@@ -1415,7 +1415,12 @@ function popularFiltrosAtas(){
   sel("fat-cpl",[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort());
   sel("fat-sim",[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort());
   sel("fat-empresa",[...new Set(atasItens.map(r=>r.empresa).filter(Boolean))].sort());
-  sel("fat-status",[...new Set(atasItens.map(r=>r.status).filter(Boolean))].sort());
+  // Agrupar encerrados num único filtro
+  const statusUnicos=[...new Set(atasItens.map(r=>{
+    if(r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return "ENCERRADO";
+    return r.status;
+  }).filter(Boolean))].sort();
+  sel("fat-status",statusUnicos);
 }
 
 function clearAllAtas(){
@@ -1435,8 +1440,9 @@ function filtrarAtas(){
     if(sim&&r.sim!==sim) return false;
     if(emp&&r.empresa!==emp) return false;
     // Ocultar encerrados por padrão (a menos que filtro de status seja "ENCERRADO")
-    if(!st&&r.status&&r.status.startsWith("ENCERRADO")) return false;
-    if(st&&!r.status.includes(st)) return false;
+    if(!st&&r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return false;
+    if(st==="ENCERRADO"&&!r.status.toUpperCase().startsWith("ENCERRADO")) return false;
+    if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
     if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
     return true;
   });
@@ -1448,6 +1454,11 @@ function filtrarAtas(){
       else if(_sortAtasCol==="saldo"){va=getSaldo(a.cpl,a.sim,a.item);vb=getSaldo(b.cpl,b.sim,b.item);}
       else{va=a[_sortAtasCol]||"";vb=b[_sortAtasCol]||"";}
       if(typeof va==="number"&&typeof vb==="number") return _sortAtasAsc?va-vb:vb-va;
+      // Ordenação de datas no formato DD/MM/YYYY
+      if(_sortAtasCol==="vencimento"){
+        const da=parseDataBR(va),db=parseDataBR(vb);
+        if(da&&db) return _sortAtasAsc?da-db:db-da;
+      }
       return _sortAtasAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
     });
   }
@@ -1489,10 +1500,14 @@ function filtrarAtas(){
       <td><span class="badge" style="background:${stColor}22;color:${stColor}">${r.status}</span></td>
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
+        ${r.status&&r.status.toUpperCase().startsWith("ENCERRADO")?`
+        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver solicitações deste item">📋</button>
+        `:`
         <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️</button>
         <button onclick="renovarAta('${r.cpl}','${r.sim}','${r.item}','${r.vencimento}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência">🔄</button>
-        <button onclick="encerrarContrato('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato (mover para encerrados)">⛔</button>
+        <button onclick="encerrarContrato('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔</button>
         <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋</button>
+        `}
       </td>
     </tr>`;
   }).join("");
@@ -1509,6 +1524,13 @@ function filtrarAtas(){
     let va=a[_sortExecCol]||"",vb=b[_sortExecCol]||"";
     if(_sortExecCol==="dias_prazo"){va=calcDiasPrazo(a)??9999;vb=calcDiasPrazo(b)??9999;return _sortExecAsc?va-vb:vb-va;}
     if(typeof va==="number"&&typeof vb==="number") return _sortExecAsc?va-vb:vb-va;
+    // Ordenação de datas
+    if(["data_af","prev_entrega","dt_entrega"].includes(_sortExecCol)){
+      const da=parseDataBR(va),db=parseDataBR(vb);
+      if(da&&db) return _sortExecAsc?da-db:db-da;
+      if(da) return _sortExecAsc?-1:1;
+      if(db) return _sortExecAsc?1:-1;
+    }
     return _sortExecAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
   });
   document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
@@ -1545,20 +1567,24 @@ function filtrarAtas(){
   if(buscaExec) filtrarExecs();
 }
 
-function calcDiasPrazo(r){
-  // Busca prazo_entrega do item na lista de ATAs
-  const at=atasItens.find(x=>x.cpl===r.cpl&&x.sim===r.sim&&x.item===r.item);
-  const prazo=at?.prazo_entrega||0;
-  if(!prazo||!r.data_af) return null;
-  // Calcular data limite = data_af + prazo dias
+function parseDataBR(s){
+  if(!s) return null;
   try{
-    let d;
-    const af=r.data_af;
-    if(af.includes("/")) {const p=af.split("/");d=new Date(p[2],p[1]-1,p[0]);}
-    else d=new Date(af);
-    d.setDate(d.getDate()+prazo);
-    const hoje=new Date();
-    return Math.round((d-hoje)/(1000*60*60*24));
+    s=s.trim();
+    if(s.includes("/")){
+      const p=s.split("/");
+      let ano=parseInt(p[2]);
+      // Corrigir ano com 2 dígitos: 25 → 2025, 26 → 2026
+      if(ano<100) ano+=2000;
+      return new Date(ano,parseInt(p[1])-1,parseInt(p[0]));
+    }
+    if(s.includes("-")){
+      const p=s.split("-");
+      let ano=parseInt(p[0]);
+      if(ano<100) ano+=2000;
+      return new Date(ano,parseInt(p[1])-1,parseInt(p[2]));
+    }
+    return null;
   }catch(e){return null;}
 }
 
@@ -1569,12 +1595,37 @@ function filtrarExecs(){
   let execRows=atasExec.filter(r=>{
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
-    if(_filtroPendentes&&r.dt_entrega) return false; // só pendentes
+    if(_filtroPendentes&&r.dt_entrega) return false;
     if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
     return true;
   });
+  // Ordenação
+  execRows.sort((a,b)=>{
+    if(_sortExecCol==="dias_prazo"){
+      const va=calcDiasPrazo(a)??9999,vb=calcDiasPrazo(b)??9999;
+      return _sortExecAsc?va-vb:vb-va;
+    }
+    let va=a[_sortExecCol]||"",vb=b[_sortExecCol]||"";
+    if(typeof va==="number"&&typeof vb==="number") return _sortExecAsc?va-vb:vb-va;
+    if(["data_af","prev_entrega","dt_entrega"].includes(_sortExecCol)){
+      const da=parseDataBR(va),db=parseDataBR(vb);
+      if(da&&db) return _sortExecAsc?da-db:db-da;
+      if(da) return _sortExecAsc?-1:1;
+      if(db) return _sortExecAsc?1:-1;
+    }
+    return _sortExecAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+  });
   document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
-  document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>`<tr>
+  document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>{
+    const dias=calcDiasPrazo(r);
+    let prazoCel;
+    if(r.dt_entrega) prazoCel='<td style="font-size:11px;color:var(--green)">✓ Entregue</td>';
+    else if(dias===null) prazoCel='<td style="font-size:11px;color:var(--text3)">—</td>';
+    else if(dias<0) prazoCel=`<td style="font-size:11px;color:var(--red);font-weight:500">⛔ ${Math.abs(dias)}d atraso</td>`;
+    else if(dias<=7) prazoCel=`<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
+    else if(dias<=15) prazoCel=`<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
+    else prazoCel=`<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
+    return `<tr>
     <td style="font-size:11px">${r.cpl}</td>
     <td style="font-size:11px">${r.sim}</td>
     <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
@@ -1585,24 +1636,35 @@ function filtrarExecs(){
     <td style="font-size:11px;white-space:nowrap">${r.data_af||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.prev_entrega||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
-    ${(()=>{
-      const dias=calcDiasPrazo(r);
-      if(r.dt_entrega) return '<td style="font-size:11px;color:var(--green)">✓ Entregue</td>';
-      if(dias===null) return '<td style="font-size:11px;color:var(--text3)">—</td>';
-      if(dias<0) return `<td style="font-size:11px;color:var(--red);font-weight:500">⛔ ${Math.abs(dias)}d atraso</td>`;
-      if(dias<=7) return `<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
-      if(dias<=15) return `<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
-      return `<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
-    })()}
+    ${prazoCel}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-    <button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️</button>
-    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅</button>`:''}
-    <button onclick="excluirExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
-  </td>
-  </tr>`).join("");
+      <button onclick="abrirModalEditExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️</button>
+      ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅</button>`:""}
+      <button onclick="excluirExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+    </td>
+  </tr>`;
+  }).join("");
   window._execRowsFiltered=execRows;
 }
+
+function calcDiasPrazo(r){
+  if(r.dt_entrega) return null; // já entregue, não calcular
+  // Se tem prev_entrega definida, usa ela como prazo
+  if(r.prev_entrega){
+    const dPrev=parseDataBR(r.prev_entrega);
+    if(dPrev) return Math.round((dPrev-new Date())/(1000*60*60*24));
+  }
+  // Senão usa data_af + prazo_entrega do item
+  const at=atasItens.find(x=>x.cpl===r.cpl&&x.sim===r.sim&&x.item===r.item);
+  const prazo=at?.prazo_entrega||0;
+  if(!prazo||!r.data_af) return null;
+  const dAF=parseDataBR(r.data_af);
+  if(!dAF) return null;
+  dAF.setDate(dAF.getDate()+prazo);
+  return Math.round((dAF-new Date())/(1000*60*60*24));
+}
+
 
 let _renovarKey=null;
 function renovarAta(cpl,sim,item,vencAtual){
@@ -1634,19 +1696,23 @@ async function salvarRenovacao(){
   const novaFormatada=`${d}/${m}/${y}`;
   const btn=document.querySelector("#modal-renovar .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  await enviarViaGet({
+  const dadosRenovar={
     acao:"atualizar_ata_status",
-    ..._renovarKey,
+    cpl:_renovarKey.cpl,
+    sim:_renovarKey.sim,
+    item:_renovarKey.item,
     status_contrato:novoStatus,
     vencimento:novaFormatada
-  });
+  };
+  console.log("Enviando renovação:", dadosRenovar);
+  await enviarViaGet(dadosRenovar);
   // Atualizar local
-  const at=atasItens.find(r=>r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item);
-  if(at){at.vencimento=novaFormatada;at.status=novoStatus;}
+  const atRen=atasItens.find(r=>r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item);
+  if(atRen){atRen.vencimento=novaFormatada;atRen.status=novoStatus;}
   filtrarAtas();renderAlertas();
-  showMsg("rv","✓ Vigência atualizada!","ok");
+  showMsg("rv","✓ Vigência atualizada! Aguarde o Apps Script processar.","ok");
   btn.disabled=false;btn.textContent="Salvar";
-  setTimeout(()=>document.getElementById("modal-renovar").classList.remove("active"),1500);
+  setTimeout(()=>document.getElementById("modal-renovar").classList.remove("active"),2000);
 }
 
 // ═══ ORDENAÇÃO ATAS ═══
