@@ -482,6 +482,7 @@ tr:hover td{background:var(--surface2)}
         <input type="text" id="fc-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamados()">
       </div>
       <button class="clear-btn" onclick="clearAllChamados()">✕ Limpar</button>
+      <button onclick="marcarTodosChamados()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg);color:var(--green-text);cursor:pointer;align-self:flex-end" title="Marcar todos os chamados visíveis como enviados">✅ Marcar todos</button>
     </div>
 
     <!-- Métricas chamados -->
@@ -502,11 +503,31 @@ tr:hover td{background:var(--surface2)}
         <table>
           <thead>
             <tr>
-              <th>📬</th><th>Protocolo</th><th>Carimbo</th><th>Data</th><th>Unidade</th>
-              <th>Endereço</th><th>Telefone</th><th>Responsável</th><th>Urgência</th>
-              <th>Patrimônio</th><th>Equipamento</th><th>Fabricante</th><th>Série</th>
-              <th>Categoria</th><th>Serviço</th><th>Problema</th><th>Descrição</th>
-              <th>Rechamado?</th><th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th><th>PDF</th>
+              <th title="Enviado à empresa">📬</th>
+              <th>Protocolo</th>
+              <th>Carimbo</th>
+              <th>Data</th>
+              <th>Unidade</th>
+              <th>Endereço</th>
+              <th>Telefone</th>
+              <th>Responsável</th>
+              <th>Urgência</th>
+              <th>Patrimônio</th>
+              <th>Equipamento</th>
+              <th>Fabricante</th>
+              <th>Série</th>
+              <th>Categoria</th>
+              <th>Serviço</th>
+              <th>Problema</th>
+              <th>Descrição</th>
+              <th>Rechamado?</th>
+              <th>Status</th>
+              <th>Dt. Atendimento</th>
+              <th>Empresa</th>
+              <th>Nº OS</th>
+              <th>O que foi feito</th>
+              <th>Ações</th>
+              <th>PDF</th>
             </tr>
           </thead>
           <tbody id="chamados-body"></tbody>
@@ -1360,20 +1381,29 @@ function filtrarChamados(){
           style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
       </td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.carimbo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.data_solicitacao||r.carimbo?.slice(0,10)||"—"}</td>
       <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
-      <td class="td-trunc" title="${r.equipamento}">${r.equipamento||"—"}</td>
+      <td style="font-size:11px" class="td-trunc" title="${r.endereco||''}">${r.endereco||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.telefone||"—"}</td>
+      <td style="font-size:11px" class="td-trunc">${r.responsavel||"—"}</td>
+      <td style="font-size:11px">${r.grau_urgencia||"—"}</td>
       <td style="font-size:11px">${r.patrimonio||"—"}${temAC?' <span class="badge" style="background:var(--blue-bg);color:var(--blue-text)">AC</span>':''}</td>
+      <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
+      <td style="font-size:11px">${r.fabricante||"—"}</td>
+      <td style="font-size:11px">${r.serie||"—"}</td>
       <td style="font-size:11px">${r.categoria||"—"}</td>
       <td style="font-size:11px">${r.servico||"—"}</td>
-      <td class="td-trunc" style="max-width:180px" title="${r.descricao}">${r.descricao||"—"}</td>
+      <td style="font-size:11px">${r.problema||"—"}</td>
+      <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
+      <td style="font-size:11px">${r.rechamado||"—"}</td>
       <td>${statusBadgeChamado(ctrl.status)}</td>
       <td style="font-size:11px">${ctrl.data_atendimento||"—"}</td>
       <td style="font-size:11px">${ctrl.empresa||"—"}</td>
       <td style="font-size:11px">${ctrl.os||"—"}</td>
-      <td class="td-trunc" style="max-width:160px" title="${ctrl.feito}">${ctrl.feito||"—"}</td>
+      <td class="td-trunc" style="max-width:160px" title="${ctrl.feito||''}">${ctrl.feito||"—"}</td>
       <td><button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button></td>
-    <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'") }')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
+      <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
     </tr>`;
   }).join("");
 }
