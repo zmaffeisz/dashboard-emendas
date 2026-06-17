@@ -833,6 +833,30 @@ tr:hover td{background:var(--surface2)}
           </div>
         </div>
 
+        <!-- Opção de valor unitário -->
+        <div style="background:var(--green-bg);border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem">
+          <div style="font-size:13px;font-weight:500;color:var(--green-text);margin-bottom:.625rem">O valor unitário será alterado?</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-valor-opt" value="manter" id="rv-valor-manter" checked onchange="toggleNovoValor()" style="accent-color:var(--green)">
+              <div>
+                <span style="font-size:13px;font-weight:500">Manter valor atual</span>
+                <span style="font-size:11px;color:var(--text2);margin-left:6px">R$ <span id="rv-valor-atual-label">—</span></span>
+              </div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-valor-opt" value="alterar" id="rv-valor-alterar" onchange="toggleNovoValor()" style="margin-top:2px;accent-color:var(--green)">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">Reajustar valor</div>
+                <div id="rv-novo-valor-wrap" style="display:none;margin-top:6px">
+                  <input type="number" id="rv-novo-valor" placeholder="Novo valor unitário (R$)" step="0.01"
+                    style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:220px">
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="form-grid">
           <div class="form-group">
             <div class="form-label">Vigência atual</div>
@@ -1704,6 +1728,12 @@ function calcDiasPrazo(r){
 }
 
 
+function toggleNovoValor(){
+  const alterar=document.getElementById("rv-valor-alterar").checked;
+  document.getElementById("rv-novo-valor-wrap").style.display=alterar?"block":"none";
+  if(alterar) document.getElementById("rv-novo-valor").focus();
+}
+
 let _renovarKey=null;
 function renovarAta(cpl,sim,item,vencAtual){
   _renovarKey={cpl,sim,item};
@@ -1735,6 +1765,10 @@ function renovarAta(cpl,sim,item,vencAtual){
   }catch(e){}
   document.getElementById("rv-nova").value=novaData;
   document.getElementById("rv-status").value="VIGENTE";
+  document.getElementById("rv-valor-atual-label").textContent=at?.valor_unit?at.valor_unit.toFixed(2):"—";
+  document.getElementById("rv-valor-manter").checked=true;
+  document.getElementById("rv-novo-valor-wrap").style.display="none";
+  document.getElementById("rv-novo-valor").value="";
   document.getElementById("rv-msg").className="fmsg";
   document.getElementById("modal-renovar").classList.add("active");
 }
@@ -1750,6 +1784,9 @@ async function salvarRenovacao(){
   const btn=document.querySelector("#modal-renovar .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
   const reiniciarSaldo=document.getElementById("rv-reiniciar").checked;
+  const alterarValor=document.getElementById("rv-valor-alterar").checked;
+  const novoValor=alterarValor?parseFloat(document.getElementById("rv-novo-valor").value)||0:0;
+  if(alterarValor&&!novoValor){showMsg("rv","Informe o novo valor unitário","err");btn.disabled=false;btn.textContent="Salvar renovação";return;}
   const dadosRenovar={
     acao:"atualizar_ata_status",
     cpl:_renovarKey.cpl,
@@ -1757,7 +1794,8 @@ async function salvarRenovacao(){
     item:_renovarKey.item,
     status_contrato:novoStatus,
     vencimento:novaFormatada,
-    reiniciar_saldo:reiniciarSaldo
+    reiniciar_saldo:reiniciarSaldo,
+    novo_valor_unit:alterarValor?novoValor:0
   };
   await enviarViaGet(dadosRenovar);
 
@@ -1776,7 +1814,11 @@ async function salvarRenovacao(){
 
   // Atualizar local
   const atRen=atasItens.find(r=>r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item);
-  if(atRen){atRen.vencimento=novaFormatada;atRen.status=novoStatus;}
+  if(atRen){
+    atRen.vencimento=novaFormatada;
+    atRen.status=novoStatus;
+    if(alterarValor&&novoValor) atRen.valor_unit=novoValor;
+  }
   filtrarAtas();renderAlertas();
   showMsg("rv","✓ Vigência atualizada! Aguarde o Apps Script processar.","ok");
   btn.disabled=false;btn.textContent="Salvar";
