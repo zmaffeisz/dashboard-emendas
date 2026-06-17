@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Emendas Parlamentares SMS Sorocaba</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -952,6 +953,49 @@ const AC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNv3eDo49IS
 const CHAMADOS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2XwYGAoxuCh_A-mZOAFsaohN1Rq1czObyXFBn7T7Jv-WlppmmiCejK0zzsbOod1i9YhetzvPzWqve/pub?gid=1633672398&single=true&output=csv";
 const CONTROLE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2XwYGAoxuCh_A-mZOAFsaohN1Rq1czObyXFBn7T7Jv-WlppmmiCejK0zzsbOod1i9YhetzvPzWqve/pub?gid=2129580133&single=true&output=csv";
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=401356519&single=true&output=csv";
+const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_62rlfRwV8Lzg_kFLJCEn4g_heoU6pqk";
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+
+async function checkAuth(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){
+    window.location.href = "login.html";
+    return false;
+  }
+  currentUser = session.user;
+  // Buscar perfil
+  const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
+  currentProfile = profile;
+  // Mostrar nome do usuário no header
+  const sub = document.getElementById("last-update");
+  if(sub) sub.textContent = `Logado como ${profile?.nome||currentUser.email} (${profile?.papel||'visualizador'})`;
+  // Mostrar botão de logout
+  const refreshBtn = document.querySelector(".refresh-btn");
+  if(refreshBtn){
+    const logoutBtn = document.createElement("button");
+    logoutBtn.className = "refresh-btn";
+    logoutBtn.textContent = "Sair";
+    logoutBtn.onclick = async()=>{
+      await sb.auth.signOut();
+      window.location.href = "login.html";
+    };
+    refreshBtn.parentNode.insertBefore(logoutBtn, refreshBtn.nextSibling);
+  }
+  // Restringir abas de edição para visualizadores
+  if(profile?.papel === 'visualizador'){
+    ["tab-btn-nova-emenda","tab-btn-novo-item","tab-btn-atualizar-status","tab-btn-atas"].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){el.style.display="none";}
+    });
+  }
+  return true;
+}
+
 const ATAS_ITENS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=1903295047&single=true&output=csv";
 const ATAS_EXEC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=330213664&single=true&output=csv";
 const CHAMADOS_SCRIPT_URL = "AGUARDANDO_URL_APPS_SCRIPT_CHAMADOS";
@@ -2558,7 +2602,7 @@ function salvarStatus(){
     .finally(()=>{btn.disabled=false;btn.textContent=label});
 }
 
-loadData();
+checkAuth().then(ok => { if(ok) loadData(); });
 </script>
 </body>
 </html>
