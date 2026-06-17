@@ -1436,6 +1436,7 @@ function gerarPDFChamado(protocolo){
   const ctrl=getControle(protocolo);
 
   const chk=(v)=>v?'(X)':'(  )';
+  const chkExato=(v)=>v?'(X)':'(  )';
   const categorias=['Eletroeletrônico','Equipamento médico/odontológico','Mobiliário médico','Mobiliário geral','Outro'];
   const cat=r.categoria||"";
   const servicos=['Manutenção corretiva','Manutenção preventiva','Instalação','Desinstalação','Treinamento','Calibração','Outro'];
