@@ -177,6 +177,7 @@ tr:hover td{background:var(--surface2)}
   <div class="tab" onclick="showTab('chamados')">📋 Chamados</div>
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
   <div class="tab tab-locked" id="tab-btn-atas" onclick="tentarAba('atas')">📄 ATAs / Contratos 🔒</div>
+  <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
   <div class="tab tab-locked" id="tab-btn-nova-emenda" onclick="tentarAba('nova-emenda')">➕ Nova emenda 🔒</div>
   <div class="tab tab-locked" id="tab-btn-novo-item" onclick="tentarAba('novo-item')">📦 Novo item 🔒</div>
   <div class="tab tab-locked" id="tab-btn-atualizar-status" onclick="tentarAba('atualizar-status')">✏️ Atualizar status 🔒</div>
@@ -620,6 +621,31 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<!-- ══════════════════════ USUÁRIOS ══════════════════════ -->
+<div id="panel-usuarios" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">⚙️ Gerenciar usuários</div>
+      <button onclick="carregarUsuarios()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻ Atualizar</button>
+    </div>
+    <div id="usuarios-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
+    <div id="usuarios-table" style="display:none">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Nome</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">E-mail</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Papel atual</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Alterar para</th>
+            <th style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2)"></th>
+          </tr>
+        </thead>
+        <tbody id="usuarios-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ ATAS ══════════════════════ -->
 <div id="panel-atas" class="panel">
   <div id="atas-loading" class="loading"><span class="spinner"></span>Carregando ATAs...</div>
@@ -986,6 +1012,11 @@ async function checkAuth(){
     };
     refreshBtn.parentNode.insertBefore(logoutBtn, refreshBtn.nextSibling);
   }
+  // Mostrar aba de usuários só para admin
+  if(profile?.papel === 'admin'){
+    const tabUsuarios=document.getElementById("tab-btn-usuarios");
+    if(tabUsuarios) tabUsuarios.style.display="block";
+  }
   // Restringir abas de edição para visualizadores
   if(profile?.papel === 'visualizador'){
     ["tab-btn-nova-emenda","tab-btn-novo-item","tab-btn-atualizar-status","tab-btn-atas"].forEach(id=>{
@@ -1110,7 +1141,7 @@ function fecharModalFora(e){
 }
 
 function showTab(name){
-  const names=["dashboard","consulta","chamados","inventario-ac","atas","nova-emenda","novo-item","atualizar-status"];
+  const names=["dashboard","consulta","chamados","inventario-ac","atas","usuarios","nova-emenda","novo-item","atualizar-status"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("panel-"+name).classList.add("active");
@@ -1118,6 +1149,7 @@ function showTab(name){
   if(name==="chamados"&&!chamadosRows.length) loadChamados();
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
+  if(name==="usuarios") carregarUsuarios();
 }
 
 // ═══ LOAD ═══
@@ -2142,6 +2174,47 @@ async function salvarEditExec(){
   showMsg("ee","✓ Salvo!","ok");
   btn.disabled=false;btn.textContent="Salvar";
   setTimeout(()=>document.getElementById("modal-edit-exec").classList.remove("active"),1500);
+}
+
+// ═══ USUÁRIOS ═══
+async function carregarUsuarios(){
+  document.getElementById("usuarios-loading").style.display="block";
+  document.getElementById("usuarios-table").style.display="none";
+  const {data:profiles,error}=await sb.from("profiles").select("*").order("nome");
+  if(error){
+    document.getElementById("usuarios-loading").textContent="Erro ao carregar usuários.";
+    return;
+  }
+  const papelCor={admin:"var(--red-text)",editor:"var(--blue-text)",visualizador:"var(--text2)"};
+  const papelBg={admin:"var(--red-bg)",editor:"var(--blue-bg)",visualizador:"var(--surface2)"};
+  document.getElementById("usuarios-body").innerHTML=profiles.map(p=>`
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px;font-weight:500">${p.nome||"—"}</td>
+      <td style="padding:10px 12px;color:var(--text2);font-size:12px">${p.email}</td>
+      <td style="padding:10px 12px">
+        <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:${papelBg[p.papel]||"var(--surface2)"};color:${papelCor[p.papel]||"var(--text2)"}">${p.papel}</span>
+      </td>
+      <td style="padding:10px 12px">
+        <select id="papel-${p.id}" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          <option value="visualizador"${p.papel==="visualizador"?" selected":""}>visualizador</option>
+          <option value="editor"${p.papel==="editor"?" selected":""}>editor</option>
+          <option value="admin"${p.papel==="admin"?" selected":""}>admin</option>
+        </select>
+      </td>
+      <td style="padding:10px 12px">
+        ${p.id===currentUser?.id?'<span style="font-size:11px;color:var(--text3)">(você)</span>':`<button onclick="alterarPapel('${p.id}','${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar</button>`}
+      </td>
+    </tr>`).join("");
+  document.getElementById("usuarios-loading").style.display="none";
+  document.getElementById("usuarios-table").style.display="block";
+}
+
+async function alterarPapel(userId, email){
+  const novoPapel=document.getElementById("papel-"+userId).value;
+  const {error}=await sb.from("profiles").update({papel:novoPapel}).eq("id",userId);
+  if(error){alert("Erro ao atualizar: "+error.message);return;}
+  alert("✓ Papel de "+email+" atualizado para '"+novoPapel+"'.");
+  carregarUsuarios();
 }
 
 async function loadData(){
