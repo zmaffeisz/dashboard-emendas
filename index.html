@@ -175,7 +175,7 @@ tr:hover td{background:var(--surface2)}
   <div class="tab" onclick="showTab('consulta')">🔍 Consulta rápida</div>
   <div class="tab" onclick="showTab('chamados')">📋 Chamados</div>
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
-  <div class="tab" onclick="showTab('atas')">📄 ATAs / Contratos</div>
+  <div class="tab tab-locked" id="tab-btn-atas" onclick="tentarAba('atas')">📄 ATAs / Contratos 🔒</div>
   <div class="tab tab-locked" id="tab-btn-nova-emenda" onclick="tentarAba('nova-emenda')">➕ Nova emenda 🔒</div>
   <div class="tab tab-locked" id="tab-btn-novo-item" onclick="tentarAba('novo-item')">📦 Novo item 🔒</div>
   <div class="tab tab-locked" id="tab-btn-atualizar-status" onclick="tentarAba('atualizar-status')">✏️ Atualizar status 🔒</div>
@@ -673,10 +673,18 @@ tr:hover td{background:var(--surface2)}
         <table>
           <thead>
             <tr>
-              <th>CPL</th><th>SIM</th><th>Item</th><th>Marca/Modelo</th>
-              <th>Qtde contratada</th><th>Executado</th><th>Saldo</th>
-              <th>Valor unit.</th><th>Vencimento</th><th>Status</th>
-              <th>Empresa</th><th>Ações</th>
+              <th onclick="sortAtas('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-atas-cpl"></span></th>
+              <th onclick="sortAtas('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-atas-sim"></span></th>
+              <th onclick="sortAtas('item')" style="cursor:pointer;user-select:none">Item <span id="sort-atas-item"></span></th>
+              <th onclick="sortAtas('marca')" style="cursor:pointer;user-select:none">Marca/Modelo <span id="sort-atas-marca"></span></th>
+              <th onclick="sortAtas('qtde_contratada')" style="cursor:pointer;user-select:none;text-align:right">Qtde contrat. <span id="sort-atas-qtde_contratada"></span></th>
+              <th onclick="sortAtas('exec')" style="cursor:pointer;user-select:none;text-align:right">Executado <span id="sort-atas-exec"></span></th>
+              <th onclick="sortAtas('saldo')" style="cursor:pointer;user-select:none;text-align:right">Saldo <span id="sort-atas-saldo"></span></th>
+              <th onclick="sortAtas('valor_unit')" style="cursor:pointer;user-select:none;text-align:right">Valor unit. <span id="sort-atas-valor_unit"></span></th>
+              <th onclick="sortAtas('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-atas-vencimento"></span></th>
+              <th onclick="sortAtas('status')" style="cursor:pointer;user-select:none">Status <span id="sort-atas-status"></span></th>
+              <th onclick="sortAtas('empresa')" style="cursor:pointer;user-select:none">Empresa <span id="sort-atas-empresa"></span></th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="atas-body"></tbody>
@@ -686,20 +694,32 @@ tr:hover td{background:var(--surface2)}
 
     <!-- Tabela de execuções -->
     <div class="table-card">
-      <div class="table-hdr">
+      <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
         <span class="table-hdr-title">Execuções / Solicitações</span>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="exec-busca" placeholder="🔍 empenho, unidade, NF..." oninput="filtrarExecs()" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:200px">
+          <button onclick="togglePendentes()" id="btn-pendentes" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer" title="Mostrar apenas itens aguardando entrega">⚠️ Pendentes</button>
           <span class="table-hdr-count" id="exec-count">—</span>
-          <button onclick="abrirModalNovaExec()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">+ Nova solicitação</button>
+          <button onclick="exportarAtas()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar itens de ATA para Excel">⬇ ATAs</button>
+          <button onclick="exportarExecs()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar execuções para Excel">⬇ Execuções</button>
+          <button onclick="abrirModalNovaExec()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer" title="Adicionar nova solicitação">+ Nova solicitação</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>CPL</th><th>SIM</th><th>Item</th><th>Unidade</th>
-              <th>Qtde</th><th>Valor total</th><th>Empenho</th>
-              <th>Data AF</th><th>Prev. entrega</th><th>Dt. entrega</th>
+              <th onclick="sortExecs('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-exec-cpl"></span></th>
+              <th onclick="sortExecs('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-exec-sim"></span></th>
+              <th onclick="sortExecs('item')" style="cursor:pointer;user-select:none">Item <span id="sort-exec-item"></span></th>
+              <th onclick="sortExecs('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-exec-unidade"></span></th>
+              <th onclick="sortExecs('qtde')" style="cursor:pointer;user-select:none;text-align:right">Qtde <span id="sort-exec-qtde"></span></th>
+              <th onclick="sortExecs('valor')" style="cursor:pointer;user-select:none;text-align:right">Valor total <span id="sort-exec-valor"></span></th>
+              <th onclick="sortExecs('empenho')" style="cursor:pointer;user-select:none">Empenho <span id="sort-exec-empenho"></span></th>
+              <th onclick="sortExecs('data_af')" style="cursor:pointer;user-select:none">Data AF <span id="sort-exec-data_af"></span></th>
+              <th onclick="sortExecs('prev_entrega')" style="cursor:pointer;user-select:none">Prev. entrega <span id="sort-exec-prev_entrega"></span></th>
+              <th onclick="sortExecs('dt_entrega')" style="cursor:pointer;user-select:none">Dt. entrega <span id="sort-exec-dt_entrega"></span></th>
+              <th onclick="sortExecs('dias_prazo')" style="cursor:pointer;user-select:none">Prazo <span id="sort-exec-dias_prazo"></span></th>
               <th>NF</th><th>Ações</th>
             </tr>
           </thead>
@@ -741,17 +761,17 @@ tr:hover td{background:var(--surface2)}
       <div class="modal-box" style="width:560px">
         <div class="modal-title">📦 Nova solicitação / execução</div>
         <div class="form-grid" style="margin-top:.875rem">
-          <div class="form-group">
-            <div class="form-label">CPL *</div>
-            <select id="ne2-cpl" onchange="popularItensExec()"><option value="">Selecione...</option></select>
-          </div>
-          <div class="form-group">
-            <div class="form-label">SIM *</div>
-            <select id="ne2-sim" onchange="popularItensExec()"><option value="">Selecione...</option></select>
-          </div>
           <div class="form-group full">
             <div class="form-label">Item *</div>
-            <select id="ne2-item"><option value="">Selecione CPL e SIM primeiro...</option></select>
+            <select id="ne2-item" onchange="autoPreencherCplSim()"><option value="">Selecione o item...</option></select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">CPL</div>
+            <input type="text" id="ne2-cpl" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">SIM</div>
+            <input type="text" id="ne2-sim" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
           </div>
           <div class="form-group full"><div class="form-label">Unidade *</div><input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU"></div>
           <div class="form-group"><div class="form-label">Qtde *</div><input type="number" id="ne2-qtde" placeholder="ex: 2" oninput="calcValorExec()"></div>
@@ -766,6 +786,33 @@ tr:hover td{background:var(--surface2)}
           <button class="btn-primary" onclick="salvarNovaExec()">Salvar</button>
           <button class="btn-secondary" onclick="document.getElementById('modal-nova-exec').classList.remove('active')">Cancelar</button>
           <span id="ne2-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Renovar Vigência -->
+    <div class="modal-overlay" id="modal-renovar" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title">🔄 Prorrogar vigência</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="rv-info"></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <div class="form-label">Vigência atual</div>
+            <input type="text" id="rv-atual" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Nova vigência *</div>
+            <input type="date" id="rv-nova" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Novo status</div>
+            <input list="status-ata-opts" id="rv-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarRenovacao()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-renovar').classList.remove('active')">Cancelar</button>
+          <span id="rv-msg" class="fmsg"></span>
         </div>
       </div>
     </div>
@@ -792,6 +839,49 @@ tr:hover td{background:var(--surface2)}
 
   </div>
 </div>
+
+    <!-- Modal Encerrar Contrato -->
+    <div class="modal-overlay" id="modal-encerrar" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title">⛔ Encerrar contrato</div>
+        <div style="font-size:13px;color:var(--text2);margin:.75rem 0 1rem" id="enc-info"></div>
+        <div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.75rem;font-size:13px;margin-bottom:1rem">
+          ⚠️ Este item será marcado como <strong>ENCERRADO</strong> e ficará oculto na visualização padrão. Você poderá vê-lo ativando o filtro de encerrados.
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <div class="form-label">Motivo do encerramento (opcional)</div>
+          <input type="text" id="enc-motivo" placeholder="ex: Não renovado, esgotado..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" style="background:var(--red)" onclick="confirmarEncerramento()">⛔ Encerrar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-encerrar').classList.remove('active')">Cancelar</button>
+          <span id="enc-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Prorrogar Prazo de Entrega -->
+    <div class="modal-overlay" id="modal-prorrogar-prazo" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title">📅 Prorrogar prazo de entrega</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="pp-info"></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <div class="form-label">Novo prazo de entrega *</div>
+            <input type="date" id="pp-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Observação</div>
+            <input type="text" id="pp-obs" placeholder="ex: Prorrogado a pedido da empresa" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarProrrogarPrazo()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-prorrogar-prazo').classList.remove('active')">Cancelar</button>
+          <span id="pp-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
 
 </div><!-- /container -->
 
@@ -876,7 +966,7 @@ function statusBadge(cat){const i=STATUS_MAP[cat]||{color:"#888",label:cat};retu
 
 // ═══ TABS ═══
 function tentarAba(name){
-  if(autenticado){showTab(name);return;}
+  if(autenticado||name==='dashboard'||name==='consulta'||name==='chamados'||name==='inventario-ac'){showTab(name);return;}
   document.getElementById("modal-senha").classList.add("active");
   document.getElementById("input-senha").value="";
   document.getElementById("modal-err").style.display="none";
@@ -891,7 +981,7 @@ function verificarSenha(){
     autenticado=true;
     fecharModal();
     // Remover cadeados das abas
-    ["nova-emenda","novo-item","atualizar-status"].forEach(n=>{
+    ["nova-emenda","novo-item","atualizar-status","atas"].forEach(n=>{
       const btn=document.getElementById("tab-btn-"+n);
       if(btn){
         btn.classList.remove("tab-locked");
@@ -1256,6 +1346,7 @@ async function loadAtas(){
       vencimento:(r["VENCIMENTO"]||"").trim(),
       status:(r["STATUS_CONTRATO"]||"VIGENTE").trim(),
       empresa:(r["EMPRESA"]||"").trim(),
+      prazo_entrega:parseInt(r["PRAZO_ENTREGA"])||0,
     }));
     atasExec=p2.data.filter(r=>r["CPL"]).map(r=>({
       cpl:(r["CPL"]||"").trim(),
@@ -1343,10 +1434,23 @@ function filtrarAtas(){
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
     if(emp&&r.empresa!==emp) return false;
-    if(st&&r.status!==st) return false;
+    // Ocultar encerrados por padrão (a menos que filtro de status seja "ENCERRADO")
+    if(!st&&r.status&&r.status.startsWith("ENCERRADO")) return false;
+    if(st&&!r.status.includes(st)) return false;
     if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
     return true;
   });
+  // Ordenação
+  if(_sortAtasCol){
+    rows.sort((a,b)=>{
+      let va,vb;
+      if(_sortAtasCol==="exec"){va=getExecutado(a.cpl,a.sim,a.item);vb=getExecutado(b.cpl,b.sim,b.item);}
+      else if(_sortAtasCol==="saldo"){va=getSaldo(a.cpl,a.sim,a.item);vb=getSaldo(b.cpl,b.sim,b.item);}
+      else{va=a[_sortAtasCol]||"";vb=b[_sortAtasCol]||"";}
+      if(typeof va==="number"&&typeof vb==="number") return _sortAtasAsc?va-vb:vb-va;
+      return _sortAtasAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    });
+  }
 
   const totalSaldo=rows.reduce((a,r)=>a+getSaldo(r.cpl,r.sim,r.item),0);
   const totalExec=rows.reduce((a,r)=>a+getExecutado(r.cpl,r.sim,r.item),0);
@@ -1385,8 +1489,10 @@ function filtrarAtas(){
       <td><span class="badge" style="background:${stColor}22;color:${stColor}">${r.status}</span></td>
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
-        <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
-        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px">📋</button>
+        <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️</button>
+        <button onclick="renovarAta('${r.cpl}','${r.sim}','${r.item}','${r.vencimento}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência">🔄</button>
+        <button onclick="encerrarContrato('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato (mover para encerrados)">⛔</button>
+        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋</button>
       </td>
     </tr>`;
   }).join("");
@@ -1396,6 +1502,75 @@ function filtrarAtas(){
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
     if(busca&&!matchBusca(r.item+" "+r.cpl+" "+r.sim+" "+r.unidade,busca)) return false;
+    return true;
+  });
+  // Ordenação execuções (padrão: data_af mais recente no topo)
+  execRows.sort((a,b)=>{
+    let va=a[_sortExecCol]||"",vb=b[_sortExecCol]||"";
+    if(_sortExecCol==="dias_prazo"){va=calcDiasPrazo(a)??9999;vb=calcDiasPrazo(b)??9999;return _sortExecAsc?va-vb:vb-va;}
+    if(typeof va==="number"&&typeof vb==="number") return _sortExecAsc?va-vb:vb-va;
+    return _sortExecAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+  });
+  document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
+  document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>`<tr>
+    <td style="font-size:11px">${r.cpl}</td>
+    <td style="font-size:11px">${r.sim}</td>
+    <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
+    <td style="font-size:12px">${r.unidade}</td>
+    <td style="text-align:right">${r.qtde}</td>
+    <td style="text-align:right;font-size:11px">${r.valor?fmtFull(r.valor):"—"}</td>
+    <td style="font-size:11px">${r.empenho||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.data_af||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.prev_entrega||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
+    ${(()=>{
+      const dias=calcDiasPrazo(r);
+      if(r.dt_entrega) return '<td style="font-size:11px;color:var(--green)">✓ Entregue</td>';
+      if(dias===null) return '<td style="font-size:11px;color:var(--text3)">—</td>';
+      if(dias<0) return `<td style="font-size:11px;color:var(--red);font-weight:500">⛔ ${Math.abs(dias)}d atraso</td>`;
+      if(dias<=7) return `<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
+      if(dias<=15) return `<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
+      return `<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
+    })()}
+    <td style="font-size:11px">${r.nf||"—"}</td>
+    <td style="white-space:nowrap">
+    <button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️</button>
+    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅</button>`:''}
+    <button onclick="excluirExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+  </td>
+  </tr>`).join("");
+  window._execRowsFiltered=execRows;
+  // Sincronizar busca de execuções
+  const buscaExec=document.getElementById('exec-busca')?.value||'';
+  if(buscaExec) filtrarExecs();
+}
+
+function calcDiasPrazo(r){
+  // Busca prazo_entrega do item na lista de ATAs
+  const at=atasItens.find(x=>x.cpl===r.cpl&&x.sim===r.sim&&x.item===r.item);
+  const prazo=at?.prazo_entrega||0;
+  if(!prazo||!r.data_af) return null;
+  // Calcular data limite = data_af + prazo dias
+  try{
+    let d;
+    const af=r.data_af;
+    if(af.includes("/")) {const p=af.split("/");d=new Date(p[2],p[1]-1,p[0]);}
+    else d=new Date(af);
+    d.setDate(d.getDate()+prazo);
+    const hoje=new Date();
+    return Math.round((d-hoje)/(1000*60*60*24));
+  }catch(e){return null;}
+}
+
+function filtrarExecs(){
+  const busca=document.getElementById("exec-busca")?.value||"";
+  const cpl=document.getElementById("fat-cpl")?.value||"";
+  const sim=document.getElementById("fat-sim")?.value||"";
+  let execRows=atasExec.filter(r=>{
+    if(cpl&&r.cpl!==cpl) return false;
+    if(sim&&r.sim!==sim) return false;
+    if(_filtroPendentes&&r.dt_entrega) return false; // só pendentes
+    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
     return true;
   });
   document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
@@ -1409,11 +1584,204 @@ function filtrarAtas(){
     <td style="font-size:11px">${r.empenho||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.data_af||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.prev_entrega||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
+    ${(()=>{
+      const dias=calcDiasPrazo(r);
+      if(r.dt_entrega) return '<td style="font-size:11px;color:var(--green)">✓ Entregue</td>';
+      if(dias===null) return '<td style="font-size:11px;color:var(--text3)">—</td>';
+      if(dias<0) return `<td style="font-size:11px;color:var(--red);font-weight:500">⛔ ${Math.abs(dias)}d atraso</td>`;
+      if(dias<=7) return `<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
+      if(dias<=15) return `<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
+      return `<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
+    })()}
     <td style="font-size:11px">${r.nf||"—"}</td>
-    <td><button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button></td>
+    <td style="white-space:nowrap">
+    <button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️</button>
+    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅</button>`:''}
+    <button onclick="excluirExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+  </td>
   </tr>`).join("");
   window._execRowsFiltered=execRows;
+}
+
+let _renovarKey=null;
+function renovarAta(cpl,sim,item,vencAtual){
+  _renovarKey={cpl,sim,item};
+  document.getElementById("rv-info").textContent=`${cpl} · ${sim} · ${item}`;
+  document.getElementById("rv-atual").value=vencAtual||"";
+  // Sugerir +1 ano automaticamente
+  let novaData="";
+  try{
+    const partes=vencAtual.split("/");
+    if(partes.length===3){
+      const d=new Date(parseInt(partes[2])+1,parseInt(partes[1])-1,parseInt(partes[0]));
+      novaData=d.toISOString().split("T")[0];
+    }
+  }catch(e){}
+  document.getElementById("rv-nova").value=novaData;
+  document.getElementById("rv-status").value="VIGENTE";
+  document.getElementById("rv-msg").className="fmsg";
+  document.getElementById("modal-renovar").classList.add("active");
+}
+
+async function salvarRenovacao(){
+  if(!_renovarKey) return;
+  const novaData=document.getElementById("rv-nova").value;
+  const novoStatus=document.getElementById("rv-status").value||"VIGENTE";
+  if(!novaData){showMsg("rv","Informe a nova data (*)","err");return}
+  // Formatar para DD/MM/YYYY
+  const [y,m,d]=novaData.split("-");
+  const novaFormatada=`${d}/${m}/${y}`;
+  const btn=document.querySelector("#modal-renovar .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  await enviarViaGet({
+    acao:"atualizar_ata_status",
+    ..._renovarKey,
+    status_contrato:novoStatus,
+    vencimento:novaFormatada
+  });
+  // Atualizar local
+  const at=atasItens.find(r=>r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item);
+  if(at){at.vencimento=novaFormatada;at.status=novoStatus;}
+  filtrarAtas();renderAlertas();
+  showMsg("rv","✓ Vigência atualizada!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-renovar").classList.remove("active"),1500);
+}
+
+// ═══ ORDENAÇÃO ATAS ═══
+let _sortAtasCol=null,_sortAtasAsc=true;
+function sortAtas(col){
+  if(_sortAtasCol===col)_sortAtasAsc=!_sortAtasAsc;else{_sortAtasCol=col;_sortAtasAsc=true;}
+  document.querySelectorAll('[id^="sort-atas-"]').forEach(el=>el.textContent="");
+  const el=document.getElementById("sort-atas-"+col);
+  if(el) el.textContent=_sortAtasAsc?" ↑":" ↓";
+  filtrarAtas();
+}
+
+// ═══ ORDENAÇÃO EXECUÇÕES ═══
+let _sortExecCol='data_af',_sortExecAsc=false; // padrão: mais recentes no topo
+function sortExecs(col){
+  if(_sortExecCol===col)_sortExecAsc=!_sortExecAsc;else{_sortExecCol=col;_sortExecAsc=false;}
+  document.querySelectorAll('[id^="sort-exec-"]').forEach(el=>el.textContent="");
+  const el=document.getElementById("sort-exec-"+col);
+  if(el) el.textContent=_sortExecAsc?" ↑":" ↓";
+  filtrarExecs();
+}
+
+// ═══ FILTRO PENDENTES ═══
+let _filtroPendentes=false;
+function togglePendentes(){
+  _filtroPendentes=!_filtroPendentes;
+  const btn=document.getElementById("btn-pendentes");
+  if(_filtroPendentes){
+    btn.style.background="var(--red)";btn.style.color="#fff";btn.style.borderColor="var(--red)";
+  } else {
+    btn.style.background="var(--surface)";btn.style.color="var(--red)";btn.style.borderColor="var(--red)";
+  }
+  filtrarExecs();
+}
+
+// ═══ EXPORTAR EXCEL ═══
+function exportarAtas(){
+  const colunas=["CPL","SIM","ITEM","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
+  const cpl=document.getElementById("fat-cpl")?.value||"";
+  const sim=document.getElementById("fat-sim")?.value||"";
+  const busca=document.getElementById("fat-busca")?.value||"";
+  const rows=atasItens.filter(r=>{
+    if(cpl&&r.cpl!==cpl) return false;
+    if(sim&&r.sim!==sim) return false;
+    if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
+    if(!document.getElementById("fat-status")?.value||(document.getElementById("fat-status")?.value===r.status)) return true;
+    return !document.getElementById("fat-status")?.value;
+  });
+  const dados=rows.map(r=>[r.cpl,r.sim,r.item,r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
+  const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
+  const wb={SheetNames:["ATAs"],Sheets:{ATAs:ws}};
+  XLSX.writeFile(wb,"atas_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");
+}
+
+function exportarExecs(){
+  const colunas=["CPL","SIM","ITEM","UNIDADE","QTDE","VALOR","EMPENHO","DATA_AF","PREV_ENTREGA","DT_ENTREGA","NF"];
+  const rows=window._execRowsFiltered||atasExec;
+  const dados=rows.map(r=>[r.cpl,r.sim,r.item,r.unidade,r.qtde,r.valor,r.empenho,r.data_af,r.prev_entrega,r.dt_entrega,r.nf]);
+  const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
+  const wb={SheetNames:["Execucoes"],Sheets:{Execucoes:ws}};
+  XLSX.writeFile(wb,"execucoes_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");
+}
+
+// ═══ ENCERRAR CONTRATO ═══
+let _encerrarKey=null;
+function encerrarContrato(cpl,sim,item){
+  _encerrarKey={cpl,sim,item};
+  document.getElementById("enc-info").textContent=`${cpl} · ${sim} · ${item}`;
+  document.getElementById("enc-motivo").value="";
+  document.getElementById("enc-msg").className="fmsg";
+  document.getElementById("modal-encerrar").classList.add("active");
+}
+async function confirmarEncerramento(){
+  if(!_encerrarKey) return;
+  const btn=document.querySelector("#modal-encerrar .btn-primary");
+  btn.disabled=true;btn.textContent="Encerrando...";
+  const motivo=document.getElementById("enc-motivo").value.trim();
+  await enviarViaGet({acao:"atualizar_ata_status",..._encerrarKey,status_contrato:"ENCERRADO"+(motivo?" - "+motivo:""),vencimento:""});
+  const at=atasItens.find(r=>r.cpl===_encerrarKey.cpl&&r.sim===_encerrarKey.sim&&r.item===_encerrarKey.item);
+  if(at){at.status="ENCERRADO"+(motivo?" - "+motivo:"");}
+  filtrarAtas();renderAlertas();
+  showMsg("enc","✓ Contrato encerrado!","ok");
+  btn.disabled=false;btn.textContent="⛔ Encerrar";
+  setTimeout(()=>document.getElementById("modal-encerrar").classList.remove("active"),1500);
+}
+
+// ═══ EXCLUIR EXECUÇÃO ═══
+async function excluirExec(idx,cpl,sim,item,unidade){
+  if(!confirm(`Excluir esta solicitação?\n${item} · ${unidade}\n\nEsta ação não pode ser desfeita.`)) return;
+  await enviarViaGet({acao:"excluir_execucao",cpl,sim,item,unidade});
+  // Remover localmente
+  const globalIdx=atasExec.findIndex(r=>r.cpl===cpl&&r.sim===sim&&r.item===item&&r.unidade===unidade);
+  if(globalIdx>=0) atasExec.splice(globalIdx,1);
+  filtrarAtas();filtrarExecs();
+}
+
+// ═══ PRORROGAR PRAZO DE ENTREGA ═══
+let _prorrogarKey=null,_prorrogarIdx=null;
+function abrirModalProrrogarPrazo(idx,cpl,sim,item,unidade){
+  _prorrogarKey={cpl,sim,item,unidade};
+  _prorrogarIdx=idx;
+  const r=window._execRowsFiltered?.[idx];
+  document.getElementById("pp-info").textContent=`${item} · ${unidade}`;
+  document.getElementById("pp-data").value=r?.prev_entrega||"";
+  document.getElementById("pp-obs").value="";
+  document.getElementById("pp-msg").className="fmsg";
+  document.getElementById("modal-prorrogar-prazo").classList.add("active");
+}
+async function salvarProrrogarPrazo(){
+  const data=document.getElementById("pp-data").value;
+  const obs=document.getElementById("pp-obs").value.trim();
+  if(!data){showMsg("pp","Informe a nova data (*)","err");return}
+  const btn=document.querySelector("#modal-prorrogar-prazo .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  await enviarViaGet({acao:"atualizar_execucao",..._prorrogarKey,prev_entrega:data,obs_prazo:obs?"Prorrogado: "+obs:""});
+  const r=window._execRowsFiltered?.[_prorrogarIdx];
+  if(r){r.prev_entrega=data;r.obs_prazo=obs?"Prorrogado: "+obs:"";}
+  const gr=atasExec.find(x=>x.cpl===_prorrogarKey.cpl&&x.sim===_prorrogarKey.sim&&x.item===_prorrogarKey.item&&x.unidade===_prorrogarKey.unidade);
+  if(gr){gr.prev_entrega=data;}
+  filtrarExecs();
+  showMsg("pp","✓ Prazo prorrogado!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-prorrogar-prazo").classList.remove("active"),1500);
+}
+
+// ═══ AUTO PREENCHER CPL/SIM AO SELECIONAR ITEM ═══
+function autoPreencherCplSim(){
+  const item=document.getElementById("ne2-item").value;
+  const at=atasItens.find(r=>r.item===item);
+  if(at){
+    document.getElementById("ne2-cpl").value=at.cpl||"";
+    document.getElementById("ne2-sim").value=at.sim||"";
+    // Calcular valor auto quando digitar qtde
+    document.getElementById("ne2-qtde").oninput=()=>calcValorExec();
+  }
 }
 
 function verExecsItem(cpl,sim,item){
@@ -1439,24 +1807,22 @@ function popularItensExec(){
 }
 
 function calcValorExec(){
-  const cpl=document.getElementById("ne2-cpl").value;
-  const sim=document.getElementById("ne2-sim").value;
   const item=document.getElementById("ne2-item").value;
+  const atItem=atasItens.find(r=>r.item===item)||{};
+  const cpl=document.getElementById("ne2-cpl").value||atItem.cpl||"";
+  const sim=document.getElementById("ne2-sim").value||atItem.sim||"";
   const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
-  const at=atasItens.find(r=>r.cpl===cpl&&r.sim===sim&&r.item===item);
-  if(at&&at.valor_unit&&qtde) document.getElementById("ne2-valor").value=(at.valor_unit*qtde).toFixed(2);
+  if(atItem&&atItem.valor_unit&&qtde) document.getElementById("ne2-valor").value=(atItem.valor_unit*qtde).toFixed(2);
 }
 
 function abrirModalNovaExec(){
-  // Popular selects CPL e SIM
-  const cpls=[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort();
-  const sims=[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort();
-  const cplSel=document.getElementById("ne2-cpl");
-  const simSel=document.getElementById("ne2-sim");
-  cplSel.innerHTML='<option value="">Selecione...</option>'+cpls.map(c=>`<option value="${c}">${c}</option>`).join("");
-  simSel.innerHTML='<option value="">Selecione...</option>'+sims.map(s=>`<option value="${s}">${s}</option>`).join("");
+  // Popular lista de itens (sem duplicatas)
+  const itensUnicos=[...new Map(atasItens.filter(r=>r.status!=="ENCERRADO").map(r=>[r.item,r])).values()].sort((a,b)=>a.item.localeCompare(b.item));
+  const itemSel=document.getElementById("ne2-item");
+  itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.item}">${r.item} (${r.cpl} / ${r.sim})</option>`).join("");
+  document.getElementById("ne2-cpl").value="";
+  document.getElementById("ne2-sim").value="";
   ["ne2-unidade","ne2-qtde","ne2-valor","ne2-empenho","ne2-data-af","ne2-prev","ne2-dt-entrega","ne2-nf"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
-  document.getElementById("ne2-item").innerHTML='<option value="">Selecione CPL e SIM primeiro...</option>';
   document.getElementById("ne2-msg").className="fmsg";
   document.getElementById("modal-nova-exec").classList.add("active");
 }
