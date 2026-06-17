@@ -504,7 +504,7 @@ tr:hover td{background:var(--surface2)}
             <tr>
               <th>📬</th><th>Protocolo</th><th>Data</th><th>Unidade</th><th>Equipamento</th>
               <th>Patrimônio</th><th>Categoria</th><th>Serviço</th><th>Problema</th>
-              <th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th>
+              <th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th><th>PDF</th>
             </tr>
           </thead>
           <tbody id="chamados-body"></tbody>
@@ -1365,9 +1365,188 @@ function filtrarChamados(){
       <td style="font-size:11px">${ctrl.empresa||"—"}</td>
       <td style="font-size:11px">${ctrl.os||"—"}</td>
       <td class="td-trunc" style="max-width:160px" title="${ctrl.feito}">${ctrl.feito||"—"}</td>
-      <td><button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button></td>
+      <td><button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button></td>
+    <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'") }')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
     </tr>`;
   }).join("");
+}
+
+async function marcarTodosChamados(){
+  const visiveis=document.querySelectorAll('#chamados-body tr');
+  if(!visiveis.length) return;
+  if(!confirm(`Marcar ${visiveis.length} chamados visíveis como enviados?`)) return;
+  // Pegar protocolos dos checkboxes desmarcados
+  const checkboxes=document.querySelectorAll('#chamados-body input[type=checkbox]:not(:checked)');
+  const btn=document.querySelector('[onclick="marcarTodosChamados()"]');
+  btn.disabled=true;btn.textContent="Marcando...";
+  for(const cb of checkboxes){
+    const proto=cb.closest('tr')?.querySelector('td:nth-child(2)')?.textContent?.trim();
+    if(!proto||proto==="—") continue;
+    const idx=controleRows.findIndex(r=>r.protocolo===proto);
+    const novo={protocolo:proto,status:"Em andamento",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
+    if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
+    cb.checked=true;
+  }
+  atualizarBadgeChamados();
+  filtrarChamados();
+  btn.disabled=false;btn.textContent="✅ Marcar todos";
+  alert("✓ Chamados marcados como enviados!");
+}
+
+function gerarPDFChamado(protocolo){
+  const r=chamadosRows.find(x=>x.protocolo===protocolo);
+  if(!r){alert("Chamado não encontrado.");return;}
+  const ctrl=getControle(protocolo);
+
+  const chk=(v)=>v?'(X)':'(  )';
+  const categorias=['Eletroeletrônico','Equipamento médico/odontológico','Mobiliário médico','Mobiliário geral','Outro'];
+  const cat=r.categoria||"";
+  const servicos=['Manutenção corretiva','Manutenção preventiva','Instalação','Desinstalação','Treinamento','Calibração','Outro'];
+  const serv=r.servico||"";
+  const prob=r.problema||"";
+  const rechamado=r.rechamado||"";
+
+  const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page{size:A4;margin:15mm 15mm 15mm 15mm}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:10px;color:#000}
+  .page{width:100%}
+  .header{display:flex;align-items:center;justify-content:center;margin-bottom:6px;position:relative}
+  .brasao{width:70px;height:60px;position:absolute;left:0}
+  .header-text{text-align:center}
+  .header-text .pref{font-size:11px;font-weight:bold}
+  .header-text .sec{font-size:10px}
+  table{width:100%;border-collapse:collapse;margin-bottom:4px}
+  td,th{border:1px solid #000;padding:3px 5px;vertical-align:top}
+  .titulo{text-align:center;font-weight:bold;font-size:10px;background:#e0e0e0;padding:4px}
+  .label{font-weight:bold;font-size:9px}
+  .rotulo{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:8px;font-weight:bold;text-align:center;width:16px;background:#e0e0e0;padding:2px}
+  .footer{text-align:center;font-size:8px;margin-top:8px;border-top:1px solid #000;padding-top:4px}
+  @media print{button{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <img src="${"https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg"}" class="brasao" alt="Brasão">
+    <div class="header-text">
+      <div class="pref">SECRETARIA DA SAÚDE</div>
+      <div class="sec">SEÇÃO DE UNIDADES E EQUIPAMENTOS - BENS PERMANENTES</div>
+    </div>
+  </div>
+
+  <table>
+    <tr>
+      <td colspan="2" class="titulo" style="width:65%">ORDEM DE SERVIÇO - MANUTENÇÃO DE BENS PERMANENTES</td>
+      <td style="width:15%"><span class="label">Nº OS:</span></td>
+      <td style="width:20%">${r.protocolo||""}</td>
+    </tr>
+  </table>
+
+  <table>
+    <tr>
+      <td rowspan="5" class="rotulo">Identificação da Unidade</td>
+      <td colspan="2"><span class="label">Unidade Solicitante:</span> ${r.unidade||""}</td>
+      <td><span class="label">Data da Solicitação:</span> ${r.data_solicitacao||r.carimbo?.slice(0,10)||""}</td>
+    </tr>
+    <tr><td colspan="3"><span class="label">Endereço:</span> ${""}</td></tr>
+    <tr><td colspan="3"><span class="label">Telefone:</span> ${""}</td></tr>
+    <tr>
+      <td colspan="2">
+        <span class="label">Grau de Urgência</span><br>
+        (  ) P1 &nbsp;&nbsp; (X) P2 &nbsp;&nbsp; (  ) P3
+      </td>
+      <td style="font-size:8px">P1 - Interrupção de Atendimento<br>P2 - Atendimento parcialmente prejudicado<br>P3 - Pouco urgente</td>
+    </tr>
+    <tr><td colspan="3"><span class="label">Responsável pela abertura do chamado:</span> ${""}</td></tr>
+  </table>
+
+  <table>
+    <tr>
+      <td colspan="4"><span class="label">Número Patrimônio (informação obrigatória):</span> ${r.patrimonio||""}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><span class="label">Nome do equipamento:</span><br>${r.equipamento||""}</td>
+      <td colspan="2"><span class="label">Fabricante:</span><br>${r.fabricante||""}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><span class="label">Modelo:</span> ${r.fabricante||""}</td>
+      <td colspan="2"><span class="label">Nº de Série:</span> ${r.serie||""}</td>
+    </tr>
+  </table>
+
+  <table>
+    <tr>
+      <td rowspan="8" class="rotulo">Dados do Bem Permanente</td>
+      <td colspan="3"><span class="label">Categoria</span></td>
+    </tr>
+    ${categorias.map(c=>`<tr><td colspan="3">${chk(cat===c)} ${c}</td></tr>`).join("")}
+    <tr>
+      <td colspan="3">
+        <span class="label">Serviço Solicitado</span><br>
+        ${servicos.map(s=>`${chk(serv===s)} ${s}`).join(" &nbsp; ")}
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
+        <span class="label">Problema apresentado:</span>
+        ${chk(prob==="No bem permanente")} No bem permanente &nbsp;&nbsp;
+        ${chk(prob==="No acessório")} No acessório
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
+        <span class="label">Descrição completa e detalhada do problema:</span><br><br>
+        <div style="min-height:60px;padding:4px">${r.descricao||""}</div>
+      </td>
+    </tr>
+  </table>
+
+  <table>
+    <tr>
+      <td colspan="2">
+        <span class="label">É Rechamado?</span><br>
+        ${chk(rechamado==="Sim")} Sim - Data do chamado anterior: _______________ &nbsp;&nbsp;&nbsp;
+        ${chk(rechamado!=="Sim")} Não
+      </td>
+    </tr>
+  </table>
+
+  <table>
+    <tr>
+      <td rowspan="6" class="rotulo">Pendências</td>
+      <td style="background:#e0e0e0"><span class="label">Controle de Manutenção Externa - Retirada de bem permanente</span></td>
+      <td><span class="label">Controle Nº:</span></td>
+    </tr>
+    <tr><td colspan="2"><span class="label">Acessórios acompanhantes:</span><br><br><br></td></tr>
+    <tr><td colspan="2"><span class="label">Data da retirada:</span> ____/____/_______ às _____:_____ hs</td></tr>
+    <tr><td colspan="2"><span class="label">Data da devolução:</span> ____/____/_______ às _____:_____ hs</td></tr>
+    <tr><td colspan="2"><span class="label">Recebido por:</span><br><br></td></tr>
+    <tr><td colspan="2"><span class="label">Nome da Empresa e o técnico que executou a ação:</span><br><br></td></tr>
+  </table>
+
+  <div class="footer">
+    PALÁCIO DOS TROPEIROS – 2º andar<br>
+    Av. Eng. Carlos Reinaldo Mendes 3.041 – Alto da Boa Vista – CEP 18013-280 – Sorocaba – SP<br>
+    Fone: (15) 3238 2421 - e-mail: sueq.equipamentos@sorocaba.sp.gov.br
+  </div>
+
+  <div style="text-align:center;margin-top:12px">
+    <button onclick="window.print()" style="padding:8px 24px;background:#378ADD;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const win=window.open("","_blank","width=800,height:900");
+  win.document.write(html);
+  win.document.close();
 }
 
 async function marcarChamadoAberto(protocolo, marcado){
