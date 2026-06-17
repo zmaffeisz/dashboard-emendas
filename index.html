@@ -174,26 +174,13 @@ tr:hover td{background:var(--surface2)}
 <div class="tabs">
   <div class="tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
   <div class="tab" onclick="showTab('consulta')">🔍 Consulta rápida</div>
-  <div class="tab" onclick="showTab('chamados')">📋 Chamados</div>
+  <div class="tab" onclick="showTab('chamados')">📋 Chamados <span id="badge-chamados" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
-  <div class="tab tab-locked" id="tab-btn-atas" onclick="tentarAba('atas')">📄 ATAs / Contratos 🔒</div>
+  <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
-  <div class="tab tab-locked" id="tab-btn-nova-emenda" onclick="tentarAba('nova-emenda')">➕ Nova emenda 🔒</div>
-  <div class="tab tab-locked" id="tab-btn-novo-item" onclick="tentarAba('novo-item')">📦 Novo item 🔒</div>
-  <div class="tab tab-locked" id="tab-btn-atualizar-status" onclick="tentarAba('atualizar-status')">✏️ Atualizar status 🔒</div>
-</div>
-
-<div class="modal-overlay" id="modal-senha" onclick="fecharModalFora(event)">
-  <div class="modal-box">
-    <div class="modal-title">🔒 Área restrita</div>
-    <div class="modal-sub">Digite a senha para acessar as funções de edição.</div>
-    <input type="password" class="modal-input" id="input-senha" placeholder="Senha..." onkeydown="if(event.key==='Enter')verificarSenha()">
-    <div class="modal-err" id="modal-err">Senha incorreta.</div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="fecharModal()">Cancelar</button>
-      <button class="btn-primary" onclick="verificarSenha()">Entrar</button>
-    </div>
-  </div>
+  <div class="tab" id="tab-btn-nova-emenda" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
+  <div class="tab" id="tab-btn-novo-item" onclick="showTab('novo-item')">📦 Novo item</div>
+  <div class="tab" id="tab-btn-atualizar-status" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
 </div>
 
 <div class="container">
@@ -482,6 +469,15 @@ tr:hover td{background:var(--surface2)}
         </select>
       </div>
       <div class="fg">
+        <div class="fg-label">Período <button onclick="clearF('fc-periodo')">✕</button></div>
+        <select id="fc-periodo" onchange="filtrarChamados()">
+          <option value="12">Último ano</option>
+          <option value="6">Últimos 6 meses</option>
+          <option value="3">Últimos 3 meses</option>
+          <option value="0">Todos</option>
+        </select>
+      </div>
+      <div class="fg">
         <div class="fg-label">Buscar <button onclick="clearF('fc-busca')">✕</button></div>
         <input type="text" id="fc-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamados()">
       </div>
@@ -506,7 +502,7 @@ tr:hover td{background:var(--surface2)}
         <table>
           <thead>
             <tr>
-              <th>Protocolo</th><th>Data</th><th>Unidade</th><th>Equipamento</th>
+              <th>📬</th><th>Protocolo</th><th>Data</th><th>Unidade</th><th>Equipamento</th>
               <th>Patrimônio</th><th>Categoria</th><th>Serviço</th><th>Problema</th>
               <th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th>
             </tr>
@@ -1017,11 +1013,11 @@ async function checkAuth(){
     const tabUsuarios=document.getElementById("tab-btn-usuarios");
     if(tabUsuarios) tabUsuarios.style.display="block";
   }
-  // Restringir abas de edição para visualizadores
+  // Ocultar abas de edição para visualizadores
   if(profile?.papel === 'visualizador'){
     ["tab-btn-nova-emenda","tab-btn-novo-item","tab-btn-atualizar-status","tab-btn-atas"].forEach(id=>{
       const el=document.getElementById(id);
-      if(el){el.style.display="none";}
+      if(el) el.style.display="none";
     });
   }
   return true;
@@ -1222,6 +1218,7 @@ async function loadChamados(){
 
     popularFiltrosChamados();
     filtrarChamados();
+    atualizarBadgeChamados();
     document.getElementById("chamados-loading").style.display="none";
     document.getElementById("chamados-main").style.display="block";
   }catch(e){
@@ -1289,14 +1286,32 @@ function clearAllChamados(){
   filtrarChamados();
 }
 
+function atualizarBadgeChamados(){
+  const naoEnviados=chamadosRows.filter(r=>getControle(r.protocolo).status==="Aberto").length;
+  const badge=document.getElementById("badge-chamados");
+  if(badge){
+    if(naoEnviados>0){badge.textContent=naoEnviados;badge.style.display="inline";}
+    else badge.style.display="none";
+  }
+}
+
 function filtrarChamados(){
   const un=document.getElementById("fc-unidade")?.value||"";
   const cat=document.getElementById("fc-categoria")?.value||"";
   const serv=document.getElementById("fc-servico")?.value||"";
   const st=document.getElementById("fc-status")?.value||"";
   const busca=document.getElementById("fc-busca")?.value||"";
+  const meses=parseInt(document.getElementById("fc-periodo")?.value||"12");
+
+  const cutoff=new Date();
+  if(meses>0) cutoff.setMonth(cutoff.getMonth()-meses);
 
   let rows=chamadosRows.filter(r=>{
+    // Filtro de período
+    if(meses>0){
+      const d=parseDataBR(r.carimbo?.slice(0,10))||parseDataBR(r.data_solicitacao);
+      if(d&&d<cutoff) return false;
+    }
     if(un&&r.unidade!==un) return false;
     if(cat&&r.categoria!==cat) return false;
     if(serv&&r.servico!==serv) return false;
@@ -1320,9 +1335,16 @@ function filtrarChamados(){
   document.getElementById("chamados-count").textContent=`${total} chamados`;
 
   document.getElementById("chamados-body").innerHTML=rows.map(r=>{
-    const ctrl=getControle(r.protocolo);
     const temAC=acRows.some(a=>a.patrimonio&&a.patrimonio===r.patrimonio);
-    return`<tr>
+    const ctrl=getControle(r.protocolo);
+    const aberto=ctrl.status==="Aberto";
+    return`<tr style="${aberto?'background:var(--amber-bg)':''}">
+      <td style="text-align:center">
+        <input type="checkbox" ${aberto?'':'checked'} 
+          onchange="marcarChamadoAberto('${r.protocolo.replace(/'/g,"\'")}', this.checked)"
+          title="${aberto?'Marcar como enviado à empresa':'Chamado já enviado'}"
+          style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
+      </td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.data_solicitacao||r.carimbo?.slice(0,10)||"—"}</td>
       <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
@@ -1339,6 +1361,29 @@ function filtrarChamados(){
       <td><button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button></td>
     </tr>`;
   }).join("");
+}
+
+async function marcarChamadoAberto(protocolo, marcado){
+  // marcado=true = checkbox checked = chamado enviado (Em andamento)
+  // marcado=false = desmarcado = voltou para Aberto
+  const novoStatus = marcado ? "Em andamento" : "Aberto";
+  const dados = {
+    acao: "salvar_controle",
+    protocolo,
+    status: novoStatus,
+    data_atendimento: "",
+    empresa: "",
+    os: "",
+    feito: "",
+    obs: ""
+  };
+  // Atualizar localmente
+  const idx = controleRows.findIndex(r=>r.protocolo===protocolo);
+  const novo = {protocolo, status:novoStatus, data_atendimento:"", empresa:"", os:"", feito:"", obs:""};
+  if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
+  await enviarViaGet({...dados, script_url: CHAMADOS_SCRIPT_URL});
+  atualizarBadgeChamados();
+  filtrarChamados();
 }
 
 let _chamadoAtual = null;
