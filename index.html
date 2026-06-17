@@ -1456,8 +1456,8 @@ function diasParaVencer(vencimento){
 }
 
 function renderAlertas(){
-  const vencendo=atasItens.filter(r=>diasParaVencer(r.vencimento)<=90&&diasParaVencer(r.vencimento)>0&&r.status!=="ENCERRADO");
-  const encerrados=atasItens.filter(r=>diasParaVencer(r.vencimento)<0&&r.status!=="ENCERRADO");
+  const vencendo=atasItens.filter(r=>diasParaVencer(r.vencimento)<=90&&diasParaVencer(r.vencimento)>0&&!r.status?.toUpperCase().startsWith("ENCERRADO"));
+  const encerrados=atasItens.filter(r=>diasParaVencer(r.vencimento)<0&&!r.status?.toUpperCase().startsWith("ENCERRADO"));
   let html="";
   if(encerrados.length){
     html+=`<div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:.5rem;font-size:13px">
@@ -1903,7 +1903,8 @@ async function confirmarEncerramento(){
   await enviarViaGet({acao:"atualizar_ata_status",..._encerrarKey,status_contrato:"ENCERRADO"+(motivo?" - "+motivo:""),vencimento:""});
   const at=atasItens.find(r=>r.cpl===_encerrarKey.cpl&&r.sim===_encerrarKey.sim&&r.item===_encerrarKey.item);
   if(at){at.status="ENCERRADO"+(motivo?" - "+motivo:"");}
-  filtrarAtas();renderAlertas();
+  filtrarAtas();
+  renderAlertas();
   showMsg("enc","✓ Contrato encerrado!","ok");
   btn.disabled=false;btn.textContent="⛔ Encerrar";
   setTimeout(()=>document.getElementById("modal-encerrar").classList.remove("active"),1500);
