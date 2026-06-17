@@ -173,6 +173,9 @@ tr:hover td{background:var(--surface2)}
 <div class="tabs">
   <div class="tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
   <div class="tab" onclick="showTab('consulta')">🔍 Consulta rápida</div>
+  <div class="tab" onclick="showTab('chamados')">📋 Chamados</div>
+  <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
+  <div class="tab" onclick="showTab('atas')">📄 ATAs / Contratos</div>
   <div class="tab tab-locked" id="tab-btn-nova-emenda" onclick="tentarAba('nova-emenda')">➕ Nova emenda 🔒</div>
   <div class="tab tab-locked" id="tab-btn-novo-item" onclick="tentarAba('novo-item')">📦 Novo item 🔒</div>
   <div class="tab tab-locked" id="tab-btn-atualizar-status" onclick="tentarAba('atualizar-status')">✏️ Atualizar status 🔒</div>
@@ -447,14 +450,368 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- ══════════════════════ CHAMADOS ══════════════════════ -->
+<div id="panel-chamados" class="panel">
+  <div id="chamados-loading" class="loading"><span class="spinner"></span>Carregando chamados...</div>
+  <div id="chamados-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Unidade <button onclick="clearF('fc-unidade')">✕</button></div>
+        <select id="fc-unidade" onchange="filtrarChamados()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Categoria <button onclick="clearF('fc-categoria')">✕</button></div>
+        <select id="fc-categoria" onchange="filtrarChamados()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Serviço <button onclick="clearF('fc-servico')">✕</button></div>
+        <select id="fc-servico" onchange="filtrarChamados()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('fc-status')">✕</button></div>
+        <select id="fc-status" onchange="filtrarChamados()">
+          <option value="">Todos</option>
+          <option>Aberto</option>
+          <option>Em andamento</option>
+          <option>Concluído</option>
+          <option>Pendente</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('fc-busca')">✕</button></div>
+        <input type="text" id="fc-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamados()">
+      </div>
+      <button class="clear-btn" onclick="clearAllChamados()">✕ Limpar</button>
+    </div>
+
+    <!-- Métricas chamados -->
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cm-total">—</div><div class="metric-sub">chamados</div></div>
+      <div class="metric"><div class="metric-label">Abertos</div><div class="metric-value" id="cm-abertos" style="color:var(--red)">—</div><div class="metric-sub">sem atendimento</div></div>
+      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="cm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" id="cm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
+      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="cm-pendentes" style="color:var(--purple)">—</div><div class="metric-sub">com pendência</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Chamados</span>
+        <span class="table-hdr-count" id="chamados-count">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Protocolo</th><th>Data</th><th>Unidade</th><th>Equipamento</th>
+              <th>Patrimônio</th><th>Categoria</th><th>Serviço</th><th>Problema</th>
+              <th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="chamados-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal de atualização de chamado -->
+    <div class="modal-overlay" id="modal-chamado" onclick="fecharModalChamadoFora(event)">
+      <div class="modal-box" style="width:500px">
+        <div class="modal-title">✏️ Atualizar chamado</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="mc-info"></div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group full">
+            <div class="form-label">Status *</div>
+            <select id="mc-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+              <option value="Aberto">Aberto</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Concluído">Concluído</option>
+              <option value="Pendente">Pendente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Data do atendimento</div>
+            <input type="date" id="mc-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Empresa</div>
+            <input type="text" id="mc-empresa" placeholder="Nome da empresa">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Nº OS</div>
+            <input type="text" id="mc-os" placeholder="ex: OS 1234">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">O que foi feito</div>
+            <input type="text" id="mc-feito" placeholder="Descrição do atendimento">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Observação</div>
+            <input type="text" id="mc-obs" placeholder="Observações adicionais">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarControleChamado()">Salvar</button>
+          <button class="btn-secondary" onclick="fecharModalChamado()">Cancelar</button>
+          <span id="mc-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ INVENTÁRIO AC ══════════════════════ -->
+<div id="panel-inventario-ac" class="panel">
+  <div id="ac-loading" class="loading"><span class="spinner"></span>Carregando inventário...</div>
+  <div id="ac-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Estabelecimento <button onclick="clearF('fa-estab')">✕</button></div>
+        <select id="fa-estab" onchange="filtrarAC()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Situação <button onclick="clearF('fa-situacao')">✕</button></div>
+        <select id="fa-situacao" onchange="filtrarAC()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Marca <button onclick="clearF('fa-marca')">✕</button></div>
+        <select id="fa-marca" onchange="filtrarAC()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Contrato <button onclick="clearF('fa-contrato')">✕</button></div>
+        <select id="fa-contrato" onchange="filtrarAC()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('fa-busca')">✕</button></div>
+        <input type="text" id="fa-busca" placeholder="patrimônio, sala, modelo..." oninput="filtrarAC()">
+      </div>
+      <button class="clear-btn" onclick="clearAllAC()">✕ Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="ac-total">—</div><div class="metric-sub">equipamentos</div></div>
+      <div class="metric"><div class="metric-label">Com contrato</div><div class="metric-value" id="ac-contrato" style="color:var(--green)">—</div><div class="metric-sub">vigente</div></div>
+      <div class="metric"><div class="metric-label">Com chamado aberto</div><div class="metric-value" id="ac-chamado-aberto" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric"><div class="metric-label">Estabelecimentos</div><div class="metric-value" id="ac-estabs">—</div><div class="metric-sub">unidades</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Inventário de Ar Condicionado</span>
+        <span class="table-hdr-count" id="ac-count">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº</th><th>Situação</th><th>Estabelecimento</th><th>Sala</th>
+              <th>Patrimônio</th><th>Ano</th><th>Marca</th><th>Modelo</th>
+              <th>BTU</th><th>Tipo</th><th>Contrato</th><th>Chamados</th>
+            </tr>
+          </thead>
+          <tbody id="ac-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ ATAS ══════════════════════ -->
+<div id="panel-atas" class="panel">
+  <div id="atas-loading" class="loading"><span class="spinner"></span>Carregando ATAs...</div>
+  <div id="atas-main" style="display:none">
+
+    <!-- Alertas de vencimento -->
+    <div id="atas-alertas" style="margin-bottom:1rem"></div>
+
+    <!-- Filtros -->
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">CPL <button onclick="clearF('fat-cpl')">✕</button></div>
+        <select id="fat-cpl" onchange="filtrarAtas()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">SIM <button onclick="clearF('fat-sim')">✕</button></div>
+        <select id="fat-sim" onchange="filtrarAtas()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Empresa <button onclick="clearF('fat-empresa')">✕</button></div>
+        <select id="fat-empresa" onchange="filtrarAtas()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('fat-status')">✕</button></div>
+        <select id="fat-status" onchange="filtrarAtas()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar item <button onclick="clearF('fat-busca')">✕</button></div>
+        <input type="text" id="fat-busca" placeholder="item, marca..." oninput="filtrarAtas()">
+      </div>
+      <button class="clear-btn" onclick="clearAllAtas()">✕ Limpar</button>
+    </div>
+
+    <!-- Métricas -->
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Itens de ata</div><div class="metric-value" id="at-total">—</div><div class="metric-sub">cadastrados</div></div>
+      <div class="metric"><div class="metric-label">Saldo total</div><div class="metric-value" id="at-saldo" style="color:var(--green)">—</div><div class="metric-sub">unidades disponíveis</div></div>
+      <div class="metric"><div class="metric-label">Executado</div><div class="metric-value" id="at-exec">—</div><div class="metric-sub">unidades solicitadas</div></div>
+      <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="at-vence" style="color:var(--red)">—</div><div class="metric-sub">contratos</div></div>
+    </div>
+
+    <!-- Tabela de itens das ATAs -->
+    <div class="table-card" style="margin-bottom:1.25rem">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Itens das ATAs / Contratos</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="atas-count">—</span>
+          <button onclick="abrirModalNovaAta()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Nova ATA</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>CPL</th><th>SIM</th><th>Item</th><th>Marca/Modelo</th>
+              <th>Qtde contratada</th><th>Executado</th><th>Saldo</th>
+              <th>Valor unit.</th><th>Vencimento</th><th>Status</th>
+              <th>Empresa</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="atas-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tabela de execuções -->
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Execuções / Solicitações</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="exec-count">—</span>
+          <button onclick="abrirModalNovaExec()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">+ Nova solicitação</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>CPL</th><th>SIM</th><th>Item</th><th>Unidade</th>
+              <th>Qtde</th><th>Valor total</th><th>Empenho</th>
+              <th>Data AF</th><th>Prev. entrega</th><th>Dt. entrega</th>
+              <th>NF</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="exec-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Nova ATA -->
+    <div class="modal-overlay" id="modal-nova-ata" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:560px">
+        <div class="modal-title">📄 Cadastrar item de ATA</div>
+        <div class="form-grid" style="margin-top:.875rem">
+          <div class="form-group"><div class="form-label">CPL *</div><input type="text" id="na-cpl" placeholder="ex: CPL 455/2023"></div>
+          <div class="form-group"><div class="form-label">SIM (nº contrato) *</div><input type="text" id="na-sim" placeholder="ex: SIM 578/2025"></div>
+          <div class="form-group full"><div class="form-label">Item *</div><input type="text" id="na-item" placeholder="ex: AR CONDICIONADO INVERTER 24.000 BTU"></div>
+          <div class="form-group"><div class="form-label">Marca/Modelo</div><input type="text" id="na-marca" placeholder="ex: AGRATTO LCST24F"></div>
+          <div class="form-group"><div class="form-label">Empresa</div><input type="text" id="na-empresa" placeholder="ex: AGASERV"></div>
+          <div class="form-group"><div class="form-label">Qtde contratada *</div><input type="number" id="na-qtde" placeholder="ex: 46"></div>
+          <div class="form-group"><div class="form-label">Valor unitário (R$)</div><input type="number" id="na-valor" placeholder="ex: 3749.82" step="0.01"></div>
+          <div class="form-group"><div class="form-label">Vencimento</div><input type="date" id="na-vencimento"></div>
+          <div class="form-group"><div class="form-label">Status do contrato</div>
+            <input list="status-ata-opts" id="na-status" placeholder="ex: VIGENTE">
+            <datalist id="status-ata-opts">
+              <option value="VIGENTE"><option value="ENCERRADO"><option value="SUSPENSO"><option value="PRORROGADO">
+            </datalist>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarNovaAta()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-nova-ata').classList.remove('active')">Cancelar</button>
+          <span id="na-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Nova Execução -->
+    <div class="modal-overlay" id="modal-nova-exec" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:560px">
+        <div class="modal-title">📦 Nova solicitação / execução</div>
+        <div class="form-grid" style="margin-top:.875rem">
+          <div class="form-group">
+            <div class="form-label">CPL *</div>
+            <select id="ne2-cpl" onchange="popularItensExec()"><option value="">Selecione...</option></select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">SIM *</div>
+            <select id="ne2-sim" onchange="popularItensExec()"><option value="">Selecione...</option></select>
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Item *</div>
+            <select id="ne2-item"><option value="">Selecione CPL e SIM primeiro...</option></select>
+          </div>
+          <div class="form-group full"><div class="form-label">Unidade *</div><input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU"></div>
+          <div class="form-group"><div class="form-label">Qtde *</div><input type="number" id="ne2-qtde" placeholder="ex: 2" oninput="calcValorExec()"></div>
+          <div class="form-group"><div class="form-label">Valor total (R$)</div><input type="number" id="ne2-valor" placeholder="Calculado auto" step="0.01"></div>
+          <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="ne2-empenho" placeholder="ex: 10296/2025"></div>
+          <div class="form-group"><div class="form-label">Data AF</div><input type="date" id="ne2-data-af"></div>
+          <div class="form-group"><div class="form-label">Prev. entrega</div><input type="date" id="ne2-prev"></div>
+          <div class="form-group"><div class="form-label">Dt. entrega</div><input type="date" id="ne2-dt-entrega"></div>
+          <div class="form-group"><div class="form-label">NF</div><input type="text" id="ne2-nf" placeholder="ex: 2452"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarNovaExec()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-nova-exec').classList.remove('active')">Cancelar</button>
+          <span id="ne2-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Editar Execução -->
+    <div class="modal-overlay" id="modal-edit-exec" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:480px">
+        <div class="modal-title">✏️ Atualizar execução</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ee-info"></div>
+        <div class="form-grid">
+          <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="ee-empenho"></div>
+          <div class="form-group"><div class="form-label">Data AF</div><input type="date" id="ee-data-af"></div>
+          <div class="form-group"><div class="form-label">Prev. entrega</div><input type="date" id="ee-prev"></div>
+          <div class="form-group"><div class="form-label">Dt. entrega</div><input type="date" id="ee-dt-entrega"></div>
+          <div class="form-group full"><div class="form-label">NF</div><input type="text" id="ee-nf"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarEditExec()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-edit-exec').classList.remove('active')">Cancelar</button>
+          <span id="ee-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <script>
+const AC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNv3eDo49IS5Ouj16SK8mnxAHbN-sSIEVX-VyjwNqD0ey43C_-NYb3Ilky3zol-g/pub?gid=401272592&single=true&output=csv";
+const CHAMADOS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2XwYGAoxuCh_A-mZOAFsaohN1Rq1czObyXFBn7T7Jv-WlppmmiCejK0zzsbOod1i9YhetzvPzWqve/pub?gid=1633672398&single=true&output=csv";
+const CONTROLE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2XwYGAoxuCh_A-mZOAFsaohN1Rq1czObyXFBn7T7Jv-WlppmmiCejK0zzsbOod1i9YhetzvPzWqve/pub?gid=2129580133&single=true&output=csv";
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=401356519&single=true&output=csv";
+const ATAS_ITENS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=1903295047&single=true&output=csv";
+const ATAS_EXEC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=330213664&single=true&output=csv";
+const CHAMADOS_SCRIPT_URL = "AGUARDANDO_URL_APPS_SCRIPT_CHAMADOS";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydum9CSR96g3NEy1lHRT1avj93xe3BOw9OZjkcKFDLNDcwnDQCoPAbW7Iyvgl5k5FItA/exec";
 
 let allRows = [];
-const SENHA_HASH = "373916b5eeb27bf7b2a4f557e0f12964a5e3fdce781526cb6b313d7c30765960";
+let acRows = [];
+let atasItens = [];
+let atasExec = [];
+let chamadosRows = [];
+let controleRows = [];
+const SENHA = "patikolindo";
 let autenticado = false;
 let filtered = [];
 let searchType = "todos";
@@ -528,11 +885,9 @@ function tentarAba(name){
   window._abaAlvo = name;
 }
 
-async function verificarSenha(){
+function verificarSenha(){
   const v=document.getElementById("input-senha").value;
-  const hashDigitado = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
-  const hashHex = Array.from(new Uint8Array(hashDigitado)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  if(hashHex===SENHA_HASH){
+  if(v===SENHA){
     autenticado=true;
     fecharModal();
     // Remover cadeados das abas
@@ -559,11 +914,14 @@ function fecharModalFora(e){
 }
 
 function showTab(name){
-  const names=["dashboard","consulta","nova-emenda","novo-item","atualizar-status"];
+  const names=["dashboard","consulta","chamados","inventario-ac","atas","nova-emenda","novo-item","atualizar-status"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("panel-"+name).classList.add("active");
   if(name==="novo-item"||name==="atualizar-status") popularSelectsEdicao();
+  if(name==="chamados"&&!chamadosRows.length) loadChamados();
+  if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
+  if(name==="atas"&&!atasItens.length) loadAtas();
 }
 
 // ═══ LOAD ═══
@@ -590,6 +948,613 @@ function exportarExcel(){
   const wb={SheetNames:["Emendas"],Sheets:{Emendas:ws}};
   const data=new Date().toLocaleDateString("pt-BR").replace(/\//g,"-");
   XLSX.writeFile(wb,"emendas_filtradas_"+data+".xlsx");
+}
+
+// ═══ CARREGAR CHAMADOS E AC ═══
+async function loadChamados(){
+  document.getElementById("chamados-loading").style.display="block";
+  document.getElementById("chamados-main").style.display="none";
+  try{
+    // Carregar chamados
+    const r1=await fetch(CHAMADOS_CSV_URL);
+    const t1=await r1.text();
+    const p1=Papa.parse(t1,{header:true,skipEmptyLines:true});
+    chamadosRows=p1.data.filter(r=>r["Protocolo"]||r["Carimbo de data/hora"]).map(r=>({
+      protocolo:(r["Protocolo"]||r["Nº protocolo"]||"").trim(),
+      carimbo:(r["Carimbo de data/hora"]||"").trim(),
+      data_solicitacao:(r["Data da solicitação:"]||r["Data da solicitação"]||"").trim(),
+      unidade:(r["Unidade solicitante:"]||r["Unidade solicitante"]||"").trim(),
+      equipamento:(r["Descrição do bem:"]||r["Descrição do bem"]||"").trim(),
+      fabricante:(r["Fabricante/modelo:"]||r["Fabricante/modelo"]||"").trim(),
+      serie:(r["Nº de série:"]||r["Nº de série"]||"").trim(),
+      patrimonio:(r["Número Patrimônio (informação obrigatória)"]||r["Nº Patrimônio"]||"").trim(),
+      categoria:(r["Categoria:"]||r["Categoria"]||"").trim(),
+      servico:(r["Serviço solicitado:"]||r["Serviço solicitado"]||"").trim(),
+      problema:(r["Problema apresentado:"]||r["Problema apresentado"]||"").trim(),
+      descricao:(r["Descrição completa e detalhada do problema:"]||r["Descrição completa"]||"").trim(),
+      rechamado:(r["É rechamado?"]||"").trim(),
+      observacao:(r["OBSERVAÇÕES"]||r["Observações"]||"").trim(),
+    }));
+
+    // Carregar controle
+    try{
+      const r2=await fetch(CONTROLE_CSV_URL);
+      const t2=await r2.text();
+      const p2=Papa.parse(t2,{header:true,skipEmptyLines:true});
+      controleRows=p2.data.filter(r=>r["Protocolo"]).map(r=>({
+        protocolo:(r["Protocolo"]||"").trim(),
+        status:(r["Status"]||"Aberto").trim(),
+        data_atendimento:(r["Data Atendimento"]||"").trim(),
+        empresa:(r["Empresa"]||"").trim(),
+        os:(r["Nº OS"]||"").trim(),
+        feito:(r["O que foi feito"]||"").trim(),
+        obs:(r["Observação"]||"").trim(),
+      }));
+    }catch(e){controleRows=[];}
+
+    popularFiltrosChamados();
+    filtrarChamados();
+    document.getElementById("chamados-loading").style.display="none";
+    document.getElementById("chamados-main").style.display="block";
+  }catch(e){
+    document.getElementById("chamados-loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro ao carregar chamados: ${e.message}</div>`;
+  }
+}
+
+async function loadAC(){
+  document.getElementById("ac-loading").style.display="block";
+  document.getElementById("ac-main").style.display="none";
+  try{
+    const r=await fetch(AC_CSV_URL);
+    const t=await r.text();
+    const p=Papa.parse(t,{header:false,skipEmptyLines:true});
+    const rows=p.data.slice(3); // pular 3 linhas de cabeçalho
+    acRows=rows.filter(r=>r[0]&&!isNaN(r[0])).map(r=>({
+      num:r[0]||"",
+      situacao:(r[1]||"").trim(),
+      estabelecimento:(r[2]||"").trim(),
+      endereco:(r[3]||"").trim(),
+      sala:(r[4]||"").trim(),
+      patrimonio:String(r[5]||"").trim(),
+      ano_fab:(r[6]||"").trim(),
+      marca:(r[7]||"").trim(),
+      modelo:(r[8]||"").trim(),
+      serie:(r[9]||"").trim(),
+      btu:(r[10]||"").trim(),
+      qf:(r[11]||"").trim(),
+      tipo:(r[12]||"").trim(),
+      contrato:(r[13]||"").trim(),
+    }));
+    popularFiltrosAC();
+    filtrarAC();
+    document.getElementById("ac-loading").style.display="none";
+    document.getElementById("ac-main").style.display="block";
+  }catch(e){
+    document.getElementById("ac-loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro: ${e.message}</div>`;
+  }
+}
+
+function getControle(protocolo){
+  return controleRows.find(r=>r.protocolo===protocolo)||{status:"Aberto",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
+}
+
+function statusBadgeChamado(status){
+  const m={
+    "Aberto":["var(--red-bg)","var(--red-text)"],
+    "Em andamento":["var(--amber-bg)","var(--amber-text)"],
+    "Concluído":["var(--green-bg)","var(--green-text)"],
+    "Pendente":["var(--purple-bg)","var(--purple-text)"],
+  };
+  const c=m[status]||["var(--gray-bg)","var(--gray-text)"];
+  return`<span class="badge" style="background:${c[0]};color:${c[1]}">${status}</span>`;
+}
+
+function popularFiltrosChamados(){
+  const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
+  sel("fc-unidade",[...new Set(chamadosRows.map(r=>r.unidade).filter(Boolean))].sort());
+  sel("fc-categoria",[...new Set(chamadosRows.map(r=>r.categoria).filter(Boolean))].sort());
+  sel("fc-servico",[...new Set(chamadosRows.map(r=>r.servico).filter(Boolean))].sort());
+}
+
+function clearAllChamados(){
+  ["fc-unidade","fc-categoria","fc-servico","fc-status","fc-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  filtrarChamados();
+}
+
+function filtrarChamados(){
+  const un=document.getElementById("fc-unidade")?.value||"";
+  const cat=document.getElementById("fc-categoria")?.value||"";
+  const serv=document.getElementById("fc-servico")?.value||"";
+  const st=document.getElementById("fc-status")?.value||"";
+  const busca=document.getElementById("fc-busca")?.value||"";
+
+  let rows=chamadosRows.filter(r=>{
+    if(un&&r.unidade!==un) return false;
+    if(cat&&r.categoria!==cat) return false;
+    if(serv&&r.servico!==serv) return false;
+    const ctrl=getControle(r.protocolo);
+    if(st&&ctrl.status!==st) return false;
+    if(busca&&!matchBusca([r.equipamento,r.patrimonio,r.descricao,r.protocolo,r.unidade].join(" "),busca)) return false;
+    return true;
+  });
+
+  // Métricas
+  const total=rows.length;
+  const abertos=rows.filter(r=>getControle(r.protocolo).status==="Aberto").length;
+  const andamento=rows.filter(r=>getControle(r.protocolo).status==="Em andamento").length;
+  const concluidos=rows.filter(r=>getControle(r.protocolo).status==="Concluído").length;
+  const pendentes=rows.filter(r=>getControle(r.protocolo).status==="Pendente").length;
+  document.getElementById("cm-total").textContent=total;
+  document.getElementById("cm-abertos").textContent=abertos;
+  document.getElementById("cm-andamento").textContent=andamento;
+  document.getElementById("cm-concluidos").textContent=concluidos;
+  document.getElementById("cm-pendentes").textContent=pendentes;
+  document.getElementById("chamados-count").textContent=`${total} chamados`;
+
+  document.getElementById("chamados-body").innerHTML=rows.map(r=>{
+    const ctrl=getControle(r.protocolo);
+    const temAC=acRows.some(a=>a.patrimonio&&a.patrimonio===r.patrimonio);
+    return`<tr>
+      <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.data_solicitacao||r.carimbo?.slice(0,10)||"—"}</td>
+      <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
+      <td class="td-trunc" title="${r.equipamento}">${r.equipamento||"—"}</td>
+      <td style="font-size:11px">${r.patrimonio||"—"}${temAC?' <span class="badge" style="background:var(--blue-bg);color:var(--blue-text)">AC</span>':''}</td>
+      <td style="font-size:11px">${r.categoria||"—"}</td>
+      <td style="font-size:11px">${r.servico||"—"}</td>
+      <td class="td-trunc" style="max-width:180px" title="${r.descricao}">${r.descricao||"—"}</td>
+      <td>${statusBadgeChamado(ctrl.status)}</td>
+      <td style="font-size:11px">${ctrl.data_atendimento||"—"}</td>
+      <td style="font-size:11px">${ctrl.empresa||"—"}</td>
+      <td style="font-size:11px">${ctrl.os||"—"}</td>
+      <td class="td-trunc" style="max-width:160px" title="${ctrl.feito}">${ctrl.feito||"—"}</td>
+      <td><button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button></td>
+    </tr>`;
+  }).join("");
+}
+
+let _chamadoAtual = null;
+function abrirModalChamado(protocolo, equip, unidade, patrimonio){
+  _chamadoAtual = protocolo;
+  const ctrl=getControle(protocolo);
+  document.getElementById("mc-info").textContent=`${protocolo} · ${equip} · ${unidade}${patrimonio?' · Pat: '+patrimonio:''}`;
+  document.getElementById("mc-status").value=ctrl.status||"Aberto";
+  document.getElementById("mc-data").value=ctrl.data_atendimento||"";
+  document.getElementById("mc-empresa").value=ctrl.empresa||"";
+  document.getElementById("mc-os").value=ctrl.os||"";
+  document.getElementById("mc-feito").value=ctrl.feito||"";
+  document.getElementById("mc-obs").value=ctrl.obs||"";
+  document.getElementById("mc-msg").className="fmsg";
+  document.getElementById("modal-chamado").classList.add("active");
+}
+
+function fecharModalChamado(){document.getElementById("modal-chamado").classList.remove("active")}
+function fecharModalChamadoFora(e){if(e.target===document.getElementById("modal-chamado"))fecharModalChamado()}
+
+async function salvarControleChamado(){
+  const protocolo=_chamadoAtual;
+  if(!protocolo) return;
+  const dados={
+    acao:"salvar_controle",
+    protocolo,
+    status:document.getElementById("mc-status").value,
+    data_atendimento:document.getElementById("mc-data").value,
+    empresa:document.getElementById("mc-empresa").value,
+    os:document.getElementById("mc-os").value,
+    feito:document.getElementById("mc-feito").value,
+    obs:document.getElementById("mc-obs").value,
+  };
+  const btn=document.querySelector("#modal-chamado .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  await enviarViaGet({...dados, script_url: CHAMADOS_SCRIPT_URL});
+  // Atualizar localmente
+  const idx=controleRows.findIndex(r=>r.protocolo===protocolo);
+  const novo={protocolo,status:dados.status,data_atendimento:dados.data_atendimento,empresa:dados.empresa,os:dados.os,feito:dados.feito,obs:dados.obs};
+  if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
+  filtrarChamados();
+  showMsg("mc","✓ Salvo!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>fecharModalChamado(),1500);
+}
+
+// ═══ INVENTÁRIO AC ═══
+function popularFiltrosAC(){
+  const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
+  sel("fa-estab",[...new Set(acRows.map(r=>r.estabelecimento).filter(Boolean))].sort());
+  sel("fa-situacao",[...new Set(acRows.map(r=>r.situacao).filter(Boolean))].sort());
+  sel("fa-marca",[...new Set(acRows.map(r=>r.marca).filter(Boolean))].sort());
+  sel("fa-contrato",[...new Set(acRows.map(r=>r.contrato).filter(Boolean))].sort());
+}
+
+function clearAllAC(){
+  ["fa-estab","fa-situacao","fa-marca","fa-contrato","fa-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  filtrarAC();
+}
+
+function filtrarAC(){
+  const estab=document.getElementById("fa-estab")?.value||"";
+  const sit=document.getElementById("fa-situacao")?.value||"";
+  const marca=document.getElementById("fa-marca")?.value||"";
+  const cont=document.getElementById("fa-contrato")?.value||"";
+  const busca=document.getElementById("fa-busca")?.value||"";
+
+  let rows=acRows.filter(r=>{
+    if(estab&&r.estabelecimento!==estab) return false;
+    if(sit&&r.situacao!==sit) return false;
+    if(marca&&r.marca!==marca) return false;
+    if(cont&&r.contrato!==cont) return false;
+    if(busca&&!matchBusca([r.patrimonio,r.sala,r.modelo,r.estabelecimento,r.serie].join(" "),busca)) return false;
+    return true;
+  });
+
+  const total=rows.length;
+  const comContrato=rows.filter(r=>r.situacao?.toUpperCase().includes("CONTRATO VIGENTE")).length;
+  const estabs=new Set(rows.map(r=>r.estabelecimento).filter(Boolean)).size;
+
+  // Cruzar com chamados abertos
+  const chamadosAbertosAC=rows.filter(r=>{
+    if(!r.patrimonio||r.patrimonio==="IMÓVEL LOCADO"||r.patrimonio==="SEM NUMERO") return false;
+    return chamadosRows.some(c=>{
+      const ctrl=getControle(c.protocolo);
+      return c.patrimonio===r.patrimonio && ctrl.status!=="Concluído";
+    });
+  }).length;
+
+  document.getElementById("ac-total").textContent=total;
+  document.getElementById("ac-contrato").textContent=comContrato;
+  document.getElementById("ac-chamado-aberto").textContent=chamadosAbertosAC;
+  document.getElementById("ac-estabs").textContent=estabs;
+  document.getElementById("ac-count").textContent=`${total} equipamentos`;
+
+  document.getElementById("ac-body").innerHTML=rows.map(r=>{
+    const chamadosEq=chamadosRows.filter(c=>c.patrimonio&&c.patrimonio===r.patrimonio);
+    const temAberto=chamadosEq.some(c=>getControle(c.protocolo).status!=="Concluído");
+    const sitColor=r.situacao?.toUpperCase().includes("CONTRATO VIGENTE")?"var(--green)":r.situacao?.toUpperCase().includes("BAIXA")?"var(--text3)":"var(--amber)";
+    return`<tr>
+      <td style="color:var(--text3);font-size:11px">${r.num}</td>
+      <td><span class="badge" style="background:${sitColor}22;color:${sitColor};font-size:10px">${r.situacao||"—"}</span></td>
+      <td style="white-space:nowrap;font-size:12px">${r.estabelecimento||"—"}</td>
+      <td style="font-size:12px">${r.sala||"—"}</td>
+      <td style="font-size:11px;font-weight:500">${r.patrimonio||"—"}</td>
+      <td style="font-size:11px">${r.ano_fab||"—"}</td>
+      <td style="font-size:12px">${r.marca||"—"}</td>
+      <td style="font-size:11px">${r.modelo||"—"}</td>
+      <td style="font-size:11px;text-align:right">${r.btu||"—"}</td>
+      <td style="font-size:11px">${r.tipo||"—"}</td>
+      <td style="font-size:11px">${r.contrato||"—"}</td>
+      <td style="font-size:11px">
+        ${chamadosEq.length===0?'<span style="color:var(--text3)">—</span>':
+          `<span style="color:${temAberto?'var(--red)':'var(--green)'};font-weight:500;cursor:pointer" onclick="verChamadosEquip('${r.patrimonio}')">${chamadosEq.length} chamado${chamadosEq.length>1?'s':''}${temAberto?' ⚠️':' ✓'}</span>`}
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function verChamadosEquip(patrimonio){
+  // Vai para aba chamados e filtra pelo patrimônio
+  showTab('chamados');
+  document.getElementById("fc-busca").value=patrimonio;
+  filtrarChamados();
+}
+
+// ═══ ATAS ═══
+async function loadAtas(){
+  document.getElementById("atas-loading").style.display="block";
+  document.getElementById("atas-main").style.display="none";
+  try{
+    const [r1,r2]=await Promise.all([fetch(ATAS_ITENS_URL),fetch(ATAS_EXEC_URL)]);
+    const [t1,t2]=await Promise.all([r1.text(),r2.text()]);
+    const p1=Papa.parse(t1,{header:true,skipEmptyLines:true});
+    const p2=Papa.parse(t2,{header:true,skipEmptyLines:true});
+    atasItens=p1.data.filter(r=>r["CPL"]).map(r=>({
+      cpl:(r["CPL"]||"").trim(),
+      sim:(r["SIM"]||"").trim(),
+      item:(r["ITEM"]||"").trim(),
+      marca:(r["MARCA_MODELO"]||"").trim(),
+      qtde_contratada:parseFloat(r["QTDE_CONTRATADA"])||0,
+      valor_unit:parseBR(r["VALOR_UNIT"]),
+      vencimento:(r["VENCIMENTO"]||"").trim(),
+      status:(r["STATUS_CONTRATO"]||"VIGENTE").trim(),
+      empresa:(r["EMPRESA"]||"").trim(),
+    }));
+    atasExec=p2.data.filter(r=>r["CPL"]).map(r=>({
+      cpl:(r["CPL"]||"").trim(),
+      sim:(r["SIM"]||"").trim(),
+      item:(r["ITEM"]||"").trim(),
+      unidade:(r["UNIDADE"]||"").trim(),
+      qtde:parseFloat(r["QTDE"])||0,
+      valor:parseBR(r["VALOR"]),
+      empenho:(r["EMPENHO"]||"").trim(),
+      data_af:(r["DATA_AF"]||"").trim(),
+      prev_entrega:(r["PREV_ENTREGA"]||"").trim(),
+      dt_entrega:(r["DT_ENTREGA"]||"").trim(),
+      nf:(r["NF"]||"").trim(),
+    }));
+    popularFiltrosAtas();
+    filtrarAtas();
+    renderAlertas();
+    document.getElementById("atas-loading").style.display="none";
+    document.getElementById("atas-main").style.display="block";
+  }catch(e){
+    document.getElementById("atas-loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro: ${e.message}</div>`;
+  }
+}
+
+function getSaldo(cpl,sim,item){
+  const at=atasItens.find(r=>r.cpl===cpl&&r.sim===sim&&r.item===item);
+  if(!at) return 0;
+  const exec=atasExec.filter(r=>r.cpl===cpl&&r.sim===sim&&r.item===item).reduce((a,r)=>a+r.qtde,0);
+  return at.qtde_contratada-exec;
+}
+
+function getExecutado(cpl,sim,item){
+  return atasExec.filter(r=>r.cpl===cpl&&r.sim===sim&&r.item===item).reduce((a,r)=>a+r.qtde,0);
+}
+
+function diasParaVencer(vencimento){
+  if(!vencimento) return 9999;
+  try{
+    const partes=vencimento.split("/");
+    let d;
+    if(partes.length===3) d=new Date(partes[2],partes[1]-1,partes[0]);
+    else d=new Date(vencimento);
+    return Math.round((d-new Date())/(1000*60*60*24));
+  }catch(e){return 9999;}
+}
+
+function renderAlertas(){
+  const vencendo=atasItens.filter(r=>diasParaVencer(r.vencimento)<=90&&diasParaVencer(r.vencimento)>0&&r.status!=="ENCERRADO");
+  const encerrados=atasItens.filter(r=>diasParaVencer(r.vencimento)<0&&r.status!=="ENCERRADO");
+  let html="";
+  if(encerrados.length){
+    html+=`<div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:.5rem;font-size:13px">
+      ⛔ <strong>${encerrados.length} contrato(s) VENCIDO(S):</strong> ${encerrados.map(r=>`${r.cpl} / ${r.sim} — ${r.item}`).join(" · ")}
+    </div>`;
+  }
+  if(vencendo.length){
+    html+=`<div style="background:var(--amber-bg);color:var(--amber-text);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:13px">
+      ⚠️ <strong>${vencendo.length} contrato(s) vencendo em até 90 dias:</strong> ${vencendo.map(r=>`${r.cpl}/${r.sim} — ${r.item} (${diasParaVencer(r.vencimento)}d)`).join(" · ")}
+    </div>`;
+  }
+  document.getElementById("atas-alertas").innerHTML=html;
+}
+
+function popularFiltrosAtas(){
+  const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
+  sel("fat-cpl",[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort());
+  sel("fat-sim",[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort());
+  sel("fat-empresa",[...new Set(atasItens.map(r=>r.empresa).filter(Boolean))].sort());
+  sel("fat-status",[...new Set(atasItens.map(r=>r.status).filter(Boolean))].sort());
+}
+
+function clearAllAtas(){
+  ["fat-cpl","fat-sim","fat-empresa","fat-status","fat-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  filtrarAtas();
+}
+
+function filtrarAtas(){
+  const cpl=document.getElementById("fat-cpl")?.value||"";
+  const sim=document.getElementById("fat-sim")?.value||"";
+  const emp=document.getElementById("fat-empresa")?.value||"";
+  const st=document.getElementById("fat-status")?.value||"";
+  const busca=document.getElementById("fat-busca")?.value||"";
+
+  let rows=atasItens.filter(r=>{
+    if(cpl&&r.cpl!==cpl) return false;
+    if(sim&&r.sim!==sim) return false;
+    if(emp&&r.empresa!==emp) return false;
+    if(st&&r.status!==st) return false;
+    if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
+    return true;
+  });
+
+  const totalSaldo=rows.reduce((a,r)=>a+getSaldo(r.cpl,r.sim,r.item),0);
+  const totalExec=rows.reduce((a,r)=>a+getExecutado(r.cpl,r.sim,r.item),0);
+  const vencendo90=rows.filter(r=>diasParaVencer(r.vencimento)<=90&&r.status!=="ENCERRADO").length;
+
+  document.getElementById("at-total").textContent=rows.length;
+  document.getElementById("at-saldo").textContent=totalSaldo;
+  document.getElementById("at-exec").textContent=totalExec;
+  document.getElementById("at-vence").textContent=vencendo90;
+  document.getElementById("atas-count").textContent=`${rows.length} itens`;
+
+  const dias90=new Date();dias90.setDate(dias90.getDate()+90);
+
+  document.getElementById("atas-body").innerHTML=rows.map(r=>{
+    const exec=getExecutado(r.cpl,r.sim,r.item);
+    const saldo=r.qtde_contratada-exec;
+    const dias=diasParaVencer(r.vencimento);
+    const vcor=dias<=0?"var(--red)":dias<=90?"var(--amber)":"var(--green)";
+    const pct=r.qtde_contratada?Math.round(exec/r.qtde_contratada*100):0;
+    const stColor=r.status==="VIGENTE"?"var(--green)":r.status==="ENCERRADO"?"var(--red)":"var(--amber)";
+    return`<tr>
+      <td style="font-size:11px;white-space:nowrap">${r.cpl}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
+      <td class="td-trunc" title="${r.item}" style="max-width:220px">${r.item}</td>
+      <td style="font-size:11px">${r.marca||"—"}</td>
+      <td style="text-align:right">${r.qtde_contratada}</td>
+      <td style="text-align:right">
+        ${exec}
+        <div style="height:4px;background:var(--surface2);border-radius:2px;margin-top:3px;width:60px">
+          <div style="height:4px;background:${pct>=90?'var(--red)':pct>=70?'var(--amber)':'var(--green)'};border-radius:2px;width:${Math.min(pct,100)}%"></div>
+        </div>
+      </td>
+      <td style="text-align:right;font-weight:500;color:${saldo<=0?'var(--red)':saldo<=5?'var(--amber)':'var(--text)'}">${saldo}</td>
+      <td style="text-align:right;font-size:11px">${r.valor_unit?fmtFull(r.valor_unit):"—"}</td>
+      <td style="font-size:11px;color:${vcor};font-weight:500">${r.vencimento||"—"}${dias<=90&&dias>0?` (${dias}d)`:''}${dias<=0?' ⛔':''}</td>
+      <td><span class="badge" style="background:${stColor}22;color:${stColor}">${r.status}</span></td>
+      <td style="font-size:11px">${r.empresa||"—"}</td>
+      <td>
+        <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
+        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px">📋</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  // Tabela de execuções filtradas
+  let execRows=atasExec.filter(r=>{
+    if(cpl&&r.cpl!==cpl) return false;
+    if(sim&&r.sim!==sim) return false;
+    if(busca&&!matchBusca(r.item+" "+r.cpl+" "+r.sim+" "+r.unidade,busca)) return false;
+    return true;
+  });
+  document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
+  document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>`<tr>
+    <td style="font-size:11px">${r.cpl}</td>
+    <td style="font-size:11px">${r.sim}</td>
+    <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
+    <td style="font-size:12px">${r.unidade}</td>
+    <td style="text-align:right">${r.qtde}</td>
+    <td style="text-align:right;font-size:11px">${r.valor?fmtFull(r.valor):"—"}</td>
+    <td style="font-size:11px">${r.empenho||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.data_af||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.prev_entrega||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||"—"}</td>
+    <td style="font-size:11px">${r.nf||"—"}</td>
+    <td><button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button></td>
+  </tr>`).join("");
+  window._execRowsFiltered=execRows;
+}
+
+function verExecsItem(cpl,sim,item){
+  document.getElementById("fat-cpl").value=cpl;
+  document.getElementById("fat-sim").value=sim;
+  document.getElementById("fat-busca").value=item;
+  filtrarAtas();
+  document.getElementById("exec-body").scrollIntoView({behavior:"smooth"});
+}
+
+function abrirModalNovaAta(){
+  ["na-cpl","na-sim","na-item","na-marca","na-empresa","na-qtde","na-valor","na-vencimento","na-status"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  document.getElementById("na-msg").className="fmsg";
+  document.getElementById("modal-nova-ata").classList.add("active");
+}
+
+function popularItensExec(){
+  const cpl=document.getElementById("ne2-cpl").value;
+  const sim=document.getElementById("ne2-sim").value;
+  const itens=atasItens.filter(r=>(!cpl||r.cpl===cpl)&&(!sim||r.sim===sim)).map(r=>r.item);
+  const el=document.getElementById("ne2-item");
+  el.innerHTML='<option value="">Selecione...</option>'+itens.map(i=>`<option value="${i}">${i}</option>`).join("");
+}
+
+function calcValorExec(){
+  const cpl=document.getElementById("ne2-cpl").value;
+  const sim=document.getElementById("ne2-sim").value;
+  const item=document.getElementById("ne2-item").value;
+  const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
+  const at=atasItens.find(r=>r.cpl===cpl&&r.sim===sim&&r.item===item);
+  if(at&&at.valor_unit&&qtde) document.getElementById("ne2-valor").value=(at.valor_unit*qtde).toFixed(2);
+}
+
+function abrirModalNovaExec(){
+  // Popular selects CPL e SIM
+  const cpls=[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort();
+  const sims=[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort();
+  const cplSel=document.getElementById("ne2-cpl");
+  const simSel=document.getElementById("ne2-sim");
+  cplSel.innerHTML='<option value="">Selecione...</option>'+cpls.map(c=>`<option value="${c}">${c}</option>`).join("");
+  simSel.innerHTML='<option value="">Selecione...</option>'+sims.map(s=>`<option value="${s}">${s}</option>`).join("");
+  ["ne2-unidade","ne2-qtde","ne2-valor","ne2-empenho","ne2-data-af","ne2-prev","ne2-dt-entrega","ne2-nf"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  document.getElementById("ne2-item").innerHTML='<option value="">Selecione CPL e SIM primeiro...</option>';
+  document.getElementById("ne2-msg").className="fmsg";
+  document.getElementById("modal-nova-exec").classList.add("active");
+}
+
+let _editExecIdx=null,_editExecKey=null;
+function abrirModalEditExec(idx,cpl,sim,item,unidade){
+  _editExecIdx=idx;
+  _editExecKey={cpl,sim,item,unidade};
+  const r=window._execRowsFiltered?.[idx]||{};
+  document.getElementById("ee-info").textContent=`${cpl} · ${sim} · ${item} · ${unidade}`;
+  document.getElementById("ee-empenho").value=r.empenho||"";
+  document.getElementById("ee-data-af").value=r.data_af||"";
+  document.getElementById("ee-prev").value=r.prev_entrega||"";
+  document.getElementById("ee-dt-entrega").value=r.dt_entrega||"";
+  document.getElementById("ee-nf").value=r.nf||"";
+  document.getElementById("ee-msg").className="fmsg";
+  document.getElementById("modal-edit-exec").classList.add("active");
+}
+
+function abrirModalEditAta(cpl,sim,item){
+  // Por simplicidade, abre modal de nova execução já com CPL/SIM/item pré-selecionados
+  abrirModalNovaExec();
+  setTimeout(()=>{
+    document.getElementById("ne2-cpl").value=cpl;
+    document.getElementById("ne2-sim").value=sim;
+    popularItensExec();
+    setTimeout(()=>{document.getElementById("ne2-item").value=item;},100);
+  },100);
+}
+
+async function salvarNovaAta(){
+  const cpl=document.getElementById("na-cpl").value.trim();
+  const sim=document.getElementById("na-sim").value.trim();
+  const item=document.getElementById("na-item").value.trim();
+  const qtde=parseFloat(document.getElementById("na-qtde").value)||0;
+  if(!cpl||!sim||!item||!qtde){showMsg("na","Preencha CPL, SIM, Item e Qtde (*)","err");return}
+  const btn=document.querySelector("#modal-nova-ata .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const dados={acao:"nova_ata_item",cpl,sim,item,
+    marca_modelo:document.getElementById("na-marca").value.trim(),
+    empresa:document.getElementById("na-empresa").value.trim(),
+    qtde_contratada:qtde,
+    valor_unit:parseFloat(document.getElementById("na-valor").value)||0,
+    vencimento:document.getElementById("na-vencimento").value,
+    status_contrato:document.getElementById("na-status").value||"VIGENTE"
+  };
+  await enviarViaGet(dados);
+  atasItens.push({...dados,qtde_contratada:qtde,valor_unit:dados.valor_unit,status:dados.status_contrato,marca:dados.marca_modelo});
+  popularFiltrosAtas();filtrarAtas();renderAlertas();
+  showMsg("na","✓ Salvo!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-nova-ata").classList.remove("active"),1500);
+}
+
+async function salvarNovaExec(){
+  const cpl=document.getElementById("ne2-cpl").value;
+  const sim=document.getElementById("ne2-sim").value;
+  const item=document.getElementById("ne2-item").value;
+  const unidade=document.getElementById("ne2-unidade").value.trim();
+  const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
+  if(!cpl||!sim||!item||!unidade||!qtde){showMsg("ne2","Preencha CPL, SIM, Item, Unidade e Qtde (*)","err");return}
+  const btn=document.querySelector("#modal-nova-exec .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const dados={acao:"nova_execucao",cpl,sim,item,unidade,qtde,
+    valor:parseFloat(document.getElementById("ne2-valor").value)||0,
+    empenho:document.getElementById("ne2-empenho").value.trim(),
+    data_af:document.getElementById("ne2-data-af").value,
+    prev_entrega:document.getElementById("ne2-prev").value,
+    dt_entrega:document.getElementById("ne2-dt-entrega").value,
+    nf:document.getElementById("ne2-nf").value.trim()
+  };
+  await enviarViaGet(dados);
+  atasExec.push(dados);
+  filtrarAtas();
+  showMsg("ne2","✓ Salvo!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-nova-exec").classList.remove("active"),1500);
+}
+
+async function salvarEditExec(){
+  if(!_editExecKey) return;
+  const btn=document.querySelector("#modal-edit-exec .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const dados={acao:"atualizar_execucao",..._editExecKey,
+    empenho:document.getElementById("ee-empenho").value.trim(),
+    data_af:document.getElementById("ee-data-af").value,
+    prev_entrega:document.getElementById("ee-prev").value,
+    dt_entrega:document.getElementById("ee-dt-entrega").value,
+    nf:document.getElementById("ee-nf").value.trim()
+  };
+  await enviarViaGet(dados);
+  // Atualizar local
+  const r=window._execRowsFiltered?.[_editExecIdx];
+  if(r){Object.assign(r,{empenho:dados.empenho,data_af:dados.data_af,prev_entrega:dados.prev_entrega,dt_entrega:dados.dt_entrega,nf:dados.nf})}
+  filtrarAtas();
+  showMsg("ee","✓ Salvo!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-edit-exec").classList.remove("active"),1500);
 }
 
 async function loadData(){
