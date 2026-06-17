@@ -502,9 +502,11 @@ tr:hover td{background:var(--surface2)}
         <table>
           <thead>
             <tr>
-              <th>📬</th><th>Protocolo</th><th>Data</th><th>Unidade</th><th>Equipamento</th>
-              <th>Patrimônio</th><th>Categoria</th><th>Serviço</th><th>Problema</th>
-              <th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th><th>PDF</th>
+              <th>📬</th><th>Protocolo</th><th>Carimbo</th><th>Data</th><th>Unidade</th>
+              <th>Endereço</th><th>Telefone</th><th>Responsável</th><th>Urgência</th>
+              <th>Patrimônio</th><th>Equipamento</th><th>Fabricante</th><th>Série</th>
+              <th>Categoria</th><th>Serviço</th><th>Problema</th><th>Descrição</th>
+              <th>Rechamado?</th><th>Status</th><th>Dt. Atendimento</th><th>Empresa</th><th>Nº OS</th><th>O que foi feito</th><th>Ações</th><th>PDF</th>
             </tr>
           </thead>
           <tbody id="chamados-body"></tbody>
@@ -1184,19 +1186,24 @@ async function loadChamados(){
     const t1=await r1.text();
     const p1=Papa.parse(t1,{header:true,skipEmptyLines:true});
     chamadosRows=p1.data.filter(r=>r["Protocolo"]||r["Carimbo de data/hora"]).map(r=>({
-      protocolo:(r["Protocolo"]||r["Nº protocolo"]||"").trim(),
+      protocolo:(r["Protocolo"]||"").trim(),
       carimbo:(r["Carimbo de data/hora"]||"").trim(),
       data_solicitacao:(r["Data da solicitação:"]||r["Data da solicitação"]||"").trim(),
       unidade:(r["Unidade solicitante:"]||r["Unidade solicitante"]||"").trim(),
+      endereco:(r["Endereço:"]||r["Endereço"]||"").trim(),
+      telefone:(r["Telefone:"]||r["Telefone"]||"").trim(),
+      responsavel:(r["Responsável na unidade:"]||r["Responsável na unidade"]||"").trim(),
+      grau_urgencia:(r["Grau de urgência:"]||r["Grau de urgência"]||"").trim(),
+      patrimonio:(r["Número do patrimônio:"]||r["Número Patrimônio (informação obrigatória)"]||r["Nº Patrimônio"]||"").trim(),
       equipamento:(r["Descrição do bem:"]||r["Descrição do bem"]||"").trim(),
       fabricante:(r["Fabricante/modelo:"]||r["Fabricante/modelo"]||"").trim(),
       serie:(r["Nº de série:"]||r["Nº de série"]||"").trim(),
-      patrimonio:(r["Número Patrimônio (informação obrigatória)"]||r["Nº Patrimônio"]||"").trim(),
       categoria:(r["Categoria:"]||r["Categoria"]||"").trim(),
       servico:(r["Serviço solicitado:"]||r["Serviço solicitado"]||"").trim(),
       problema:(r["Problema apresentado:"]||r["Problema apresentado"]||"").trim(),
       descricao:(r["Descrição completa e detalhada do problema:"]||r["Descrição completa"]||"").trim(),
       rechamado:(r["É rechamado?"]||"").trim(),
+      data_rechamado:(r["Se sim, qual data?"]||"").trim(),
       observacao:(r["OBSERVAÇÕES"]||r["Observações"]||"").trim(),
     }));
 
@@ -1324,7 +1331,7 @@ function filtrarChamados(){
     if(serv&&r.servico!==serv) return false;
     const ctrl=getControle(r.protocolo);
     if(st&&ctrl.status!==st) return false;
-    if(busca&&!matchBusca([r.equipamento,r.patrimonio,r.descricao,r.protocolo,r.unidade].join(" "),busca)) return false;
+    if(busca&&!matchBusca([r.equipamento,r.patrimonio,r.descricao,r.protocolo,r.unidade,r.responsavel,r.endereco,r.fabricante,r.serie].join(" "),busca)) return false;
     return true;
   });
 
@@ -1454,8 +1461,8 @@ function gerarPDFChamado(protocolo){
       <td colspan="2"><span class="label">Unidade Solicitante:</span> ${r.unidade||""}</td>
       <td><span class="label">Data da Solicitação:</span> ${r.data_solicitacao||r.carimbo?.slice(0,10)||""}</td>
     </tr>
-    <tr><td colspan="3"><span class="label">Endereço:</span> ${""}</td></tr>
-    <tr><td colspan="3"><span class="label">Telefone:</span> ${""}</td></tr>
+    <tr><td colspan="3"><span class="label">Endereço:</span> ${r.endereco||""}</td></tr>
+    <tr><td colspan="3"><span class="label">Telefone:</span> ${r.telefone||""}</td></tr>
     <tr>
       <td colspan="2">
         <span class="label">Grau de Urgência</span><br>
@@ -1463,7 +1470,7 @@ function gerarPDFChamado(protocolo){
       </td>
       <td style="font-size:8px">P1 - Interrupção de Atendimento<br>P2 - Atendimento parcialmente prejudicado<br>P3 - Pouco urgente</td>
     </tr>
-    <tr><td colspan="3"><span class="label">Responsável pela abertura do chamado:</span> ${""}</td></tr>
+    <tr><td colspan="3"><span class="label">Responsável pela abertura do chamado:</span> ${r.responsavel||""}</td></tr>
   </table>
 
   <table>
@@ -1511,8 +1518,8 @@ function gerarPDFChamado(protocolo){
     <tr>
       <td colspan="2">
         <span class="label">É Rechamado?</span><br>
-        ${chk(rechamado==="Sim")} Sim - Data do chamado anterior: _______________ &nbsp;&nbsp;&nbsp;
-        ${chk(rechamado!=="Sim")} Não
+        ${chkExato(normalizar(rechamado).includes("sim"))} Sim - Data do chamado anterior: ${r.data_rechamado||"_______________"} &nbsp;&nbsp;&nbsp;
+        ${chkExato(!normalizar(rechamado).includes("sim"))} Não
       </td>
     </tr>
   </table>
