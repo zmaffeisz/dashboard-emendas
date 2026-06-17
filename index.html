@@ -1216,6 +1216,13 @@ async function loadChamados(){
       }));
     }catch(e){controleRows=[];}
 
+    // Ordenar por data mais recente no topo
+    chamadosRows.sort((a,b)=>{
+      const da=parseDataBR((a.carimbo||a.data_solicitacao||"").slice(0,10));
+      const db=parseDataBR((b.carimbo||b.data_solicitacao||"").slice(0,10));
+      if(da&&db) return db-da;
+      return 0;
+    });
     popularFiltrosChamados();
     filtrarChamados();
     atualizarBadgeChamados();
