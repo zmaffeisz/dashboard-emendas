@@ -103,12 +103,15 @@ async function cadastrar(){
 
   // Criar perfil como visualizador
   if(data.user){
-    await sb.from("profiles").insert({
+    const {error:profileError}=await sb.from("profiles").insert({
       id: data.user.id,
       nome: nome,
       email: email,
       papel: "visualizador"
     });
+    if(profileError){
+      console.error("Erro ao criar perfil:", profileError);
+    }
   }
 
   suc.textContent="✓ Conta criada! Redirecionando para o login...";
