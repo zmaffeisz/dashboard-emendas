@@ -792,9 +792,47 @@ tr:hover td{background:var(--surface2)}
 
     <!-- Modal Renovar Vigência -->
     <div class="modal-overlay" id="modal-renovar" onclick="if(event.target===this)this.classList.remove('active')">
-      <div class="modal-box" style="width:420px">
+      <div class="modal-box" style="width:480px">
         <div class="modal-title">🔄 Prorrogar vigência</div>
-        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="rv-info"></div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 .75rem" id="rv-info"></div>
+
+        <!-- Info de saldo -->
+        <div id="rv-saldo-info" style="background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Qtde contratada</div>
+            <div style="font-size:18px;font-weight:600" id="rv-qtde-contratada">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Executado</div>
+            <div style="font-size:18px;font-weight:600;color:var(--blue)" id="rv-executado">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Saldo atual</div>
+            <div style="font-size:18px;font-weight:600;color:var(--green)" id="rv-saldo-atual">—</div>
+          </div>
+        </div>
+
+        <!-- Pergunta sobre saldo -->
+        <div style="background:var(--blue-bg);border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem">
+          <div style="font-size:13px;font-weight:500;color:var(--blue-text);margin-bottom:.625rem">Ao renovar, como fica o saldo?</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-saldo-opt" value="reiniciar" id="rv-reiniciar" style="margin-top:2px;accent-color:var(--blue)">
+              <div>
+                <div style="font-size:13px;font-weight:500">Reiniciar saldo</div>
+                <div style="font-size:11px;color:var(--text2)">Volta para a quantidade contratada original (<span id="rv-qtde-label">—</span> unidades)</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-saldo-opt" value="manter" id="rv-manter" checked style="margin-top:2px;accent-color:var(--blue)">
+              <div>
+                <div style="font-size:13px;font-weight:500">Manter saldo atual</div>
+                <div style="font-size:11px;color:var(--text2)">Continua com o saldo restante (<span id="rv-saldo-label">—</span> unidades)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="form-grid">
           <div class="form-group">
             <div class="form-label">Vigência atual</div>
@@ -810,7 +848,7 @@ tr:hover td{background:var(--surface2)}
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-primary" onclick="salvarRenovacao()">Salvar</button>
+          <button class="btn-primary" onclick="salvarRenovacao()">Salvar renovação</button>
           <button class="btn-secondary" onclick="document.getElementById('modal-renovar').classList.remove('active')">Cancelar</button>
           <span id="rv-msg" class="fmsg"></span>
         </div>
@@ -1671,12 +1709,27 @@ function renovarAta(cpl,sim,item,vencAtual){
   _renovarKey={cpl,sim,item};
   document.getElementById("rv-info").textContent=`${cpl} · ${sim} · ${item}`;
   document.getElementById("rv-atual").value=vencAtual||"";
+
+  // Popular saldo info
+  const at=atasItens.find(r=>r.cpl===cpl&&r.sim===sim&&r.item===item);
+  const exec=getExecutado(cpl,sim,item);
+  const saldo=getSaldo(cpl,sim,item);
+  const qtde=at?.qtde_contratada||0;
+  document.getElementById("rv-qtde-contratada").textContent=qtde;
+  document.getElementById("rv-executado").textContent=exec;
+  document.getElementById("rv-saldo-atual").textContent=saldo;
+  document.getElementById("rv-qtde-label").textContent=qtde;
+  document.getElementById("rv-saldo-label").textContent=saldo;
+  document.getElementById("rv-manter").checked=true;
+
   // Sugerir +1 ano automaticamente
   let novaData="";
   try{
     const partes=vencAtual.split("/");
     if(partes.length===3){
-      const d=new Date(parseInt(partes[2])+1,parseInt(partes[1])-1,parseInt(partes[0]));
+      let ano=parseInt(partes[2]);
+      if(ano<100) ano+=2000;
+      const d=new Date(ano+1,parseInt(partes[1])-1,parseInt(partes[0]));
       novaData=d.toISOString().split("T")[0];
     }
   }catch(e){}
@@ -1696,16 +1749,31 @@ async function salvarRenovacao(){
   const novaFormatada=`${d}/${m}/${y}`;
   const btn=document.querySelector("#modal-renovar .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
+  const reiniciarSaldo=document.getElementById("rv-reiniciar").checked;
   const dadosRenovar={
     acao:"atualizar_ata_status",
     cpl:_renovarKey.cpl,
     sim:_renovarKey.sim,
     item:_renovarKey.item,
     status_contrato:novoStatus,
-    vencimento:novaFormatada
+    vencimento:novaFormatada,
+    reiniciar_saldo:reiniciarSaldo
   };
-  console.log("Enviando renovação:", dadosRenovar);
   await enviarViaGet(dadosRenovar);
+
+  // Se reiniciar saldo: remover todas as execuções deste item do array local
+  // (o Apps Script vai excluir da planilha)
+  if(reiniciarSaldo){
+    const before=atasExec.length;
+    // Remover localmente
+    for(let i=atasExec.length-1;i>=0;i--){
+      const r=atasExec[i];
+      if(r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item){
+        atasExec.splice(i,1);
+      }
+    }
+  }
+
   // Atualizar local
   const atRen=atasItens.find(r=>r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item);
   if(atRen){atRen.vencimento=novaFormatada;atRen.status=novoStatus;}
