@@ -1278,32 +1278,31 @@ async function loadAC(){
   document.getElementById("ac-loading").style.display="block";
   document.getElementById("ac-main").style.display="none";
   try{
-    const r=await fetch(AC_CSV_URL);
-    const t=await r.text();
-    const p=Papa.parse(t,{header:false,skipEmptyLines:true});
-    const rows=p.data.slice(3); // pular 3 linhas de cabeçalho
-    acRows=rows.filter(r=>r[0]&&!isNaN(r[0])).map(r=>({
-      num:r[0]||"",
-      situacao:(r[1]||"").trim(),
-      estabelecimento:(r[2]||"").trim(),
-      endereco:(r[3]||"").trim(),
-      sala:(r[4]||"").trim(),
-      patrimonio:String(r[5]||"").trim(),
-      ano_fab:(r[6]||"").trim(),
-      marca:(r[7]||"").trim(),
-      modelo:(r[8]||"").trim(),
-      serie:(r[9]||"").trim(),
-      btu:(r[10]||"").trim(),
-      qf:(r[11]||"").trim(),
-      tipo:(r[12]||"").trim(),
-      contrato:(r[13]||"").trim(),
+    // Ler do Supabase em vez do CSV
+    const {data,error}=await sb.from("inventario_ac").select("*").order("num");
+    if(error) throw new Error(error.message);
+    acRows=data.map(r=>({
+      num:r.num||"",
+      situacao:(r.situacao||"").trim(),
+      estabelecimento:(r.estabelecimento||"").trim(),
+      endereco:(r.endereco||"").trim(),
+      sala:(r.sala||"").trim(),
+      patrimonio:String(r.patrimonio||"").trim(),
+      ano_fab:(r.ano_fab||"").trim(),
+      marca:(r.marca||"").trim(),
+      modelo:(r.modelo||"").trim(),
+      serie:(r.serie||"").trim(),
+      btu:(r.btu||"").trim(),
+      qf:(r.quente_frio||"").trim(),
+      tipo:(r.tipo||"").trim(),
+      contrato:(r.contrato||"").trim(),
     }));
     popularFiltrosAC();
     filtrarAC();
     document.getElementById("ac-loading").style.display="none";
     document.getElementById("ac-main").style.display="block";
   }catch(e){
-    document.getElementById("ac-loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro: ${e.message}</div>`;
+    document.getElementById("ac-loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro ao carregar inventário: ${e.message}</div>`;
   }
 }
 
