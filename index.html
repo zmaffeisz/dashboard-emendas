@@ -604,15 +604,26 @@ tr:hover td{background:var(--surface2)}
         <div class="fg-label">Status <button onclick="clearF('cn-status')">✕</button></div>
         <select id="cn-status" onchange="filtrarChamadosNovos()">
           <option value="">Todos</option>
+          <option>Aguardando abertura</option>
           <option>Aberto</option>
-          <option>Em andamento</option>
-          <option>Concluído</option>
-          <option>Pendente</option>
         </select>
       </div>
       <div class="fg">
+        <div class="fg-label">Urgência <button onclick="clearF('cn-urgencia')">✕</button></div>
+        <select id="cn-urgencia" onchange="filtrarChamadosNovos()">
+          <option value="">Todas</option>
+          <option>P1 (interrupção de atendimento)</option>
+          <option>P2 (atendimento parcialmente prejudicado)</option>
+          <option>P3 (pouco urgente)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Serviço <button onclick="clearF('cn-servico')">✕</button></div>
+        <select id="cn-servico" onchange="filtrarChamadosNovos()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
         <div class="fg-label">Buscar <button onclick="clearF('cn-busca')">✕</button></div>
-        <input type="text" id="cn-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamadosNovos()">
+        <input type="text" id="cn-busca" placeholder="equipamento, patrimônio, responsável..." oninput="filtrarChamadosNovos()">
       </div>
       <button class="clear-btn" onclick="clearAllChamadosNovos()">✕ Limpar</button>
     </div>
@@ -636,9 +647,11 @@ tr:hover td{background:var(--surface2)}
         <table>
           <thead>
             <tr>
-              <th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Patrimônio</th>
-              <th>Equipamento</th><th>Categoria</th><th>Serviço</th><th>Urgência</th>
-              <th>Problema</th><th>Status</th><th>Ações</th><th>PDF</th>
+              <th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Endereço</th>
+              <th>Telefone</th><th>Responsável</th><th>Urgência</th><th>Patrimônio</th>
+              <th>Equipamento</th><th>Fabricante/Modelo</th><th>Série</th>
+              <th>Categoria</th><th>Serviço</th><th>Problema apresentado</th>
+              <th>Descrição</th><th>Rechamado?</th><th>Status</th><th>Ações</th><th>PDF</th>
             </tr>
           </thead>
           <tbody id="cn-body"></tbody>
@@ -655,7 +668,8 @@ tr:hover td{background:var(--surface2)}
           <div class="form-group full">
             <div class="form-label">Status *</div>
             <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
-              <option>Aberto</option><option>Em andamento</option><option>Concluído</option><option>Pendente</option>
+              <option>Aguardando abertura</option>
+              <option>Aberto</option>
             </select>
           </div>
           <div class="form-group"><div class="form-label">Data atendimento</div><input type="date" id="mcn-data"></div>
@@ -741,6 +755,7 @@ tr:hover td{background:var(--surface2)}
         <div class="form-title" style="margin:0;padding:0;border:none">📊 Planilhas</div>
         <div style="display:flex;gap:4px">
           <button onclick="mudarPlanilha('ac')" id="pl-btn-ac" style="font-size:12px;padding:4px 12px;border-radius:20px;border:none;background:var(--blue);color:#fff;cursor:pointer">🧊 Inventário AC</button>
+          <button onclick="mudarPlanilha('chamados')" id="pl-btn-chamados" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">🆕 Chamados novos</button>
         </div>
       </div>
       <div style="display:flex;gap:8px">
@@ -2682,6 +2697,26 @@ async function alterarPapel(userId, email){
 }
 
 // ═══ PLANILHAS ═══
+const CHAMADOS_COLUNAS = [
+  {key:"protocolo",label:"Protocolo",width:"130px"},
+  {key:"carimbo",label:"Data/Hora",width:"130px"},
+  {key:"unidade",label:"Unidade",width:"180px"},
+  {key:"endereco",label:"Endereço",width:"180px"},
+  {key:"telefone",label:"Telefone",width:"110px"},
+  {key:"responsavel",label:"Responsável",width:"150px"},
+  {key:"grau_urgencia",label:"Urgência",width:"120px"},
+  {key:"patrimonio",label:"Patrimônio",width:"100px"},
+  {key:"equipamento",label:"Equipamento",width:"180px"},
+  {key:"fabricante",label:"Fabricante",width:"130px"},
+  {key:"serie",label:"Série",width:"120px"},
+  {key:"categoria",label:"Categoria",width:"150px"},
+  {key:"servico",label:"Serviço",width:"150px"},
+  {key:"problema",label:"Problema",width:"120px"},
+  {key:"descricao",label:"Descrição",width:"200px"},
+  {key:"rechamado",label:"Rechamado?",width:"100px"},
+  {key:"observacao",label:"Observação",width:"150px"},
+];
+
 const AC_COLUNAS = [
   {key:"num",label:"Nº",width:"50px"},
   {key:"situacao",label:"Situação",width:"200px"},
@@ -2710,6 +2745,8 @@ async function carregarPlanilhaAC(){
   if(error){document.getElementById("pl-loading").innerHTML=`<div style="color:var(--red)">Erro: ${error.message}</div>`;return;}
   _plAcData=data;
   _plAcFiltrado=data;
+  document.getElementById("btn-add-ac").style.display="block";
+  document.getElementById("pl-busca").oninput=filtrarPlanilhaAC;
   renderPlanilhaAC(_plAcFiltrado);
   document.getElementById("pl-loading").style.display="none";
   document.getElementById("pl-table-wrap").style.display="block";
@@ -2768,7 +2805,8 @@ async function salvarCelula(){
   const btn=document.querySelector("#modal-celula .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
 
-  const {error}=await sb.from("inventario_ac")
+  const tabela=_celulaAtual.tabela||"inventario_ac";
+  const {error}=await sb.from(tabela)
     .update({[_celulaAtual.key]:novoValor})
     .eq("id",_celulaAtual.id);
 
@@ -2779,14 +2817,19 @@ async function salvarCelula(){
   }
 
   // Atualizar local
-  const idx=_plAcData.findIndex(r=>r.id===_celulaAtual.id);
-  if(idx>=0){
-    _plAcData[idx][_celulaAtual.key]=novoValor;
-    // Atualizar também acRows para o inventário
-    const acIdx=acRows.findIndex(r=>r.id===_celulaAtual.id);
-    if(acIdx>=0) acRows[acIdx][_celulaAtual.key]=novoValor;
+  if(tabela==="inventario_ac"){
+    const idx=_plAcData.findIndex(r=>r.id===_celulaAtual.id);
+    if(idx>=0){
+      _plAcData[idx][_celulaAtual.key]=novoValor;
+      const acIdx=acRows.findIndex(r=>r.id===_celulaAtual.id);
+      if(acIdx>=0) acRows[acIdx][_celulaAtual.key]=novoValor;
+    }
+    filtrarPlanilhaAC();
+  } else if(tabela==="chamados"){
+    const idx=_plChamadosData.findIndex(r=>r.id===_celulaAtual.id);
+    if(idx>=0) _plChamadosData[idx][_celulaAtual.key]=novoValor;
+    filtrarPlanilhaChamados();
   }
-  filtrarPlanilhaAC();
   showMsg("mc2","✓ Salvo!","ok");
   btn.disabled=false;btn.textContent="Salvar";
   setTimeout(()=>fecharModalCelula(),800);
@@ -2839,8 +2882,15 @@ async function salvarNovaLinhaAC(){
 }
 
 function mudarPlanilha(tipo){
-  // Por enquanto só AC - expansível futuramente
+  // Atualizar botões
+  document.querySelectorAll('[id^="pl-btn-"]').forEach(b=>{
+    b.style.background="var(--surface)";b.style.color="var(--text2)";b.style.border="1px solid var(--border)";
+  });
+  const btn=document.getElementById("pl-btn-"+tipo);
+  if(btn){btn.style.background="var(--blue)";btn.style.color="#fff";btn.style.border="none";}
+
   if(tipo==="ac") carregarPlanilhaAC();
+  if(tipo==="chamados") carregarPlanilhaChamados();
 }
 
 // ═══ CHAMADOS NOVOS (SUPABASE) ═══
@@ -2874,10 +2924,10 @@ function getControleCN(row){
 }
 
 function atualizarBadgeCN(){
-  const abertos=chamadosNovosRows.filter(r=>getControleCN(r).status==="Aberto").length;
+  const aguardando=chamadosNovosRows.filter(r=>getControleCN(r).status==="Aguardando abertura"||!getControleCN(r).status||getControleCN(r).status==="Aberto").length;
   const badge=document.getElementById("badge-chamados-novos");
   if(badge){
-    if(abertos>0){badge.textContent=abertos;badge.style.display="inline";}
+    if(aguardando>0){badge.textContent=aguardando;badge.style.display="inline";}
     else badge.style.display="none";
   }
 }
@@ -2886,10 +2936,11 @@ function popularFiltrosCN(){
   const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Todas</option>'+vals.map(v=>`<option value="${v}">${v}</option>`).join("")};
   sel("cn-unidade",[...new Set(chamadosNovosRows.map(r=>r.unidade).filter(Boolean))].sort());
   sel("cn-categoria",[...new Set(chamadosNovosRows.map(r=>r.categoria).filter(Boolean))].sort());
+  sel("cn-servico",[...new Set(chamadosNovosRows.map(r=>r.servico).filter(Boolean))].sort());
 }
 
 function clearAllChamadosNovos(){
-  ["cn-unidade","cn-categoria","cn-status","cn-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["cn-unidade","cn-categoria","cn-status","cn-urgencia","cn-servico","cn-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   filtrarChamadosNovos();
 }
 
@@ -2899,12 +2950,17 @@ function filtrarChamadosNovos(){
   const st=document.getElementById("cn-status")?.value||"";
   const busca=document.getElementById("cn-busca")?.value||"";
 
+  const urg=document.getElementById("cn-urgencia")?.value||"";
+  const serv=document.getElementById("cn-servico")?.value||"";
   let rows=chamadosNovosRows.filter(r=>{
     if(un&&r.unidade!==un) return false;
     if(cat&&r.categoria!==cat) return false;
+    if(urg&&r.grau_urgencia!==urg) return false;
+    if(serv&&r.servico!==serv) return false;
     const ctrl=getControleCN(r);
-    if(st&&ctrl.status!==st) return false;
-    if(busca&&!matchBusca([r.equipamento,r.patrimonio,r.protocolo,r.unidade,r.descricao].join(" "),busca)) return false;
+    const stAtual=ctrl.status||"Aguardando abertura";
+    if(st&&stAtual!==st) return false;
+    if(busca&&!matchBusca([r.equipamento,r.patrimonio,r.protocolo,r.unidade,r.descricao,r.responsavel,r.fabricante,r.serie].join(" "),busca)) return false;
     return true;
   });
 
@@ -2921,19 +2977,27 @@ function filtrarChamadosNovos(){
     const ctrl=getControleCN(r);
     const aberto=ctrl.status==="Aberto";
     const data=r.carimbo||new Date(r.created_at).toLocaleString("pt-BR");
-    return`<tr style="${aberto?'background:var(--amber-bg)':''}">
+    const aguardando=!ctrl.status||ctrl.status==="Aguardando abertura";
+    return`<tr style="${aguardando?'background:var(--amber-bg)':''}">
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
-      <td style="font-size:12px">${r.unidade||"—"}</td>
+      <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
+      <td style="font-size:11px" class="td-trunc">${r.endereco||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.telefone||"—"}</td>
+      <td style="font-size:11px" class="td-trunc">${r.responsavel||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.grau_urgencia||"—"}</td>
       <td style="font-size:11px">${r.patrimonio||"—"}</td>
       <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
+      <td style="font-size:11px">${r.fabricante||"—"}</td>
+      <td style="font-size:11px">${r.serie||"—"}</td>
       <td style="font-size:11px">${r.categoria||"—"}</td>
       <td style="font-size:11px">${r.servico||"—"}</td>
-      <td style="font-size:11px">${r.grau_urgencia||"—"}</td>
       <td style="font-size:11px">${r.problema||"—"}</td>
-      <td>${statusBadgeChamado(ctrl.status)}</td>
-      <td><button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button></td>
-      <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
+      <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
+      <td style="font-size:11px">${r.rechamado||"—"}</td>
+      <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
+      <td><button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button></td>
+      <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
     </tr>`;
   }).join("");
 }
@@ -2944,7 +3008,7 @@ function abrirModalCN(id){
   _cnAtual=id;
   const ctrl=getControleCN(r);
   document.getElementById("mcn-info").textContent=`${r.protocolo} · ${r.equipamento} · ${r.unidade}`;
-  document.getElementById("mcn-status").value=ctrl.status||"Aberto";
+  document.getElementById("mcn-status").value=ctrl.status||"Aguardando abertura";
   document.getElementById("mcn-data").value=ctrl.data_atendimento||"";
   document.getElementById("mcn-empresa").value=ctrl.empresa||"";
   document.getElementById("mcn-os").value=ctrl.os||"";
@@ -3009,6 +3073,74 @@ function gerarPDFChamadoNovo(id){
   if(tempIdx<0) chamadosRows.push(chamadoAdaptado);
   gerarPDFChamado(r.protocolo);
   if(tempIdx<0) chamadosRows.pop();
+}
+
+let _plChamadosData = [];
+let _plChamadosFiltrado = [];
+
+async function carregarPlanilhaChamados(){
+  document.getElementById("pl-loading").style.display="block";
+  document.getElementById("pl-table-wrap").style.display="none";
+  document.getElementById("btn-add-ac").style.display="none"; // ocultar botão add AC
+  const {data,error}=await sb.from("chamados").select("*").order("created_at",{ascending:false});
+  if(error){document.getElementById("pl-loading").innerHTML=`<div style="color:var(--red)">Erro: ${error.message}</div>`;return;}
+  _plChamadosData=data;
+  _plChamadosFiltrado=data;
+  renderPlanilhaChamados(_plChamadosFiltrado);
+  document.getElementById("pl-loading").style.display="none";
+  document.getElementById("pl-table-wrap").style.display="block";
+  // Atualizar busca para chamados
+  document.getElementById("pl-busca").oninput=filtrarPlanilhaChamados;
+  document.getElementById("pl-count").textContent=`${data.length} chamados`;
+}
+
+function filtrarPlanilhaChamados(){
+  const busca=normalizar(document.getElementById("pl-busca")?.value||"");
+  _plChamadosFiltrado=busca?_plChamadosData.filter(r=>
+    CHAMADOS_COLUNAS.some(c=>normalizar(String(r[c.key]||"")).includes(busca))
+  ):_plChamadosData;
+  renderPlanilhaChamados(_plChamadosFiltrado);
+}
+
+function renderPlanilhaChamados(rows){
+  document.getElementById("pl-thead").innerHTML=`<tr style="background:var(--surface2)">
+    ${CHAMADOS_COLUNAS.map(c=>`<th style="padding:6px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);white-space:nowrap;width:${c.width};border-bottom:1px solid var(--border)">${c.label}</th>`).join("")}
+    <th style="padding:6px 10px;border-bottom:1px solid var(--border);width:60px"></th>
+  </tr>`;
+
+  document.getElementById("pl-tbody").innerHTML=rows.map(r=>`
+    <tr id="row-ch-${r.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      ${CHAMADOS_COLUNAS.map(c=>`
+        <td style="padding:6px 10px;max-width:${c.width};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer"
+            title="${String(r[c.key]||"")}"
+            onclick="editarCelulaChamado('${r.id}','${c.key}','${c.label}',\`${String(r[c.key]||"").replace(/\`/g,"'")}\`)">
+          ${r[c.key]||"<span style='color:var(--text3)'>—</span>"}
+        </td>`).join("")}
+      <td style="padding:6px 10px;white-space:nowrap">
+        <button onclick="excluirLinhaChamado('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir">🗑️</button>
+      </td>
+    </tr>`).join("");
+
+  document.getElementById("pl-count").textContent=`${rows.length} chamados`;
+}
+
+function editarCelulaChamado(id, key, label, valor){
+  _celulaAtual={id, key, label, tabela:"chamados"};
+  document.getElementById("mc-titulo").textContent="Editar: "+label;
+  document.getElementById("mc-ctx").textContent="Chamado ID: "+id.slice(0,8)+"...";
+  document.getElementById("mc-valor").value=valor==="—"?"":valor;
+  document.getElementById("mc-msg2").className="fmsg";
+  document.getElementById("modal-celula").classList.add("active");
+  setTimeout(()=>document.getElementById("mc-valor").select(),100);
+}
+
+async function excluirLinhaChamado(id){
+  const row=_plChamadosData.find(r=>r.id===id);
+  if(!confirm(`Excluir chamado ${row?.protocolo||""}?`)) return;
+  const {error}=await sb.from("chamados").delete().eq("id",id);
+  if(error){alert("Erro: "+error.message);return;}
+  _plChamadosData=_plChamadosData.filter(r=>r.id!==id);
+  filtrarPlanilhaChamados();
 }
 
 async function loadData(){
