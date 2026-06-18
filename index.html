@@ -2732,8 +2732,12 @@ async function carregarUsuarios(){
 async function alterarPapel(userId, email){
   if(bloquearSeVisualiz()) return;
   const novoPapel=document.getElementById("papel-"+userId).value;
-  const {error}=await sb.from("profiles").update({papel:novoPapel}).eq("id",userId);
+  const {data, error}=await sb.from("profiles").update({papel:novoPapel}).eq("id",userId).select();
   if(error){alert("Erro ao atualizar: "+error.message);return;}
+  if(!data || data.length===0){
+    alert("⚠️ Sem permissão para alterar este usuário.\n\nVerifique a política RLS da tabela 'profiles' no Supabase (o admin precisa de permissão UPDATE em perfis de outros usuários).");
+    return;
+  }
   alert("✓ Papel de "+email+" atualizado para '"+novoPapel+"'.");
   carregarUsuarios();
 }
