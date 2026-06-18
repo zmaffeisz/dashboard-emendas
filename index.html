@@ -2886,8 +2886,9 @@ async function excluirLinhaAC(id){
   if(bloquearSeVisualiz()) return;
   const row=_plAcData.find(r=>r.id===id);
   if(!confirm(`Excluir equipamento ${row?.estabelecimento||""} - Pat: ${row?.patrimonio||""}?`)) return;
-  const {error}=await sb.from("inventario_ac").delete().eq("id",id);
+  const {data, error}=await sb.from("inventario_ac").delete().eq("id",id).select();
   if(error){alert("Erro: "+error.message);return;}
+  if(!data || data.length===0){alert("⚠️ Sem permissão para excluir. Verifique a política RLS da tabela 'inventario_ac' no Supabase.");return;}
   _plAcData=_plAcData.filter(r=>r.id!==id);
   acRows=acRows.filter(r=>r.id!==id);
   filtrarPlanilhaAC();
@@ -3191,8 +3192,9 @@ async function excluirLinhaChamado(id){
   if(bloquearSeVisualiz()) return;
   const row=_plChamadosData.find(r=>r.id===id);
   if(!confirm(`Excluir chamado ${row?.protocolo||""}?`)) return;
-  const {error}=await sb.from("chamados").delete().eq("id",id);
+  const {data, error}=await sb.from("chamados").delete().eq("id",id).select();
   if(error){alert("Erro: "+error.message);return;}
+  if(!data || data.length===0){alert("⚠️ Sem permissão para excluir. Verifique a política RLS da tabela 'chamados' no Supabase.");return;}
   _plChamadosData=_plChamadosData.filter(r=>r.id!==id);
   filtrarPlanilhaChamados();
 }
