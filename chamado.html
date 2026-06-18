@@ -144,6 +144,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <input type="text" class="form-input" id="f-responsavel" placeholder="Nome completo">
         </div>
         <div class="form-group full">
+          <label class="form-label">E-mail para retorno do chamado <span class="req">*</span></label>
+          <input type="email" class="form-input" id="f-email" placeholder="email@exemplo.com.br">
+        </div>
+        <div class="form-group full">
           <label class="form-label">Grau de urgência <span class="req">*</span></label>
           <div class="urgencia-grid">
             <label class="urgencia-item p1" onclick="selecionarUrgencia(this,'P1 (interrupção de atendimento)')">
@@ -335,6 +339,7 @@ async function enviarChamado(){
   const endereco = document.getElementById('f-endereco').value.trim();
   const telefone = document.getElementById('f-telefone').value.trim();
   const responsavel = document.getElementById('f-responsavel').value.trim();
+  const email_retorno = document.getElementById('f-email').value.trim();
   const patrimonio = document.getElementById('f-patrimonio').value.trim();
   const equipamento = document.getElementById('f-equipamento').value.trim();
   const descricao = document.getElementById('f-descricao').value.trim();
@@ -343,6 +348,7 @@ async function enviarChamado(){
   if(!endereco){err.textContent='Informe o endereço.';err.style.display='block';return;}
   if(!telefone){err.textContent='Informe o telefone.';err.style.display='block';return;}
   if(!responsavel){err.textContent='Informe o responsável.';err.style.display='block';return;}
+  if(!email_retorno){err.textContent='Informe o e-mail para retorno.';err.style.display='block';return;}
   if(!_urgencia){err.textContent='Selecione o grau de urgência.';err.style.display='block';return;}
   if(!patrimonio){err.textContent='Informe o número do patrimônio.';err.style.display='block';return;}
   if(!equipamento){err.textContent='Informe a descrição do bem.';err.style.display='block';return;}
@@ -368,6 +374,7 @@ async function enviarChamado(){
     endereco,
     telefone,
     responsavel,
+    email_retorno,
     grau_urgencia: _urgencia,
     patrimonio,
     equipamento,
@@ -405,7 +412,7 @@ async function enviarChamado(){
   // Disparar e-mail em segundo plano (não bloqueia o formulário)
   const dadosEmail = {
     protocolo, carimbo,
-    unidade, endereco, telefone, responsavel,
+    unidade, endereco, telefone, responsavel, email_retorno,
     urgencia: _urgencia,
     patrimonio, equipamento,
     fabricante: document.getElementById('f-fabricante').value.trim(),

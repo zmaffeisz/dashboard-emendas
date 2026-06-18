@@ -655,11 +655,11 @@ tr:hover td{background:#e8f0fb}
         <table>
           <thead>
             <tr>
-              <th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Endereço</th>
-              <th>Telefone</th><th>Responsável</th><th>Urgência</th><th>Patrimônio</th>
+              <th>Ações</th><th>PDF</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Endereço</th>
+              <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
               <th>Equipamento</th><th>Fabricante/Modelo</th><th>Série</th>
               <th>Categoria</th><th>Serviço</th><th>Problema apresentado</th>
-              <th>Descrição</th><th>Rechamado?</th><th>Status</th><th>Ações</th><th>PDF</th>
+              <th>Descrição</th><th>Rechamado?</th><th>Status</th>
             </tr>
           </thead>
           <tbody id="cn-body"></tbody>
@@ -1742,7 +1742,7 @@ function gerarPDFChamado(protocolo){
       </td>
       <td style="font-size:8px">P1 - Interrupção de Atendimento<br>P2 - Atendimento parcialmente prejudicado<br>P3 - Pouco urgente</td>
     </tr>
-    <tr><td colspan="3"><span class="label">Responsável pela abertura do chamado:</span> ${r.responsavel||""}</td></tr>
+    <tr><td colspan="3"><span class="label">Responsável pela abertura do chamado:</span> ${r.responsavel||""}${r.email_retorno?` &nbsp;&nbsp; <span class="label">E-mail para retorno:</span> ${r.email_retorno}`:''}</td></tr>
   </table>
 
   <table>
@@ -3032,12 +3032,15 @@ function filtrarChamadosNovos(){
     const data=r.carimbo||new Date(r.created_at).toLocaleString("pt-BR");
     const aguardando=!ctrl.status||ctrl.status==="Aguardando abertura";  // amarelo só se aguardando
     return`<tr style="${aguardando?'background:var(--amber-bg)':''}">
+      <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
+      <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
       <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
       <td style="font-size:11px" class="td-trunc">${r.endereco||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.telefone||"—"}</td>
       <td style="font-size:11px" class="td-trunc">${r.responsavel||"—"}</td>
+      <td style="font-size:11px">${r.email_retorno||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.grau_urgencia||"—"}</td>
       <td style="font-size:11px">${r.patrimonio||"—"}</td>
       <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
@@ -3048,9 +3051,7 @@ function filtrarChamadosNovos(){
       <td style="font-size:11px">${r.problema||"—"}</td>
       <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
       <td style="font-size:11px">${r.rechamado||"—"}</td>
-      <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>  
-      <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
-      <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
+      <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
     </tr>`;
   }).join("");
 }
@@ -3126,6 +3127,7 @@ function gerarPDFChamadoNovo(id){
     descricao:r.descricao||"",
     rechamado:r.rechamado||"",
     data_rechamado:r.data_rechamado||"",
+    email_retorno:r.email_retorno||"",
   };
   // Adicionar temporariamente ao chamadosRows e chamar PDF
   const tempIdx=chamadosRows.findIndex(x=>x.protocolo===r.protocolo);
