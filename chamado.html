@@ -261,6 +261,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script>
 const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_62rlfRwV8Lzg_kFLJCEn4g_heoU6pqk";
+const EMAIL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtsCvpSQsnFEXks3GcJyRB-UNh3z5M2-3kAoMGAJeoFTFXioSyMHsmxhDsW8g4_ZLMJQ/exec";
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -389,6 +390,21 @@ async function enviarChamado(){
     btn.disabled=false;btn.textContent='📨 Enviar solicitação';
     return;
   }
+
+  // Disparar e-mail em segundo plano (não bloqueia o formulário)
+  const dadosEmail = {
+    protocolo, carimbo,
+    unidade, endereco, telefone, responsavel,
+    urgencia: _urgencia,
+    patrimonio, equipamento,
+    fabricante: document.getElementById('f-fabricante').value.trim(),
+    serie: document.getElementById('f-serie').value.trim(),
+    categoria: _categoria, servico: _servico, problema: _problema, descricao,
+    rechamado: _rechamado,
+  };
+  fetch(EMAIL_SCRIPT_URL + "?dados=" + encodeURIComponent(JSON.stringify(dadosEmail)), {
+    method: "GET", mode: "no-cors"
+  }).catch(()=>{});
 
   // Sucesso
   document.getElementById('form-container').style.display='none';
