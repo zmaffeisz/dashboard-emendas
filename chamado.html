@@ -392,10 +392,15 @@ async function enviarChamado(){
   }
 
   // Garante status inicial correto no controle (sobrepõe qualquer trigger que use "Aberto" como default)
-  await sb.from('chamados_controle').upsert(
-    {protocolo, status: 'Aguardando abertura'},
-    {onConflict: 'protocolo'}
-  );
+  await sb.from('chamados_controle').upsert({
+    protocolo: protocolo,
+    status: 'Aguardando abertura',
+    data_atendimento: null,
+    empresa: '',
+    os: '',
+    feito: '',
+    obs: ''
+  }, {onConflict: 'protocolo'});
 
   // Disparar e-mail em segundo plano (não bloqueia o formulário)
   const dadosEmail = {
