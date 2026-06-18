@@ -1254,6 +1254,8 @@ async function checkAuth(){
     `;
     document.head.appendChild(style);
   }
+  const ultimaAba=localStorage.getItem("ultima_aba");
+  if(ultimaAba) showTab(ultimaAba);
   return true;
 }
 
@@ -1275,6 +1277,7 @@ let searchType = "todos";
 let lastSearchResults = [];
 let sortCol = null;
 let sortAsc = true;
+let _cnInterval = null;
 
 const STATUS_MAP = {
   "ENTREGUE":{color:"#1D9E75",label:"Entregue"},
@@ -1371,6 +1374,7 @@ function fecharModalFora(e){
 }
 
 function showTab(name){
+  localStorage.setItem("ultima_aba", name);
   const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
@@ -1382,6 +1386,11 @@ function showTab(name){
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
+  if(name==="chamados-novos"){
+    if(!_cnInterval) _cnInterval=setInterval(loadChamadosNovos,30000);
+  } else {
+    if(_cnInterval){clearInterval(_cnInterval);_cnInterval=null;}
+  }
 }
 
 // ═══ LOAD ═══
