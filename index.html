@@ -176,6 +176,7 @@ tr:hover td{background:var(--surface2)}
   <div class="tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
   <div class="tab" onclick="showTab('consulta')">🔍 Consulta rápida</div>
   <div class="tab" onclick="showTab('chamados')">📋 Chamados <span id="badge-chamados" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
+  <div class="tab" onclick="showTab('chamados-novos')">🆕 Chamados novos <span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
   <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
@@ -578,6 +579,95 @@ tr:hover td{background:var(--surface2)}
           <button class="btn-primary" onclick="salvarControleChamado()">Salvar</button>
           <button class="btn-secondary" onclick="fecharModalChamado()">Cancelar</button>
           <span id="mc-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ CHAMADOS NOVOS (SUPABASE) ══════════════════════ -->
+<div id="panel-chamados-novos" class="panel">
+  <div id="cn-loading" class="loading"><span class="spinner"></span>Carregando chamados...</div>
+  <div id="cn-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Unidade <button onclick="clearF('cn-unidade')">✕</button></div>
+        <select id="cn-unidade" onchange="filtrarChamadosNovos()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Categoria <button onclick="clearF('cn-categoria')">✕</button></div>
+        <select id="cn-categoria" onchange="filtrarChamadosNovos()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('cn-status')">✕</button></div>
+        <select id="cn-status" onchange="filtrarChamadosNovos()">
+          <option value="">Todos</option>
+          <option>Aberto</option>
+          <option>Em andamento</option>
+          <option>Concluído</option>
+          <option>Pendente</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('cn-busca')">✕</button></div>
+        <input type="text" id="cn-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamadosNovos()">
+      </div>
+      <button class="clear-btn" onclick="clearAllChamadosNovos()">✕ Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cnm-total">—</div><div class="metric-sub">chamados</div></div>
+      <div class="metric"><div class="metric-label">Abertos</div><div class="metric-value" id="cnm-abertos" style="color:var(--red)">—</div><div class="metric-sub">sem atendimento</div></div>
+      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="cnm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" id="cnm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Chamados novos (Supabase)</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="cn-count">—</span>
+          <button onclick="loadChamadosNovos()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻ Atualizar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Patrimônio</th>
+              <th>Equipamento</th><th>Categoria</th><th>Serviço</th><th>Urgência</th>
+              <th>Problema</th><th>Status</th><th>Ações</th><th>PDF</th>
+            </tr>
+          </thead>
+          <tbody id="cn-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal atualizar chamado novo -->
+    <div class="modal-overlay" id="modal-cn" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:500px">
+        <div class="modal-title">✏️ Atualizar chamado</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="mcn-info"></div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group full">
+            <div class="form-label">Status *</div>
+            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+              <option>Aberto</option><option>Em andamento</option><option>Concluído</option><option>Pendente</option>
+            </select>
+          </div>
+          <div class="form-group"><div class="form-label">Data atendimento</div><input type="date" id="mcn-data"></div>
+          <div class="form-group"><div class="form-label">Empresa</div><input type="text" id="mcn-empresa"></div>
+          <div class="form-group"><div class="form-label">Nº OS</div><input type="text" id="mcn-os"></div>
+          <div class="form-group full"><div class="form-label">O que foi feito</div><input type="text" id="mcn-feito"></div>
+          <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="mcn-obs"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarChamadoNovo()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-cn').classList.remove('active')">Cancelar</button>
+          <span id="mcn-msg" class="fmsg"></span>
         </div>
       </div>
     </div>
@@ -1243,12 +1333,13 @@ function fecharModalFora(e){
 }
 
 function showTab(name){
-  const names=["dashboard","consulta","chamados","inventario-ac","atas","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
+  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("panel-"+name).classList.add("active");
   if(name==="novo-item"||name==="atualizar-status") popularSelectsEdicao();
   if(name==="chamados"&&!chamadosRows.length) loadChamados();
+  if(name==="chamados-novos"&&!chamadosNovosCarregado) loadChamadosNovos();
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="usuarios") carregarUsuarios();
@@ -2750,6 +2841,172 @@ async function salvarNovaLinhaAC(){
 function mudarPlanilha(tipo){
   // Por enquanto só AC - expansível futuramente
   if(tipo==="ac") carregarPlanilhaAC();
+}
+
+// ═══ CHAMADOS NOVOS (SUPABASE) ═══
+let chamadosNovosRows = [];
+let chamadosNovosCarregado = false;
+let _cnAtual = null;
+
+async function loadChamadosNovos(){
+  document.getElementById("cn-loading").style.display="block";
+  document.getElementById("cn-main").style.display="none";
+  const {data,error}=await sb.from("chamados").select("*, chamados_controle(status,data_atendimento,empresa,os,feito,obs)").order("created_at",{ascending:false});
+  if(error){document.getElementById("cn-loading").innerHTML=`<div style="color:var(--red)">Erro: ${error.message}</div>`;return;}
+  chamadosNovosRows=data;
+  chamadosNovosCarregado=true;
+  popularFiltrosCN();
+  filtrarChamadosNovos();
+  atualizarBadgeCN();
+  document.getElementById("cn-loading").style.display="none";
+  document.getElementById("cn-main").style.display="block";
+}
+
+function getControleCN(row){
+  const ctrl=row.chamados_controle;
+  if(ctrl&&ctrl.length>0) return ctrl[0];
+  return {status:"Aberto",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
+}
+
+function atualizarBadgeCN(){
+  const abertos=chamadosNovosRows.filter(r=>getControleCN(r).status==="Aberto").length;
+  const badge=document.getElementById("badge-chamados-novos");
+  if(badge){
+    if(abertos>0){badge.textContent=abertos;badge.style.display="inline";}
+    else badge.style.display="none";
+  }
+}
+
+function popularFiltrosCN(){
+  const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">Todas</option>'+vals.map(v=>`<option value="${v}">${v}</option>`).join("")};
+  sel("cn-unidade",[...new Set(chamadosNovosRows.map(r=>r.unidade).filter(Boolean))].sort());
+  sel("cn-categoria",[...new Set(chamadosNovosRows.map(r=>r.categoria).filter(Boolean))].sort());
+}
+
+function clearAllChamadosNovos(){
+  ["cn-unidade","cn-categoria","cn-status","cn-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  filtrarChamadosNovos();
+}
+
+function filtrarChamadosNovos(){
+  const un=document.getElementById("cn-unidade")?.value||"";
+  const cat=document.getElementById("cn-categoria")?.value||"";
+  const st=document.getElementById("cn-status")?.value||"";
+  const busca=document.getElementById("cn-busca")?.value||"";
+
+  let rows=chamadosNovosRows.filter(r=>{
+    if(un&&r.unidade!==un) return false;
+    if(cat&&r.categoria!==cat) return false;
+    const ctrl=getControleCN(r);
+    if(st&&ctrl.status!==st) return false;
+    if(busca&&!matchBusca([r.equipamento,r.patrimonio,r.protocolo,r.unidade,r.descricao].join(" "),busca)) return false;
+    return true;
+  });
+
+  const abertos=rows.filter(r=>getControleCN(r).status==="Aberto").length;
+  const andamento=rows.filter(r=>getControleCN(r).status==="Em andamento").length;
+  const concluidos=rows.filter(r=>getControleCN(r).status==="Concluído").length;
+  document.getElementById("cnm-total").textContent=rows.length;
+  document.getElementById("cnm-abertos").textContent=abertos;
+  document.getElementById("cnm-andamento").textContent=andamento;
+  document.getElementById("cnm-concluidos").textContent=concluidos;
+  document.getElementById("cn-count").textContent=`${rows.length} chamados`;
+
+  document.getElementById("cn-body").innerHTML=rows.map(r=>{
+    const ctrl=getControleCN(r);
+    const aberto=ctrl.status==="Aberto";
+    const data=r.carimbo||new Date(r.created_at).toLocaleString("pt-BR");
+    return`<tr style="${aberto?'background:var(--amber-bg)':''}">
+      <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${data}</td>
+      <td style="font-size:12px">${r.unidade||"—"}</td>
+      <td style="font-size:11px">${r.patrimonio||"—"}</td>
+      <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
+      <td style="font-size:11px">${r.categoria||"—"}</td>
+      <td style="font-size:11px">${r.servico||"—"}</td>
+      <td style="font-size:11px">${r.grau_urgencia||"—"}</td>
+      <td style="font-size:11px">${r.problema||"—"}</td>
+      <td>${statusBadgeChamado(ctrl.status)}</td>
+      <td><button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button></td>
+      <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function abrirModalCN(id){
+  const r=chamadosNovosRows.find(x=>x.id===id);
+  if(!r) return;
+  _cnAtual=id;
+  const ctrl=getControleCN(r);
+  document.getElementById("mcn-info").textContent=`${r.protocolo} · ${r.equipamento} · ${r.unidade}`;
+  document.getElementById("mcn-status").value=ctrl.status||"Aberto";
+  document.getElementById("mcn-data").value=ctrl.data_atendimento||"";
+  document.getElementById("mcn-empresa").value=ctrl.empresa||"";
+  document.getElementById("mcn-os").value=ctrl.os||"";
+  document.getElementById("mcn-feito").value=ctrl.feito||"";
+  document.getElementById("mcn-obs").value=ctrl.obs||"";
+  document.getElementById("mcn-msg").className="fmsg";
+  document.getElementById("modal-cn").classList.add("active");
+}
+
+async function salvarChamadoNovo(){
+  if(!_cnAtual) return;
+  const btn=document.querySelector("#modal-cn .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const dados={
+    protocolo: chamadosNovosRows.find(r=>r.id===_cnAtual)?.protocolo,
+    status:document.getElementById("mcn-status").value,
+    data_atendimento:document.getElementById("mcn-data").value||null,
+    empresa:document.getElementById("mcn-empresa").value,
+    os:document.getElementById("mcn-os").value,
+    feito:document.getElementById("mcn-feito").value,
+    obs:document.getElementById("mcn-obs").value,
+  };
+  // Upsert no controle
+  const {error}=await sb.from("chamados_controle").upsert({...dados},{onConflict:"protocolo"});
+  if(error){showMsg("mcn","Erro: "+error.message,"err");btn.disabled=false;btn.textContent="Salvar";return;}
+  // Atualizar local
+  const r=chamadosNovosRows.find(x=>x.id===_cnAtual);
+  if(r){
+    if(!r.chamados_controle||!r.chamados_controle.length) r.chamados_controle=[dados];
+    else Object.assign(r.chamados_controle[0],dados);
+  }
+  filtrarChamadosNovos();
+  atualizarBadgeCN();
+  showMsg("mcn","✓ Salvo!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-cn").classList.remove("active"),1200);
+}
+
+function gerarPDFChamadoNovo(id){
+  const r=chamadosNovosRows.find(x=>x.id===id);
+  if(!r) return;
+  // Reutilizar gerarPDFChamado adaptando o objeto
+  const chamadoAdaptado={
+    protocolo:r.protocolo,
+    carimbo:r.carimbo,
+    data_solicitacao:r.data_solicitacao,
+    unidade:r.unidade,
+    endereco:r.endereco||"",
+    telefone:r.telefone||"",
+    responsavel:r.responsavel||"",
+    grau_urgencia:r.grau_urgencia||"",
+    patrimonio:r.patrimonio||"",
+    equipamento:r.equipamento||"",
+    fabricante:r.fabricante||"",
+    serie:r.serie||"",
+    categoria:r.categoria||"",
+    servico:r.servico||"",
+    problema:r.problema||"",
+    descricao:r.descricao||"",
+    rechamado:r.rechamado||"",
+    data_rechamado:r.data_rechamado||"",
+  };
+  // Adicionar temporariamente ao chamadosRows e chamar PDF
+  const tempIdx=chamadosRows.findIndex(x=>x.protocolo===r.protocolo);
+  if(tempIdx<0) chamadosRows.push(chamadoAdaptado);
+  gerarPDFChamado(r.protocolo);
+  if(tempIdx<0) chamadosRows.pop();
 }
 
 async function loadData(){
