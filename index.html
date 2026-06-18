@@ -2492,8 +2492,8 @@ async function confirmarEncerramento(){
 }
 
 // ═══ EXCLUIR EXECUÇÃO ═══
-async function excluirExec(
-  if(bloquearSeVisualiz()) return;idx,cpl,sim,item,unidade){
+async function excluirExec(idx,cpl,sim,item,unidade){
+  if(bloquearSeVisualiz()) return;
   if(!confirm(`Excluir esta solicitação?\n${item} · ${unidade}\n\nEsta ação não pode ser desfeita.`)) return;
   await enviarViaGet({acao:"excluir_execucao",cpl,sim,item,unidade});
   // Remover localmente
@@ -2719,8 +2719,8 @@ async function carregarUsuarios(){
   document.getElementById("usuarios-table").style.display="block";
 }
 
-async function alterarPapel(
-  if(bloquearSeVisualiz()) return;userId, email){
+async function alterarPapel(userId, email){
+  if(bloquearSeVisualiz()) return;
   const novoPapel=document.getElementById("papel-"+userId).value;
   const {error}=await sb.from("profiles").update({papel:novoPapel}).eq("id",userId);
   if(error){alert("Erro ao atualizar: "+error.message);return;}
@@ -2868,8 +2868,8 @@ async function salvarCelula(){
   setTimeout(()=>fecharModalCelula(),800);
 }
 
-async function excluirLinhaAC(
-  if(bloquearSeVisualiz()) return;id){
+async function excluirLinhaAC(id){
+  if(bloquearSeVisualiz()) return;
   const row=_plAcData.find(r=>r.id===id);
   if(!confirm(`Excluir equipamento ${row?.estabelecimento||""} - Pat: ${row?.patrimonio||""}?`)) return;
   const {error}=await sb.from("inventario_ac").delete().eq("id",id);
@@ -3173,8 +3173,8 @@ function editarCelulaChamado(id, key, label, valor){
   setTimeout(()=>document.getElementById("mc-valor").select(),100);
 }
 
-async function excluirLinhaChamado(
-  if(bloquearSeVisualiz()) return;id){
+async function excluirLinhaChamado(id){
+  if(bloquearSeVisualiz()) return;
   const row=_plChamadosData.find(r=>r.id===id);
   if(!confirm(`Excluir chamado ${row?.protocolo||""}?`)) return;
   const {error}=await sb.from("chamados").delete().eq("id",id);
