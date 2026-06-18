@@ -235,10 +235,23 @@ tr:hover td{background:#e8f0fb}
         <div class="fg-label">Unidade <button onclick="clearF('f-unidade')">✕</button></div>
         <select id="f-unidade" onchange="applyFilters()"><option value="">Todas</option></select>
       </div>
-      <div class="fg">
-        <div class="fg-label">Nº da emenda <button onclick="clearFMulti('f-emenda')">✕</button></div>
-        <select id="f-emenda" multiple onchange="applyFilters()" style="min-height:76px;min-width:160px"></select>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">Ctrl+clique p/ múltiplas</div>
+      <div class="fg" style="position:relative">
+        <div class="fg-label">Nº da emenda <button onclick="clearEmendaFilter()">✕</button></div>
+        <button id="emenda-trigger" onclick="toggleEmendaDropdown(event)" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:160px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap">
+          <span id="emenda-trigger-label">Todas</span><span style="font-size:10px;color:var(--text3)">▼</span>
+        </button>
+        <div id="emenda-dropdown" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);width:230px;padding:.625rem">
+          <input type="text" id="emenda-search" placeholder="🔍 Buscar número..." oninput="filterEmendaList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box">
+          <div style="display:flex;gap:5px;margin-bottom:.375rem">
+            <button onclick="selectAllEmendas(true)" style="font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;color:var(--text2)">Todos</button>
+            <button onclick="selectAllEmendas(false)" style="font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;color:var(--text2)">Nenhum</button>
+          </div>
+          <div id="emenda-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button onclick="cancelEmendaDropdown()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+            <button onclick="confirmEmendaFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+          </div>
+        </div>
       </div>
       <div class="fg">
         <div class="fg-label">CPL / Processo <button onclick="clearF('f-cpl')">✕</button></div>
@@ -1600,6 +1613,9 @@ let searchType = "todos";
 let lastSearchResults = [];
 let sortCol = null;
 let sortAsc = true;
+let selectedEmendas = [];
+let pendingEmendas = [];
+let allEmendaOptions = [];
 
 const STATUS_MAP = {
   "ENTREGUE":{color:"#1D9E75",label:"Entregue"},
@@ -3594,19 +3610,97 @@ async function loadData(){
 // ═══ FILTROS ═══
 function populateFilters(){
   const sel=(id,vals,def="Todos")=>{const el=document.getElementById(id);const cur=el.value;el.innerHTML=`<option value="">${def}</option>`+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
-  const selM=(id,vals)=>{const el=document.getElementById(id);const s=[...el.selectedOptions].map(o=>o.value);el.innerHTML=vals.map(v=>`<option value="${v}"${s.includes(v)?" selected":""}>${v}</option>`).join("")};
   sel("f-parlamentar",[...new Set(allRows.map(r=>r.parlamentar).filter(Boolean))].sort());
   sel("f-status",[...new Set(allRows.map(r=>r.status_cat))].sort());
   sel("f-tipo",[...new Set(allRows.map(r=>r.tipo).filter(Boolean))].sort());
   sel("f-unidade",[...new Set(allRows.map(r=>r.unidade).filter(Boolean))].sort(),"Todas");
-  selM("f-emenda",[...new Set(allRows.map(r=>r.emenda).filter(Boolean))].sort());
+  allEmendaOptions=[...new Set(allRows.map(r=>r.emenda).filter(Boolean))].sort();
+  buildEmendaList(allEmendaOptions);
 }
 
+function buildEmendaList(vals){
+  const list=document.getElementById("emenda-list");
+  if(!list) return;
+  list.innerHTML=vals.map(v=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">`+
+    `<input type="checkbox" value="${v}" ${pendingEmendas.includes(v)?'checked':''} style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0" onchange="updatePendingEmendas()"> ${v}</label>`).join('');
+}
+
+function filterEmendaList(){
+  const q=document.getElementById("emenda-search").value.toLowerCase().trim();
+  const vals=q?allEmendaOptions.filter(v=>v.toLowerCase().includes(q)):allEmendaOptions;
+  const list=document.getElementById("emenda-list");
+  list.innerHTML=vals.map(v=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">`+
+    `<input type="checkbox" value="${v}" ${pendingEmendas.includes(v)?'checked':''} style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0" onchange="updatePendingEmendas()"> ${v}</label>`).join('');
+}
+
+function updatePendingEmendas(){
+  pendingEmendas=[...document.getElementById("emenda-list").querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
+}
+
+function toggleEmendaDropdown(e){
+  e.stopPropagation();
+  const dd=document.getElementById("emenda-dropdown");
+  const btn=document.getElementById("emenda-trigger");
+  if(dd.style.display==='none'||dd.style.display===''){
+    pendingEmendas=[...selectedEmendas];
+    document.getElementById("emenda-search").value='';
+    buildEmendaList(allEmendaOptions);
+    const rect=btn.getBoundingClientRect();
+    dd.style.top=(rect.bottom+window.scrollY+4)+'px';
+    dd.style.left=(rect.left+window.scrollX)+'px';
+    dd.style.display='block';
+    document.getElementById("emenda-search").focus();
+  } else {
+    dd.style.display='none';
+  }
+}
+
+function confirmEmendaFilter(){
+  selectedEmendas=[...pendingEmendas];
+  updateEmendaTriggerLabel();
+  document.getElementById("emenda-dropdown").style.display='none';
+  applyFilters();
+}
+
+function cancelEmendaDropdown(){
+  document.getElementById("emenda-dropdown").style.display='none';
+}
+
+function clearEmendaFilter(){
+  selectedEmendas=[];
+  pendingEmendas=[];
+  updateEmendaTriggerLabel();
+  applyFilters();
+}
+
+function updateEmendaTriggerLabel(){
+  const lbl=document.getElementById("emenda-trigger-label");
+  if(!lbl) return;
+  if(selectedEmendas.length===0) lbl.textContent='Todas';
+  else if(selectedEmendas.length===1) lbl.textContent=selectedEmendas[0];
+  else lbl.textContent=selectedEmendas.length+' selecionadas';
+}
+
+function selectAllEmendas(all){
+  const boxes=document.getElementById("emenda-list").querySelectorAll('input[type=checkbox]');
+  boxes.forEach(c=>c.checked=all);
+  if(all) pendingEmendas=[...boxes].map(c=>c.value);
+  else pendingEmendas=[];
+}
+
+// fechar dropdown ao clicar fora
+document.addEventListener('click',function(e){
+  const dd=document.getElementById("emenda-dropdown");
+  if(dd&&dd.style.display!=='none'){
+    if(!dd.contains(e.target)&&e.target.id!=='emenda-trigger'&&!e.target.closest('#emenda-trigger'))
+      dd.style.display='none';
+  }
+});
+
 function clearF(id){const el=document.getElementById(id);if(el)el.value="";applyFilters()}
-function clearFMulti(id){const el=document.getElementById(id);if(el)[...el.options].forEach(o=>o.selected=false);applyFilters()}
 function clearAllFilters(){
   ["f-parlamentar","f-status","f-tipo","f-unidade","f-cpl","f-empenho","f-patrimonio","f-nf","f-busca"].forEach(id=>clearF(id));
-  clearFMulti("f-emenda");
+  clearEmendaFilter();
 }
 
 function applyFilters(){
@@ -3614,7 +3708,7 @@ function applyFilters(){
   const parl=get("f-parlamentar"),status=get("f-status"),tipo=get("f-tipo"),unidade=get("f-unidade");
   const cpl=get("f-cpl").toLowerCase(),busca=get("f-busca").toLowerCase();
   const empenho=get("f-empenho").toLowerCase(),patrimonio=get("f-patrimonio").toLowerCase(),nf=get("f-nf").toLowerCase();
-  const emSel=[...document.getElementById("f-emenda").selectedOptions].map(o=>o.value).filter(Boolean);
+  const emSel=selectedEmendas;
   filtered=allRows.filter(r=>{
     if(parl&&r.parlamentar!==parl) return false;
     if(status&&r.status_cat!==status) return false;
