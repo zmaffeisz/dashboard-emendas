@@ -675,10 +675,15 @@ tr:hover td{background:#e8f0fb}
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
           <div class="form-group full">
             <div class="form-label">Status *</div>
-            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)" onchange="document.getElementById('mcn-invalido-wrap').style.display=this.value==='Inválido'?'block':'none'">
               <option>Aguardando abertura</option>
               <option>Aberto</option>
+              <option>Inválido</option>
             </select>
+            <div id="mcn-invalido-wrap" style="display:none;margin-top:8px">
+              <div class="form-label">Motivo da invalidação *</div>
+              <input type="text" id="mcn-motivo-invalido" placeholder="Descreva o motivo...">
+            </div>
           </div>
           <div class="form-group"><div class="form-label">Data atendimento</div><input type="date" id="mcn-data"></div>
           <div class="form-group"><div class="form-label">Empresa</div><input type="text" id="mcn-empresa"></div>
@@ -1536,6 +1541,7 @@ function statusBadgeChamado(status){
     "Em andamento":["var(--amber-bg)","var(--amber-text)"],
     "Concluído":["var(--green-bg)","var(--green-text)"],
     "Pendente":["var(--purple-bg)","var(--purple-text)"],
+    "Inválido":["var(--gray-bg)","var(--gray-text)"],
   };
   const c=m[status]||["var(--gray-bg)","var(--gray-text)"];
   return`<span class="badge" style="background:${c[0]};color:${c[1]}">${status}</span>`;
@@ -3061,7 +3067,10 @@ function abrirModalCN(id){
   _cnAtual=id;
   const ctrl=getControleCN(r);
   document.getElementById("mcn-info").textContent=`${r.protocolo} · ${r.equipamento} · ${r.unidade}`;
-  document.getElementById("mcn-status").value=ctrl.status||"Aguardando abertura";
+  const _st=ctrl.status||"Aguardando abertura";
+  document.getElementById("mcn-status").value=_st;
+  document.getElementById("mcn-invalido-wrap").style.display=_st==="Inválido"?"block":"none";
+  document.getElementById("mcn-motivo-invalido").value=ctrl.motivo_invalido||"";
   document.getElementById("mcn-data").value=ctrl.data_atendimento||"";
   document.getElementById("mcn-empresa").value=ctrl.empresa||"";
   document.getElementById("mcn-os").value=ctrl.os||"";
@@ -3076,14 +3085,16 @@ async function salvarChamadoNovo(){
   if(!_cnAtual) return;
   const btn=document.querySelector("#modal-cn .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
+  const _status=document.getElementById("mcn-status").value;
   const dados={
     protocolo: chamadosNovosRows.find(r=>r.id===_cnAtual)?.protocolo,
-    status:document.getElementById("mcn-status").value,
+    status:_status,
     data_atendimento:document.getElementById("mcn-data").value||null,
     empresa:document.getElementById("mcn-empresa").value,
     os:document.getElementById("mcn-os").value,
     feito:document.getElementById("mcn-feito").value,
     obs:document.getElementById("mcn-obs").value,
+    motivo_invalido:_status==="Inválido"?document.getElementById("mcn-motivo-invalido").value||null:null,
   };
   // Upsert no controle
   const {error}=await sb.from("chamados_controle").upsert({...dados},{onConflict:"protocolo"});
