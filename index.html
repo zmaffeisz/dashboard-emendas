@@ -172,6 +172,7 @@ tr:hover td{background:var(--surface2)}
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
+    <span id="last-update" style="display:none"></span>
     <span class="pill pill-loading" id="conn-pill">⏳ Conectando</span>
     <button class="refresh-btn" onclick="loadData()">↻ Atualizar</button>
   </div>
@@ -1208,8 +1209,7 @@ async function checkAuth(){
   const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
   currentProfile = profile;
   // Mostrar nome do usuário no header
-  const sub = document.getElementById("last-update");
-  if(sub) sub.textContent = `Logado como ${profile?.nome||currentUser.email} (${profile?.papel||'visualizador'})`;
+  // last-update é atualizado pelo loadData
   // Mostrar botão de logout
   const refreshBtn = document.querySelector(".refresh-btn");
   if(refreshBtn){
