@@ -179,6 +179,7 @@ tr:hover td{background:var(--surface2)}
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
   <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
+  <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
   <div class="tab" id="tab-btn-nova-emenda" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
   <div class="tab" id="tab-btn-novo-item" onclick="showTab('novo-item')">📦 Novo item</div>
   <div class="tab" id="tab-btn-atualizar-status" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
@@ -642,6 +643,81 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<!-- ══════════════════════ PLANILHAS ══════════════════════ -->
+<div id="panel-planilhas" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="form-title" style="margin:0;padding:0;border:none">📊 Planilhas</div>
+        <div style="display:flex;gap:4px">
+          <button onclick="mudarPlanilha('ac')" id="pl-btn-ac" style="font-size:12px;padding:4px 12px;border-radius:20px;border:none;background:var(--blue);color:#fff;cursor:pointer">🧊 Inventário AC</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="adicionarLinhaAC()" id="btn-add-ac" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">+ Nova linha</button>
+        <button onclick="carregarPlanilhaAC()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻ Atualizar</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:.75rem;display:flex;gap:8px">
+      <input type="text" id="pl-busca" placeholder="🔍 Buscar..." oninput="filtrarPlanilhaAC()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:250px">
+      <span id="pl-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
+      <span style="font-size:11px;color:var(--text3);align-self:center;margin-left:auto">Clique em qualquer célula para editar</span>
+    </div>
+
+    <div id="pl-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
+    <div id="pl-table-wrap" style="display:none;overflow-x:auto;max-height:600px;overflow-y:auto">
+      <table id="pl-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1200px">
+        <thead id="pl-thead" style="position:sticky;top:0;z-index:1"></thead>
+        <tbody id="pl-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Modal editar célula -->
+    <div class="modal-overlay" id="modal-celula" onclick="if(event.target===this)fecharModalCelula()">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title" id="mc-titulo">Editar</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 .75rem" id="mc-ctx"></div>
+        <input type="text" id="mc-valor" style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm)" onkeydown="if(event.key==='Enter')salvarCelula();if(event.key==='Escape')fecharModalCelula()">
+        <div class="form-actions" style="margin-top:1rem">
+          <button class="btn-primary" onclick="salvarCelula()">Salvar</button>
+          <button class="btn-secondary" onclick="fecharModalCelula()">Cancelar</button>
+          <span id="mc-msg2" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal nova linha AC -->
+    <div class="modal-overlay" id="modal-nova-linha-ac" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:560px">
+        <div class="modal-title">➕ Novo equipamento AC</div>
+        <div class="form-grid" style="margin-top:.875rem">
+          <div class="form-group"><div class="form-label">Nº</div><input type="text" id="nl-num" placeholder="ex: 284"></div>
+          <div class="form-group"><div class="form-label">Situação</div><input type="text" id="nl-situacao" placeholder="ex: CONTRATO VIGENTE - instalado"></div>
+          <div class="form-group"><div class="form-label">Estabelecimento</div><input type="text" id="nl-estab" placeholder="ex: UBS CAJURU"></div>
+          <div class="form-group"><div class="form-label">Endereço</div><input type="text" id="nl-end" placeholder="ex: RUA X, 123"></div>
+          <div class="form-group"><div class="form-label">Sala</div><input type="text" id="nl-sala" placeholder="ex: RECEPÇÃO"></div>
+          <div class="form-group"><div class="form-label">Patrimônio</div><input type="text" id="nl-pat" placeholder="ex: 123456"></div>
+          <div class="form-group"><div class="form-label">Ano fab.</div><input type="text" id="nl-ano" placeholder="ex: 2023"></div>
+          <div class="form-group"><div class="form-label">Marca</div><input type="text" id="nl-marca" placeholder="ex: AGRATTO"></div>
+          <div class="form-group"><div class="form-label">Modelo</div><input type="text" id="nl-modelo" placeholder="ex: LCST24F"></div>
+          <div class="form-group"><div class="form-label">Série</div><input type="text" id="nl-serie" placeholder="ex: ABC123"></div>
+          <div class="form-group"><div class="form-label">BTU</div><input type="text" id="nl-btu" placeholder="ex: 24000"></div>
+          <div class="form-group"><div class="form-label">Q/F</div><input type="text" id="nl-qf" placeholder="ex: FRIO"></div>
+          <div class="form-group"><div class="form-label">Tipo</div><input type="text" id="nl-tipo" placeholder="ex: SPLIT HI WALL"></div>
+          <div class="form-group"><div class="form-label">Contrato</div><input type="text" id="nl-contrato" placeholder="ex: CPL 455/2023"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarNovaLinhaAC()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-nova-linha-ac').classList.remove('active')">Cancelar</button>
+          <span id="nl-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ══════════════════════ USUÁRIOS ══════════════════════ -->
 <div id="panel-usuarios" class="panel">
   <div class="form-card">
@@ -1038,6 +1114,11 @@ async function checkAuth(){
     const tabUsuarios=document.getElementById("tab-btn-usuarios");
     if(tabUsuarios) tabUsuarios.style.display="block";
   }
+  // Mostrar aba Planilhas para admin e editor
+  if(profile?.papel === 'admin' || profile?.papel === 'editor'){
+    const tabPlanilhas=document.getElementById("tab-btn-planilhas");
+    if(tabPlanilhas) tabPlanilhas.style.display="block";
+  }
   // Ocultar abas de edição para visualizadores
   if(profile?.papel === 'visualizador'){
     ["tab-btn-nova-emenda","tab-btn-novo-item","tab-btn-atualizar-status","tab-btn-atas"].forEach(id=>{
@@ -1162,7 +1243,7 @@ function fecharModalFora(e){
 }
 
 function showTab(name){
-  const names=["dashboard","consulta","chamados","inventario-ac","atas","usuarios","nova-emenda","novo-item","atualizar-status"];
+  const names=["dashboard","consulta","chamados","inventario-ac","atas","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("panel-"+name).classList.add("active");
@@ -1171,6 +1252,7 @@ function showTab(name){
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="usuarios") carregarUsuarios();
+  if(name==="planilhas") carregarPlanilhaAC();
 }
 
 // ═══ LOAD ═══
@@ -2506,6 +2588,168 @@ async function alterarPapel(userId, email){
   if(error){alert("Erro ao atualizar: "+error.message);return;}
   alert("✓ Papel de "+email+" atualizado para '"+novoPapel+"'.");
   carregarUsuarios();
+}
+
+// ═══ PLANILHAS ═══
+const AC_COLUNAS = [
+  {key:"num",label:"Nº",width:"50px"},
+  {key:"situacao",label:"Situação",width:"200px"},
+  {key:"estabelecimento",label:"Estabelecimento",width:"160px"},
+  {key:"endereco",label:"Endereço",width:"180px"},
+  {key:"sala",label:"Sala",width:"120px"},
+  {key:"patrimonio",label:"Patrimônio",width:"100px"},
+  {key:"ano_fab",label:"Ano",width:"60px"},
+  {key:"marca",label:"Marca",width:"100px"},
+  {key:"modelo",label:"Modelo",width:"120px"},
+  {key:"serie",label:"Série",width:"120px"},
+  {key:"btu",label:"BTU",width:"70px"},
+  {key:"quente_frio",label:"Q/F",width:"60px"},
+  {key:"tipo",label:"Tipo",width:"120px"},
+  {key:"contrato",label:"Contrato",width:"130px"},
+];
+
+let _plAcData=[];
+let _plAcFiltrado=[];
+let _celulaAtual=null; // {id, key, label, valor}
+
+async function carregarPlanilhaAC(){
+  document.getElementById("pl-loading").style.display="block";
+  document.getElementById("pl-table-wrap").style.display="none";
+  const {data,error}=await sb.from("inventario_ac").select("*").order("num");
+  if(error){document.getElementById("pl-loading").innerHTML=`<div style="color:var(--red)">Erro: ${error.message}</div>`;return;}
+  _plAcData=data;
+  _plAcFiltrado=data;
+  renderPlanilhaAC(_plAcFiltrado);
+  document.getElementById("pl-loading").style.display="none";
+  document.getElementById("pl-table-wrap").style.display="block";
+}
+
+function filtrarPlanilhaAC(){
+  const busca=normalizar(document.getElementById("pl-busca")?.value||"");
+  _plAcFiltrado=busca?_plAcData.filter(r=>
+    AC_COLUNAS.some(c=>normalizar(String(r[c.key]||"")).includes(busca))
+  ):_plAcData;
+  renderPlanilhaAC(_plAcFiltrado);
+}
+
+function renderPlanilhaAC(rows){
+  // Thead
+  document.getElementById("pl-thead").innerHTML=`<tr style="background:var(--surface2)">
+    ${AC_COLUNAS.map(c=>`<th style="padding:6px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);white-space:nowrap;width:${c.width};border-bottom:1px solid var(--border)">${c.label}</th>`).join("")}
+    <th style="padding:6px 10px;border-bottom:1px solid var(--border);width:60px"></th>
+  </tr>`;
+
+  // Tbody
+  document.getElementById("pl-tbody").innerHTML=rows.map(r=>`
+    <tr id="row-ac-${r.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      ${AC_COLUNAS.map(c=>`
+        <td style="padding:6px 10px;max-width:${c.width};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" 
+            title="${(r[c.key]||"")}" 
+            onclick="editarCelula('${r.id}','${c.key}','${c.label}',\`${String(r[c.key]||"").replace(/`/g,"'")}\`)">
+          ${r[c.key]||"<span style='color:var(--text3)'>—</span>"}
+        </td>`).join("")}
+      <td style="padding:6px 10px;white-space:nowrap">
+        <button onclick="excluirLinhaAC('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir esta linha">🗑️</button>
+      </td>
+    </tr>`).join("");
+
+  document.getElementById("pl-count").textContent=`${rows.length} equipamentos`;
+}
+
+function editarCelula(id, key, label, valor){
+  _celulaAtual={id,key,label};
+  document.getElementById("mc-titulo").textContent="Editar: "+label;
+  document.getElementById("mc-ctx").textContent="ID: "+id.slice(0,8)+"...";
+  document.getElementById("mc-valor").value=valor==="—"?"":valor;
+  document.getElementById("mc-msg2").className="fmsg";
+  document.getElementById("modal-celula").classList.add("active");
+  setTimeout(()=>document.getElementById("mc-valor").select(),100);
+}
+
+function fecharModalCelula(){
+  document.getElementById("modal-celula").classList.remove("active");
+  _celulaAtual=null;
+}
+
+async function salvarCelula(){
+  if(!_celulaAtual) return;
+  const novoValor=document.getElementById("mc-valor").value.trim();
+  const btn=document.querySelector("#modal-celula .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+
+  const {error}=await sb.from("inventario_ac")
+    .update({[_celulaAtual.key]:novoValor})
+    .eq("id",_celulaAtual.id);
+
+  if(error){
+    showMsg("mc2","Erro: "+error.message,"err");
+    btn.disabled=false;btn.textContent="Salvar";
+    return;
+  }
+
+  // Atualizar local
+  const idx=_plAcData.findIndex(r=>r.id===_celulaAtual.id);
+  if(idx>=0){
+    _plAcData[idx][_celulaAtual.key]=novoValor;
+    // Atualizar também acRows para o inventário
+    const acIdx=acRows.findIndex(r=>r.id===_celulaAtual.id);
+    if(acIdx>=0) acRows[acIdx][_celulaAtual.key]=novoValor;
+  }
+  filtrarPlanilhaAC();
+  showMsg("mc2","✓ Salvo!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>fecharModalCelula(),800);
+}
+
+async function excluirLinhaAC(id){
+  const row=_plAcData.find(r=>r.id===id);
+  if(!confirm(`Excluir equipamento ${row?.estabelecimento||""} - Pat: ${row?.patrimonio||""}?`)) return;
+  const {error}=await sb.from("inventario_ac").delete().eq("id",id);
+  if(error){alert("Erro: "+error.message);return;}
+  _plAcData=_plAcData.filter(r=>r.id!==id);
+  acRows=acRows.filter(r=>r.id!==id);
+  filtrarPlanilhaAC();
+}
+
+function adicionarLinhaAC(){
+  ["nl-num","nl-situacao","nl-estab","nl-end","nl-sala","nl-pat","nl-ano","nl-marca","nl-modelo","nl-serie","nl-btu","nl-qf","nl-tipo","nl-contrato"]
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("nl-msg").className="fmsg";
+  document.getElementById("modal-nova-linha-ac").classList.add("active");
+}
+
+async function salvarNovaLinhaAC(){
+  const btn=document.querySelector("#modal-nova-linha-ac .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const item={
+    num:document.getElementById("nl-num").value.trim(),
+    situacao:document.getElementById("nl-situacao").value.trim(),
+    estabelecimento:document.getElementById("nl-estab").value.trim(),
+    endereco:document.getElementById("nl-end").value.trim(),
+    sala:document.getElementById("nl-sala").value.trim(),
+    patrimonio:document.getElementById("nl-pat").value.trim(),
+    ano_fab:document.getElementById("nl-ano").value.trim(),
+    marca:document.getElementById("nl-marca").value.trim(),
+    modelo:document.getElementById("nl-modelo").value.trim(),
+    serie:document.getElementById("nl-serie").value.trim(),
+    btu:document.getElementById("nl-btu").value.trim(),
+    quente_frio:document.getElementById("nl-qf").value.trim(),
+    tipo:document.getElementById("nl-tipo").value.trim(),
+    contrato:document.getElementById("nl-contrato").value.trim(),
+  };
+  const {data,error}=await sb.from("inventario_ac").insert(item).select().single();
+  if(error){showMsg("nl","Erro: "+error.message,"err");btn.disabled=false;btn.textContent="Salvar";return;}
+  _plAcData.push(data);
+  acRows.push({...item,id:data.id,qf:item.quente_frio});
+  filtrarPlanilhaAC();
+  showMsg("nl","✓ Equipamento adicionado!","ok");
+  btn.disabled=false;btn.textContent="Salvar";
+  setTimeout(()=>document.getElementById("modal-nova-linha-ac").classList.remove("active"),1200);
+}
+
+function mudarPlanilha(tipo){
+  // Por enquanto só AC - expansível futuramente
+  if(tipo==="ac") carregarPlanilhaAC();
 }
 
 async function loadData(){
