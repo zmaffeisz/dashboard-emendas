@@ -1231,14 +1231,17 @@ tr:hover td{background:#e8f0fb}
           <thead>
             <tr>
               <th style="width:40px">Ações</th>
-              <th>CPL</th>
-              <th>Prestador</th>
-              <th>Objeto</th>
-              <th>Vigência atual</th>
-              <th>Vencimento</th>
-              <th>Status</th>
-              <th>Seção</th>
-              <th>Fiscalização</th>
+              <th onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-ct-cpl"></span></th>
+              <th onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></th>
+              <th onclick="sortContratos('objeto')" style="cursor:pointer;user-select:none">Objeto <span id="sort-ct-objeto"></span></th>
+              <th onclick="sortContratos('vigencia_atual')" style="cursor:pointer;user-select:none">Vigência atual <span id="sort-ct-vigencia_atual"></span></th>
+              <th onclick="sortContratos('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-ct-vencimento"></span></th>
+              <th onclick="sortContratos('dias')" style="cursor:pointer;user-select:none">Dias <span id="sort-ct-dias"></span></th>
+              <th onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></th>
+              <th onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></th>
+              <th onclick="sortContratos('fiscalizacao')" style="cursor:pointer;user-select:none">Fiscalização <span id="sort-ct-fiscalizacao"></span></th>
+              <th onclick="sortContratos('valor_mensal')" style="cursor:pointer;user-select:none;text-align:right">Valor mensal <span id="sort-ct-valor_mensal"></span></th>
+              <th onclick="sortContratos('valor_total')" style="cursor:pointer;user-select:none;text-align:right">Valor total <span id="sort-ct-valor_total"></span></th>
             </tr>
           </thead>
           <tbody id="ct-tbody"></tbody>
@@ -1266,6 +1269,17 @@ tr:hover td{background:#e8f0fb}
         <button class="btn-secondary" onclick="abrirModalContratoOp('prorrogacao')">📅 Prorrogação</button>
         <button class="btn-secondary" onclick="abrirModalContratoOp('supressao')" style="color:var(--red)">✂️ Supressão</button>
         <button class="btn-secondary" onclick="abrirModalContratoOp('fiscal')">👤 Trocar fiscal</button>
+      </div>
+    </div>
+    <div id="mcd-valores" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Atualizar valores</div>
+      <div class="form-grid" style="margin-bottom:.75rem">
+        <div class="form-group"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="mcd-novo-mensal" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="mcd-novo-total" placeholder="0,00" step="0.01" min="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="salvarValoresContrato()">Salvar valores</button>
+        <span id="mcd-valores-msg" class="fmsg"></span>
       </div>
     </div>
   </div>
@@ -3881,6 +3895,8 @@ let contratosRows = [];
 let contratosFiltrados = [];
 let contratosCarregado = false;
 let _ctAtual = null;
+let ctSortCol = null;
+let ctSortAsc = true;
 
 async function loadContratos(){
   document.getElementById("contratos-loading").style.display="block";
@@ -3969,13 +3985,64 @@ function fmtDate(d){
   return d;
 }
 
+function sortContratos(col){
+  if(ctSortCol===col) ctSortAsc=!ctSortAsc;
+  else{ctSortCol=col;ctSortAsc=true;}
+  renderTabelaContratos();
+}
+
+function ctGetSortVal(r,col){
+  if(col==="vencimento"||col==="dias"){
+    const d=parseDataBR(r.vencimento);
+    return d?d.getTime():(ctSortAsc?Infinity:-Infinity);
+  }
+  if(col==="valor_mensal") return r.valor_mensal??-Infinity;
+  if(col==="valor_total") return (r.valor_atual??r.valor_inicial)??-Infinity;
+  return ((r[col])||"").toString().toLowerCase();
+}
+
+function diasContratoVencer(vencimento){
+  if(!vencimento) return null;
+  const v=parseDataBR(vencimento);
+  if(!v) return null;
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  return Math.round((v-hoje)/(1000*60*60*24));
+}
+
 function renderTabelaContratos(){
   const tbody=document.getElementById("ct-tbody");
   if(!tbody) return;
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
-  tbody.innerHTML=contratosFiltrados.map(r=>{
+
+  // Atualizar ícones de ordenação
+  ["cpl","prestador","objeto","vigencia_atual","vencimento","dias","status","secao","fiscalizacao","valor_mensal","valor_total"].forEach(col=>{
+    const el=document.getElementById("sort-ct-"+col);
+    if(el) el.textContent=ctSortCol===col?(ctSortAsc?" ▲":" ▼"):"";
+  });
+
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+
+  let rows=[...contratosFiltrados];
+  if(ctSortCol){
+    rows.sort((a,b)=>{
+      const va=ctGetSortVal(a,ctSortCol),vb=ctGetSortVal(b,ctSortCol);
+      if(va<vb) return ctSortAsc?-1:1;
+      if(va>vb) return ctSortAsc?1:-1;
+      return 0;
+    });
+  }
+
+  tbody.innerHTML=rows.map(r=>{
     const cor=corVencimento(r.vencimento);
     const fisc=r.fiscalizacao||"—";
+    const dias=diasContratoVencer(r.vencimento);
+    let diasHtml="—";
+    if(dias!==null){
+      if(dias<0) diasHtml=`<span style="color:var(--red);font-weight:600">VENCIDO</span>`;
+      else if(dias<=90) diasHtml=`<span style="color:var(--amber);font-weight:600">${dias}d</span>`;
+      else diasHtml=`<span style="color:var(--green)">${dias}d</span>`;
+    }
+    const vm=r.valor_mensal!=null?r.valor_mensal:"—";
+    const vt=(r.valor_atual??r.valor_inicial)!=null?(r.valor_atual??r.valor_inicial):"—";
     return `<tr>
       <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋</button></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
@@ -3983,9 +4050,12 @@ function renderTabelaContratos(){
       <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
       <td style="white-space:nowrap">${r.vigencia_atual||"—"}</td>
       <td style="white-space:nowrap;color:${cor};font-weight:500">${r.vencimento||"—"}</td>
+      <td style="text-align:center">${diasHtml}</td>
       <td>${badgeStatusContrato(r.status)}</td>
       <td>${r.secao||"—"}</td>
       <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
+      <td style="text-align:right;white-space:nowrap">${vm}</td>
+      <td style="text-align:right;white-space:nowrap">${vt}</td>
     </tr>`;
   }).join("");
 }
@@ -3997,8 +4067,16 @@ async function abrirDetalheContrato(id){
   document.getElementById("mcd-titulo").textContent=`📋 ${_ctAtual.cpl||"Contrato"} — ${_ctAtual.prestador||""}`;
   document.getElementById("mcd-corpo").innerHTML=`<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>`;
   el.classList.add("active");
-  if(podeEditar()) document.getElementById("mcd-acoes").style.display="block";
-  else document.getElementById("mcd-acoes").style.display="none";
+  const editor=podeEditar();
+  document.getElementById("mcd-acoes").style.display=editor?"block":"none";
+  const mcdValores=document.getElementById("mcd-valores");
+  if(mcdValores){
+    mcdValores.style.display=editor?"block":"none";
+    document.getElementById("mcd-novo-mensal").value="";
+    document.getElementById("mcd-novo-total").value="";
+    const msgV=document.getElementById("mcd-valores-msg");
+    if(msgV){msgV.className="fmsg";msgV.textContent="";}
+  }
 
   const [vigRes,histRes,fiscRes]=await Promise.all([
     sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
@@ -4142,6 +4220,37 @@ async function salvarOperacaoContrato(op){
   } catch(e){
     setMsg("✗ Erro: "+(e.message||e),"err");
   }
+}
+
+async function salvarValoresContrato(){
+  if(bloquearSeVisualiz()) return;
+  if(!_ctAtual) return;
+  const novoMensal=document.getElementById("mcd-novo-mensal").value.trim();
+  const novoTotal=document.getElementById("mcd-novo-total").value.trim();
+  const msgEl=document.getElementById("mcd-valores-msg");
+  const setMsg=(txt,ok)=>{msgEl.className="fmsg "+(ok?"ok":"err");msgEl.textContent=txt;};
+  if(!novoMensal&&!novoTotal){setMsg("Informe ao menos um valor.","err");return;}
+  const upd={};
+  const partes=[];
+  if(novoMensal){
+    const antigo=_ctAtual.valor_mensal!=null?_ctAtual.valor_mensal:"—";
+    partes.push(`Mensal: ${antigo} → ${novoMensal}`);
+    upd.valor_mensal=parseFloat(novoMensal);
+  }
+  if(novoTotal){
+    const antigo=(_ctAtual.valor_atual??_ctAtual.valor_inicial)!=null?(_ctAtual.valor_atual??_ctAtual.valor_inicial):"—";
+    partes.push(`Total: ${antigo} → ${novoTotal}`);
+    upd.valor_atual=parseFloat(novoTotal);
+  }
+  const {error}=await sb.from("contratos").update(upd).eq("id",_ctAtual.id);
+  if(error){setMsg("Erro: "+error.message,"err");return;}
+  const hoje=new Date().toISOString().substring(0,10);
+  await sb.from("contratos_historico").insert({contrato_id:_ctAtual.id,tipo:"ATUALIZAÇÃO DE VALOR",data_evento:hoje,obs:partes.join("; ")});
+  setMsg("✓ Valores atualizados!","ok");
+  await loadContratos();
+  _ctAtual=contratosRows.find(r=>String(r.id)===String(_ctAtual.id))||_ctAtual;
+  document.getElementById("mcd-novo-mensal").value="";
+  document.getElementById("mcd-novo-total").value="";
 }
 
 checkAuth().then(ok => { if(ok) loadData(); });
