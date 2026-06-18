@@ -188,7 +188,7 @@ tr:hover td{background:var(--surface2)}
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
   <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
-  <div class="tab" id="tab-btn-planilhas" onclick="showTab('planilhas')">📊 Planilhas</div>
+  <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
   <div class="tab" id="tab-btn-nova-emenda" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
   <div class="tab" id="tab-btn-novo-item" onclick="showTab('novo-item')">📦 Novo item</div>
   <div class="tab" id="tab-btn-atualizar-status" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
@@ -1224,12 +1224,13 @@ async function checkAuth(){
     };
     refreshBtn.parentNode.insertBefore(logoutBtn, refreshBtn.nextSibling);
   }
-  // Mostrar aba de usuários só para admin
+  // Mostrar abas de usuários e planilhas só para admin
   if(profile?.papel === 'admin'){
     const tabUsuarios=document.getElementById("tab-btn-usuarios");
     if(tabUsuarios) tabUsuarios.style.display="block";
+    const tabPlanilhas=document.getElementById("tab-btn-planilhas");
+    if(tabPlanilhas) tabPlanilhas.style.display="block";
   }
-  // Planilhas visível para todos
   // Visualizadores veem todas as abas mas não podem editar
   if(profile?.papel === 'visualizador'){
     document.body.classList.add('is-visualizador');
