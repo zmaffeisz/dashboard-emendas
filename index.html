@@ -3195,6 +3195,8 @@ async function excluirLinhaChamado(id){
   const {data, error}=await sb.from("chamados").delete().eq("id",id).select();
   if(error){alert("Erro: "+error.message);return;}
   if(!data || data.length===0){alert("⚠️ Sem permissão para excluir. Verifique a política RLS da tabela 'chamados' no Supabase.");return;}
+  const protocolo=row?.protocolo;
+  if(protocolo) await sb.from("chamados_controle").delete().eq("protocolo",protocolo);
   _plChamadosData=_plChamadosData.filter(r=>r.id!==id);
   filtrarPlanilhaChamados();
 }
