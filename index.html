@@ -1282,7 +1282,6 @@ let searchType = "todos";
 let lastSearchResults = [];
 let sortCol = null;
 let sortAsc = true;
-let _cnInterval = null;
 
 const STATUS_MAP = {
   "ENTREGUE":{color:"#1D9E75",label:"Entregue"},
@@ -1391,11 +1390,6 @@ function showTab(name){
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
-  if(name==="chamados-novos"){
-    if(!_cnInterval) _cnInterval=setInterval(loadChamadosNovos,30000);
-  } else {
-    if(_cnInterval){clearInterval(_cnInterval);_cnInterval=null;}
-  }
 }
 
 // ═══ LOAD ═══
