@@ -482,7 +482,14 @@ tr:hover td{background:var(--surface2)}
         <input type="text" id="fc-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamados()">
       </div>
       <button class="clear-btn" onclick="clearAllChamados()">✕ Limpar</button>
-      <button onclick="marcarTodosChamados()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg);color:var(--green-text);cursor:pointer;align-self:flex-end" title="Marcar todos os chamados visíveis como enviados">✅ Marcar todos</button>
+      <div class="fg" style="align-self:flex-end">
+        <div class="fg-label">Data de corte <span id="corte-label" style="font-weight:400;color:var(--text3)"></span></div>
+        <div style="display:flex;gap:6px">
+          <input type="date" id="input-corte" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+          <button onclick="aplicarDataCorte()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">✓ Aplicar</button>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">Chamados antes desta data saem do alerta</div>
+      </div>
     </div>
 
     <!-- Métricas chamados -->
@@ -504,6 +511,7 @@ tr:hover td{background:var(--surface2)}
           <thead>
             <tr>
               <th title="Enviado à empresa">📬</th>
+              <th title="Gerar PDF">📄</th>
               <th>Protocolo</th>
               <th>Carimbo</th>
               <th>Data</th>
@@ -1254,6 +1262,11 @@ async function loadChamados(){
     popularFiltrosChamados();
     filtrarChamados();
     atualizarBadgeChamados();
+    const corteInit=getDataCorte();
+    const inputC=document.getElementById("input-corte");
+    if(inputC) inputC.value=corteInit.toISOString().slice(0,10);
+    const corteL=document.getElementById("corte-label");
+    if(corteL) corteL.textContent="(atual: "+corteInit.toLocaleDateString("pt-BR")+")";
     document.getElementById("chamados-loading").style.display="none";
     document.getElementById("chamados-main").style.display="block";
   }catch(e){
@@ -1321,13 +1334,35 @@ function clearAllChamados(){
   filtrarChamados();
 }
 
+function getDataCorte(){
+  const salva=localStorage.getItem("chamados_data_corte");
+  return salva ? new Date(salva) : new Date("2026-06-17T23:59:59");
+}
+function setDataCorte(data){
+  localStorage.setItem("chamados_data_corte", data.toISOString());
+}
 function atualizarBadgeChamados(){
-  const naoEnviados=chamadosRows.filter(r=>getControle(r.protocolo).status==="Aberto").length;
+  const corte=getDataCorte();
+  const novos=chamadosRows.filter(r=>{
+    const d=parseDataBR((r.carimbo||r.data_solicitacao||"").slice(0,10));
+    return d && d > corte;
+  }).length;
   const badge=document.getElementById("badge-chamados");
   if(badge){
-    if(naoEnviados>0){badge.textContent=naoEnviados;badge.style.display="inline";}
+    if(novos>0){badge.textContent=novos;badge.style.display="inline";}
     else badge.style.display="none";
   }
+}
+function aplicarDataCorte(){
+  const val=document.getElementById("input-corte").value;
+  if(!val){alert("Selecione uma data.");return;}
+  const d=new Date(val+"T23:59:59");
+  setDataCorte(d);
+  const label=document.getElementById("corte-label");
+  if(label) label.textContent="(atual: "+d.toLocaleDateString("pt-BR")+")";
+  atualizarBadgeChamados();
+  filtrarChamados();
+  alert("Data de corte definida para "+d.toLocaleDateString("pt-BR"));
 }
 
 function filtrarChamados(){
@@ -1373,13 +1408,16 @@ function filtrarChamados(){
     const temAC=acRows.some(a=>a.patrimonio&&a.patrimonio===r.patrimonio);
     const ctrl=getControle(r.protocolo);
     const aberto=ctrl.status==="Aberto";
-    return`<tr style="${aberto?'background:var(--amber-bg)':''}">
+    const dChamado=parseDataBR((r.carimbo||r.data_solicitacao||"").slice(0,10));
+    const isNovo=dChamado&&dChamado>getDataCorte();
+    return`<tr style="${isNovo?'background:var(--amber-bg)':''}">
       <td style="text-align:center">
         <input type="checkbox" ${aberto?'':'checked'} 
           onchange="marcarChamadoAberto('${r.protocolo.replace(/'/g,"\'")}', this.checked)"
           title="${aberto?'Marcar como enviado à empresa':'Chamado já enviado'}"
           style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
       </td>
+      <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.carimbo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.data_solicitacao||r.carimbo?.slice(0,10)||"—"}</td>
