@@ -1201,6 +1201,7 @@ function exportarExcel(){
 
 // ═══ CARREGAR CHAMADOS E AC ═══
 async function loadChamados(){
+  localStorage.removeItem('chamados_data_corte');
   document.getElementById("chamados-loading").style.display="block";
   document.getElementById("chamados-main").style.display="none";
   try{
@@ -1232,35 +1233,40 @@ async function loadChamados(){
 
     // Carregar controle
     try{
-      const r2=await fetch(CONTROLE_CSV_URL);
+      const r2=await fetch(CONTROLE_CSV_URL+"&t="+Date.now()); // cache busting
       const t2=await r2.text();
       const p2=Papa.parse(t2,{header:true,skipEmptyLines:true});
-      controleRows=p2.data.filter(r=>r["Protocolo"]).map(r=>({
-        protocolo:(r["Protocolo"]||"").trim(),
-        status:(r["Status"]||"Aberto").trim(),
-        data_atendimento:(r["Data Atendimento"]||"").trim(),
-        empresa:(r["Empresa"]||"").trim(),
-        os:(r["Nº OS"]||"").trim(),
-        feito:(r["O que foi feito"]||"").trim(),
-        obs:(r["Observação"]||"").trim(),
+      console.log("CONTROLE headers:", p2.meta.fields);
+      console.log("CONTROLE linhas:", p2.data.length);
+      controleRows=p2.data.filter(r=>r["Protocolo"]||r["PROTOCOLO"]).map(r=>({
+        protocolo:(r["Protocolo"]||r["PROTOCOLO"]||"").trim(),
+        status:(r["Status"]||r["STATUS"]||"Aberto").trim(),
+        data_atendimento:(r["Data Atendimento"]||r["DATA ATENDIMENTO"]||"").trim(),
+        empresa:(r["Empresa"]||r["EMPRESA"]||"").trim(),
+        os:(r["Nº OS"]||r["O.S"]||r["OS"]||"").trim(),
+        feito:(r["O que foi feito"]||r["OQ FOI FEITO"]||"").trim(),
+        obs:(r["Observação"]||r["OBS"]||"").trim(),
       }));
-    }catch(e){controleRows=[];}
+      console.log("CONTROLE carregado:", controleRows.length, "registros");
+    }catch(e){console.error("Erro controle:",e);controleRows=[];}
 
-    // Ordenar por data mais recente no topo
+    // Ordenar por carimbo completo (data + hora) mais recente no topo
     chamadosRows.sort((a,b)=>{
-      const da=parseDataBR((a.carimbo||a.data_solicitacao||"").slice(0,10));
-      const db=parseDataBR((b.carimbo||b.data_solicitacao||"").slice(0,10));
+      const parseCarimbo=(s)=>{
+        if(!s) return null;
+        // Formato: DD/MM/AAAA HH:MM:SS
+        const m=s.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+        if(m) return new Date(m[3],m[2]-1,m[1],m[4],m[5]);
+        return parseDataBR(s.slice(0,10));
+      };
+      const da=parseCarimbo(a.carimbo||a.data_solicitacao||"");
+      const db=parseCarimbo(b.carimbo||b.data_solicitacao||"");
       if(da&&db) return db-da;
       return 0;
     });
     popularFiltrosChamados();
     filtrarChamados();
     atualizarBadgeChamados();
-    const corteInit=getDataCorte();
-    const inputC=document.getElementById("input-corte");
-    if(inputC) inputC.value=corteInit.toISOString().slice(0,10);
-    const corteL=document.getElementById("corte-label");
-    if(corteL) corteL.textContent="(atual: "+corteInit.toLocaleDateString("pt-BR")+")";
     document.getElementById("chamados-loading").style.display="none";
     document.getElementById("chamados-main").style.display="block";
   }catch(e){
@@ -1328,35 +1334,13 @@ function clearAllChamados(){
   filtrarChamados();
 }
 
-function getDataCorte(){
-  const salva=localStorage.getItem("chamados_data_corte");
-  return salva ? new Date(salva) : new Date("2026-06-17T23:59:59");
-}
-function setDataCorte(data){
-  localStorage.setItem("chamados_data_corte", data.toISOString());
-}
 function atualizarBadgeChamados(){
-  const corte=getDataCorte();
-  const novos=chamadosRows.filter(r=>{
-    const d=parseDataBR((r.carimbo||r.data_solicitacao||"").slice(0,10));
-    return d && d > corte;
-  }).length;
+  const abertos=chamadosRows.filter(r=>getControle(r.protocolo).status==="Aberto").length;
   const badge=document.getElementById("badge-chamados");
   if(badge){
-    if(novos>0){badge.textContent=novos;badge.style.display="inline";}
+    if(abertos>0){badge.textContent=abertos;badge.style.display="inline";}
     else badge.style.display="none";
   }
-}
-function aplicarDataCorte(){
-  const val=document.getElementById("input-corte").value;
-  if(!val){alert("Selecione uma data.");return;}
-  const d=new Date(val+"T23:59:59");
-  setDataCorte(d);
-  const label=document.getElementById("corte-label");
-  if(label) label.textContent="(atual: "+d.toLocaleDateString("pt-BR")+")";
-  atualizarBadgeChamados();
-  filtrarChamados();
-  alert("Data de corte definida para "+d.toLocaleDateString("pt-BR"));
 }
 
 function filtrarChamados(){
@@ -1402,9 +1386,7 @@ function filtrarChamados(){
     const temAC=acRows.some(a=>a.patrimonio&&a.patrimonio===r.patrimonio);
     const ctrl=getControle(r.protocolo);
     const aberto=ctrl.status==="Aberto";
-    const dChamado=parseDataBR((r.carimbo||r.data_solicitacao||"").slice(0,10));
-    const isNovo=dChamado&&dChamado>getDataCorte();
-    return`<tr style="${isNovo?'background:var(--amber-bg)':''}">
+    return`<tr style="${aberto?'background:var(--amber-bg)':''}">
       <td style="text-align:center">
         <input type="checkbox" ${aberto?'':'checked'} 
           onchange="marcarChamadoAberto('${r.protocolo.replace(/'/g,"\'")}', this.checked)"
