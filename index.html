@@ -187,6 +187,7 @@ tr:hover td{background:#e8f0fb}
   <div class="tab" onclick="showTab('chamados-novos')">🆕 Chamados novos <span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
   <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
+  <div class="tab" id="tab-btn-contratos" onclick="showTab('contratos')">📋 Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
   <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
   <div class="tab" id="tab-btn-nova-emenda" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
@@ -1187,6 +1188,202 @@ tr:hover td{background:#e8f0fb}
       </div>
     </div>
 
+<!-- ══════════════════════ CONTRATOS (SUPABASE) ══════════════════════ -->
+<div id="panel-contratos" class="panel">
+  <div id="contratos-loading" class="loading"><span class="spinner"></span>Carregando contratos...</div>
+  <div id="contratos-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Seção <button onclick="clearF('ct-secao')">✕</button></div>
+        <select id="ct-secao" onchange="filtrarContratos()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('ct-status')">✕</button></div>
+        <select id="ct-status" onchange="filtrarContratos()">
+          <option value="">Todos</option>
+          <option value="VIGENTE">VIGENTE</option>
+          <option value="ENCERRADO">ENCERRADO</option>
+          <option value="SUSPENSO">SUSPENSO</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('ct-busca')">✕</button></div>
+        <input type="text" id="ct-busca" placeholder="CPL, prestador, objeto..." oninput="filtrarContratos()" style="min-width:220px">
+      </div>
+      <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total contratos</div><div class="metric-value" id="ct-m-total">—</div><div class="metric-sub">cadastrados</div></div>
+      <div class="metric"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
+      <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
+      <div class="metric"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Contratos</span>
+        <span class="table-hdr-count" id="ct-count">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px">Ações</th>
+              <th>CPL</th>
+              <th>Prestador</th>
+              <th>Objeto</th>
+              <th>Vigência atual</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th>Seção</th>
+              <th>Fiscalização</th>
+            </tr>
+          </thead>
+          <tbody id="ct-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Detalhes do Contrato -->
+<div class="modal-overlay" id="modal-contrato-detalhe" onclick="if(event.target===this)this.classList.remove('active')" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:720px;max-width:98vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
+      <div class="modal-title" id="mcd-titulo">Contrato</div>
+      <button onclick="document.getElementById('modal-contrato-detalhe').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+    </div>
+    <div id="mcd-corpo"></div>
+    <div id="mcd-acoes" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.625rem">Ações</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="abrirModalContratoOp('renovar')" style="background:var(--green)">🔄 Renovar</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('reajuste')">📈 Reajuste</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('aditivo')">➕ Aditivo</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('prorrogacao')">📅 Prorrogação</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('supressao')" style="color:var(--red)">✂️ Supressão</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('fiscal')">👤 Trocar fiscal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Renovar Contrato -->
+<div class="modal-overlay" id="modal-ct-renovar" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-title">🔄 Renovar contrato</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctr-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Nova vigência início *</div><input type="date" id="ctr-inicio"></div>
+      <div class="form-group"><div class="form-label">Nova vigência fim *</div><input type="date" id="ctr-fim"></div>
+      <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="ctr-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="ctr-valor-mensal" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctr-obs" placeholder="ex: Renovado conforme parecer jurídico..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" style="background:var(--green)" onclick="salvarOperacaoContrato('renovar')">Salvar renovação</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-renovar').classList.remove('active')">Cancelar</button>
+      <span id="ctr-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reajuste -->
+<div class="modal-overlay" id="modal-ct-reajuste" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">📈 Reajuste</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctrea-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctrea-data"></div>
+      <div class="form-group"><div class="form-label">Percentual (%) *</div><input type="number" id="ctrea-pct" placeholder="ex: 5.5" step="0.01"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctrea-obs" placeholder="ex: IPCA 2024..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('reajuste')">Salvar reajuste</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-reajuste').classList.remove('active')">Cancelar</button>
+      <span id="ctrea-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aditivo -->
+<div class="modal-overlay" id="modal-ct-aditivo" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">➕ Aditivo</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctad-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctad-data"></div>
+      <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctad-pct" placeholder="ex: 25" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor acrescido (R$)</div><input type="number" id="ctad-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctad-obs" placeholder="ex: Acréscimo de serviços..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('aditivo')">Salvar aditivo</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-aditivo').classList.remove('active')">Cancelar</button>
+      <span id="ctad-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Prorrogação -->
+<div class="modal-overlay" id="modal-ct-prorrogacao" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">📅 Prorrogação</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctpr-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Nova data fim *</div><input type="date" id="ctpr-data-fim"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctpr-obs" placeholder="ex: Prorrogado por 12 meses..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('prorrogacao')">Salvar prorrogação</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-prorrogacao').classList.remove('active')">Cancelar</button>
+      <span id="ctpr-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Supressão -->
+<div class="modal-overlay" id="modal-ct-supressao" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">✂️ Supressão</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctsu-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctsu-data"></div>
+      <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctsu-pct" placeholder="ex: 10" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor reduzido (R$)</div><input type="number" id="ctsu-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctsu-obs" placeholder="ex: Redução de escopo..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" style="background:var(--red)" onclick="salvarOperacaoContrato('supressao')">Salvar supressão</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-supressao').classList.remove('active')">Cancelar</button>
+      <span id="ctsu-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Trocar Fiscal -->
+<div class="modal-overlay" id="modal-ct-fiscal" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-title">👤 Trocar fiscal</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctfi-info"></div>
+    <div id="ctfi-fiscais-atuais" style="margin-bottom:1rem"></div>
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Adicionar novo fiscal</div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Nome *</div><input type="text" id="ctfi-nome" placeholder="Nome do fiscal"></div>
+      <div class="form-group"><div class="form-label">Data início *</div><input type="date" id="ctfi-inicio"></div>
+      <div class="form-group full"><div class="form-label">Cargo / Matrícula</div><input type="text" id="ctfi-cargo" placeholder="ex: Fiscal de Contrato, mat. 12345"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('fiscal')">Salvar</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-fiscal').classList.remove('active')">Cancelar</button>
+      <span id="ctfi-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 </div><!-- /container -->
 <div style="text-align:center;padding:1.5rem;font-size:11px;color:#b0bac8;border-top:1px solid var(--border);margin-top:1rem;background:#f8fafd">
   Desenvolvido por <strong style="color:#8896a8">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
@@ -1379,7 +1576,7 @@ function fecharModalFora(e){
 
 function showTab(name){
   localStorage.setItem("ultima_aba", name);
-  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
+  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("panel-"+name).classList.add("active");
@@ -1388,6 +1585,7 @@ function showTab(name){
   if(name==="chamados-novos"&&!chamadosNovosCarregado) loadChamadosNovos();
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
+  if(name==="contratos"&&!contratosCarregado) loadContratos();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
 }
@@ -3676,6 +3874,270 @@ function salvarStatus(){
     setTimeout(()=>loadData(),3000);
   }).catch(e=>showMsg("as","✗ Erro: "+e.message,"err"))
     .finally(()=>{btn.disabled=false;btn.textContent=label});
+}
+
+// ═══ CONTRATOS (SUPABASE) ═══
+let contratosRows = [];
+let contratosFiltrados = [];
+let contratosCarregado = false;
+let _ctAtual = null;
+
+async function loadContratos(){
+  document.getElementById("contratos-loading").style.display="block";
+  document.getElementById("contratos-main").style.display="none";
+  const {data,error}=await sb.from("contratos").select("*");
+  if(error){document.getElementById("contratos-loading").innerHTML=`<div style="color:var(--red)">Erro ao carregar contratos: ${error.message}</div>`;return;}
+  const hoje=new Date();
+  contratosRows=(data||[]).sort((a,b)=>{
+    const ord={VIGENTE:0,SUSPENSO:1,ENCERRADO:2};
+    const oa=ord[a.status]??3, ob=ord[b.status]??3;
+    if(oa!==ob) return oa-ob;
+    return (a.data_fim||"").localeCompare(b.data_fim||"");
+  });
+  contratosCarregado=true;
+  popularFiltrosContratos();
+  filtrarContratos();
+  document.getElementById("contratos-loading").style.display="none";
+  document.getElementById("contratos-main").style.display="block";
+}
+
+function popularFiltrosContratos(){
+  const secoes=[...new Set(contratosRows.map(r=>r.secao).filter(Boolean))].sort();
+  const sel=document.getElementById("ct-secao");
+  if(sel) sel.innerHTML='<option value="">Todas</option>'+secoes.map(s=>`<option value="${s}">${s}</option>`).join("");
+}
+
+function clearAllContratos(){
+  ["ct-secao","ct-status","ct-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  filtrarContratos();
+}
+
+function filtrarContratos(){
+  const secao=document.getElementById("ct-secao")?.value||"";
+  const status=document.getElementById("ct-status")?.value||"";
+  const busca=(document.getElementById("ct-busca")?.value||"").toLowerCase();
+  const hoje=new Date();
+  const d90=new Date(hoje);d90.setDate(d90.getDate()+90);
+
+  contratosFiltrados=contratosRows.filter(r=>{
+    if(secao&&r.secao!==secao) return false;
+    if(status&&r.status!==status) return false;
+    if(busca&&![r.cpl,r.prestador,r.objeto,r.secao].filter(Boolean).join(" ").toLowerCase().includes(busca)) return false;
+    return true;
+  });
+
+  const total=contratosFiltrados.length;
+  const vigentes=contratosFiltrados.filter(r=>r.status==="VIGENTE").length;
+  const encerrados=contratosFiltrados.filter(r=>r.status==="ENCERRADO").length;
+  const vencendo=contratosFiltrados.filter(r=>{
+    if(r.status!=="VIGENTE"||!r.data_fim) return false;
+    const v=new Date(r.data_fim+"T12:00:00");
+    return v>=hoje&&v<=d90;
+  }).length;
+
+  document.getElementById("ct-m-total").textContent=total;
+  document.getElementById("ct-m-vigentes").textContent=vigentes;
+  document.getElementById("ct-m-vencendo").textContent=vencendo;
+  document.getElementById("ct-m-encerrados").textContent=encerrados;
+  document.getElementById("ct-count").textContent=`${total} contrato(s)`;
+  renderTabelaContratos();
+}
+
+function badgeStatusContrato(status){
+  const cfg={VIGENTE:{bg:"var(--green-bg)",color:"var(--green-text)"},ENCERRADO:{bg:"var(--surface2)",color:"var(--text3)"},SUSPENSO:{bg:"var(--amber-bg)",color:"var(--amber-text)"}};
+  const c=cfg[status]||{bg:"var(--surface2)",color:"var(--text3)"};
+  return `<span class="badge" style="background:${c.bg};color:${c.color}">${status||"—"}</span>`;
+}
+
+function corVencimento(dataFim,status){
+  if(!dataFim) return "var(--text3)";
+  const hoje=new Date();
+  const v=new Date(dataFim+"T12:00:00");
+  const d90=new Date(hoje);d90.setDate(d90.getDate()+90);
+  if(v<hoje) return "var(--red)";
+  if(v<=d90) return "var(--amber)";
+  return "var(--green)";
+}
+
+function fmtDate(d){
+  if(!d) return "—";
+  const p=d.split("-");
+  if(p.length===3) return `${p[2]}/${p[1]}/${p[0]}`;
+  return d;
+}
+
+function renderTabelaContratos(){
+  const tbody=document.getElementById("ct-tbody");
+  if(!tbody) return;
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  tbody.innerHTML=contratosFiltrados.map(r=>{
+    const cor=corVencimento(r.data_fim,r.status);
+    return `<tr>
+      <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋</button></td>
+      <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
+      <td class="td-trunc">${r.prestador||"—"}</td>
+      <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
+      <td style="white-space:nowrap">${fmtDate(r.data_inicio)} – ${fmtDate(r.data_fim)}</td>
+      <td style="white-space:nowrap;color:${cor};font-weight:500">${fmtDate(r.data_fim)}</td>
+      <td>${badgeStatusContrato(r.status)}</td>
+      <td>${r.secao||"—"}</td>
+      <td class="td-trunc">${r.fiscal||"—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function abrirDetalheContrato(id){
+  _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||null;
+  if(!_ctAtual) return;
+  const el=document.getElementById("modal-contrato-detalhe");
+  document.getElementById("mcd-titulo").textContent=`📋 ${_ctAtual.cpl||"Contrato"} — ${_ctAtual.prestador||""}`;
+  document.getElementById("mcd-corpo").innerHTML=`<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>`;
+  el.classList.add("active");
+  if(podeEditar()) document.getElementById("mcd-acoes").style.display="block";
+  else document.getElementById("mcd-acoes").style.display="none";
+
+  const [vigRes,histRes,fiscRes]=await Promise.all([
+    sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
+    sb.from("contratos_historico").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
+    sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false})
+  ]);
+
+  const c=_ctAtual;
+  const cor=corVencimento(c.data_fim,c.status);
+  let html=`<div class="ficha-grid" style="margin-bottom:1.25rem">
+    ${[["CPL",c.cpl],["Prestador",c.prestador],["Objeto",c.objeto],["Seção",c.secao],["Vigência início",fmtDate(c.data_inicio)],["Vencimento",`<span style="color:${cor};font-weight:600">${fmtDate(c.data_fim)}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
+  </div>`;
+
+  const vigs=vigRes.data||[];
+  html+=`<div style="margin-bottom:1.25rem"><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Vigências</div>`;
+  if(!vigs.length){html+=`<div style="font-size:13px;color:var(--text3)">Nenhuma vigência registrada</div>`;}
+  else{html+=`<table style="width:100%;font-size:12px;border-collapse:collapse">`+vigs.map(v=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px">${fmtDate(v.data_inicio)}</td><td style="padding:5px 8px">→</td><td style="padding:5px 8px">${fmtDate(v.data_fim)}</td><td style="padding:5px 8px;color:var(--text3)">${v.obs||""}</td></tr>`).join("")+`</table>`;}
+  html+=`</div>`;
+
+  const fiscais=fiscRes.data||[];
+  html+=`<div style="margin-bottom:1.25rem"><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Fiscalizadores</div>`;
+  if(!fiscais.length){html+=`<div style="font-size:13px;color:var(--text3)">Nenhum fiscalizador registrado</div>`;}
+  else{html+=fiscais.map(f=>`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:baseline"><span style="font-weight:500">${f.nome||"—"}</span><span style="font-size:11px;color:var(--text3)">${f.cargo||""}</span><span style="font-size:11px;color:var(--text3);margin-left:auto">desde ${fmtDate(f.data_inicio)}${f.data_fim?" até "+fmtDate(f.data_fim):""}</span></div>`).join("");}
+  html+=`</div>`;
+
+  const hist=histRes.data||[];
+  html+=`<div><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Histórico de eventos</div>`;
+  if(!hist.length){html+=`<div style="font-size:13px;color:var(--text3)">Nenhum evento registrado</div>`;}
+  else{html+=hist.map(h=>`<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-weight:500;color:var(--blue)">${h.tipo||"Evento"}</span> <span style="color:var(--text3);font-size:11px">${fmtDate((h.created_at||"").substring(0,10))}</span>${h.obs?` — <span style="color:var(--text2)">${h.obs}</span>`:""}</div>`).join("");}
+  html+=`</div>`;
+
+  document.getElementById("mcd-corpo").innerHTML=html;
+}
+
+function abrirModalContratoOp(op){
+  if(bloquearSeVisualiz()) return;
+  const infoMap={renovar:"ctr-info",reajuste:"ctrea-info",aditivo:"ctad-info",prorrogacao:"ctpr-info",supressao:"ctsu-info",fiscal:"ctfi-info"};
+  const modalMap={renovar:"modal-ct-renovar",reajuste:"modal-ct-reajuste",aditivo:"modal-ct-aditivo",prorrogacao:"modal-ct-prorrogacao",supressao:"modal-ct-supressao",fiscal:"modal-ct-fiscal"};
+  const info=_ctAtual?`${_ctAtual.cpl||""} — ${_ctAtual.prestador||""}`:"";
+  const infoEl=document.getElementById(infoMap[op]);
+  if(infoEl) infoEl.textContent=info;
+  if(op==="fiscal"){
+    const wrap=document.getElementById("ctfi-fiscais-atuais");
+    if(wrap&&_ctAtual){
+      sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",_ctAtual.id).is("data_fim",null).order("data_inicio",{ascending:false}).then(({data})=>{
+        if(!data||!data.length){wrap.innerHTML=`<div style="font-size:13px;color:var(--text3)">Sem fiscalizadores ativos</div>`;return;}
+        wrap.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.375rem">Fiscalizadores ativos</div>`+data.map(f=>`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span>${f.nome||"—"}</span><button onclick="removerFiscalizador(${f.id})" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--red);background:none;color:var(--red);cursor:pointer">Remover</button></div>`).join("");
+      });
+    }
+  }
+  ["ctr-msg","ctrea-msg","ctad-msg","ctpr-msg","ctsu-msg","ctfi-msg"].forEach(id=>{const el=document.getElementById(id);if(el){el.className="fmsg";el.textContent=""}});
+  document.getElementById(modalMap[op]).classList.add("active");
+}
+
+async function removerFiscalizador(fiscId){
+  if(!confirm("Remover este fiscalizador?")) return;
+  const hoje=new Date().toISOString().substring(0,10);
+  const {error}=await sb.from("contratos_fiscalizadores").update({data_fim:hoje}).eq("id",fiscId);
+  if(error){alert("Erro: "+error.message);return;}
+  abrirModalContratoOp("fiscal");
+}
+
+async function salvarOperacaoContrato(op){
+  if(bloquearSeVisualiz()) return;
+  if(!_ctAtual){alert("Contrato não selecionado.");return;}
+  const id=_ctAtual.id;
+  const msgEl=document.getElementById({renovar:"ctr-msg",reajuste:"ctrea-msg",aditivo:"ctad-msg",prorrogacao:"ctpr-msg",supressao:"ctsu-msg",fiscal:"ctfi-msg"}[op]);
+  const setMsg=(txt,ok)=>{if(msgEl){msgEl.className="fmsg "+(ok?"ok":"err");msgEl.textContent=txt;}};
+
+  try{
+    if(op==="renovar"){
+      const inicio=document.getElementById("ctr-inicio").value;
+      const fim=document.getElementById("ctr-fim").value;
+      if(!inicio||!fim){setMsg("Vigência início e fim são obrigatórios","err");return;}
+      const valor=document.getElementById("ctr-valor").value;
+      const valorMensal=document.getElementById("ctr-valor-mensal").value;
+      const obs=document.getElementById("ctr-obs").value.trim();
+      const upd={data_inicio:inicio,data_fim:fim,status:"VIGENTE"};
+      if(valor) upd.valor_total=parseFloat(valor);
+      if(valorMensal) upd.valor_mensal=parseFloat(valorMensal);
+      const {error:e1}=await sb.from("contratos").update(upd).eq("id",id);
+      if(e1) throw e1;
+      await sb.from("contratos_vigencias").insert({contrato_id:id,data_inicio:inicio,data_fim:fim,valor_total:valor?parseFloat(valor):null,valor_mensal:valorMensal?parseFloat(valorMensal):null,obs});
+      await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Renovação",obs:`Novo período: ${inicio} a ${fim}${obs?". "+obs:""}`});
+      setMsg("✓ Contrato renovado!","ok");
+
+    } else if(op==="reajuste"){
+      const data=document.getElementById("ctrea-data").value;
+      const pct=document.getElementById("ctrea-pct").value;
+      if(!data||!pct){setMsg("Data e percentual são obrigatórios","err");return;}
+      const obs=document.getElementById("ctrea-obs").value.trim();
+      const {error}=await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Reajuste",obs:`${pct}%${obs?". "+obs:""} (${data})`});
+      if(error) throw error;
+      setMsg("✓ Reajuste registrado!","ok");
+
+    } else if(op==="aditivo"){
+      const data=document.getElementById("ctad-data").value;
+      if(!data){setMsg("Data é obrigatória","err");return;}
+      const pct=document.getElementById("ctad-pct").value;
+      const valor=document.getElementById("ctad-valor").value;
+      const obs=document.getElementById("ctad-obs").value.trim();
+      const {error}=await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Aditivo",obs:`${pct?pct+"%":""} ${valor?"R$ "+parseFloat(valor).toLocaleString("pt-BR",{minimumFractionDigits:2}):""}${obs?". "+obs:""} (${data})`.trim()});
+      if(error) throw error;
+      if(valor) await sb.from("contratos").update({valor_total:(_ctAtual.valor_total||0)+parseFloat(valor)}).eq("id",id);
+      setMsg("✓ Aditivo registrado!","ok");
+
+    } else if(op==="prorrogacao"){
+      const dataFim=document.getElementById("ctpr-data-fim").value;
+      if(!dataFim){setMsg("Nova data fim é obrigatória","err");return;}
+      const obs=document.getElementById("ctpr-obs").value.trim();
+      const {error}=await sb.from("contratos").update({data_fim:dataFim}).eq("id",id);
+      if(error) throw error;
+      await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Prorrogação",obs:`Nova data fim: ${dataFim}${obs?". "+obs:""}`});
+      setMsg("✓ Prorrogação registrada!","ok");
+
+    } else if(op==="supressao"){
+      const data=document.getElementById("ctsu-data").value;
+      if(!data){setMsg("Data é obrigatória","err");return;}
+      const pct=document.getElementById("ctsu-pct").value;
+      const valor=document.getElementById("ctsu-valor").value;
+      const obs=document.getElementById("ctsu-obs").value.trim();
+      const {error}=await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Supressão",obs:`${pct?pct+"%":""} ${valor?"R$ "+parseFloat(valor).toLocaleString("pt-BR",{minimumFractionDigits:2}):""}${obs?". "+obs:""} (${data})`.trim()});
+      if(error) throw error;
+      setMsg("✓ Supressão registrada!","ok");
+
+    } else if(op==="fiscal"){
+      const nome=document.getElementById("ctfi-nome").value.trim();
+      const inicio=document.getElementById("ctfi-inicio").value;
+      if(!nome||!inicio){setMsg("Nome e data início são obrigatórios","err");return;}
+      const cargo=document.getElementById("ctfi-cargo").value.trim();
+      const {error}=await sb.from("contratos_fiscalizadores").insert({contrato_id:id,nome,data_inicio:inicio,cargo:cargo||null});
+      if(error) throw error;
+      await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Troca de fiscal",obs:`Novo fiscal: ${nome}${cargo?" ("+cargo+")":""} a partir de ${inicio}`});
+      await sb.from("contratos").update({fiscal:nome}).eq("id",id);
+      setMsg("✓ Fiscal adicionado!","ok");
+    }
+
+    await loadContratos();
+    _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||_ctAtual;
+    setTimeout(()=>{document.getElementById("modal-ct-"+op).classList.remove("active");},1200);
+  } catch(e){
+    setMsg("✗ Erro: "+(e.message||e),"err");
+  }
 }
 
 checkAuth().then(ok => { if(ok) loadData(); });
