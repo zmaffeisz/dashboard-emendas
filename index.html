@@ -3892,7 +3892,9 @@ async function loadContratos(){
     const ord={VIGENTE:0,SUSPENSO:1,ENCERRADO:2};
     const oa=ord[a.status]??3, ob=ord[b.status]??3;
     if(oa!==ob) return oa-ob;
-    return (a.data_fim||"").localeCompare(b.data_fim||"");
+    const da=parseDataBR(a.vencimento)||new Date(0);
+    const db=parseDataBR(b.vencimento)||new Date(0);
+    return da-db;
   });
   contratosCarregado=true;
   popularFiltrosContratos();
@@ -3930,9 +3932,9 @@ function filtrarContratos(){
   const vigentes=contratosFiltrados.filter(r=>r.status==="VIGENTE").length;
   const encerrados=contratosFiltrados.filter(r=>r.status==="ENCERRADO").length;
   const vencendo=contratosFiltrados.filter(r=>{
-    if(r.status!=="VIGENTE"||!r.data_fim) return false;
-    const v=new Date(r.data_fim+"T12:00:00");
-    return v>=hoje&&v<=d90;
+    if(r.status!=="VIGENTE"||!r.vencimento) return false;
+    const v=parseDataBR(r.vencimento);
+    return v&&v>=hoje&&v<=d90;
   }).length;
 
   document.getElementById("ct-m-total").textContent=total;
@@ -3949,10 +3951,11 @@ function badgeStatusContrato(status){
   return `<span class="badge" style="background:${c.bg};color:${c.color}">${status||"—"}</span>`;
 }
 
-function corVencimento(dataFim,status){
+function corVencimento(dataFim){
   if(!dataFim) return "var(--text3)";
-  const hoje=new Date();
-  const v=new Date(dataFim+"T12:00:00");
+  const v=parseDataBR(dataFim);
+  if(!v) return "var(--text3)";
+  const hoje=new Date();hoje.setHours(0,0,0,0);
   const d90=new Date(hoje);d90.setDate(d90.getDate()+90);
   if(v<hoje) return "var(--red)";
   if(v<=d90) return "var(--amber)";
@@ -3971,17 +3974,18 @@ function renderTabelaContratos(){
   if(!tbody) return;
   if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
   tbody.innerHTML=contratosFiltrados.map(r=>{
-    const cor=corVencimento(r.data_fim,r.status);
+    const cor=corVencimento(r.vencimento);
+    const fisc=r.fiscalizacao||"—";
     return `<tr>
       <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋</button></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
       <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
-      <td style="white-space:nowrap">${fmtDate(r.data_inicio)} – ${fmtDate(r.data_fim)}</td>
-      <td style="white-space:nowrap;color:${cor};font-weight:500">${fmtDate(r.data_fim)}</td>
+      <td style="white-space:nowrap">${r.vigencia_atual||"—"}</td>
+      <td style="white-space:nowrap;color:${cor};font-weight:500">${r.vencimento||"—"}</td>
       <td>${badgeStatusContrato(r.status)}</td>
       <td>${r.secao||"—"}</td>
-      <td class="td-trunc">${r.fiscal||"—"}</td>
+      <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
     </tr>`;
   }).join("");
 }
@@ -4003,9 +4007,9 @@ async function abrirDetalheContrato(id){
   ]);
 
   const c=_ctAtual;
-  const cor=corVencimento(c.data_fim,c.status);
+  const cor=corVencimento(c.vencimento);
   let html=`<div class="ficha-grid" style="margin-bottom:1.25rem">
-    ${[["CPL",c.cpl],["Prestador",c.prestador],["Objeto",c.objeto],["Seção",c.secao],["Vigência início",fmtDate(c.data_inicio)],["Vencimento",`<span style="color:${cor};font-weight:600">${fmtDate(c.data_fim)}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
+    ${[["CPL",c.cpl],["Prestador",c.prestador],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
   </div>`;
 
   const vigs=vigRes.data||[];
