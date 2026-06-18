@@ -2851,9 +2851,15 @@ let _cnAtual = null;
 async function loadChamadosNovos(){
   document.getElementById("cn-loading").style.display="block";
   document.getElementById("cn-main").style.display="none";
-  const {data,error}=await sb.from("chamados").select("*, chamados_controle(status,data_atendimento,empresa,os,feito,obs)").order("created_at",{ascending:false});
+  const {data,error}=await sb.from("chamados").select("*").order("created_at",{ascending:false});
   if(error){document.getElementById("cn-loading").innerHTML=`<div style="color:var(--red)">Erro: ${error.message}</div>`;return;}
-  chamadosNovosRows=data;
+  
+  // Carregar controle separadamente
+  const {data:controleData}=await sb.from("chamados_controle").select("*");
+  const controleMap={};
+  if(controleData) controleData.forEach(c=>controleMap[c.protocolo]=c);
+  
+  chamadosNovosRows=data.map(r=>({...r, _controle: controleMap[r.protocolo]||null}));
   chamadosNovosCarregado=true;
   popularFiltrosCN();
   filtrarChamadosNovos();
@@ -2863,8 +2869,7 @@ async function loadChamadosNovos(){
 }
 
 function getControleCN(row){
-  const ctrl=row.chamados_controle;
-  if(ctrl&&ctrl.length>0) return ctrl[0];
+  if(row._controle) return row._controle;
   return {status:"Aberto",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
 }
 
@@ -2967,10 +2972,7 @@ async function salvarChamadoNovo(){
   if(error){showMsg("mcn","Erro: "+error.message,"err");btn.disabled=false;btn.textContent="Salvar";return;}
   // Atualizar local
   const r=chamadosNovosRows.find(x=>x.id===_cnAtual);
-  if(r){
-    if(!r.chamados_controle||!r.chamados_controle.length) r.chamados_controle=[dados];
-    else Object.assign(r.chamados_controle[0],dados);
-  }
+  if(r){ r._controle=dados; }
   filtrarChamadosNovos();
   atualizarBadgeCN();
   showMsg("mcn","✓ Salvo!","ok");
