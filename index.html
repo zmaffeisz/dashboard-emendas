@@ -143,6 +143,8 @@ tr:hover td{background:var(--surface2)}
 .ficha-field-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .ficha-field-value{font-size:13px;font-weight:500;color:var(--text)}
 .ficha-field-value.empty{color:var(--text3);font-weight:400}
+.visualizador-hidden{display:none!important}
+
 /* CHECKBOX LIST */
 .check-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)}
 .check-item-row{border-bottom:1px solid var(--border);padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
@@ -186,7 +188,7 @@ tr:hover td{background:var(--surface2)}
   <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
   <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
-  <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
+  <div class="tab" id="tab-btn-planilhas" onclick="showTab('planilhas')">📊 Planilhas</div>
   <div class="tab" id="tab-btn-nova-emenda" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
   <div class="tab" id="tab-btn-novo-item" onclick="showTab('novo-item')">📦 Novo item</div>
   <div class="tab" id="tab-btn-atualizar-status" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
@@ -1227,17 +1229,29 @@ async function checkAuth(){
     const tabUsuarios=document.getElementById("tab-btn-usuarios");
     if(tabUsuarios) tabUsuarios.style.display="block";
   }
-  // Mostrar aba Planilhas para admin e editor
-  if(profile?.papel === 'admin' || profile?.papel === 'editor'){
-    const tabPlanilhas=document.getElementById("tab-btn-planilhas");
-    if(tabPlanilhas) tabPlanilhas.style.display="block";
-  }
-  // Ocultar abas de edição para visualizadores
+  // Planilhas visível para todos
+  // Visualizadores veem todas as abas mas não podem editar
   if(profile?.papel === 'visualizador'){
-    ["tab-btn-nova-emenda","tab-btn-novo-item","tab-btn-atualizar-status","tab-btn-atas"].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display="none";
-    });
+    document.body.classList.add('is-visualizador');
+    // Ocultar via CSS botões de ação nas abas
+    const style=document.createElement('style');
+    style.textContent=`
+      button[onclick*="salvarNova"],
+      button[onclick*="abrirModalNova"],
+      button[onclick*="abrirModalNovaExec"],
+      button[onclick*="abrirModalNovaAta"],
+      button[onclick*="encerrarContrato"],
+      button[onclick*="renovarAta"],
+      button[onclick*="excluirExec"],
+      button[onclick*="excluirLinhaAC"],
+      button[onclick*="excluirLinhaChamado"],
+      button[onclick*="adicionarLinhaAC"],
+      button[onclick*="marcarTodosChamados"],
+      #btn-add-ac,
+      .btn-enviar-status
+      {display:none!important}
+    `;
+    document.head.appendChild(style);
   }
   return true;
 }
@@ -1611,13 +1625,14 @@ function filtrarChamados(){
       <td style="font-size:11px">${ctrl.empresa||"—"}</td>
       <td style="font-size:11px">${ctrl.os||"—"}</td>
       <td class="td-trunc" style="max-width:160px" title="${ctrl.feito||''}">${ctrl.feito||"—"}</td>
-      <td><button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button></td>
+      <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
     </tr>`;
   }).join("");
 }
 
 async function marcarTodosChamados(){
+  if(currentProfile?.papel==="visualizador"){alert("Sem permissão.");return;}
   const checkboxes=document.querySelectorAll('#chamados-body input[type=checkbox]:not(:checked)');
   if(!checkboxes.length){alert("Nenhum chamado pendente.");return;}
   if(!confirm(`Marcar ${checkboxes.length} chamados como enviados à empresa?`)) return;
@@ -1846,6 +1861,7 @@ function fecharModalChamado(){document.getElementById("modal-chamado").classList
 function fecharModalChamadoFora(e){if(e.target===document.getElementById("modal-chamado"))fecharModalChamado()}
 
 async function salvarControleChamado(){
+  if(currentProfile?.papel==="visualizador"){alert("Sem permissão.");return;}
   const protocolo=_chamadoAtual;
   if(!protocolo) return;
   const dados={
@@ -2337,6 +2353,7 @@ function renovarAta(cpl,sim,item,vencAtual){
 }
 
 async function salvarRenovacao(){
+  if(bloquearSeVisualiz()) return;
   if(!_renovarKey) return;
   const novaData=document.getElementById("rv-nova").value;
   const novoStatus=document.getElementById("rv-status").value||"VIGENTE";
@@ -2459,6 +2476,7 @@ function encerrarContrato(cpl,sim,item){
   document.getElementById("modal-encerrar").classList.add("active");
 }
 async function confirmarEncerramento(){
+  if(bloquearSeVisualiz()) return;
   if(!_encerrarKey) return;
   const btn=document.querySelector("#modal-encerrar .btn-primary");
   btn.disabled=true;btn.textContent="Encerrando...";
@@ -2474,7 +2492,8 @@ async function confirmarEncerramento(){
 }
 
 // ═══ EXCLUIR EXECUÇÃO ═══
-async function excluirExec(idx,cpl,sim,item,unidade){
+async function excluirExec(
+  if(bloquearSeVisualiz()) return;idx,cpl,sim,item,unidade){
   if(!confirm(`Excluir esta solicitação?\n${item} · ${unidade}\n\nEsta ação não pode ser desfeita.`)) return;
   await enviarViaGet({acao:"excluir_execucao",cpl,sim,item,unidade});
   // Remover localmente
@@ -2496,6 +2515,7 @@ function abrirModalProrrogarPrazo(idx,cpl,sim,item,unidade){
   document.getElementById("modal-prorrogar-prazo").classList.add("active");
 }
 async function salvarProrrogarPrazo(){
+  if(bloquearSeVisualiz()) return;
   const data=document.getElementById("pp-data").value;
   const obs=document.getElementById("pp-obs").value.trim();
   if(!data){showMsg("pp","Informe a nova data (*)","err");return}
@@ -2594,6 +2614,7 @@ function abrirModalEditAta(cpl,sim,item){
 }
 
 async function salvarNovaAta(){
+  if(bloquearSeVisualiz()) return;
   const cpl=document.getElementById("na-cpl").value.trim();
   const sim=document.getElementById("na-sim").value.trim();
   const item=document.getElementById("na-item").value.trim();
@@ -2618,6 +2639,7 @@ async function salvarNovaAta(){
 }
 
 async function salvarNovaExec(){
+  if(bloquearSeVisualiz()) return;
   const cpl=document.getElementById("ne2-cpl").value;
   const sim=document.getElementById("ne2-sim").value;
   const item=document.getElementById("ne2-item").value;
@@ -2643,6 +2665,7 @@ async function salvarNovaExec(){
 }
 
 async function salvarEditExec(){
+  if(bloquearSeVisualiz()) return;
   if(!_editExecKey) return;
   const btn=document.querySelector("#modal-edit-exec .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
@@ -2696,7 +2719,8 @@ async function carregarUsuarios(){
   document.getElementById("usuarios-table").style.display="block";
 }
 
-async function alterarPapel(userId, email){
+async function alterarPapel(
+  if(bloquearSeVisualiz()) return;userId, email){
   const novoPapel=document.getElementById("papel-"+userId).value;
   const {error}=await sb.from("profiles").update({papel:novoPapel}).eq("id",userId);
   if(error){alert("Erro ao atualizar: "+error.message);return;}
@@ -2808,6 +2832,7 @@ function fecharModalCelula(){
 }
 
 async function salvarCelula(){
+  if(bloquearSeVisualiz()) return;
   if(!_celulaAtual) return;
   const novoValor=document.getElementById("mc-valor").value.trim();
   const btn=document.querySelector("#modal-celula .btn-primary");
@@ -2843,7 +2868,8 @@ async function salvarCelula(){
   setTimeout(()=>fecharModalCelula(),800);
 }
 
-async function excluirLinhaAC(id){
+async function excluirLinhaAC(
+  if(bloquearSeVisualiz()) return;id){
   const row=_plAcData.find(r=>r.id===id);
   if(!confirm(`Excluir equipamento ${row?.estabelecimento||""} - Pat: ${row?.patrimonio||""}?`)) return;
   const {error}=await sb.from("inventario_ac").delete().eq("id",id);
@@ -2861,6 +2887,7 @@ function adicionarLinhaAC(){
 }
 
 async function salvarNovaLinhaAC(){
+  if(bloquearSeVisualiz()) return;
   const btn=document.querySelector("#modal-nova-linha-ac .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
   const item={
@@ -3007,7 +3034,7 @@ function filtrarChamadosNovos(){
       <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
       <td style="font-size:11px">${r.rechamado||"—"}</td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>  
-      <td><button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button></td>
+      <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
     </tr>`;
   }).join("");
@@ -3030,6 +3057,7 @@ function abrirModalCN(id){
 }
 
 async function salvarChamadoNovo(){
+  if(currentProfile?.papel==="visualizador"){alert("Sem permissão.");return;}
   if(!_cnAtual) return;
   const btn=document.querySelector("#modal-cn .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
@@ -3145,13 +3173,26 @@ function editarCelulaChamado(id, key, label, valor){
   setTimeout(()=>document.getElementById("mc-valor").select(),100);
 }
 
-async function excluirLinhaChamado(id){
+async function excluirLinhaChamado(
+  if(bloquearSeVisualiz()) return;id){
   const row=_plChamadosData.find(r=>r.id===id);
   if(!confirm(`Excluir chamado ${row?.protocolo||""}?`)) return;
   const {error}=await sb.from("chamados").delete().eq("id",id);
   if(error){alert("Erro: "+error.message);return;}
   _plChamadosData=_plChamadosData.filter(r=>r.id!==id);
   filtrarPlanilhaChamados();
+}
+
+function podeEditar(){
+  return currentProfile?.papel==="editor"||currentProfile?.papel==="admin";
+}
+
+function bloquearSeVisualiz(msg){
+  if(!podeEditar()){
+    alert("⛔ Sem permissão. Apenas editores e administradores podem realizar esta ação.");
+    return true;
+  }
+  return false;
 }
 
 async function loadData(){
