@@ -3193,7 +3193,7 @@ async function loadData(){
     applyFilters();
     document.getElementById("conn-pill").textContent="✓ Conectado";
     document.getElementById("conn-pill").className="pill pill-ok";
-    document.getElementById("last-update").textContent="Atualizado em "+new Date().toLocaleString("pt-BR");
+    const lu=document.getElementById("last-update"); if(lu) lu.textContent="Atualizado em "+new Date().toLocaleString("pt-BR");
     document.getElementById("loading").style.display="none";
     document.getElementById("main").style.display="block";
   }catch(e){
