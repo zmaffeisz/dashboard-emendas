@@ -655,11 +655,11 @@ tr:hover td{background:#e8f0fb}
         <table>
           <thead>
             <tr>
-              <th>Ações</th><th>PDF</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Endereço</th>
+              <th>Ações</th><th>PDF</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Endereço</th>
               <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
               <th>Equipamento</th><th>Fabricante/Modelo</th><th>Série</th>
               <th>Categoria</th><th>Serviço</th><th>Problema apresentado</th>
-              <th>Descrição</th><th>Rechamado?</th><th>Status</th>
+              <th>Descrição</th><th>Rechamado?</th>
             </tr>
           </thead>
           <tbody id="cn-body"></tbody>
@@ -3034,6 +3034,7 @@ function filtrarChamadosNovos(){
     return`<tr style="${aguardando?'background:var(--amber-bg)':''}">
       <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
+      <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
       <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
@@ -3051,7 +3052,6 @@ function filtrarChamadosNovos(){
       <td style="font-size:11px">${r.problema||"—"}</td>
       <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
       <td style="font-size:11px">${r.rechamado||"—"}</td>
-      <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
     </tr>`;
   }).join("");
 }
