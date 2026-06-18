@@ -181,7 +181,7 @@ tr:hover td{background:#e8f0fb}
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
+  <div class="tab active" onclick="showTab('dashboard')">📊 Emendas</div>
   <div class="tab" onclick="showTab('consulta')">🔍 Consulta rápida</div>
   <div class="tab" onclick="showTab('chamados')">📋 Chamados Antigos</div>
   <div class="tab" onclick="showTab('chamados-novos')">🆕 Chamados novos <span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
@@ -201,6 +201,8 @@ tr:hover td{background:#e8f0fb}
 <div id="panel-dashboard" class="panel active">
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Google Sheets...</div>
   <div id="main" style="display:none">
+    <div style="display:flex;gap:1.125rem;align-items:flex-start">
+      <div style="width:260px;position:sticky;top:0">
 
     <div class="filters">
       <div class="fg">
@@ -246,6 +248,8 @@ tr:hover td{background:#e8f0fb}
       </div>
       <button class="clear-btn" onclick="clearAllFilters()">✕ Limpar tudo</button>
     </div>
+      </div>
+      <div style="flex:1;min-width:0">
 
     <div class="metrics">
       <div class="metric"><div class="metric-label">Emendas</div><div class="metric-value" id="m-emendas">—</div><div class="metric-sub">únicas</div></div>
@@ -305,6 +309,8 @@ tr:hover td{background:#e8f0fb}
           </thead>
           <tbody id="table-body"></tbody>
         </table>
+      </div>
+    </div>
       </div>
     </div>
   </div>
