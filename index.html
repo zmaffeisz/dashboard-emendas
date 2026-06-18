@@ -483,14 +483,7 @@ tr:hover td{background:var(--surface2)}
         <input type="text" id="fc-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamados()">
       </div>
       <button class="clear-btn" onclick="clearAllChamados()">✕ Limpar</button>
-      <div class="fg" style="align-self:flex-end">
-        <div class="fg-label">Data de corte <span id="corte-label" style="font-weight:400;color:var(--text3)"></span></div>
-        <div style="display:flex;gap:6px">
-          <input type="date" id="input-corte" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm)">
-          <button onclick="aplicarDataCorte()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">✓ Aplicar</button>
-        </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">Chamados antes desta data saem do alerta</div>
-      </div>
+      <button onclick="marcarTodosChamados()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg);color:var(--green-text);cursor:pointer;align-self:flex-end" title="Marcar todos os chamados visíveis como enviados">✅ Marcar todos como enviados</button>
     </div>
 
     <!-- Métricas chamados -->
@@ -1057,7 +1050,7 @@ async function checkAuth(){
 
 const ATAS_ITENS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=1903295047&single=true&output=csv";
 const ATAS_EXEC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=330213664&single=true&output=csv";
-const CHAMADOS_SCRIPT_URL = "AGUARDANDO_URL_APPS_SCRIPT_CHAMADOS";
+const CHAMADOS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzyU6Rfb6oiFzPao7yHyVWT8dyv79RFr_IzgNVcUB3mb6WaCx_pHhGiwDFzWY1JgsERQ/exec";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydum9CSR96g3NEy1lHRT1avj93xe3BOw9OZjkcKFDLNDcwnDQCoPAbW7Iyvgl5k5FItA/exec";
 
 let allRows = [];
@@ -1448,25 +1441,32 @@ function filtrarChamados(){
 }
 
 async function marcarTodosChamados(){
-  const visiveis=document.querySelectorAll('#chamados-body tr');
-  if(!visiveis.length) return;
-  if(!confirm(`Marcar ${visiveis.length} chamados visíveis como enviados?`)) return;
-  // Pegar protocolos dos checkboxes desmarcados
   const checkboxes=document.querySelectorAll('#chamados-body input[type=checkbox]:not(:checked)');
+  if(!checkboxes.length){alert("Nenhum chamado pendente.");return;}
+  if(!confirm(`Marcar ${checkboxes.length} chamados como enviados à empresa?`)) return;
   const btn=document.querySelector('[onclick="marcarTodosChamados()"]');
-  btn.disabled=true;btn.textContent="Marcando...";
+  btn.disabled=true;btn.textContent="Salvando...";
+  // Coletar protocolos
+  const protocolos=[];
   for(const cb of checkboxes){
-    const proto=cb.closest('tr')?.querySelector('td:nth-child(2)')?.textContent?.trim();
+    const proto=cb.closest('tr')?.querySelector('td:nth-child(3)')?.textContent?.trim();
     if(!proto||proto==="—") continue;
+    protocolos.push(proto);
     const idx=controleRows.findIndex(r=>r.protocolo===proto);
     const novo={protocolo:proto,status:"Em andamento",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
     if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
     cb.checked=true;
   }
+  // Salvar em lote no Apps Script (um por um mas em paralelo)
+  const promises=protocolos.map(proto=>{
+    const dados={acao:"salvar_controle",protocolo:proto,status:"Em andamento",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
+    return fetch(CHAMADOS_SCRIPT_URL+"?dados="+encodeURIComponent(JSON.stringify(dados)),{method:"GET",mode:"cors"}).catch(()=>{});
+  });
+  await Promise.all(promises);
   atualizarBadgeChamados();
   filtrarChamados();
-  btn.disabled=false;btn.textContent="✅ Marcar todos";
-  alert("✓ Chamados marcados como enviados!");
+  btn.disabled=false;btn.textContent="✅ Marcar todos como enviados";
+  alert(`✓ ${protocolos.length} chamados marcados e salvos!`);
 }
 
 function gerarPDFChamado(protocolo){
@@ -1644,7 +1644,8 @@ async function marcarChamadoAberto(protocolo, marcado){
   const idx = controleRows.findIndex(r=>r.protocolo===protocolo);
   const novo = {protocolo, status:novoStatus, data_atendimento:"", empresa:"", os:"", feito:"", obs:""};
   if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
-  await enviarViaGet({...dados, script_url: CHAMADOS_SCRIPT_URL});
+  const urlParams = encodeURIComponent(JSON.stringify(dados));
+  await fetch(CHAMADOS_SCRIPT_URL + "?dados=" + urlParams, {method:"GET", mode:"cors"}).catch(()=>{});
   atualizarBadgeChamados();
   filtrarChamados();
 }
@@ -1682,7 +1683,8 @@ async function salvarControleChamado(){
   };
   const btn=document.querySelector("#modal-chamado .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  await enviarViaGet({...dados, script_url: CHAMADOS_SCRIPT_URL});
+  const urlParams = encodeURIComponent(JSON.stringify(dados));
+  await fetch(CHAMADOS_SCRIPT_URL + "?dados=" + urlParams, {method:"GET", mode:"cors"}).catch(()=>{});
   // Atualizar localmente
   const idx=controleRows.findIndex(r=>r.protocolo===protocolo);
   const novo={protocolo,status:dados.status,data_atendimento:dados.data_atendimento,empresa:dados.empresa,os:dados.os,feito:dados.feito,obs:dados.obs};
