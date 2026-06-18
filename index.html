@@ -197,9 +197,9 @@ tr:hover td{background:#e8f0fb}
   <div class="tab" id="tab-btn-contratos" style="display:none" onclick="showTab('contratos')">📋 Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
   <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
-  <div class="tab" id="tab-btn-nova-emenda" style="display:none" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
-  <div class="tab" id="tab-btn-novo-item" style="display:none" onclick="showTab('novo-item')">📦 Novo item</div>
-  <div class="tab" id="tab-btn-atualizar-status" style="display:none" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
+  <div class="tab" id="tab-btn-nova-emenda" style="display:none"></div>
+  <div class="tab" id="tab-btn-novo-item" style="display:none"></div>
+  <div class="tab" id="tab-btn-atualizar-status" style="display:none"></div>
 </div>
 
 <div class="container">
@@ -286,6 +286,12 @@ tr:hover td{background:#e8f0fb}
       <div class="metric"><div class="metric-label">Entregues</div><div class="metric-value" id="m-entregues">—</div><div class="metric-sub">% dos itens</div></div>
     </div>
 
+    <div id="editor-btns" style="display:none;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
+      <button onclick="abrirModalEdicao('nova-emenda')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">➕ Nova emenda</button>
+      <button onclick="abrirModalEdicao('novo-item')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">📦 Novo item</button>
+      <button onclick="abrirModalEdicao('atualizar-status')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer;font-weight:500">✏️ Atualizar status</button>
+    </div>
+
     <div class="table-card">
       <div class="table-hdr">
         <span class="table-hdr-title">Itens detalhados</span>
@@ -307,6 +313,8 @@ tr:hover td{background:#e8f0fb}
               <th onclick="sortTable('vl_total')">Valor total <span class="sort-icon" id="si-vl_total"></span></th>
               <th onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></th>
               <th onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></th>
+              <th onclick="sortTable('status_raw')" style="min-width:200px">Status completo <span class="sort-icon" id="si-status_raw"></span></th>
+              <th onclick="sortTable('data_atualizacao')" style="white-space:nowrap">Atualização <span class="sort-icon" id="si-data_atualizacao"></span></th>
               <th onclick="sortTable('nota_fiscal')">Nota fiscal <span class="sort-icon" id="si-nota_fiscal"></span></th>
               <th onclick="sortTable('empenho')">Empenho <span class="sort-icon" id="si-empenho"></span></th>
               <th onclick="sortTable('patrimonio')">Patrimônio <span class="sort-icon" id="si-patrimonio"></span></th>
@@ -366,10 +374,13 @@ tr:hover td{background:#e8f0fb}
   </div>
 </div>
 
-<!-- ══════════════════════ NOVA EMENDA ══════════════════════ -->
-<div id="panel-nova-emenda" class="panel">
-  <div class="form-card">
-    <div class="form-title">➕ Cadastrar nova emenda</div>
+<!-- ══════════════════════ MODAL NOVA EMENDA ══════════════════════ -->
+<div class="modal-overlay" id="panel-nova-emenda" onclick="if(event.target===this)fecharModalEdicao('nova-emenda')">
+  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:.875rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">➕ Cadastrar nova emenda</span>
+      <button onclick="fecharModalEdicao('nova-emenda')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
     <div class="form-grid">
       <div class="form-group"><div class="form-label">Tipo *</div><select id="ne-tipo"><option value="">Selecione...</option><option>ESTADUAL</option><option>FEDERAL</option><option>MUNICIPAL</option></select></div>
       <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="ne-emenda" placeholder="ex: 202300546528"></div>
@@ -378,24 +389,27 @@ tr:hover td{background:#e8f0fb}
       <div class="form-group"><div class="form-label">Valor cedido (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000"></div>
       <div class="form-group"><div class="form-label">Unidade beneficiada *</div><input type="text" id="ne-unidade" placeholder="ex: UBS CAJURU"></div>
     </div>
-    <div class="form-actions">
+    <div class="form-actions" style="margin-top:1.25rem">
       <button class="btn-primary" onclick="salvarNovaEmenda()">Salvar emenda</button>
       <button class="btn-secondary" onclick="limparForm('ne')">Limpar</button>
+      <button class="btn-secondary" onclick="fecharModalEdicao('nova-emenda')">Fechar</button>
       <span id="ne-msg" class="fmsg"></span>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════ NOVO ITEM ══════════════════════ -->
-<div id="panel-novo-item" class="panel">
-  <div class="form-card">
-    <div class="form-title">📦 Adicionar item a uma emenda existente</div>
+<!-- ══════════════════════ MODAL NOVO ITEM ══════════════════════ -->
+<div class="modal-overlay" id="panel-novo-item" onclick="if(event.target===this)fecharModalEdicao('novo-item')">
+  <div class="modal-box" style="width:720px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:.875rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📦 Adicionar item a uma emenda existente</span>
+      <button onclick="fecharModalEdicao('novo-item')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
     <div class="form-grid">
       <div class="form-group">
         <div class="form-label">Emenda(s) * <span style="font-size:10px;color:var(--text3);font-weight:400">(Ctrl+clique p/ múltiplas)</span></div>
         <select id="ni-emenda" multiple onchange="autoPreencherEmenda()" style="min-height:100px;min-width:180px"></select>
       </div>
-
       <div class="form-group full"><div class="form-label">Item / Descrição *</div><input type="text" id="ni-item" placeholder="ex: AR CONDICIONADO 12000 BTU"></div>
       <div class="form-group"><div class="form-label">Valor unitário (R$)</div><input type="number" id="ni-vl-unit" placeholder="ex: 2400" oninput="recalcTotais()"></div>
       <div class="form-group"><div class="form-label">CPL / Processo contratação</div><input type="text" id="ni-cpl" placeholder="ex: CPL 086/2025"></div>
@@ -416,18 +430,22 @@ tr:hover td{background:#e8f0fb}
         </div>
       </div>
     </div>
-    <div class="form-actions">
+    <div class="form-actions" style="margin-top:1.25rem">
       <button class="btn-primary" onclick="salvarNovoItem()">Salvar item</button>
       <button class="btn-secondary" onclick="limparForm('ni')">Limpar</button>
+      <button class="btn-secondary" onclick="fecharModalEdicao('novo-item')">Fechar</button>
       <span id="ni-msg" class="fmsg"></span>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════ ATUALIZAR STATUS ══════════════════════ -->
-<div id="panel-atualizar-status" class="panel">
-  <div class="form-card">
-    <div class="form-title">✏️ Atualizar status de itens</div>
+<!-- ══════════════════════ MODAL ATUALIZAR STATUS ══════════════════════ -->
+<div class="modal-overlay" id="panel-atualizar-status" onclick="if(event.target===this)fecharModalEdicao('atualizar-status')">
+  <div class="modal-box" style="width:780px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:.875rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Atualizar status de itens</span>
+      <button onclick="fecharModalEdicao('atualizar-status')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
     <div class="form-grid">
       <div class="form-group">
         <div class="form-label">CPL / Processo <button onclick="clearFAs('as-cpl')" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;margin-left:4px">✕</button></div>
@@ -476,9 +494,10 @@ tr:hover td{background:#e8f0fb}
         </div>
       </div>
     </div>
-    <div class="form-actions">
-      <button class="btn-primary" onclick="salvarStatus()">Atualizar selecionados</button>
+    <div class="form-actions" style="margin-top:1.25rem">
+      <button class="btn-primary btn-enviar-status" onclick="salvarStatus()">Atualizar selecionados</button>
       <button class="btn-secondary" onclick="limparStatus()">Limpar tudo</button>
+      <button class="btn-secondary" onclick="fecharModalEdicao('atualizar-status')">Fechar</button>
       <span id="as-msg" class="fmsg"></span>
     </div>
   </div>
@@ -1492,11 +1511,17 @@ async function checkAuth(){
     greetEl.style.display = "inline";
   }
 
-  // Mostrar todas as abas autenticadas
-  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos","nova-emenda","novo-item","atualizar-status"].forEach(n=>{
+  // Mostrar abas autenticadas
+  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos"].forEach(n=>{
     const el=document.getElementById("tab-btn-"+n);
     if(el) el.style.display="";
   });
+
+  // Botões de editor
+  if(profile?.papel==='editor'||profile?.papel==='admin'){
+    const eb=document.getElementById("editor-btns");
+    if(eb) eb.style.display="flex";
+  }
 
   // Botão de logout
   if(!document.getElementById("btn-logout")){
@@ -1550,7 +1575,7 @@ async function checkAuth(){
 
 function entrarModoConvidado(){
   // Esconder todas as abas exceto Emendas
-  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos","nova-emenda","novo-item","atualizar-status","usuarios","planilhas"].forEach(n=>{
+  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas"].forEach(n=>{
     const el=document.getElementById("tab-btn-"+n);
     if(el) el.style.display="none";
   });
@@ -1689,7 +1714,7 @@ function verificarSenha(){
     autenticado=true;
     fecharModal();
     // Remover cadeados das abas
-    ["nova-emenda","novo-item","atualizar-status","atas"].forEach(n=>{
+    ["atas"].forEach(n=>{
       const btn=document.getElementById("tab-btn-"+n);
       if(btn){
         btn.classList.remove("tab-locked");
@@ -1711,13 +1736,22 @@ function fecharModalFora(e){
   if(e.target===document.getElementById("modal-senha")) fecharModal();
 }
 
+function abrirModalEdicao(name){
+  if(bloquearSeVisualiz()) return;
+  popularSelectsEdicao();
+  document.getElementById("panel-"+name).classList.add("active");
+}
+
+function fecharModalEdicao(name){
+  document.getElementById("panel-"+name).classList.remove("active");
+}
+
 function showTab(name){
   localStorage.setItem("ultima_aba", name);
-  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas","nova-emenda","novo-item","atualizar-status"];
+  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
-  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
   document.getElementById("panel-"+name).classList.add("active");
-  if(name==="novo-item"||name==="atualizar-status") popularSelectsEdicao();
   if(name==="chamados"&&!chamadosRows.length) loadChamados();
   if(name==="chamados-novos"&&!chamadosNovosCarregado) loadChamadosNovos();
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
@@ -3589,6 +3623,7 @@ async function loadData(){
       unidade_entrega:(r["UNIDADE DE ENTREGA"]||"").trim(),
       data_entrega:(r["DATA DE ENTREGA NA UNIDADE"]||"").trim(),
       ordem_pagamento:(r["ORDEM DE PAGAMENTO"]||"").trim(),
+      data_atualizacao:(r["DATA ATUALIZAÇÃO"]||"").trim(),
       // índices reais no Sheets (para referência do script)
       // col 12=ITEM, 13=QTDE, 14=VL_UNIT, 15=VL_TOT, 16=CPL, 17=STATUS
       // 18=NF, 19=EMPENHO, 20=PATRIMONIO, 21=UN_ENTREGA, 22=DT_ENTREGA
@@ -3805,6 +3840,8 @@ function renderTable(){
     <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${r.cpl||"—"}</td>
     <td>${statusBadge(r.status_cat)}</td>
+    <td style="font-size:11px;max-width:240px;white-space:pre-wrap;word-break:break-word">${r.status_raw||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap;color:var(--text3)">${r.data_atualizacao||"—"}</td>
     <td style="font-size:11px">${r.nota_fiscal||"—"}</td>
     <td style="font-size:11px">${r.empenho||"—"}</td>
     <td style="font-size:11px">${r.patrimonio||"—"}</td>
