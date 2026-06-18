@@ -160,6 +160,11 @@ tr:hover td{background:#e8f0fb}
 .item-field input{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:150px}
 .check-actions-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
 .check-actions-row button{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)}
+/* Dashboard filter column - prevent overflow */
+.dash-filters-col{overflow:hidden}
+.dash-filters-col .filters{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
+.dash-filters-col .fg{width:100%;max-width:100%;box-sizing:border-box}
+.dash-filters-col .fg select,.dash-filters-col .fg input{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -202,7 +207,7 @@ tr:hover td{background:#e8f0fb}
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Google Sheets...</div>
   <div id="main" style="display:none">
     <div style="display:flex;gap:1.125rem;align-items:flex-start">
-      <div style="width:260px;position:sticky;top:0">
+      <div class="dash-filters-col" style="width:260px;position:sticky;top:0">
 
     <div class="filters">
       <div class="fg">
@@ -259,26 +264,6 @@ tr:hover td{background:#e8f0fb}
       <div class="metric"><div class="metric-label">Entregues</div><div class="metric-value" id="m-entregues">—</div><div class="metric-sub">% dos itens</div></div>
     </div>
 
-    <div class="prog-card">
-      <div class="prog-header">
-        <span style="font-size:13px;font-weight:500">Execução financeira</span>
-        <span class="prog-pct" id="prog-pct">—%</span>
-      </div>
-      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
-      <div class="prog-labels"><span id="prog-exec">—</span><span id="prog-rest">—</span><span id="prog-total">—</span></div>
-    </div>
-
-    <div class="grid2">
-      <div class="card">
-        <div class="card-title">Status dos itens</div>
-        <div class="status-list" id="status-list"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Top parlamentares (nº de emendas)</div>
-        <div class="bar-list" id="parl-bars"></div>
-      </div>
-    </div>
-
     <div class="table-card">
       <div class="table-hdr">
         <span class="table-hdr-title">Itens detalhados</span>
@@ -309,6 +294,26 @@ tr:hover td{background:#e8f0fb}
           </thead>
           <tbody id="table-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="prog-card">
+      <div class="prog-header">
+        <span style="font-size:13px;font-weight:500">Execução financeira</span>
+        <span class="prog-pct" id="prog-pct">—%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="prog-labels"><span id="prog-exec">—</span><span id="prog-rest">—</span><span id="prog-total">—</span></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Status dos itens</div>
+        <div class="status-list" id="status-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top parlamentares (nº de emendas)</div>
+        <div class="bar-list" id="parl-bars"></div>
       </div>
     </div>
       </div>
