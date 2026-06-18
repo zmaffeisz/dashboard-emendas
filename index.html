@@ -179,6 +179,7 @@ tr:hover td{background:#e8f0fb}
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
+    <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">🔑 Entrar</button>
     <span id="last-update" style="display:none"></span>
     <a href="https://zmaffeisz.github.io/dashboard-emendas/chamado.html" target="_blank" rel="noopener noreferrer" class="refresh-btn" style="text-decoration:none">Abertura de Chamados</a>
     <span class="pill pill-loading" id="conn-pill">⏳ Conectando</span>
@@ -188,23 +189,30 @@ tr:hover td{background:#e8f0fb}
 
 <div class="tabs">
   <div class="tab active" onclick="showTab('dashboard')">📊 Emendas</div>
-  <div class="tab" onclick="showTab('consulta')">🔍 Consulta rápida</div>
-  <div class="tab" onclick="showTab('chamados')">📋 Chamados Antigos</div>
-  <div class="tab" onclick="showTab('chamados-novos')">🆕 Chamados novos <span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
-  <div class="tab" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
-  <div class="tab" id="tab-btn-atas" onclick="showTab('atas')">📄 ATAs / Contratos</div>
-  <div class="tab" id="tab-btn-contratos" onclick="showTab('contratos')">📋 Contratos</div>
+  <div class="tab" id="tab-btn-consulta" style="display:none" onclick="showTab('consulta')">🔍 Consulta rápida</div>
+  <div class="tab" id="tab-btn-chamados" style="display:none" onclick="showTab('chamados')">📋 Chamados Antigos</div>
+  <div class="tab" id="tab-btn-chamados-novos" style="display:none" onclick="showTab('chamados-novos')">🆕 Chamados novos <span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
+  <div class="tab" id="tab-btn-inventario-ac" style="display:none" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
+  <div class="tab" id="tab-btn-atas" style="display:none" onclick="showTab('atas')">📄 ATAs / Contratos</div>
+  <div class="tab" id="tab-btn-contratos" style="display:none" onclick="showTab('contratos')">📋 Contratos</div>
   <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
   <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
-  <div class="tab" id="tab-btn-nova-emenda" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
-  <div class="tab" id="tab-btn-novo-item" onclick="showTab('novo-item')">📦 Novo item</div>
-  <div class="tab" id="tab-btn-atualizar-status" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
+  <div class="tab" id="tab-btn-nova-emenda" style="display:none" onclick="showTab('nova-emenda')">➕ Nova emenda</div>
+  <div class="tab" id="tab-btn-novo-item" style="display:none" onclick="showTab('novo-item')">📦 Novo item</div>
+  <div class="tab" id="tab-btn-atualizar-status" style="display:none" onclick="showTab('atualizar-status')">✏️ Atualizar status</div>
 </div>
 
 <div class="container">
 
 <!-- ══════════════════════ DASHBOARD ══════════════════════ -->
 <div id="panel-dashboard" class="panel active">
+  <div id="guest-banner" style="display:none;background:linear-gradient(135deg,#1a5fa8,#1a3a6b);color:#fff;border-radius:var(--radius);padding:.875rem 1.25rem;margin-bottom:1rem;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:3px">🔓 Modo de visualização pública</div>
+      <div style="font-size:12px;opacity:.85">Você está vendo as emendas em modo público. Faça login para acessar todas as seções e funcionalidades.</div>
+    </div>
+    <button onclick="abrirModalLogin()" style="flex-shrink:0;font-size:13px;padding:8px 20px;border-radius:var(--radius-sm);border:2px solid rgba(255,255,255,.6);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-weight:600;white-space:nowrap">🔑 Fazer Login</button>
+  </div>
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Google Sheets...</div>
   <div id="main" style="display:none">
     <div style="display:flex;gap:1.125rem;align-items:flex-start">
@@ -1410,6 +1418,28 @@ tr:hover td{background:#e8f0fb}
   </div>
 </div>
 
+<!-- Modal Login -->
+<div class="modal-overlay" id="modal-login" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:380px">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" style="height:52px;width:auto;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))" alt="Brasão">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:.75rem">Entrar no sistema</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">Seção de Aquisição e Manutenção · SMS Sorocaba</div>
+    </div>
+    <div class="form-group" style="margin-bottom:.875rem">
+      <div class="form-label">E-mail</div>
+      <input type="email" id="login-email" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s" placeholder="seu@email.com" autocomplete="username" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+    <div class="form-group" style="margin-bottom:1.125rem">
+      <div class="form-label">Senha</div>
+      <input type="password" id="login-senha" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s" placeholder="••••••••" autocomplete="current-password" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div id="login-err" style="display:none;font-size:12px;color:var(--red-text);background:var(--red-bg);padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:.875rem"></div>
+    <button class="btn-primary" onclick="fazerLogin()" id="btn-fazer-login" style="width:100%;padding:10px;font-size:14px;justify-content:center">Entrar</button>
+    <button class="btn-secondary" onclick="document.getElementById('modal-login').classList.remove('active')" style="width:100%;margin-top:8px;text-align:center;padding:9px">Cancelar</button>
+  </div>
+</div>
+
 </div><!-- /container -->
 <div style="text-align:center;padding:1.5rem;font-size:11px;color:#b0bac8;border-top:1px solid var(--border);margin-top:1rem;background:#f8fafd">
   Desenvolvido por <strong style="color:#8896a8">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
@@ -1431,38 +1461,55 @@ let currentProfile = null;
 async function checkAuth(){
   const {data:{session}} = await sb.auth.getSession();
   if(!session){
-    window.location.href = "login.html";
+    entrarModoConvidado();
     return false;
   }
   currentUser = session.user;
-  // Buscar perfil
   const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
   currentProfile = profile;
-  // Mostrar nome do usuário no header
-  // last-update é atualizado pelo loadData
-  // Mostrar botão de logout
-  const refreshBtn = document.querySelector(".refresh-btn");
-  if(refreshBtn){
-    const logoutBtn = document.createElement("button");
-    logoutBtn.className = "refresh-btn";
-    logoutBtn.textContent = "Sair";
-    logoutBtn.onclick = async()=>{
-      await sb.auth.signOut();
-      window.location.href = "login.html";
-    };
-    refreshBtn.parentNode.insertBefore(logoutBtn, refreshBtn.nextSibling);
+
+  // Esconder banner de convidado e botão de login
+  document.getElementById("guest-banner").style.display = "none";
+  document.getElementById("btn-login-header").style.display = "none";
+
+  // Mostrar nome do usuário
+  const greetEl = document.getElementById("user-greeting");
+  if(greetEl){
+    greetEl.textContent = profile?.nome_completo || currentUser.email;
+    greetEl.style.display = "inline";
   }
-  // Mostrar abas de usuários e planilhas só para admin
-  if(profile?.papel === 'admin'){
+
+  // Mostrar todas as abas autenticadas
+  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos","nova-emenda","novo-item","atualizar-status"].forEach(n=>{
+    const el=document.getElementById("tab-btn-"+n);
+    if(el) el.style.display="";
+  });
+
+  // Botão de logout
+  if(!document.getElementById("btn-logout")){
+    const logoutBtn=document.createElement("button");
+    logoutBtn.className="refresh-btn";
+    logoutBtn.id="btn-logout";
+    logoutBtn.textContent="Sair";
+    logoutBtn.onclick=async()=>{
+      await sb.auth.signOut();
+      window.location.reload();
+    };
+    const refreshBtn=document.querySelector(".refresh-btn");
+    if(refreshBtn) refreshBtn.parentNode.insertBefore(logoutBtn,refreshBtn.nextSibling);
+  }
+
+  // Admin: mostrar abas de usuários e planilhas
+  if(profile?.papel==='admin'){
     const tabUsuarios=document.getElementById("tab-btn-usuarios");
     if(tabUsuarios) tabUsuarios.style.display="block";
     const tabPlanilhas=document.getElementById("tab-btn-planilhas");
     if(tabPlanilhas) tabPlanilhas.style.display="block";
   }
-  // Visualizadores veem todas as abas mas não podem editar
-  if(profile?.papel === 'visualizador'){
+
+  // Visualizador: ocultar botões de edição
+  if(profile?.papel==='visualizador'){
     document.body.classList.add('is-visualizador');
-    // Ocultar via CSS botões de ação nas abas
     const style=document.createElement('style');
     style.textContent=`
       button[onclick*="salvarNova"],
@@ -1482,9 +1529,57 @@ async function checkAuth(){
     `;
     document.head.appendChild(style);
   }
+
   const ultimaAba=localStorage.getItem("ultima_aba");
   if(ultimaAba) showTab(ultimaAba);
   return true;
+}
+
+function entrarModoConvidado(){
+  // Esconder todas as abas exceto Emendas
+  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos","nova-emenda","novo-item","atualizar-status","usuarios","planilhas"].forEach(n=>{
+    const el=document.getElementById("tab-btn-"+n);
+    if(el) el.style.display="none";
+  });
+  // Mostrar banner e botão de login
+  document.getElementById("guest-banner").style.display="flex";
+  document.getElementById("btn-login-header").style.display="inline-block";
+  showTab("dashboard");
+}
+
+function abrirModalLogin(){
+  document.getElementById("modal-login").classList.add("active");
+  document.getElementById("login-email").value="";
+  document.getElementById("login-senha").value="";
+  document.getElementById("login-err").style.display="none";
+  setTimeout(()=>document.getElementById("login-email").focus(),100);
+}
+
+async function fazerLogin(){
+  const email=document.getElementById("login-email").value.trim();
+  const senha=document.getElementById("login-senha").value;
+  const errEl=document.getElementById("login-err");
+  const btnEl=document.getElementById("btn-fazer-login");
+  if(!email||!senha){
+    errEl.textContent="Preencha e-mail e senha.";
+    errEl.style.display="block";
+    return;
+  }
+  btnEl.disabled=true;
+  btnEl.textContent="Entrando...";
+  errEl.style.display="none";
+  const {error}=await sb.auth.signInWithPassword({email,password:senha});
+  if(error){
+    errEl.textContent=error.message==="Invalid login credentials"?"E-mail ou senha incorretos.":error.message;
+    errEl.style.display="block";
+    btnEl.disabled=false;
+    btnEl.textContent="Entrar";
+    return;
+  }
+  document.getElementById("modal-login").classList.remove("active");
+  btnEl.disabled=false;
+  btnEl.textContent="Entrar";
+  await checkAuth();
 }
 
 const ATAS_ITENS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=1903295047&single=true&output=csv";
@@ -4265,7 +4360,7 @@ async function salvarValoresContrato(){
   document.getElementById("mcd-novo-total").value="";
 }
 
-checkAuth().then(ok => { if(ok) loadData(); });
+checkAuth().then(() => { loadData(); });
 </script>
 </body>
 </html>
