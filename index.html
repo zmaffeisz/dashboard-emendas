@@ -1197,7 +1197,7 @@ tr:hover td{background:#e8f0fb}
   </div>
 </div>
 
-    <!-- Modal Encerrar Contrato -->
+    <!-- Modal Encerrar Contrato (ATAs) -->
     <div class="modal-overlay" id="modal-encerrar" onclick="if(event.target===this)this.classList.remove('active')">
       <div class="modal-box" style="width:420px">
         <div class="modal-title">⛔ Encerrar contrato</div>
@@ -1213,6 +1213,58 @@ tr:hover td{background:#e8f0fb}
           <button class="btn-primary" style="background:var(--red)" onclick="confirmarEncerramento()">⛔ Encerrar</button>
           <button class="btn-secondary" onclick="document.getElementById('modal-encerrar').classList.remove('active')">Cancelar</button>
           <span id="enc-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Encerrar Contrato (Contratos Supabase) -->
+    <div class="modal-overlay" id="modal-encerrar-ct" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:520px;max-width:95vw">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div class="modal-title" style="margin:0">⛔ Encerrar Contrato</div>
+          <button onclick="document.getElementById('modal-encerrar-ct').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);line-height:1;padding:4px">✕</button>
+        </div>
+
+        <!-- Info do contrato -->
+        <div id="ect-info" style="background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:var(--text2);display:grid;gap:3px"></div>
+
+        <div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.6rem .85rem;font-size:12.5px;margin-bottom:1rem">
+          ⚠️ O contrato será marcado como <strong>ENCERRADO</strong> e ficará oculto na listagem padrão. Visível apenas ao filtrar por status ENCERRADO.
+        </div>
+
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+          <div class="form-group">
+            <div class="form-label">Data de encerramento *</div>
+            <input type="date" id="ect-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Motivo *</div>
+            <select id="ect-motivo" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+              <option value="">Selecione...</option>
+              <option value="Término de vigência">Término de vigência</option>
+              <option value="Rescisão amigável">Rescisão amigável</option>
+              <option value="Rescisão unilateral pela administração">Rescisão unilateral pela administração</option>
+              <option value="Rescisão por inadimplência do contratado">Rescisão por inadimplência do contratado</option>
+              <option value="Substituído por novo contrato">Substituído por novo contrato</option>
+              <option value="Objeto concluído (entrega única)">Objeto concluído (entrega única)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:.75rem">
+          <div class="form-label">CPL substituto <span style="font-size:11px;color:var(--text3);font-weight:400">(se aplicável)</span></div>
+          <input type="text" id="ect-cpl-sub" placeholder="ex: CPL 123/2026" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+        </div>
+
+        <div class="form-group" style="margin-bottom:1rem">
+          <div class="form-label">Observações</div>
+          <textarea id="ect-obs" rows="3" placeholder="Detalhes adicionais sobre o encerramento..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;resize:vertical;background:var(--surface);color:var(--text);font-family:inherit"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-primary" style="background:var(--red)" onclick="confirmarEncerramentoCt()">⛔ Encerrar contrato</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-encerrar-ct').classList.remove('active')">Cancelar</button>
+          <span id="ect-msg" class="fmsg"></span>
         </div>
       </div>
     </div>
@@ -1290,6 +1342,7 @@ tr:hover td{background:#e8f0fb}
               <th onclick="sortContratos('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-ct-vencimento"></span></th>
               <th onclick="sortContratos('dias')" style="cursor:pointer;user-select:none">Dias <span id="sort-ct-dias"></span></th>
               <th onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></th>
+              <th style="white-space:nowrap">Ação</th>
               <th onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></th>
               <th onclick="sortContratos('fiscalizacao')" style="cursor:pointer;user-select:none">Fiscalização <span id="sort-ct-fiscalizacao"></span></th>
               <th onclick="sortContratos('valor_mensal')" style="cursor:pointer;user-select:none;text-align:right">Valor mensal <span id="sort-ct-valor_mensal"></span></th>
@@ -2845,6 +2898,75 @@ function exportarExecs(){
   XLSX.writeFile(wb,"execucoes_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");
 }
 
+// ═══ ENCERRAR CONTRATO (CONTRATOS SUPABASE) ═══
+let _encerrarCtId=null;
+function abrirEncerrarCt(id){
+  if(bloquearSeVisualiz()) return;
+  const r=contratosRows.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  _encerrarCtId=id;
+  // Preencher info
+  document.getElementById("ect-info").innerHTML=`
+    <div><strong>${r.prestador||"—"}</strong></div>
+    <div style="color:var(--text3);margin-top:2px">${r.objeto||"—"}</div>
+    <div style="margin-top:4px;display:flex;gap:1rem">
+      <span>📋 ${r.cpl||"—"}</span>
+      <span>📅 Venc: ${r.vencimento||"—"}</span>
+      <span>💰 ${r.valor_atual||r.valor_inicial||"—"}</span>
+    </div>`;
+  // Data padrão = hoje
+  document.getElementById("ect-data").value=new Date().toISOString().split("T")[0];
+  document.getElementById("ect-motivo").value="";
+  document.getElementById("ect-cpl-sub").value="";
+  document.getElementById("ect-obs").value="";
+  const msg=document.getElementById("ect-msg");
+  msg.className="fmsg";msg.textContent="";
+  document.getElementById("modal-encerrar-ct").classList.add("active");
+}
+async function confirmarEncerramentoCt(){
+  if(bloquearSeVisualiz()) return;
+  if(!_encerrarCtId) return;
+  const motivo=document.getElementById("ect-motivo").value;
+  const data=document.getElementById("ect-data").value;
+  const cplSub=document.getElementById("ect-cpl-sub").value.trim();
+  const obs=document.getElementById("ect-obs").value.trim();
+  if(!motivo){
+    const msg=document.getElementById("ect-msg");
+    msg.className="fmsg err";msg.textContent="Selecione o motivo.";return;
+  }
+  if(!data){
+    const msg=document.getElementById("ect-msg");
+    msg.className="fmsg err";msg.textContent="Informe a data de encerramento.";return;
+  }
+  const btn=document.querySelector("#modal-encerrar-ct .btn-primary");
+  btn.disabled=true;btn.textContent="Encerrando...";
+  try{
+    // 1. Atualizar status na tabela contratos
+    const {error:errCt}=await sb.from("contratos").update({status:"ENCERRADO"}).eq("id",_encerrarCtId);
+    if(errCt) throw errCt;
+    // 2. Registrar no histórico
+    const obsHist=[motivo, cplSub?"CPL substituto: "+cplSub:"", obs].filter(Boolean).join(" | ");
+    await sb.from("contratos_historico").insert({
+      contrato_id:_encerrarCtId,
+      tipo:"Encerramento",
+      data_evento:data,
+      obs:obsHist
+    });
+    // 3. Atualizar local
+    const local=contratosRows.find(r=>String(r.id)===String(_encerrarCtId));
+    if(local) local.status="ENCERRADO";
+    filtrarContratos();
+    const msg=document.getElementById("ect-msg");
+    msg.className="fmsg ok";msg.textContent="✓ Contrato encerrado!";
+    setTimeout(()=>document.getElementById("modal-encerrar-ct").classList.remove("active"),1500);
+  }catch(e){
+    const msg=document.getElementById("ect-msg");
+    msg.className="fmsg err";msg.textContent="Erro: "+(e.message||e);
+  }finally{
+    btn.disabled=false;btn.textContent="⛔ Encerrar contrato";
+  }
+}
+
 // ═══ ENCERRAR CONTRATO ═══
 let _encerrarKey=null;
 function encerrarContrato(cpl,sim,item){
@@ -4177,7 +4299,8 @@ function filtrarContratos(){
 
   contratosFiltrados=contratosRows.filter(r=>{
     if(secao&&r.secao!==secao) return false;
-    if(status&&r.status!==status) return false;
+    if(status){if(r.status!==status) return false;}
+    else{if(r.status==="ENCERRADO") return false;}
     if(busca&&![r.cpl,r.prestador,r.objeto,r.secao].filter(Boolean).join(" ").toLowerCase().includes(busca)) return false;
     return true;
   });
@@ -4281,6 +4404,9 @@ function renderTabelaContratos(){
     }
     const vm=r.valor_mensal!=null?r.valor_mensal:"—";
     const vt=(r.valor_atual??r.valor_inicial)!=null?(r.valor_atual??r.valor_inicial):"—";
+    const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar()
+      ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
+      :"";
     return `<tr>
       <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋</button></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
@@ -4290,6 +4416,7 @@ function renderTabelaContratos(){
       <td style="white-space:nowrap;color:${cor};font-weight:500">${r.vencimento||"—"}</td>
       <td style="text-align:center">${diasHtml}</td>
       <td>${badgeStatusContrato(r.status)}</td>
+      <td>${btnEncerrarCt}</td>
       <td>${r.secao||"—"}</td>
       <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
       <td style="text-align:right;white-space:nowrap">${vm}</td>
