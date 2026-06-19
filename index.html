@@ -63,8 +63,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-input:focus{outline:none;border-color:var(--blue)}
 .modal-err{font-size:12px;color:var(--red);margin-bottom:.75rem;display:none}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end}
-.container{max-width:1300px;margin:0 auto;padding:1.25rem}
-@media(min-width:769px){.container{margin-left:236px}}
+.container{max-width:none;margin:0 auto;padding:1.25rem}
+@media(min-width:769px){.container{margin-left:220px}}
 @media(max-width:768px){
   .hamburger{display:inline-flex;align-items:center;justify-content:center}
   .sidebar{transform:translateX(-100%);box-shadow:2px 0 16px rgba(0,0,0,.25)}
@@ -1552,10 +1552,10 @@ tr:hover td{background:var(--row-hover)}
     <div class="form-group" style="margin-bottom:1rem">
       <div class="form-label">Papel global</div>
       <select id="ud-papel" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
-        <option value="visualizador">visualizador</option>
-        <option value="editor">editor</option>
-        <option value="admin">admin</option>
+        <option value="visualizador">Usuário</option>
+        <option value="admin">Administrador</option>
       </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Usuário: o acesso de ver/editar é definido pelas caixinhas abaixo. Administrador: acesso total.</div>
     </div>
     <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:.5rem">Permissões por aba</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem">
@@ -1575,8 +1575,8 @@ tr:hover td{background:var(--row-hover)}
 </div>
 
 </div><!-- /container -->
-<div style="text-align:center;padding:1.5rem;font-size:11px;color:#b0bac8;border-top:1px solid var(--border);margin-top:1rem;background:#f8fafd">
-  Desenvolvido por <strong style="color:#8896a8">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
+<div style="text-align:center;padding:1.5rem;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem;background:var(--surface)">
+  Desenvolvido por <strong style="color:var(--text2)">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
 </div>
 
 <script>
@@ -1593,23 +1593,28 @@ let currentUser = null;
 let currentProfile = null;
 
 // ═══ PERMISSÕES GRANULARES POR ABA ═══
+// Modelo de dois papéis: 'admin' (acesso total) e qualquer outro = usuário comum,
+// cujo acesso de VER/EDITAR é definido 100% pelas caixinhas de permissão por aba.
 window._userPapel = null;
 window._tabPerms = [];
-const ADMIN_ONLY_TABS = ['usuarios','planilhas'];
+window._activeTab = 'dashboard';
+const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
+const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
 const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','inventario-ac','atas','contratos','usuarios','planilhas'];
+function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
-  if(window._userPapel==='admin') return true;
+  if(_isAdmin()) return true;
+  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
   const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
   if(perm) return !!perm.can_view;
-  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
-  return window._userPapel==='editor'||window._userPapel==='visualizador';
+  return !DEFAULT_HIDDEN_TABS.includes(tabKey); // por padrão vê tudo, exceto abas administrativas
 }
 function userCanEdit(tabKey){
-  if(window._userPapel==='admin') return true;
+  if(_isAdmin()) return true;
+  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
   const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
   if(perm) return !!perm.can_edit;
-  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
-  return window._userPapel==='editor';
+  return false; // edição só com a caixinha marcada
 }
 function aplicarVisibilidadeAbas(){
   SIDEBAR_TABS.forEach(n=>{
@@ -1670,11 +1675,9 @@ async function checkAuth(){
   // Mostrar abas conforme permissões (papel global + permissões por aba)
   aplicarVisibilidadeAbas();
 
-  // Botões de editor (aba Emendas/dashboard)
-  if(userCanEdit('dashboard')){
-    const eb=document.getElementById("editor-btns");
-    if(eb) eb.style.display="flex";
-  }
+  // Botões de editor da aba Emendas (a visibilidade real é controlada por aba em showTab)
+  const eb=document.getElementById("editor-btns");
+  if(eb) eb.style.display="flex";
 
   // Botão de logout
   if(!document.getElementById("btn-logout")){
@@ -1692,28 +1695,28 @@ async function checkAuth(){
 
   // (visibilidade das abas Usuários/Planilhas já é tratada por aplicarVisibilidadeAbas)
 
-  // Visualizador: ocultar botões de edição
-  if(profile?.papel==='visualizador'){
-    document.body.classList.add('is-visualizador');
-    const style=document.createElement('style');
-    style.textContent=`
-      button[onclick*="salvarNova"],
-      button[onclick*="abrirModalNova"],
-      button[onclick*="abrirModalNovaExec"],
-      button[onclick*="abrirModalNovaAta"],
-      button[onclick*="encerrarContrato"],
-      button[onclick*="renovarAta"],
-      button[onclick*="excluirExec"],
-      button[onclick*="excluirLinhaAC"],
-      button[onclick*="excluirLinhaChamado"],
-      button[onclick*="adicionarLinhaAC"],
-      button[onclick*="marcarTodosChamados"],
-      #btn-add-ac,
-      .btn-enviar-status
-      {display:none!important}
-    `;
-    document.head.appendChild(style);
-  }
+  // Controle de botões de edição por aba (modelo de permissões granulares).
+  // Quando a aba ativa não permite editar para este usuário, escondemos os botões de ação.
+  const _editStyle=document.createElement('style');
+  _editStyle.textContent=`
+    body.no-edit-tab button[onclick*="salvarNova"],
+    body.no-edit-tab button[onclick*="abrirModalNova"],
+    body.no-edit-tab button[onclick*="abrirModalNovaExec"],
+    body.no-edit-tab button[onclick*="abrirModalNovaAta"],
+    body.no-edit-tab button[onclick*="abrirModalEdicao"],
+    body.no-edit-tab button[onclick*="encerrarContrato"],
+    body.no-edit-tab button[onclick*="renovarAta"],
+    body.no-edit-tab button[onclick*="excluirExec"],
+    body.no-edit-tab button[onclick*="excluirLinhaAC"],
+    body.no-edit-tab button[onclick*="excluirLinhaChamado"],
+    body.no-edit-tab button[onclick*="adicionarLinhaAC"],
+    body.no-edit-tab button[onclick*="marcarTodosChamados"],
+    body.no-edit-tab #editor-btns,
+    body.no-edit-tab #btn-add-ac,
+    body.no-edit-tab .btn-enviar-status
+    {display:none!important}
+  `;
+  document.head.appendChild(_editStyle);
 
   const ultimaAba=localStorage.getItem("ultima_aba");
   if(ultimaAba) showTab(ultimaAba);
@@ -1897,6 +1900,8 @@ function fecharModalEdicao(name){
 
 function showTab(name){
   localStorage.setItem("ultima_aba", name);
+  window._activeTab = name;
+  document.body.classList.toggle('no-edit-tab', !userCanEdit(name));
   const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas"];
   document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
   fecharSidebar();
@@ -2154,7 +2159,7 @@ function filtrarChamados(){
       <td style="font-size:11px">${ctrl.empresa||"—"}</td>
       <td style="font-size:11px">${ctrl.os||"—"}</td>
       <td class="td-trunc" style="max-width:160px" title="${ctrl.feito||''}">${ctrl.feito||"—"}</td>
-      <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button>`:"—"}</td>
+      <td>${podeEditar('chamados')?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
     </tr>`;
   }).join("");
@@ -3303,10 +3308,10 @@ const PERM_TABS = [
 ];
 let _udUserId = null;
 function _defaultPerm(tabKey, papel){
-  const adminOnly=['usuarios','planilhas'];
-  const view = papel==='admin' || (!adminOnly.includes(tabKey) && (papel==='editor'||papel==='visualizador'));
-  const edit = papel==='admin' || (!adminOnly.includes(tabKey) && papel==='editor');
-  return {can_view:view, can_edit:edit};
+  // Modelo de dois papéis: admin vê/edita tudo; usuário comum vê por padrão
+  // (exceto abas administrativas) e só edita se liberado.
+  if(papel==='admin') return {can_view:true, can_edit:true};
+  return {can_view: !DEFAULT_HIDDEN_TABS.includes(tabKey), can_edit:false};
 }
 async function abrirDetalheUsuario(userId){
   const p=_usuariosCache.find(u=>u.id===userId);
@@ -3314,7 +3319,7 @@ async function abrirDetalheUsuario(userId){
   _udUserId=userId;
   document.getElementById('ud-nome').textContent=p.nome||'—';
   document.getElementById('ud-email').textContent=p.email||'';
-  document.getElementById('ud-papel').value=p.papel||'visualizador';
+  document.getElementById('ud-papel').value=(p.papel==='admin')?'admin':'visualizador';
   const msg=document.getElementById('ud-msg'); msg.className='fmsg'; msg.textContent='';
   const body=document.getElementById('ud-perms-body');
   body.innerHTML='<tr><td colspan="3" style="padding:10px;color:var(--text3);font-size:12px">Carregando...</td></tr>';
@@ -3370,20 +3375,20 @@ async function carregarUsuarios(){
     return;
   }
   _usuariosCache = profiles;
-  const papelCor={admin:"var(--red-text)",editor:"var(--blue-text)",visualizador:"var(--text2)"};
-  const papelBg={admin:"var(--red-bg)",editor:"var(--blue-bg)",visualizador:"var(--surface2)"};
+  const papelLabel=p=>p==='admin'?'Administrador':'Usuário';
+  const papelCor=p=>p==='admin'?"var(--red-text)":"var(--text2)";
+  const papelBg=p=>p==='admin'?"var(--red-bg)":"var(--surface2)";
   document.getElementById("usuarios-body").innerHTML=profiles.map(p=>`
     <tr style="border-bottom:1px solid var(--border)">
       <td style="padding:10px 12px;font-weight:500">${p.nome||"—"}</td>
       <td style="padding:10px 12px;color:var(--text2);font-size:12px">${p.email}</td>
       <td style="padding:10px 12px">
-        <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:${papelBg[p.papel]||"var(--surface2)"};color:${papelCor[p.papel]||"var(--text2)"}">${p.papel}</span>
+        <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:${papelBg(p.papel)};color:${papelCor(p.papel)}">${papelLabel(p.papel)}</span>
       </td>
       <td style="padding:10px 12px">
-        <select id="papel-${p.id}" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm)">
-          <option value="visualizador"${p.papel==="visualizador"?" selected":""}>visualizador</option>
-          <option value="editor"${p.papel==="editor"?" selected":""}>editor</option>
-          <option value="admin"${p.papel==="admin"?" selected":""}>admin</option>
+        <select id="papel-${p.id}" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          <option value="visualizador"${p.papel!=="admin"?" selected":""}>Usuário</option>
+          <option value="admin"${p.papel==="admin"?" selected":""}>Administrador</option>
         </select>
       </td>
       <td style="padding:10px 12px;white-space:nowrap">
@@ -3700,7 +3705,7 @@ function filtrarChamadosNovos(){
     const data=r.carimbo||new Date(r.created_at).toLocaleString("pt-BR");
     const aguardando=!ctrl.status||ctrl.status==="Aguardando abertura";  // amarelo só se aguardando
     return`<tr style="${aguardando?'background:var(--amber-bg)':''}">
-      <td>${(currentProfile?.papel==="editor"||currentProfile?.papel==="admin")?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
+      <td>${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
@@ -3876,13 +3881,14 @@ async function excluirLinhaChamado(id){
   filtrarPlanilhaChamados();
 }
 
-function podeEditar(){
-  return currentProfile?.papel==="editor"||currentProfile?.papel==="admin";
+function podeEditar(tabKey){
+  if(_isAdmin()) return true;
+  return userCanEdit(tabKey || window._activeTab || 'dashboard');
 }
 
-function bloquearSeVisualiz(msg){
-  if(!podeEditar()){
-    alert("⛔ Sem permissão. Apenas editores e administradores podem realizar esta ação.");
+function bloquearSeVisualiz(tabKey){
+  if(!podeEditar(typeof tabKey==='string'?tabKey:undefined)){
+    alert("⛔ Você não tem permissão para editar nesta aba.");
     return true;
   }
   return false;
@@ -4710,7 +4716,7 @@ function renderTabelaContratos(){
     }
     const vm=r.valor_mensal!=null?r.valor_mensal:"—";
     const vt=(r.valor_atual??r.valor_inicial)!=null?(r.valor_atual??r.valor_inicial):"—";
-    const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar()
+    const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar('contratos')
       ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
       :"";
     return `<tr>
@@ -4738,7 +4744,7 @@ async function abrirDetalheContrato(id){
   document.getElementById("mcd-titulo").textContent=`📋 ${_ctAtual.cpl||"Contrato"} — ${_ctAtual.prestador||""}`;
   document.getElementById("mcd-corpo").innerHTML=`<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>`;
   el.classList.add("active");
-  const editor=podeEditar();
+  const editor=podeEditar('contratos');
   document.getElementById("mcd-acoes").style.display=editor?"block":"none";
   const mcdValores=document.getElementById("mcd-valores");
   if(mcdValores){
