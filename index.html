@@ -63,6 +63,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-input:focus{outline:none;border-color:var(--blue)}
 .modal-err{font-size:12px;color:var(--red);margin-bottom:.75rem;display:none}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-filter-btn{width:100%;text-align:left;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer}
+.modal-filter-btn:hover{border-color:var(--blue)}
+.modal-filter-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
 .container{max-width:none;margin:0 auto;padding:1.25rem}
 @media(min-width:769px){.container{margin-left:220px}}
 @media(max-width:768px){
@@ -394,6 +397,7 @@ tr:hover td{background:var(--row-hover)}
     <div class="form-grid">
       <div class="form-group"><div class="form-label">Tipo *</div><select id="ne-tipo"><option value="">Selecione...</option><option>ESTADUAL</option><option>FEDERAL</option><option>MUNICIPAL</option></select></div>
       <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="ne-emenda" placeholder="ex: 202300546528"></div>
+      <div class="form-group"><div class="form-label">Ano</div><input type="number" id="ne-ano" placeholder="ex: 2026"></div>
       <div class="form-group"><div class="form-label">Parlamentar</div><input type="text" id="ne-parlamentar" placeholder="Nome do parlamentar"></div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000"></div>
@@ -421,7 +425,8 @@ tr:hover td{background:var(--row-hover)}
         <select id="ni-emenda" multiple onchange="autoPreencherEmenda()" style="min-height:100px;min-width:180px"></select>
       </div>
       <div class="form-group full"><div class="form-label">Item / Descrição *</div><input type="text" id="ni-item" placeholder="ex: AR CONDICIONADO 12000 BTU"></div>
-      <div class="form-group"><div class="form-label">Valor unitário (R$)</div><input type="number" id="ni-vl-unit" placeholder="ex: 2400" oninput="recalcTotais()"></div>
+      <div class="form-group"><div class="form-label">Valor unitário PLANEJADO (R$) *</div><input type="number" id="ni-vl-unit" placeholder="ex: 2400" oninput="recalcTotais()"></div>
+      <div class="form-group"><div class="form-label">Valor unitário EXECUTADO (R$) <span style="font-size:10px;color:var(--text3);font-weight:400">opcional</span></div><input type="number" id="ni-vl-unit-exec" placeholder="deixe vazio se ainda não executado"></div>
       <div class="form-group"><div class="form-label">CPL / Processo contratação</div><input type="text" id="ni-cpl" placeholder="ex: CPL 086/2025"></div>
       <div class="form-group full"><div class="form-label">Status inicial</div>
         <select id="ni-status">
@@ -458,18 +463,16 @@ tr:hover td{background:var(--row-hover)}
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <div class="form-label">CPL / Processo <button onclick="clearFAs('as-cpl')" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;margin-left:4px">✕</button></div>
-        <select id="as-cpl" onchange="popularItens()"><option value="">Todos os CPLs</option></select>
+        <div class="form-label">CPL / Processo</div>
+        <button type="button" id="mf-btn-cpl" class="modal-filter-btn" onclick="openModalFilter(event,'cpl')">Todos os CPLs <span style="float:right">▾</span></button>
       </div>
       <div class="form-group">
-        <div class="form-label">Emenda <button onclick="clearFAsMulti('as-emenda')" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;margin-left:4px">✕</button></div>
-        <select id="as-emenda" multiple onchange="popularItens()" style="min-height:76px;min-width:160px"></select>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">Ctrl+clique p/ múltiplas</div>
+        <div class="form-label">Emenda</div>
+        <button type="button" id="mf-btn-emenda" class="modal-filter-btn" onclick="openModalFilter(event,'emenda')">Todas as emendas <span style="float:right">▾</span></button>
       </div>
       <div class="form-group">
-        <div class="form-label">Tipo <button onclick="clearFAsMulti('as-tipo')" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;margin-left:4px">✕</button></div>
-        <select id="as-tipo" multiple onchange="popularItens()" style="min-height:76px;min-width:130px"></select>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">Ctrl+clique p/ múltiplos</div>
+        <div class="form-label">Tipo</div>
+        <button type="button" id="mf-btn-tipo" class="modal-filter-btn" onclick="openModalFilter(event,'tipo')">Todos os tipos <span style="float:right">▾</span></button>
       </div>
       <div class="form-group">
         <div class="form-label">Buscar item <button onclick="clearFAs('as-busca-item')" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;margin-left:4px">✕</button></div>
@@ -1891,6 +1894,7 @@ function fecharModalFora(e){
 function abrirModalEdicao(name){
   if(bloquearSeVisualiz()) return;
   popularSelectsEdicao();
+  if(name==='atualizar-status'){ resetModalFilters(); limparStatus(); }
   document.getElementById("panel-"+name).classList.add("active");
 }
 
@@ -3900,39 +3904,54 @@ async function loadData(){
   document.getElementById("conn-pill").textContent="⏳ Conectando";
   document.getElementById("conn-pill").className="pill pill-loading";
   try{
-    const res=await fetch(CSV_URL);
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const text=await res.text();
-    let parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
-    let rows=parsed.data;
-    if(rows.length>0&&!rows[0]["TIPO"]&&!rows[0]["tipo"]){
-      parsed=Papa.parse(text.split("\n").slice(1).join("\n"),{header:true,skipEmptyLines:true});
-      rows=parsed.data;
+    // ── Leitura via SUPABASE (emenda_itens + emendas) ──
+    // Paginação: o Supabase limita a 1000 linhas por requisição.
+    let raw=[], desde=0; const PAG=1000;
+    while(true){
+      const {data,error}=await sb
+        .from("emenda_itens")
+        .select("*, emendas(tipo,emenda,parlamentar,sei_emenda,valor_cedido,unidade,ano)")
+        .order("emenda",{ascending:true})
+        .range(desde,desde+PAG-1);
+      if(error) throw new Error(error.message);
+      raw=raw.concat(data||[]);
+      if(!data||data.length<PAG) break;
+      desde+=PAG;
     }
-    allRows=rows.map(r=>({
-      tipo:(r["TIPO"]||"").trim(),
-      emenda:(r["EMENDA"]||"").trim(),
-      parlamentar:(r["PARLAMENTAR"]||"").trim(),
-      sei_emenda:(r["PROCESSO SEI DA EMENDA"]||"").trim(),
-      valor_cedido:parseBR(r["VALOR CEDIDO"]),
-      unidade:(r["UNIDADE BENEFICIADA"]||"").trim(),
-      item:(r["ITEM"]||"").trim(),
-      qtde:(r["QTDE EXECUTADA"]||"").toString().trim(),
-      vl_unitario:parseBR(r["VALOR UNITÁRIO (R$) EXECUTADO"]),
-      vl_total:parseBR(r["VALOR TOTAL (R$) EXECUTADO"]),
-      cpl:(r["PROCESSO SEI DA CONTRATAÇÃO"]||"").trim(),
-      status_raw:(r["STATUS DA CONTRATAÇÃO"]||"").trim(),
-      nota_fiscal:(r["NOTA FISCAL"]||"").trim(),
-      empenho:(r["Nº DE EMPENHO"]||"").trim(),
-      patrimonio:(r["Nº DE PATRIMONIO"]||"").trim(),
-      unidade_entrega:(r["UNIDADE DE ENTREGA"]||"").trim(),
-      data_entrega:(r["DATA DE ENTREGA NA UNIDADE"]||"").trim(),
-      ordem_pagamento:(r["ORDEM DE PAGAMENTO"]||"").trim(),
-      data_atualizacao:(r["DATA ATUALIZAÇÃO"]||"").trim(),
-      // índices reais no Sheets (para referência do script)
-      // col 12=ITEM, 13=QTDE, 14=VL_UNIT, 15=VL_TOT, 16=CPL, 17=STATUS
-      // 18=NF, 19=EMPENHO, 20=PATRIMONIO, 21=UN_ENTREGA, 22=DT_ENTREGA
-    })).map(r=>({...r,status_cat:catStatus(r.status_raw)}));
+    const num=v=>v==null||v===""?0:Number(v);
+    allRows=raw.map(i=>{
+      const e=i.emendas||{};
+      return {
+        id:i.id,                       // uuid do item (chave para updates)
+        emenda_id:i.emenda_id,         // uuid da emenda (FK)
+        tipo:(e.tipo||"").trim(),
+        emenda:((e.emenda!=null?e.emenda:i.emenda)||"").toString().trim(),
+        parlamentar:(e.parlamentar||"").trim(),
+        sei_emenda:(e.sei_emenda||"").trim(),
+        valor_cedido:num(e.valor_cedido),
+        ano:(e.ano!=null?e.ano:"").toString().trim(),
+        unidade:((i.unidade_beneficiada||e.unidade)||"").toString().trim(),
+        // ── executado ──
+        item:(i.item||"").toString().trim(),
+        qtde:(i.qtde!=null?i.qtde:"").toString().trim(),
+        vl_unitario:num(i.vl_unitario),
+        vl_total:num(i.vl_total),
+        // ── plano de trabalho aprovado (cadastrado/planejado) ──
+        item_cadastrado:(i.item_cadastrado||"").toString().trim(),
+        qtde_cadastrada:(i.qtde_cadastrada!=null?i.qtde_cadastrada:"").toString().trim(),
+        vl_unitario_cadastrado:num(i.vl_unitario_cadastrado),
+        vl_total_cadastrado:num(i.vl_total_cadastrado),
+        cpl:(i.cpl||"").toString().trim(),
+        status_raw:(i.status||"").toString().trim(),
+        nota_fiscal:(i.nota_fiscal||"").toString().trim(),
+        empenho:(i.empenho||"").toString().trim(),
+        patrimonio:(i.patrimonio||"").toString().trim(),
+        unidade_entrega:(i.unidade_entrega||"").toString().trim(),
+        data_entrega:(i.data_entrega||"").toString().trim(),
+        ordem_pagamento:(i.ordem_pagamento||"").toString().trim(),
+        data_atualizacao:(i.data_atualizacao||"").toString().trim(),
+      };
+    }).map(r=>({...r,status_cat:catStatus(r.status_raw)}));
     populateFilters();
     applyFilters();
     document.getElementById("conn-pill").textContent="✓ Conectado";
@@ -4365,40 +4384,147 @@ function popularSelectsEdicao(){
 function clearFAs(id){const el=document.getElementById(id);if(el)el.value="";popularItens()}
 function clearFAsMulti(id){const el=document.getElementById(id);if(el)[...el.options].forEach(o=>o.selected=false);popularItens()}
 
+// ═══ FILTROS DO MODAL (estilo Google Sheets) ═══
+let modalFilters={cpl:[],emenda:[],tipo:[]};
+const MF_COLS={
+  cpl:{label:'CPL / Processo', allLabel:'Todos os CPLs', get:r=>r.cpl, disp:v=>v||'(sem CPL)'},
+  emenda:{label:'Emenda', allLabel:'Todas as emendas', get:r=>r.emenda, disp:v=>v||'(vazio)'},
+  tipo:{label:'Tipo', allLabel:'Todos os tipos', get:r=>r.tipo, disp:v=>v||'(vazio)'},
+};
+let _mfCol=null,_mfPending=[];
+
+function _mfUnique(col){
+  const cfg=MF_COLS[col];
+  const vals=[...new Set(allRows.map(cfg.get).map(v=>v==null?'':String(v)))];
+  return vals.sort((a,b)=>cfg.disp(a).localeCompare(cfg.disp(b),'pt-BR',{numeric:true}));
+}
+function _ensureMfDropdown(){
+  let dd=document.getElementById('modal-filter-dropdown');
+  if(dd) return dd;
+  dd=document.createElement('div');
+  dd.id='modal-filter-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:10001;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.25);min-width:240px;padding:.625rem';
+  dd.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:.375rem">
+      <button onclick="_mfSort(true)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↑ Classificar A → Z</button>
+      <button onclick="_mfSort(false)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↓ Classificar Z → A</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:.375rem 0">
+    <input type="text" id="mf-search" placeholder="🔍 Buscar..." oninput="_mfRenderList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem">Selecionar <a href="#" onclick="_mfSelectAll(true);return false" style="color:var(--blue);text-decoration:none">tudo: <span id="mf-count">0</span></a> — <a href="#" onclick="_mfSelectAll(false);return false" style="color:var(--blue);text-decoration:none">Limpar</a></div>
+    <div id="mf-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeModalFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmModalFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd);
+  return dd;
+}
+function openModalFilter(e,col){
+  e.stopPropagation();
+  const dd=_ensureMfDropdown();
+  if(_mfCol===col && dd.style.display==='block'){ dd.style.display='none'; _mfCol=null; return; }
+  _mfCol=col;
+  const all=_mfUnique(col);
+  const cur=modalFilters[col]||[];
+  _mfPending=cur.length?[...cur]:[...all];
+  document.getElementById('mf-search').value='';
+  _mfRenderList();
+  const rect=e.currentTarget.getBoundingClientRect();
+  dd.style.display='block';
+  const ddW=dd.offsetWidth||240;
+  let left=rect.left+window.scrollX;
+  if(left+ddW>window.scrollX+window.innerWidth-8) left=window.scrollX+window.innerWidth-ddW-8;
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px';
+  dd.style.left=Math.max(8,left)+'px';
+  setTimeout(()=>document.getElementById('mf-search').focus(),50);
+}
+function _mfRenderList(){
+  const col=_mfCol; if(!col) return;
+  const q=normalizar(document.getElementById('mf-search').value);
+  const all=_mfUnique(col); const disp=MF_COLS[col].disp;
+  const vis=q?all.filter(v=>normalizar(disp(v)).includes(q)):all;
+  document.getElementById('mf-count').textContent=all.length;
+  document.getElementById('mf-list').innerHTML=vis.map(v=>{
+    const checked=_mfPending.includes(v)?'checked':'';
+    const safe=String(v).replace(/"/g,'&quot;');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px"><input type="checkbox" value="${safe}" ${checked} onchange="_mfToggle(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${disp(v)}</label>`;
+  }).join('')||'<div style="padding:10px;font-size:12px;color:var(--text3);text-align:center">Nenhum resultado</div>';
+}
+function _mfToggle(cb){
+  if(cb.checked){ if(!_mfPending.includes(cb.value)) _mfPending.push(cb.value); }
+  else { _mfPending=_mfPending.filter(x=>x!==cb.value); }
+}
+function _mfSelectAll(all){ const col=_mfCol; if(!col) return; _mfPending=all?_mfUnique(col):[]; _mfRenderList(); }
+function _mfSort(asc){
+  const col=_mfCol; if(!col) return;
+  const list=document.getElementById('mf-list');
+  const labels=[...list.querySelectorAll('label')];
+  labels.sort((a,b)=>asc?a.textContent.localeCompare(b.textContent,'pt-BR',{numeric:true}):b.textContent.localeCompare(a.textContent,'pt-BR',{numeric:true}));
+  labels.forEach(l=>list.appendChild(l));
+}
+function confirmModalFilter(){
+  const col=_mfCol; if(!col) return;
+  const all=_mfUnique(col);
+  modalFilters[col]=(_mfPending.length===0||_mfPending.length===all.length)?[]:[..._mfPending];
+  document.getElementById('modal-filter-dropdown').style.display='none';
+  _mfCol=null;
+  _mfUpdateBtn(col);
+  popularItens();
+}
+function closeModalFilter(){ const dd=document.getElementById('modal-filter-dropdown'); if(dd) dd.style.display='none'; _mfCol=null; }
+function _mfUpdateBtn(col){
+  const btn=document.getElementById('mf-btn-'+col); if(!btn) return;
+  const sel=modalFilters[col]||[];
+  btn.classList.toggle('active',sel.length>0);
+  const txt=sel.length===0?MF_COLS[col].allLabel:(sel.length+' selecionado'+(sel.length>1?'s':''));
+  btn.innerHTML=txt+' <span style="float:right">▾</span>';
+}
+function resetModalFilters(){
+  modalFilters={cpl:[],emenda:[],tipo:[]};
+  ['cpl','emenda','tipo'].forEach(_mfUpdateBtn);
+}
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('modal-filter-dropdown');
+  if(dd && dd.style.display==='block'){
+    if(!dd.contains(e.target) && !(e.target.closest && e.target.closest('.modal-filter-btn'))){ dd.style.display='none'; _mfCol=null; }
+  }
+});
+
 function popularItens(){
-  const cpl=document.getElementById("as-cpl").value;
-  const emSel=[...document.getElementById("as-emenda").selectedOptions].map(o=>o.value).filter(Boolean);
-  const tipoSel=[...document.getElementById("as-tipo").selectedOptions].map(o=>o.value).filter(Boolean);
+  const fCpl=modalFilters.cpl, fEm=modalFilters.emenda, fTipo=modalFilters.tipo;
   const busca=document.getElementById("as-busca-item").value.toLowerCase();
-  if(!cpl&&!emSel.length&&!tipoSel.length&&!busca){
-    document.getElementById("as-itens-lista").innerHTML='<div style="font-size:12px;color:var(--text3);padding:.875rem">Selecione um CPL, emenda, tipo ou busque por item.</div>';
+  if(!fCpl.length&&!fEm.length&&!fTipo.length&&!busca){
+    document.getElementById("as-itens-lista").innerHTML='<div style="font-size:12px;color:var(--text3);padding:.875rem">Filtre por CPL, emenda, tipo ou busque por item.</div>';
     document.getElementById("as-count").textContent="";
     return;
   }
   let itens=allRows.filter(r=>{
-    if(cpl&&r.cpl!==cpl) return false;
-    if(emSel.length&&!emSel.includes(r.emenda)) return false;
-    if(tipoSel.length&&!tipoSel.includes(r.tipo)) return false;
-    if(busca&&!matchBusca(r.item+' '+r.status_raw+' '+r.unidade+' '+r.cpl,busca)) return false;
-    return r.item;
+    if(fCpl.length&&!fCpl.includes(r.cpl)) return false;
+    if(fEm.length&&!fEm.includes(r.emenda)) return false;
+    if(fTipo.length&&!fTipo.includes(r.tipo)) return false;
+    if(busca&&!matchBusca((r.item||"")+' '+(r.item_cadastrado||"")+' '+r.status_raw+' '+r.unidade+' '+r.cpl,busca)) return false;
+    return true;
   });
-  const vistos=new Set();
-  itens=itens.filter(r=>{const k=r.emenda+"||"+r.item;if(vistos.has(k))return false;vistos.add(k);return true});
   document.getElementById("as-count").textContent=`${itens.length} item(ns)`;
   if(!itens.length){document.getElementById("as-itens-lista").innerHTML='<div style="font-size:12px;color:var(--text3);padding:.875rem">Nenhum item encontrado.</div>';return}
-  document.getElementById("as-itens-lista").innerHTML=itens.map((r,i)=>`
+  document.getElementById("as-itens-lista").innerHTML=itens.map((r,i)=>{
+    const nome=(r.item||r.item_cadastrado||"—");
+    const esc=v=>String(v||"").replace(/"/g,'&quot;');
+    return `
     <div class="check-item-row">
-      <input type="checkbox" id="ci-${i}" value="${r.emenda}||${r.item}" checked>
+      <input type="checkbox" id="ci-${i}" data-id="${r.id}" checked>
       <div class="item-info">
-        <div class="item-name">${r.item}</div>
-        <div class="item-meta">${r.emenda} · ${r.unidade||"—"} · ${r.cpl||"sem CPL"} · ${statusBadge(r.status_cat)}</div>
+        <div class="item-name">${nome}</div>
+        <div class="item-meta">${r.emenda} · ${r.unidade||"—"} · ${statusBadge(r.status_cat)}</div>
         <div class="item-fields">
-          <div class="item-field"><div class="item-field-label">Nota fiscal</div><input type="text" id="nf-${i}" placeholder="ex: NF 84253" value="${r.nota_fiscal||""}"></div>
-          <div class="item-field"><div class="item-field-label">Nº empenho</div><input type="text" id="emp-${i}" placeholder="ex: 23230/2025" value="${r.empenho||""}"></div>
-          <div class="item-field"><div class="item-field-label">Nº patrimônio</div><input type="text" id="pat-${i}" placeholder="ex: 12345" value="${r.patrimonio||""}"></div>
+          <div class="item-field"><div class="item-field-label">CPL / Processo</div><input type="text" id="cpl-${i}" placeholder="ex: CPL 086/2025" value="${esc(r.cpl)}"></div>
+          <div class="item-field"><div class="item-field-label">Nota fiscal</div><input type="text" id="nf-${i}" placeholder="ex: NF 84253" value="${esc(r.nota_fiscal)}"></div>
+          <div class="item-field"><div class="item-field-label">Nº empenho</div><input type="text" id="emp-${i}" placeholder="ex: 23230/2025" value="${esc(r.empenho)}"></div>
+          <div class="item-field"><div class="item-field-label">Nº patrimônio</div><input type="text" id="pat-${i}" placeholder="ex: 12345" value="${esc(r.patrimonio)}"></div>
         </div>
       </div>
-    </div>`).join("");
+    </div>`;}).join("");
 }
 
 function selectAll(v){document.querySelectorAll('#as-itens-lista input[type=checkbox]').forEach(c=>c.checked=v)}
@@ -4497,69 +4623,106 @@ async function enviar(dados,prefix,btn){
 function showMsg(p,txt,tipo){const el=document.getElementById(p+"-msg");if(!el)return;el.textContent=txt;el.className="fmsg "+tipo;if(tipo==="ok")setTimeout(()=>el.className="fmsg",6000)}
 function limparForm(p){document.querySelectorAll(`[id^="${p}-"]`).forEach(el=>{if(el.tagName==="SELECT")el.selectedIndex=0;else el.value=""});showMsg(p,"","ok")}
 function limparStatus(){
-  ["as-status","as-cpl","as-busca-item"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
-  ["as-emenda","as-tipo"].forEach(id=>{const el=document.getElementById(id);if(el)[...el.options].forEach(o=>o.selected=false)});
-  document.getElementById("as-itens-lista").innerHTML='<div style="font-size:12px;color:var(--text3);padding:.875rem">Selecione um CPL, emenda, tipo ou busque por item.</div>';
+  ["as-status","as-busca-item"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  resetModalFilters();
+  document.getElementById("as-itens-lista").innerHTML='<div style="font-size:12px;color:var(--text3);padding:.875rem">Filtre por CPL, emenda, tipo ou busque por item.</div>';
   document.getElementById("as-count").textContent="";
   showMsg("as","","ok");
 }
 
-function salvarNovaEmenda(){
+async function salvarNovaEmenda(){
   const tipo=document.getElementById("ne-tipo").value,emenda=document.getElementById("ne-emenda").value.trim();
   const valor=document.getElementById("ne-valor").value,unidade=document.getElementById("ne-unidade").value.trim();
   if(!tipo||!emenda||!valor||!unidade){showMsg("ne","Preencha os campos obrigatórios (*)","err");return}
-  enviar({acao:"nova_emenda",tipo,emenda,parlamentar:document.getElementById("ne-parlamentar").value.trim(),sei_emenda:document.getElementById("ne-sei").value.trim(),valor_cedido:parseFloat(valor),unidade},"ne",document.querySelector("#panel-nova-emenda .btn-primary"));
+  const anoStr=document.getElementById("ne-ano").value.trim();
+  const btn=document.querySelector("#panel-nova-emenda .btn-primary");
+  const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
+  const {error}=await sb.from("emendas").insert({
+    tipo, emenda,
+    parlamentar:document.getElementById("ne-parlamentar").value.trim()||null,
+    sei_emenda:document.getElementById("ne-sei").value.trim()||null,
+    valor_cedido:parseFloat(valor),
+    unidade,
+    ano: anoStr?parseInt(anoStr):null
+  });
+  btn.disabled=false;btn.textContent=label;
+  if(error){showMsg("ne","✗ Erro: "+error.message,"err");return}
+  showMsg("ne","✓ Emenda salva! Atualizando...","ok");
+  setTimeout(()=>loadData(),1200);
 }
 
-function salvarNovoItem(){
+async function salvarNovoItem(){
   const item=document.getElementById("ni-item").value.trim();
-  const vlU=parseFloat(document.getElementById("ni-vl-unit").value)||0;
-  const tipo=document.getElementById("ni-tipo").value;
+  const vlPlan=parseFloat(document.getElementById("ni-vl-unit").value)||0;
+  const vlExecRaw=document.getElementById("ni-vl-unit-exec").value;
+  const vlExec=vlExecRaw===""?null:(parseFloat(vlExecRaw)||0);
   const cpl=document.getElementById("ni-cpl").value.trim();
   const status=document.getElementById("ni-status").value;
   const rows=[...document.querySelectorAll("#ni-emendas-detalhe [data-emenda]")];
   if(!rows.length||!item){showMsg("ni","Selecione ao menos uma emenda e preencha o item (*)","err");return}
-  // Validar que todas têm unidade e qtde
   const invalidas=rows.filter(row=>!row.querySelector(".ni-row-unidade")?.value.trim()||!row.querySelector(".ni-row-qtde")?.value);
   if(invalidas.length){showMsg("ni","Preencha unidade e quantidade para todas as emendas","err");return}
   const btn=document.querySelector("#panel-novo-item .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
-  Promise.all(rows.map(row=>{
+
+  const registros=rows.map(row=>{
     const emenda=row.dataset.emenda;
     const unidade=row.querySelector(".ni-row-unidade").value.trim();
     const qtde=parseFloat(row.querySelector(".ni-row-qtde").value)||0;
-    const vlT=vlU*qtde;
     const r=allRows.find(x=>x.emenda===emenda);
-    const parlamentar=r?r.parlamentar:"";
-    return enviarViaGet({acao:"novo_item",tipo:r?r.tipo||"":"",emenda,parlamentar,unidade,item,qtde,vl_unitario:vlU,vl_total:vlT,sei_contratacao:cpl,status});
-  })).then(()=>{
-    showMsg("ni","✓ "+rows.length+" item(ns) salvo(s)! Atualizando em 3s...","ok");
-    setTimeout(()=>loadData(),3000);
-  }).catch(e=>showMsg("ni","✗ Erro: "+e.message,"err"))
-    .finally(()=>{btn.disabled=false;btn.textContent=label});
+    return {
+      emenda_id: r?r.emenda_id:null,
+      emenda,
+      unidade_beneficiada: unidade,
+      // plano de trabalho aprovado (sempre salvo)
+      item_cadastrado: item,
+      qtde_cadastrada: qtde,
+      vl_unitario_cadastrado: vlPlan||null,
+      vl_total_cadastrado: vlPlan?vlPlan*qtde:null,
+      // execução (só preenche valor se informado; nome e qtde já aparecem na tabela)
+      item: item,
+      qtde: qtde,
+      vl_unitario: vlExec,
+      vl_total: (vlExec!=null)?vlExec*qtde:null,
+      cpl: cpl||null,
+      status: status||null
+    };
+  });
+  const semEmenda=registros.filter(x=>!x.emenda_id);
+  if(semEmenda.length){showMsg("ni","✗ Não encontrei o id de uma das emendas. Recarregue a página.","err");btn.disabled=false;btn.textContent=label;return}
+
+  const {error}=await sb.from("emenda_itens").insert(registros);
+  btn.disabled=false;btn.textContent=label;
+  if(error){showMsg("ni","✗ Erro: "+error.message,"err");return}
+  showMsg("ni","✓ "+registros.length+" item(ns) salvo(s)! Atualizando...","ok");
+  setTimeout(()=>loadData(),1200);
 }
 
-function salvarStatus(){
-  const status=document.getElementById("as-status").value;
-  if(!status){showMsg("as","Selecione o novo status (*)","err");return}
+async function salvarStatus(){
+  const status=document.getElementById("as-status").value.trim();
   const checks=[...document.querySelectorAll('#as-itens-lista input[type=checkbox]:checked')];
   if(!checks.length){showMsg("as","Selecione ao menos um item","err");return}
   const btn=document.querySelector("#panel-atualizar-status .btn-primary");
-  const label=btn.textContent;btn.disabled=true;btn.textContent=`Salvando 0/${checks.length}...`;
-  let done=0;
-  Promise.all(checks.map(c=>{
+  const label=btn.textContent;btn.disabled=true;
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  let done=0,erros=0;
+  for(const c of checks){
     const idx=c.id.replace("ci-","");
+    const id=c.dataset.id;
+    const cpl=(document.getElementById("cpl-"+idx)||{value:""}).value.trim();
     const nf=(document.getElementById("nf-"+idx)||{value:""}).value.trim();
     const emp=(document.getElementById("emp-"+idx)||{value:""}).value.trim();
     const pat=(document.getElementById("pat-"+idx)||{value:""}).value.trim();
-    const[emenda,item]=c.value.split("||");
-    return enviarViaGet({acao:"atualizar_status",emenda,item,status,nota_fiscal:nf,empenho:emp,patrimonio:pat})
-      .then(()=>{done++;btn.textContent=`Salvando ${done}/${checks.length}...`});
-  })).then(()=>{
-    showMsg("as",`✓ ${checks.length} item(ns) atualizado(s)! Recarregando em 3s...`,"ok");
-    setTimeout(()=>loadData(),3000);
-  }).catch(e=>showMsg("as","✗ Erro: "+e.message,"err"))
-    .finally(()=>{btn.disabled=false;btn.textContent=label});
+    const patch={cpl:cpl||null,nota_fiscal:nf||null,empenho:emp||null,patrimonio:pat||null,data_atualizacao:hoje};
+    if(status) patch.status=status;
+    const {error}=await sb.from("emenda_itens").update(patch).eq("id",id);
+    if(error){erros++;console.error("Erro item",id,error.message);}else{done++;}
+    btn.textContent=`Salvando ${done+erros}/${checks.length}...`;
+  }
+  btn.disabled=false;btn.textContent=label;
+  if(erros){showMsg("as",`⚠️ ${done} salvo(s), ${erros} com erro. Veja o console.`,"err");}
+  else{showMsg("as",`✓ ${done} item(ns) atualizado(s)! Recarregando...`,"ok");}
+  setTimeout(()=>loadData(),1200);
 }
 
 // ═══ CONTRATOS (SUPABASE) ═══
@@ -4936,7 +5099,26 @@ async function salvarValoresContrato(){
 
 setHeaderH();
 window.addEventListener('load', setHeaderH);
-checkAuth().then(() => { loadData(); });
+// Garante que loadData() roda após checkAuth E após o DOM estar pronto.
+// Também recarrega ao clicar na aba de Emendas se ainda não carregou.
+let _emendaCarregado = false;
+const _origLoadData = loadData;
+loadData = async function(){
+  _emendaCarregado = false;
+  await _origLoadData();
+  _emendaCarregado = true;
+};
+
+const _origShowTab = showTab;
+showTab = function(name){
+  _origShowTab(name);
+  if(name === 'dashboard' && !_emendaCarregado) loadData();
+};
+
+checkAuth().then(() => {
+  // Pequeno delay garante que o DOM está pronto antes de carregar
+  setTimeout(() => loadData(), 100);
+});
 </script>
 <script>
 function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
