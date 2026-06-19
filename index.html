@@ -20,7 +20,21 @@
   --purple:#7F77DD;--purple-bg:#EEEDFE;--purple-text:#26215C;
   --radius:10px;--radius-sm:6px;
   --sorocaba-verde:#1a6b3c;--sorocaba-azul:#1a5fa8;--sorocaba-ouro:#c9a84c;
+  --tabs-bg:#fff;--filters-bg:#f5f8fc;--dropdown-bg:#fff;
+  --th-bg:#dde8f5;--th-text:#1a3a6b;--td-border:#ccd6e0;--row-odd:#ffffff;--row-even:#f0f4f8;--row-hover:#e8f0fb;
 }
+html[data-theme="dark"]{
+  --bg:#0f141c;--surface:#15202e;--surface2:#1b2735;--border:#243040;
+  --text:#e6edf5;--text2:#c3ccd8;--text3:#8b97a8;
+  --green:#34d399;--green-bg:#0e3b2e;--green-text:#6ee7b7;
+  --blue:#5eb3f5;--blue-bg:#173049;--blue-text:#9ecbf5;
+  --amber:#fbbf24;--amber-bg:#3d2f12;--amber-text:#fcd97a;
+  --red:#f87171;--red-bg:#3d1b1b;--red-text:#fca5a5;
+  --purple:#a59cf5;--purple-bg:#23204a;--purple-text:#c4bdfb;
+  --tabs-bg:#0b0f16;--filters-bg:#15202e;--dropdown-bg:#15202e;
+  --th-bg:#1b2a3d;--th-text:#9ec5ef;--td-border:#243040;--row-odd:#15202e;--row-even:#111a25;--row-hover:#1e2c3d;
+}
+html{transition:background .2s}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .header{background:linear-gradient(135deg,#1a5fa8 0%,#1a3a6b 100%);border-bottom:3px solid var(--sorocaba-ouro);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,63,107,.25)}
 .header-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.01em}
@@ -30,11 +44,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pill-loading{background:rgba(239,159,39,.2);color:#fff}
 .pill-err{background:rgba(226,75,74,.2);color:#fff}
 .refresh-btn{font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;backdrop-filter:blur(4px)}.refresh-btn:hover{background:rgba(255,255,255,.25)}
-.tabs{background:#fff;border-bottom:2px solid var(--border);padding:0 1.5rem;display:flex;gap:0;overflow-x:auto;box-shadow:0 2px 6px rgba(0,0,0,.05)}
-.tab{padding:.625rem 1rem;font-size:13px;font-weight:500;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);white-space:nowrap;transition:color .15s}
-.tab.active{color:var(--sorocaba-azul);border-bottom-color:var(--sorocaba-azul);font-weight:600}
-.tab-locked{color:var(--text3) !important;cursor:default}
-.tab-locked:hover{background:none !important}
+.hamburger{display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;line-height:1;width:38px;height:38px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;margin-right:4px}
+.sidebar{position:fixed;top:var(--header-h,64px);left:0;width:220px;height:calc(100vh - var(--header-h,64px));background:var(--surface);border-right:1px solid var(--border);padding:.75rem 0;overflow-y:auto;z-index:96;transition:transform .25s ease}
+.sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 .5rem}
+.sidebar-section{display:flex;flex-direction:column;gap:2px}
+.sidebar-section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:.75rem .75rem .25rem}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:background .12s,color .12s;user-select:none}
+.sidebar-item:hover{background:var(--surface2);color:var(--text)}
+.sidebar-item.active{background:var(--blue-bg);color:var(--blue-text);font-weight:600}
+.sidebar-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sidebar-label{flex:1}
 .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:999;align-items:center;justify-content:center}
 .modal-overlay.active{display:flex}
 .modal-box{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)}
@@ -44,14 +63,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-input:focus{outline:none;border-color:var(--blue)}
 .modal-err{font-size:12px;color:var(--red);margin-bottom:.75rem;display:none}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end}
-.tab:hover:not(.active):not(.tab-locked){background:var(--surface2)}
 .container{max-width:1300px;margin:0 auto;padding:1.25rem}
+@media(min-width:769px){.container{margin-left:236px}}
+@media(max-width:768px){
+  .hamburger{display:inline-flex;align-items:center;justify-content:center}
+  .sidebar{transform:translateX(-100%);box-shadow:2px 0 16px rgba(0,0,0,.25)}
+  body.sidebar-open .sidebar{transform:translateX(0)}
+}
 .panel{display:none}.panel.active{display:block}
 .loading{text-align:center;padding:3rem;color:var(--text3);font-size:14px}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* FILTROS */
-.filters{background:#f5f8fc;border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1.125rem;margin-bottom:1.125rem;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.filters{background:var(--filters-bg);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1.125rem;margin-bottom:1.125rem;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .fg{display:flex;flex-direction:column;gap:3px}
 .fg-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:4px}
 .fg-label button{font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text3);line-height:1.4}
@@ -101,11 +125,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .table-hdr-count{font-size:12px;color:var(--text3)}
 .table-wrap{overflow-x:auto;max-height:460px;overflow-y:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:#dde8f5;font-weight:500;color:#1a3a6b;text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap;cursor:pointer}
+th{background:var(--th-bg);font-weight:500;color:var(--th-text);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap;cursor:pointer}
 th:hover{background:var(--border)}
-td{padding:6px 10px;border-bottom:1px solid #ccd6e0;vertical-align:top}tr:nth-child(odd) td{background:#ffffff}tr:nth-child(even) td{background:#f0f4f8}
+td{padding:6px 10px;border-bottom:1px solid var(--td-border);vertical-align:top}tr:nth-child(odd) td{background:var(--row-odd)}tr:nth-child(even) td{background:var(--row-even)}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:#e8f0fb}
+tr:hover td{background:var(--row-hover)}
 .td-trunc{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sort-icon{font-size:10px;color:var(--text3);margin-left:3px}
 .badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
@@ -165,11 +189,15 @@ tr:hover td{background:#e8f0fb}
 .dash-filters-col .filters{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
 .dash-filters-col .fg{width:100%;max-width:100%;box-sizing:border-box}
 .dash-filters-col .fg select,.dash-filters-col .fg input{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.hdr-filter-btn{cursor:pointer;font-size:9px;color:var(--text3);padding:2px 5px;border-radius:4px;border:1px solid transparent;line-height:1;transition:background .12s,color .12s,border-color .12s}
+.hdr-filter-btn:hover{background:var(--surface2);color:var(--text)}
+.hdr-filter-btn.active{color:var(--blue);background:var(--blue-bg);border-color:var(--blue)}
 </style>
 </head>
 <body>
 
 <div class="header">
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Abrir menu">☰</button>
   <div style="display:flex;align-items:center;gap:12px">
     <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" style="height:48px;width:auto" alt="Brasão">
     <div>
@@ -178,6 +206,7 @@ tr:hover td{background:#e8f0fb}
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
+    <button class="refresh-btn" id="tema-btn" onclick="alternarTema()" aria-label="Alternar tema" style="font-size:16px;padding:6px 11px">🌙</button>
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
     <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">🔑 Entrar</button>
     <span id="last-update" style="display:none"></span>
@@ -187,20 +216,34 @@ tr:hover td{background:#e8f0fb}
   </div>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab('dashboard')">📊 Emendas</div>
-  <div class="tab" id="tab-btn-consulta" style="display:none" onclick="showTab('consulta')">🔍 Consulta rápida</div>
-  <div class="tab" id="tab-btn-chamados" style="display:none" onclick="showTab('chamados')">📋 Chamados Antigos</div>
-  <div class="tab" id="tab-btn-chamados-novos" style="display:none" onclick="showTab('chamados-novos')">🆕 Chamados novos <span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px">0</span></div>
-  <div class="tab" id="tab-btn-inventario-ac" style="display:none" onclick="showTab('inventario-ac')">🧊 Inventário AC</div>
-  <div class="tab" id="tab-btn-atas" style="display:none" onclick="showTab('atas')">📄 ATAs / Contratos</div>
-  <div class="tab" id="tab-btn-contratos" style="display:none" onclick="showTab('contratos')">📋 Contratos</div>
-  <div class="tab" id="tab-btn-usuarios" style="display:none" onclick="showTab('usuarios')">⚙️ Usuários</div>
-  <div class="tab" id="tab-btn-planilhas" style="display:none" onclick="showTab('planilhas')">📊 Planilhas</div>
-  <div class="tab" id="tab-btn-nova-emenda" style="display:none"></div>
-  <div class="tab" id="tab-btn-novo-item" style="display:none"></div>
-  <div class="tab" id="tab-btn-atualizar-status" style="display:none"></div>
-</div>
+<aside class="sidebar" id="sidebar">
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-item active" id="sidebar-dashboard" onclick="showTab('dashboard')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Emendas</span></div>
+      <div class="sidebar-item" id="sidebar-consulta" style="display:none" onclick="showTab('consulta')"><span class="sidebar-icon">🔍</span><span class="sidebar-label">Consulta rápida</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Chamados</div>
+      <div class="sidebar-item" id="sidebar-chamados" style="display:none" onclick="showTab('chamados')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Chamados Antigos</span></div>
+      <div class="sidebar-item" id="sidebar-chamados-novos" style="display:none" onclick="showTab('chamados-novos')"><span class="sidebar-icon">🆕</span><span class="sidebar-label">Chamados novos</span><span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px">0</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Equipamentos</div>
+      <div class="sidebar-item" id="sidebar-inventario-ac" style="display:none" onclick="showTab('inventario-ac')"><span class="sidebar-icon">🗂️</span><span class="sidebar-label">Inventário</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Contratos</div>
+      <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
+      <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Configurações</div>
+      <div class="sidebar-item" id="sidebar-usuarios" style="display:none" onclick="showTab('usuarios')"><span class="sidebar-icon">⚙️</span><span class="sidebar-label">Usuários</span></div>
+      <div class="sidebar-item" id="sidebar-planilhas" style="display:none" onclick="showTab('planilhas')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Planilhas</span></div>
+    </div>
+  </nav>
+</aside>
+<div id="sidebar-overlay" onclick="fecharSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:95"></div>
 
 <div class="container">
 
@@ -216,43 +259,10 @@ tr:hover td{background:#e8f0fb}
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Google Sheets...</div>
   <div id="main" style="display:none">
     <div style="display:flex;gap:1.125rem;align-items:flex-start">
-      <div class="dash-filters-col" style="width:260px;position:sticky;top:0">
+      <div class="dash-filters-col" style="width:220px;position:sticky;top:0">
 
     <div class="filters">
-      <div class="fg">
-        <div class="fg-label">Parlamentar <button onclick="clearF('f-parlamentar')">✕</button></div>
-        <select id="f-parlamentar" onchange="applyFilters()"><option value="">Todos</option></select>
-      </div>
-      <div class="fg">
-        <div class="fg-label">Status <button onclick="clearF('f-status')">✕</button></div>
-        <select id="f-status" onchange="applyFilters()"><option value="">Todos</option></select>
-      </div>
-      <div class="fg">
-        <div class="fg-label">Tipo <button onclick="clearF('f-tipo')">✕</button></div>
-        <select id="f-tipo" onchange="applyFilters()"><option value="">Todos</option></select>
-      </div>
-      <div class="fg">
-        <div class="fg-label">Unidade <button onclick="clearF('f-unidade')">✕</button></div>
-        <select id="f-unidade" onchange="applyFilters()"><option value="">Todas</option></select>
-      </div>
-      <div class="fg" style="position:relative">
-        <div class="fg-label">Nº da emenda <button onclick="clearEmendaFilter()">✕</button></div>
-        <button id="emenda-trigger" onclick="toggleEmendaDropdown(event)" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:160px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap">
-          <span id="emenda-trigger-label">Todas</span><span style="font-size:10px;color:var(--text3)">▼</span>
-        </button>
-        <div id="emenda-dropdown" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);width:230px;padding:.625rem">
-          <input type="text" id="emenda-search" placeholder="🔍 Buscar número..." oninput="filterEmendaList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box">
-          <div style="display:flex;gap:5px;margin-bottom:.375rem">
-            <button onclick="selectAllEmendas(true)" style="font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;color:var(--text2)">Todos</button>
-            <button onclick="selectAllEmendas(false)" style="font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;color:var(--text2)">Nenhum</button>
-          </div>
-          <div id="emenda-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
-          <div style="display:flex;gap:6px;justify-content:flex-end">
-            <button onclick="cancelEmendaDropdown()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
-            <button onclick="confirmEmendaFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
-          </div>
-        </div>
-      </div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Buscar por texto</div>
       <div class="fg">
         <div class="fg-label">CPL / Processo <button onclick="clearF('f-cpl')">✕</button></div>
         <input type="text" id="f-cpl" placeholder="ex: CPL 086/2025" oninput="applyFilters()">
@@ -304,15 +314,15 @@ tr:hover td{background:#e8f0fb}
         <table>
           <thead>
             <tr>
-              <th onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></th>
-              <th onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></th>
-              <th onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></th>
-              <th onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></span><span class="hdr-filter-btn" id="hf-unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
               <th onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></th>
               <th onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></th>
               <th onclick="sortTable('vl_total')">Valor total <span class="sort-icon" id="si-vl_total"></span></th>
               <th onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></th>
-              <th onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></span><span class="hdr-filter-btn" id="hf-status_cat" onclick="openHeaderFilter(event,'status_cat')" title="Filtrar">▾</span></span></th>
               <th onclick="sortTable('status_raw')" style="min-width:200px">Status completo <span class="sort-icon" id="si-status_raw"></span></th>
               <th onclick="sortTable('data_atualizacao')" style="white-space:nowrap">Atualização <span class="sort-icon" id="si-data_atualizacao"></span></th>
               <th onclick="sortTable('nota_fiscal')">Nota fiscal <span class="sort-icon" id="si-nota_fiscal"></span></th>
@@ -820,7 +830,7 @@ tr:hover td{background:#e8f0fb}
       <div style="display:flex;gap:8px;align-items:center">
         <div class="form-title" style="margin:0;padding:0;border:none">📊 Planilhas</div>
         <div style="display:flex;gap:4px">
-          <button onclick="mudarPlanilha('ac')" id="pl-btn-ac" style="font-size:12px;padding:4px 12px;border-radius:20px;border:none;background:var(--blue);color:#fff;cursor:pointer">🧊 Inventário AC</button>
+          <button onclick="mudarPlanilha('ac')" id="pl-btn-ac" style="font-size:12px;padding:4px 12px;border-radius:20px;border:none;background:var(--blue);color:#fff;cursor:pointer">🗂️ Inventário</button>
           <button onclick="mudarPlanilha('chamados')" id="pl-btn-chamados" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">🆕 Chamados novos</button>
         </div>
       </div>
@@ -1522,6 +1532,45 @@ tr:hover td{background:#e8f0fb}
     <div id="login-err" style="display:none;font-size:12px;color:var(--red-text);background:var(--red-bg);padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:.875rem"></div>
     <button class="btn-primary" onclick="fazerLogin()" id="btn-fazer-login" style="width:100%;padding:10px;font-size:14px;justify-content:center">Entrar</button>
     <button class="btn-secondary" onclick="document.getElementById('modal-login').classList.remove('active')" style="width:100%;margin-top:8px;text-align:center;padding:9px">Cancelar</button>
+    <div style="text-align:center;margin-top:.875rem;border-top:1px solid var(--border);padding-top:.875rem">
+      <a href="cadastro.html" style="font-size:13px;color:var(--blue);text-decoration:none">Não tem conta? Criar acesso</a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalhe / Permissões do Usuário -->
+<div class="modal-overlay" id="modal-usuario-detalhe" onclick="if(event.target===this)fecharDetalheUsuario()">
+  <div class="modal-box" style="width:520px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">⚙️ Permissões do usuário</span>
+      <button onclick="fecharDetalheUsuario()" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:15px;font-weight:600" id="ud-nome">—</div>
+      <div style="font-size:12px;color:var(--text3)" id="ud-email">—</div>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <div class="form-label">Papel global</div>
+      <select id="ud-papel" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+        <option value="visualizador">visualizador</option>
+        <option value="editor">editor</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:.5rem">Permissões por aba</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Aba</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Visualizar</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Editar</th>
+      </tr></thead>
+      <tbody id="ud-perms-body"></tbody>
+    </table>
+    <div id="ud-msg" class="fmsg" style="margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="fecharDetalheUsuario()">Cancelar</button>
+      <button class="btn-primary" id="ud-salvar" onclick="salvarPermissoesUsuario()">Salvar permissões</button>
+    </div>
   </div>
 </div>
 
@@ -1543,6 +1592,55 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let currentProfile = null;
 
+// ═══ PERMISSÕES GRANULARES POR ABA ═══
+window._userPapel = null;
+window._tabPerms = [];
+const ADMIN_ONLY_TABS = ['usuarios','planilhas'];
+const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','inventario-ac','atas','contratos','usuarios','planilhas'];
+function userCanView(tabKey){
+  if(window._userPapel==='admin') return true;
+  const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
+  if(perm) return !!perm.can_view;
+  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
+  return window._userPapel==='editor'||window._userPapel==='visualizador';
+}
+function userCanEdit(tabKey){
+  if(window._userPapel==='admin') return true;
+  const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
+  if(perm) return !!perm.can_edit;
+  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
+  return window._userPapel==='editor';
+}
+function aplicarVisibilidadeAbas(){
+  SIDEBAR_TABS.forEach(n=>{
+    const el=document.getElementById("sidebar-"+n);
+    if(el) el.style.display = userCanView(n) ? "flex" : "none";
+  });
+  updateSidebarSections();
+}
+function updateSidebarSections(){
+  document.querySelectorAll('.sidebar-section').forEach(sec=>{
+    const items=[...sec.querySelectorAll('.sidebar-item')];
+    const anyVisible=items.some(it=>it.style.display!=='none');
+    sec.style.display = anyVisible ? '' : 'none';
+  });
+}
+
+// ═══ SIDEBAR / LAYOUT ═══
+function setHeaderH(){
+  const h=document.querySelector('.header');
+  if(h) document.documentElement.style.setProperty('--header-h', h.offsetHeight+'px');
+}
+function updateSidebarOverlay(){
+  const ov=document.getElementById('sidebar-overlay');
+  if(!ov) return;
+  const open=document.body.classList.contains('sidebar-open') && window.innerWidth<=768;
+  ov.style.display=open?'block':'none';
+}
+function toggleSidebar(){ document.body.classList.toggle('sidebar-open'); updateSidebarOverlay(); }
+function fecharSidebar(){ document.body.classList.remove('sidebar-open'); updateSidebarOverlay(); }
+window.addEventListener('resize',()=>{ setHeaderH(); updateSidebarOverlay(); });
+
 async function checkAuth(){
   const {data:{session}} = await sb.auth.getSession();
   if(!session){
@@ -1552,6 +1650,11 @@ async function checkAuth(){
   currentUser = session.user;
   const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
   currentProfile = profile;
+  window._userPapel = profile?.papel || 'visualizador';
+  try{
+    const {data:tabPerms} = await sb.from('user_tab_permissions').select('*').eq('user_id', currentUser.id);
+    window._tabPerms = tabPerms || [];
+  }catch(e){ window._tabPerms = []; }
 
   // Esconder banner de convidado e botão de login
   document.getElementById("guest-banner").style.display = "none";
@@ -1564,14 +1667,11 @@ async function checkAuth(){
     greetEl.style.display = "inline";
   }
 
-  // Mostrar abas autenticadas
-  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos"].forEach(n=>{
-    const el=document.getElementById("tab-btn-"+n);
-    if(el) el.style.display="";
-  });
+  // Mostrar abas conforme permissões (papel global + permissões por aba)
+  aplicarVisibilidadeAbas();
 
-  // Botões de editor
-  if(profile?.papel==='editor'||profile?.papel==='admin'){
+  // Botões de editor (aba Emendas/dashboard)
+  if(userCanEdit('dashboard')){
     const eb=document.getElementById("editor-btns");
     if(eb) eb.style.display="flex";
   }
@@ -1590,13 +1690,7 @@ async function checkAuth(){
     if(refreshBtn) refreshBtn.parentNode.insertBefore(logoutBtn,refreshBtn.nextSibling);
   }
 
-  // Admin: mostrar abas de usuários e planilhas
-  if(profile?.papel==='admin'){
-    const tabUsuarios=document.getElementById("tab-btn-usuarios");
-    if(tabUsuarios) tabUsuarios.style.display="block";
-    const tabPlanilhas=document.getElementById("tab-btn-planilhas");
-    if(tabPlanilhas) tabPlanilhas.style.display="block";
-  }
+  // (visibilidade das abas Usuários/Planilhas já é tratada por aplicarVisibilidadeAbas)
 
   // Visualizador: ocultar botões de edição
   if(profile?.papel==='visualizador'){
@@ -1627,11 +1721,13 @@ async function checkAuth(){
 }
 
 function entrarModoConvidado(){
+  window._userPapel = null;
+  window._tabPerms = [];
   // Esconder todas as abas exceto Emendas
-  ["consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas"].forEach(n=>{
-    const el=document.getElementById("tab-btn-"+n);
-    if(el) el.style.display="none";
+  document.querySelectorAll('.sidebar-item').forEach(el=>{
+    el.style.display = el.id==='sidebar-dashboard' ? 'flex' : 'none';
   });
+  updateSidebarSections();
   // Mostrar banner e botão de login
   document.getElementById("guest-banner").style.display="flex";
   document.getElementById("btn-login-header").style.display="inline-block";
@@ -1802,7 +1898,8 @@ function fecharModalEdicao(name){
 function showTab(name){
   localStorage.setItem("ultima_aba", name);
   const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas"];
-  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",names[i]===name));
+  document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
+  fecharSidebar();
   document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
   document.getElementById("panel-"+name).classList.add("active");
   if(name==="chamados"&&!chamadosRows.length) loadChamados();
@@ -2242,6 +2339,11 @@ function gerarPDFChamado(protocolo){
   </div>
 
 </div>
+<script>
+function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
+function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
+aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'light');
+<\/script>
 </body>
 </html>`;
 
@@ -3188,6 +3290,77 @@ async function salvarEditExec(){
 }
 
 // ═══ USUÁRIOS ═══
+let _usuariosCache = [];
+const PERM_TABS = [
+  {key:'dashboard', label:'Emendas'},
+  {key:'consulta', label:'Consulta rápida'},
+  {key:'chamados', label:'Chamados Antigos'},
+  {key:'chamados-novos', label:'Chamados novos'},
+  {key:'inventario-ac', label:'Inventário'},
+  {key:'atas', label:'ATAs / Contratos'},
+  {key:'contratos', label:'Contratos'},
+  {key:'planilhas', label:'Planilhas'},
+];
+let _udUserId = null;
+function _defaultPerm(tabKey, papel){
+  const adminOnly=['usuarios','planilhas'];
+  const view = papel==='admin' || (!adminOnly.includes(tabKey) && (papel==='editor'||papel==='visualizador'));
+  const edit = papel==='admin' || (!adminOnly.includes(tabKey) && papel==='editor');
+  return {can_view:view, can_edit:edit};
+}
+async function abrirDetalheUsuario(userId){
+  const p=_usuariosCache.find(u=>u.id===userId);
+  if(!p) return;
+  _udUserId=userId;
+  document.getElementById('ud-nome').textContent=p.nome||'—';
+  document.getElementById('ud-email').textContent=p.email||'';
+  document.getElementById('ud-papel').value=p.papel||'visualizador';
+  const msg=document.getElementById('ud-msg'); msg.className='fmsg'; msg.textContent='';
+  const body=document.getElementById('ud-perms-body');
+  body.innerHTML='<tr><td colspan="3" style="padding:10px;color:var(--text3);font-size:12px">Carregando...</td></tr>';
+  document.getElementById('modal-usuario-detalhe').classList.add('active');
+  let perms=[];
+  try{ const {data}=await sb.from('user_tab_permissions').select('*').eq('user_id',userId); perms=data||[]; }catch(e){ perms=[]; }
+  body.innerHTML=PERM_TABS.map(t=>{
+    const found=perms.find(x=>x.tab_key===t.key);
+    const def=found?{can_view:!!found.can_view,can_edit:!!found.can_edit}:_defaultPerm(t.key,p.papel);
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 8px">${t.label}</td>
+      <td style="padding:7px 8px;text-align:center"><input type="checkbox" id="udv-${t.key}" ${def.can_view?'checked':''} onchange="_udSyncEdit('${t.key}')" style="accent-color:var(--blue);width:15px;height:15px;cursor:pointer"></td>
+      <td style="padding:7px 8px;text-align:center"><input type="checkbox" id="ude-${t.key}" ${def.can_edit?'checked':''} ${def.can_view?'':'disabled'} style="accent-color:var(--blue);width:15px;height:15px;cursor:pointer"></td>
+    </tr>`;
+  }).join('');
+}
+function _udSyncEdit(key){
+  const v=document.getElementById('udv-'+key);
+  const e=document.getElementById('ude-'+key);
+  if(!v||!e) return;
+  if(!v.checked){ e.checked=false; e.disabled=true; } else { e.disabled=false; }
+}
+function fecharDetalheUsuario(){ document.getElementById('modal-usuario-detalhe').classList.remove('active'); _udUserId=null; }
+async function salvarPermissoesUsuario(){
+  if(bloquearSeVisualiz()) return;
+  if(!_udUserId) return;
+  const btn=document.getElementById('ud-salvar');
+  const msg=document.getElementById('ud-msg');
+  btn.disabled=true; btn.textContent='Salvando...';
+  const novoPapel=document.getElementById('ud-papel').value;
+  const {data:upd,error:errPapel}=await sb.from('profiles').update({papel:novoPapel}).eq('id',_udUserId).select();
+  if(errPapel){ msg.textContent='Erro ao salvar papel: '+errPapel.message; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
+  if(!upd || upd.length===0){ msg.textContent='⚠️ Sem permissão para alterar este usuário (verifique a política RLS de profiles).'; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
+  const rows=PERM_TABS.map(t=>({
+    user_id:_udUserId, tab_key:t.key,
+    can_view:document.getElementById('udv-'+t.key).checked,
+    can_edit:document.getElementById('ude-'+t.key).checked,
+  }));
+  const {error}=await sb.from('user_tab_permissions').upsert(rows,{onConflict:'user_id,tab_key'});
+  if(error){ msg.textContent='Erro ao salvar permissões: '+error.message+' — confirme que a tabela user_tab_permissions existe no Supabase.'; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
+  msg.textContent='✓ Permissões salvas com sucesso.'; msg.className='fmsg ok';
+  btn.disabled=false; btn.textContent='Salvar permissões';
+  carregarUsuarios();
+  setTimeout(()=>fecharDetalheUsuario(),900);
+}
+
 async function carregarUsuarios(){
   document.getElementById("usuarios-loading").style.display="block";
   document.getElementById("usuarios-table").style.display="none";
@@ -3196,6 +3369,7 @@ async function carregarUsuarios(){
     document.getElementById("usuarios-loading").textContent="Erro ao carregar usuários.";
     return;
   }
+  _usuariosCache = profiles;
   const papelCor={admin:"var(--red-text)",editor:"var(--blue-text)",visualizador:"var(--text2)"};
   const papelBg={admin:"var(--red-bg)",editor:"var(--blue-bg)",visualizador:"var(--surface2)"};
   document.getElementById("usuarios-body").innerHTML=profiles.map(p=>`
@@ -3212,8 +3386,11 @@ async function carregarUsuarios(){
           <option value="admin"${p.papel==="admin"?" selected":""}>admin</option>
         </select>
       </td>
-      <td style="padding:10px 12px">
-        ${p.id===currentUser?.id?'<span style="font-size:11px;color:var(--text3)">(você)</span>':`<button onclick="alterarPapel('${p.id}','${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar</button>`}
+      <td style="padding:10px 12px;white-space:nowrap">
+        <div style="display:flex;gap:6px;align-items:center">
+          ${p.id===currentUser?.id?'<span style="font-size:11px;color:var(--text3)">(você)</span>':`<button onclick="alterarPapel('${p.id}','${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar papel</button>`}
+          <button onclick="abrirDetalheUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">⚙️ Permissões</button>
+        </div>
       </td>
     </tr>`).join("");
   document.getElementById("usuarios-loading").style.display="none";
@@ -3766,14 +3943,139 @@ async function loadData(){
 
 // ═══ FILTROS ═══
 function populateFilters(){
-  const sel=(id,vals,def="Todos")=>{const el=document.getElementById(id);const cur=el.value;el.innerHTML=`<option value="">${def}</option>`+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
-  sel("f-parlamentar",[...new Set(allRows.map(r=>r.parlamentar).filter(Boolean))].sort());
-  sel("f-status",[...new Set(allRows.map(r=>r.status_cat))].sort());
-  sel("f-tipo",[...new Set(allRows.map(r=>r.tipo).filter(Boolean))].sort());
-  sel("f-unidade",[...new Set(allRows.map(r=>r.unidade).filter(Boolean))].sort(),"Todas");
-  allEmendaOptions=[...new Set(allRows.map(r=>r.emenda).filter(Boolean))].sort();
-  buildEmendaList(allEmendaOptions);
+  // Filtros agora ficam nos cabeçalhos da tabela; valores únicos são lidos sob demanda de allRows.
+  updateHeaderFilterIndicators();
 }
+
+// ═══ FILTROS DE CABEÇALHO (estilo Google Sheets) ═══
+const HDR_FILTER_COLS = {
+  tipo:{label:'Tipo', get:r=>r.tipo, disp:v=>v||'(vazio)'},
+  emenda:{label:'Emenda', get:r=>r.emenda, disp:v=>v||'(vazio)'},
+  parlamentar:{label:'Parlamentar', get:r=>r.parlamentar, disp:v=>v||'(vazio)'},
+  unidade:{label:'Unidade', get:r=>r.unidade, disp:v=>v||'(vazio)'},
+  status_cat:{label:'Status', get:r=>r.status_cat, disp:v=>((STATUS_MAP[v]&&STATUS_MAP[v].label)||v||'(vazio)')},
+};
+let headerFilters = {tipo:[], emenda:[], parlamentar:[], unidade:[], status_cat:[]};
+let _hdrFilterCol = null;
+let _hdrFilterPending = [];
+
+function _hdrUniqueValues(col){
+  const cfg=HDR_FILTER_COLS[col];
+  const vals=[...new Set(allRows.map(cfg.get).map(v=>v==null?'':String(v)))];
+  return vals.sort((a,b)=>cfg.disp(a).localeCompare(cfg.disp(b),'pt-BR',{numeric:true}));
+}
+
+function _ensureHdrDropdown(){
+  let dd=document.getElementById('hdr-filter-dropdown');
+  if(dd) return dd;
+  dd=document.createElement('div');
+  dd.id='hdr-filter-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:240px;padding:.625rem';
+  dd.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:.375rem">
+      <button onclick="hdrSort(true)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">↑ Classificar A → Z</button>
+      <button onclick="hdrSort(false)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">↓ Classificar Z → A</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:.375rem 0">
+    <input type="text" id="hdr-filter-search" placeholder="🔍 Buscar..." oninput="_hdrRenderList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem">Selecionar <a href="#" onclick="_hdrSelectAll(true);return false" style="color:var(--blue);text-decoration:none">tudo: <span id="hdr-filter-count">0</span></a> — <a href="#" onclick="_hdrSelectAll(false);return false" style="color:var(--blue);text-decoration:none">Limpar</a></div>
+    <div id="hdr-filter-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeHeaderFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmHeaderFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd);
+  return dd;
+}
+
+function openHeaderFilter(e, col){
+  e.stopPropagation();
+  const dd=_ensureHdrDropdown();
+  if(_hdrFilterCol===col && dd.style.display==='block'){ dd.style.display='none'; _hdrFilterCol=null; return; }
+  _hdrFilterCol=col;
+  const all=_hdrUniqueValues(col);
+  const cur=headerFilters[col]||[];
+  _hdrFilterPending = cur.length ? [...cur] : [...all];
+  document.getElementById('hdr-filter-search').value='';
+  _hdrRenderList();
+  const btn=e.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  dd.style.display='block';
+  const ddW=dd.offsetWidth||240;
+  let left=rect.left+window.scrollX;
+  if(left+ddW>window.scrollX+window.innerWidth-8) left=window.scrollX+window.innerWidth-ddW-8;
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px';
+  dd.style.left=Math.max(8,left)+'px';
+  setTimeout(()=>document.getElementById('hdr-filter-search').focus(),50);
+}
+
+function _hdrRenderList(){
+  const col=_hdrFilterCol; if(!col) return;
+  const q=normalizar(document.getElementById('hdr-filter-search').value);
+  const all=_hdrUniqueValues(col);
+  const disp=HDR_FILTER_COLS[col].disp;
+  const vis=q?all.filter(v=>normalizar(disp(v)).includes(q)):all;
+  document.getElementById('hdr-filter-count').textContent=all.length;
+  const list=document.getElementById('hdr-filter-list');
+  list.innerHTML=vis.map(v=>{
+    const checked=_hdrFilterPending.includes(v)?'checked':'';
+    const safe=String(v).replace(/"/g,'&quot;');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><input type="checkbox" value="${safe}" ${checked} onchange="_hdrTogglePending(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${disp(v)}</label>`;
+  }).join('') || '<div style="padding:10px;font-size:12px;color:var(--text3);text-align:center">Nenhum resultado</div>';
+}
+
+function _hdrTogglePending(cb){
+  const v=cb.value;
+  if(cb.checked){ if(!_hdrFilterPending.includes(v)) _hdrFilterPending.push(v); }
+  else { _hdrFilterPending=_hdrFilterPending.filter(x=>x!==v); }
+}
+
+function _hdrSelectAll(all){
+  const col=_hdrFilterCol; if(!col) return;
+  _hdrFilterPending = all ? _hdrUniqueValues(col) : [];
+  _hdrRenderList();
+}
+
+function confirmHeaderFilter(){
+  const col=_hdrFilterCol; if(!col) return;
+  const all=_hdrUniqueValues(col);
+  headerFilters[col] = (_hdrFilterPending.length===0 || _hdrFilterPending.length===all.length) ? [] : [..._hdrFilterPending];
+  document.getElementById('hdr-filter-dropdown').style.display='none';
+  _hdrFilterCol=null;
+  updateHeaderFilterIndicators();
+  applyFilters();
+}
+
+function closeHeaderFilter(){
+  const dd=document.getElementById('hdr-filter-dropdown');
+  if(dd) dd.style.display='none';
+  _hdrFilterCol=null;
+}
+
+function hdrSort(asc){
+  const col=_hdrFilterCol; if(!col) return;
+  sortCol=col; sortAsc=asc;
+  document.querySelectorAll('.sort-icon').forEach(el=>el.textContent='');
+  const icon=document.getElementById('si-'+col);
+  if(icon) icon.textContent=asc?' ↑':' ↓';
+  closeHeaderFilter();
+  renderTable();
+}
+
+function updateHeaderFilterIndicators(){
+  Object.keys(HDR_FILTER_COLS).forEach(col=>{
+    const btn=document.getElementById('hf-'+col);
+    if(!btn) return;
+    btn.classList.toggle('active',(headerFilters[col]||[]).length>0);
+  });
+}
+
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('hdr-filter-dropdown');
+  if(dd && dd.style.display==='block'){
+    if(!dd.contains(e.target) && !(e.target.closest && e.target.closest('.hdr-filter-btn'))){ dd.style.display='none'; _hdrFilterCol=null; }
+  }
+});
 
 function buildEmendaList(vals){
   const list=document.getElementById("emenda-list");
@@ -3856,23 +4158,27 @@ document.addEventListener('click',function(e){
 
 function clearF(id){const el=document.getElementById(id);if(el)el.value="";applyFilters()}
 function clearAllFilters(){
-  ["f-parlamentar","f-status","f-tipo","f-unidade","f-cpl","f-empenho","f-patrimonio","f-nf","f-busca"].forEach(id=>clearF(id));
-  clearEmendaFilter();
+  ["f-cpl","f-empenho","f-patrimonio","f-nf","f-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  Object.keys(headerFilters).forEach(c=>headerFilters[c]=[]);
+  sortCol=null;
+  document.querySelectorAll(".sort-icon").forEach(el=>el.textContent="");
+  updateHeaderFilterIndicators();
+  applyFilters();
 }
 
 function applyFilters(){
   const get=id=>document.getElementById(id)?.value||"";
-  const parl=get("f-parlamentar"),status=get("f-status"),tipo=get("f-tipo"),unidade=get("f-unidade");
   const cpl=get("f-cpl").toLowerCase(),busca=get("f-busca").toLowerCase();
   const empenho=get("f-empenho").toLowerCase(),patrimonio=get("f-patrimonio").toLowerCase(),nf=get("f-nf").toLowerCase();
-  const emSel=selectedEmendas;
   filtered=allRows.filter(r=>{
-    if(parl&&r.parlamentar!==parl) return false;
-    if(status&&r.status_cat!==status) return false;
-    if(tipo&&r.tipo!==tipo) return false;
-    if(unidade&&r.unidade!==unidade) return false;
+    for(const col in headerFilters){
+      const sel=headerFilters[col];
+      if(sel.length){
+        const val=HDR_FILTER_COLS[col].get(r);
+        if(!sel.includes(val==null?'':String(val))) return false;
+      }
+    }
     if(cpl&&!r.cpl.toLowerCase().includes(cpl)) return false;
-    if(emSel.length&&!emSel.includes(r.emenda)) return false;
     if(empenho&&!r.empenho.toLowerCase().includes(empenho)) return false;
     if(patrimonio&&!r.patrimonio.toLowerCase().includes(patrimonio)) return false;
     if(nf&&!r.nota_fiscal.toLowerCase().includes(nf)) return false;
@@ -3912,7 +4218,7 @@ function renderStatusList(){
     return`<div class="status-row" onclick="filterByStatus('${cat}')"><div class="sdot" style="background:${i.color}"></div><span class="sname">${i.label}</span><div class="sbar-wrap"><div class="sbar" style="width:${Math.round(cnt/max*100)}%;background:${i.color}44"></div></div><span class="scnt">${cnt}</span></div>`;
   }).join("");
 }
-function filterByStatus(cat){document.getElementById("f-status").value=cat;applyFilters()}
+function filterByStatus(cat){headerFilters.status_cat=[cat];updateHeaderFilterIndicators();applyFilters()}
 
 function renderParlBars(){
   const counts={};filtered.forEach(r=>{if(!r.parlamentar)return;if(!counts[r.parlamentar])counts[r.parlamentar]=new Set();counts[r.parlamentar].add(r.emenda)});
@@ -3921,7 +4227,7 @@ function renderParlBars(){
   const colors=["#1D9E75","#378ADD","#7F77DD","#EF9F27","#D4537E","#5DCAA5","#639922","#888780"];
   document.getElementById("parl-bars").innerHTML=sorted.map(([p,cnt],i)=>`<div class="bar-row"><div class="bar-lbl" title="${p}">${p}</div><div class="bar-track" onclick="filterByParl('${p}')"><div class="bar-fill" style="width:${Math.round(cnt/max*100)}%;background:${colors[i%8]}"></div></div><div class="bar-val">${cnt} emenda${cnt>1?"s":""}</div></div>`).join("");
 }
-function filterByParl(p){document.getElementById("f-parlamentar").value=p;applyFilters()}
+function filterByParl(p){headerFilters.parlamentar=[p];updateHeaderFilterIndicators();applyFilters()}
 
 function sortTable(col){
   if(sortCol===col){sortAsc=!sortAsc}else{sortCol=col;sortAsc=true}
@@ -4622,7 +4928,14 @@ async function salvarValoresContrato(){
   document.getElementById("mcd-novo-total").value="";
 }
 
+setHeaderH();
+window.addEventListener('load', setHeaderH);
 checkAuth().then(() => { loadData(); });
+</script>
+<script>
+function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
+function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
+aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'light');
 </script>
 </body>
 </html>
