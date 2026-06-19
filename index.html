@@ -4519,9 +4519,12 @@ async function salvarOperacaoContrato(op){
       const valor=document.getElementById("ctr-valor").value;
       const valorMensal=document.getElementById("ctr-valor-mensal").value;
       const obs=document.getElementById("ctr-obs").value.trim();
-      const upd={data_inicio:inicio,data_fim:fim,status:"VIGENTE"};
-      if(valor) upd.valor_total=parseFloat(valor);
-      if(valorMensal) upd.valor_mensal=parseFloat(valorMensal);
+      // Formatar vigencia_atual e vencimento para a tabela contratos
+      const fmtBR=d=>{if(!d)return"";const[a,m,dd]=d.split("-");return`${dd}/${m}/${a}`;};
+      const vigStr=`${fmtBR(inicio)} a ${fmtBR(fim)}`;
+      const upd={vigencia_atual:vigStr,vencimento:fmtBR(fim),status:"VIGENTE"};
+      if(valor) upd.valor_atual=valor;
+      if(valorMensal) upd.valor_mensal=valorMensal;
       const {error:e1}=await sb.from("contratos").update(upd).eq("id",id);
       if(e1) throw e1;
       await sb.from("contratos_vigencias").insert({contrato_id:id,data_inicio:inicio,data_fim:fim,valor_total:valor?parseFloat(valor):null,valor_mensal:valorMensal?parseFloat(valorMensal):null,obs});
@@ -4552,7 +4555,8 @@ async function salvarOperacaoContrato(op){
       const dataFim=document.getElementById("ctpr-data-fim").value;
       if(!dataFim){setMsg("Nova data fim é obrigatória","err");return;}
       const obs=document.getElementById("ctpr-obs").value.trim();
-      const {error}=await sb.from("contratos").update({data_fim:dataFim}).eq("id",id);
+      const fmtBR2=d=>{if(!d)return"";const[a,m,dd]=d.split("-");return`${dd}/${m}/${a}`;};
+      const {error}=await sb.from("contratos").update({vencimento:fmtBR2(dataFim)}).eq("id",id);
       if(error) throw error;
       await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Prorrogação",obs:`Nova data fim: ${dataFim}${obs?". "+obs:""}`});
       setMsg("✓ Prorrogação registrada!","ok");
