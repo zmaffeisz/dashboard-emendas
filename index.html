@@ -126,7 +126,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .table-hdr{padding:.75rem 1.125rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .table-hdr-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
 .table-hdr-count{font-size:12px;color:var(--text3)}
-.table-wrap{overflow-x:auto;max-height:460px;overflow-y:auto}
+.table-wrap{overflow-x:auto;overflow-y:auto;height:calc(100vh - var(--header-h,64px) - var(--table-offset,300px))}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{background:var(--th-bg);font-weight:500;color:var(--th-text);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap;cursor:pointer}
 th:hover{background:var(--border)}
@@ -229,6 +229,7 @@ tr:hover td{background:var(--row-hover)}
       <div class="sidebar-section-label">Chamados</div>
       <div class="sidebar-item" id="sidebar-chamados" style="display:none" onclick="showTab('chamados')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Chamados Antigos</span></div>
       <div class="sidebar-item" id="sidebar-chamados-novos" style="display:none" onclick="showTab('chamados-novos')"><span class="sidebar-icon">🆕</span><span class="sidebar-label">Chamados novos</span><span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px">0</span></div>
+      <div class="sidebar-item" id="sidebar-fiscalizacao" style="display:none" onclick="showTab('fiscalizacao')"><span class="sidebar-icon">🔍</span><span class="sidebar-label">Fiscalização</span><span id="badge-fiscalizacao" style="display:none;background:var(--amber);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px">0</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Equipamentos</div>
@@ -721,11 +722,12 @@ tr:hover td{background:var(--row-hover)}
         <table>
           <thead>
             <tr>
-              <th>Ações</th><th>PDF</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th><th>Endereço</th>
+              <th>Ações</th><th>PDF</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
+              <th>Equipamento</th><th>Descrição</th><th>Endereço</th>
               <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
-              <th>Equipamento</th><th>Fabricante/Modelo</th><th>Série</th>
+              <th>Fabricante/Modelo</th><th>Série</th>
               <th>Categoria</th><th>Serviço</th><th>Problema apresentado</th>
-              <th>Descrição</th><th>Rechamado?</th>
+              <th>Rechamado?</th>
             </tr>
           </thead>
           <tbody id="cn-body"></tbody>
@@ -733,15 +735,14 @@ tr:hover td{background:var(--row-hover)}
       </div>
     </div>
 
-    <!-- Modal atualizar chamado novo -->
     <div class="modal-overlay" id="modal-cn" onclick="if(event.target===this)this.classList.remove('active')">
-      <div class="modal-box" style="width:500px">
+      <div class="modal-box" style="width:520px">
         <div class="modal-title">✏️ Atualizar chamado</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="mcn-info"></div>
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
           <div class="form-group full">
             <div class="form-label">Status *</div>
-            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)" onchange="document.getElementById('mcn-invalido-wrap').style.display=this.value==='Inválido'?'block':'none'">
+            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)" onchange="_mcnOnStatusChange()">
               <option>Aguardando abertura</option>
               <option>Aberto</option>
               <option>Inválido</option>
@@ -751,11 +752,13 @@ tr:hover td{background:var(--row-hover)}
               <input type="text" id="mcn-motivo-invalido" placeholder="Descreva o motivo...">
             </div>
           </div>
-          <div class="form-group"><div class="form-label">Data atendimento</div><input type="date" id="mcn-data"></div>
-          <div class="form-group"><div class="form-label">Empresa</div><input type="text" id="mcn-empresa"></div>
-          <div class="form-group"><div class="form-label">Nº OS</div><input type="text" id="mcn-os"></div>
-          <div class="form-group full"><div class="form-label">O que foi feito</div><input type="text" id="mcn-feito"></div>
-          <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="mcn-obs"></div>
+          <div class="form-group full" id="mcn-cpl-wrap">
+            <div class="form-label">Contrato / CPL * <span style="font-size:10px;color:var(--text3);font-weight:400">(obrigatório para status Aberto)</span></div>
+            <select id="mcn-cpl" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+              <option value="">Selecione o contrato...</option>
+            </select>
+          </div>
+
         </div>
         <div class="form-actions">
           <button class="btn-primary" onclick="salvarChamadoNovo()">Salvar</button>
@@ -765,6 +768,181 @@ tr:hover td{background:var(--row-hover)}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════════════ FISCALIZAÇÃO DE CONTRATOS ══════════════════════ -->
+<div id="panel-fiscalizacao" class="panel">
+  <div id="fisc-loading" class="loading"><span class="spinner"></span>Carregando fiscalização...</div>
+  <div id="fisc-main" style="display:none">
+
+    <!-- Filtros -->
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('fisc-busca')">✕</button></div>
+        <input type="text" id="fisc-busca" placeholder="equipamento, protocolo, unidade, CPL..." oninput="filtrarFiscalizacao()">
+      </div>
+      <button class="clear-btn" onclick="clearAllFiscalizacao()">✕ Limpar</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total OS</div><div class="metric-value" id="fm-total">—</div><div class="metric-sub">na seleção</div></div>
+      <div class="metric"><div class="metric-label">Não fiscalizados</div><div class="metric-value" id="fm-nao" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="fm-pend" style="color:var(--amber)">—</div><div class="metric-sub">em aberto</div></div>
+      <div class="metric"><div class="metric-label">Conformes</div><div class="metric-value" id="fm-conf" style="color:var(--green)">—</div><div class="metric-sub">ok</div></div>
+    </div>
+
+    <!-- Ações -->
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+      <button onclick="selecionarTodasFisc(true)" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">☑ Marcar todas</button>
+      <button onclick="selecionarTodasFisc(false)" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">☐ Desmarcar</button>
+      <button onclick="gerarTermoAteste()" style="font-size:12px;padding:6px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar Termo de Ateste</button>
+      <span id="fisc-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox" id="fisc-check-all" onchange="selecionarTodasFisc(this.checked)" style="accent-color:var(--blue);cursor:pointer"></th>
+              <th>Ações</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Protocolo<span class="hdr-filter-btn" id="hff-protocolo" onclick="openFiscFilter(event,'protocolo')" title="Filtrar">▾</span></span></th>
+              <th>Data</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Unidade<span class="hdr-filter-btn" id="hff-unidade" onclick="openFiscFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Equipamento<span class="hdr-filter-btn" id="hff-equipamento" onclick="openFiscFilter(event,'equipamento')" title="Filtrar">▾</span></span></th>
+              <th>Patrimônio</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">CPL / Contrato<span class="hdr-filter-btn" id="hff-cpl" onclick="openFiscFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th>Nº OS</th>
+              <th>Serviço realizado</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Situação<span class="hdr-filter-btn" id="hff-situacao" onclick="openFiscFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Competência<span class="hdr-filter-btn" id="hff-competencia" onclick="openFiscFilter(event,'competencia')" title="Filtrar">▾</span></span></th>
+              <th>NF Referência</th>
+              <th>Dias p/ atend.</th>
+              <th>Fiscalizado por</th>
+              <th>Fiscalizado em</th>
+              <th>Editar</th>
+            </tr>
+          </thead>
+          <tbody id="fisc-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal editar OS na fiscalização -->
+    <div class="modal-overlay" id="modal-fisc-os" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:620px;max-width:96vw;max-height:92vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+          <span style="font-size:15px;font-weight:700">🔍 Fiscalizar OS</span>
+          <button onclick="document.getElementById('modal-fisc-os').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)" id="mfo-info"></div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group full">
+            <div class="form-label">Situação da OS *</div>
+            <select id="mfo-situacao" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+              <option value="">Selecione...</option>
+              <option value="conforme">✅ Conforme</option>
+              <option value="conforme_ressalva">⚠️ Conforme com ressalva</option>
+              <option value="parcial">🟠 Parcial</option>
+              <option value="nao_conforme">❌ Não conforme</option>
+              <option value="pendente">⏳ Pendente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Data de atendimento da OS</div>
+            <input type="date" id="mfo-data-atendimento">
+          </div>
+          <div class="form-group" id="mfo-sla-wrap" style="display:none">
+            <div class="form-label">Prazo de atendimento</div>
+            <div id="mfo-sla-info" style="font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border)">—</div>
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Serviço realizado</div>
+            <input type="text" id="mfo-servico" placeholder="Descreva o que foi realizado...">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Ocorrências / Observações</div>
+            <input type="text" id="mfo-ocorrencias" placeholder="Registre qualquer ocorrência ou ressalva...">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarFiscalizacaoOS()">Salvar fiscalização</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-fisc-os').classList.remove('active')">Cancelar</button>
+          <span id="mfo-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal editar NF + Competência -->
+<div class="modal-overlay" id="modal-editar-nf" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:400px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Editar NF e Competência</span>
+      <button onclick="document.getElementById('modal-editar-nf').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)" id="enf-info"></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Competência</div>
+        <input type="text" id="enf-competencia" placeholder="ex: 06/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Nota Fiscal</div>
+        <input type="text" id="enf-nf" placeholder="ex: NF 12345">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarEditarNF()">Salvar</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-editar-nf').classList.remove('active')">Cancelar</button>
+      <span id="enf-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal histórico OS -->
+<div class="modal-overlay" id="modal-historico-os" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:540px;max-width:96vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📋 Histórico de situações</span>
+      <button onclick="document.getElementById('modal-historico-os').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)" id="hist-info"></div>
+    <div id="hist-body"></div>
+    <div style="text-align:right;margin-top:1rem">
+      <button class="btn-secondary" onclick="document.getElementById('modal-historico-os').classList.remove('active')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal NF + Competência antes de gerar o termo -->
+<div class="modal-overlay" id="modal-termo-ateste" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Gerar Termo de Ateste</span>
+      <button onclick="document.getElementById('modal-termo-ateste').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:1rem" id="mta-info"></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Competência * <span style="font-size:10px;font-weight:400">(mês/ano)</span></div>
+        <input type="text" id="mta-competencia" placeholder="ex: 06/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Nota Fiscal de referência *</div>
+        <input type="text" id="mta-nf" placeholder="ex: NF 12345">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="confirmarGerarTermo()">Gerar PDF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-termo-ateste').classList.remove('active')">Cancelar</button>
+      <span id="mta-msg" class="fmsg"></span>
+    </div>
   </div>
 </div>
 
@@ -850,7 +1028,7 @@ tr:hover td{background:var(--row-hover)}
     </div>
 
     <div id="pl-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
-    <div id="pl-table-wrap" style="display:none;overflow-x:auto;max-height:600px;overflow-y:auto">
+    <div id="pl-table-wrap" style="display:none;overflow-x:auto;overflow-y:auto;height:calc(100vh - var(--header-h,64px) - var(--table-offset,300px))">
       <table id="pl-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1200px">
         <thead id="pl-thead" style="position:sticky;top:0;z-index:1"></thead>
         <tbody id="pl-tbody"></tbody>
@@ -1603,7 +1781,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','inventario-ac','atas','contratos','usuarios','planilhas'];
+const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -1635,6 +1813,29 @@ function updateSidebarSections(){
 }
 
 // ═══ SIDEBAR / LAYOUT ═══
+function _setTableOffset(){
+  // Mede a altura dos elementos ACIMA da tabela em cada aba ativa
+  // e define --table-offset para que a tabela ocupe o resto da tela
+  const panel=document.querySelector('.panel.active');
+  if(!panel) return;
+  const wrap=panel.querySelector('.table-wrap, #pl-table-wrap');
+  if(!wrap) return;
+  const rect=wrap.getBoundingClientRect();
+  // offset = distância do topo da viewport até o topo da tabela + padding inferior (20px)
+  const offset=Math.round(rect.top)+20;
+  document.documentElement.style.setProperty('--table-offset', offset+'px');
+}
+
+function _setTableOffset(){
+  const panel=document.querySelector('.panel.active');
+  if(!panel) return;
+  const wrap=panel.querySelector('.table-wrap, #pl-table-wrap');
+  if(!wrap) return;
+  const rect=wrap.getBoundingClientRect();
+  const offset=Math.round(rect.top)+20;
+  document.documentElement.style.setProperty('--table-offset', offset+'px');
+}
+
 function setHeaderH(){
   const h=document.querySelector('.header');
   if(h) document.documentElement.style.setProperty('--header-h', h.offsetHeight+'px');
@@ -1647,7 +1848,7 @@ function updateSidebarOverlay(){
 }
 function toggleSidebar(){ document.body.classList.toggle('sidebar-open'); updateSidebarOverlay(); }
 function fecharSidebar(){ document.body.classList.remove('sidebar-open'); updateSidebarOverlay(); }
-window.addEventListener('resize',()=>{ setHeaderH(); updateSidebarOverlay(); });
+window.addEventListener('resize',()=>{ setHeaderH(); _setTableOffset(); updateSidebarOverlay(); });
 
 async function checkAuth(){
   const {data:{session}} = await sb.auth.getSession();
@@ -1913,6 +2114,7 @@ function showTab(name){
   document.getElementById("panel-"+name).classList.add("active");
   if(name==="chamados"&&!chamadosRows.length) loadChamados();
   if(name==="chamados-novos"&&!chamadosNovosCarregado) loadChamadosNovos();
+  if(name==="fiscalizacao"&&!fiscalizacaoCarregado) loadFiscalizacao();
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="contratos"&&!contratosCarregado) loadContratos();
@@ -3305,6 +3507,7 @@ const PERM_TABS = [
   {key:'consulta', label:'Consulta rápida'},
   {key:'chamados', label:'Chamados Antigos'},
   {key:'chamados-novos', label:'Chamados novos'},
+  {key:'fiscalizacao', label:'Fiscalização de Contratos'},
   {key:'inventario-ac', label:'Inventário'},
   {key:'atas', label:'ATAs / Contratos'},
   {key:'contratos', label:'Contratos'},
@@ -3643,6 +3846,7 @@ async function loadChamadosNovos(){
   atualizarBadgeCN();
   document.getElementById("cn-loading").style.display="none";
   document.getElementById("cn-main").style.display="block";
+  setTimeout(_setTableOffset,50);
 }
 
 function getControleCN(row){
@@ -3715,22 +3919,42 @@ function filtrarChamadosNovos(){
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
       <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
+      <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
+      <td class="td-trunc" style="max-width:200px" title="${r.descricao||''}">${r.descricao||"—"}</td>
       <td style="font-size:11px" class="td-trunc">${r.endereco||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.telefone||"—"}</td>
       <td style="font-size:11px" class="td-trunc">${r.responsavel||"—"}</td>
       <td style="font-size:11px">${r.email_retorno||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${r.grau_urgencia||"—"}</td>
       <td style="font-size:11px">${r.patrimonio||"—"}</td>
-      <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
       <td style="font-size:11px">${r.fabricante||"—"}</td>
       <td style="font-size:11px">${r.serie||"—"}</td>
       <td style="font-size:11px">${r.categoria||"—"}</td>
       <td style="font-size:11px">${r.servico||"—"}</td>
       <td style="font-size:11px">${r.problema||"—"}</td>
-      <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
       <td style="font-size:11px">${r.rechamado||"—"}</td>
     </tr>`;
   }).join("");
+}
+
+// carrega contratos no select do modal de chamados novos
+let _contratosParaModal = [];
+async function _ensureContratosModal(){
+  if(_contratosParaModal.length) return;
+  const {data}=await sb.from("contratos").select("id,cpl,objeto,prestador,status").eq("status","VIGENTE").order("cpl");
+  _contratosParaModal=(data||[]);
+  const sel=document.getElementById("mcn-cpl");
+  if(sel){
+    sel.innerHTML='<option value="">Selecione o contrato...</option>'+
+      _contratosParaModal.map(c=>`<option value="${c.cpl}" data-id="${c.id}" data-prestador="${(c.prestador||'').replace(/"/g,'&quot;')}">${c.cpl} — ${c.objeto||''} — ${c.prestador||''}</option>`).join('');
+  }
+}
+
+function _mcnOnStatusChange(){
+  const v=document.getElementById("mcn-status").value;
+  document.getElementById("mcn-invalido-wrap").style.display=v==="Inválido"?"block":"none";
+  document.getElementById("mcn-cpl-wrap").style.display=v==="Inválido"?"none":"block";
+  if(v==="Aberto") _ensureContratosModal();
 }
 
 function abrirModalCN(id){
@@ -3742,13 +3966,15 @@ function abrirModalCN(id){
   const _st=ctrl.status||"Aguardando abertura";
   document.getElementById("mcn-status").value=_st;
   document.getElementById("mcn-invalido-wrap").style.display=_st==="Inválido"?"block":"none";
+  document.getElementById("mcn-cpl-wrap").style.display=_st==="Inválido"?"none":"block";
   document.getElementById("mcn-motivo-invalido").value=ctrl.motivo_invalido||"";
-  document.getElementById("mcn-data").value=ctrl.data_atendimento||"";
-  document.getElementById("mcn-empresa").value=ctrl.empresa||"";
-  document.getElementById("mcn-os").value=ctrl.os||"";
-  document.getElementById("mcn-feito").value=ctrl.feito||"";
-  document.getElementById("mcn-obs").value=ctrl.obs||"";
+
   document.getElementById("mcn-msg").className="fmsg";
+  // Carrega contratos e define o selecionado
+  _ensureContratosModal().then(()=>{
+    const sel=document.getElementById("mcn-cpl");
+    if(sel && ctrl.cpl_contrato) sel.value=ctrl.cpl_contrato;
+  });
   document.getElementById("modal-cn").classList.add("active");
 }
 
@@ -3758,24 +3984,36 @@ async function salvarChamadoNovo(){
   const btn=document.querySelector("#modal-cn .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
   const _status=document.getElementById("mcn-status").value;
+
+  // Validação: CPL obrigatório se Aberto
+  const cplSel=document.getElementById("mcn-cpl");
+  const cplVal=cplSel?.value||"";
+  if(_status==="Aberto" && !cplVal){
+    showMsg("mcn","Selecione o contrato (CPL) para salvar como Aberto.","err");
+    btn.disabled=false;btn.textContent="Salvar";return;
+  }
+  const cplOpt=cplSel?.options[cplSel.selectedIndex];
+  const contratoId=cplOpt?.dataset?.id?parseInt(cplOpt.dataset.id):null;
+  const empresaAuto=cplOpt?.dataset?.prestador||null;
+
   const dados={
     protocolo: chamadosNovosRows.find(r=>r.id===_cnAtual)?.protocolo,
     status:_status,
-    data_atendimento:document.getElementById("mcn-data").value||null,
-    empresa:document.getElementById("mcn-empresa").value,
-    os:document.getElementById("mcn-os").value,
-    feito:document.getElementById("mcn-feito").value,
-    obs:document.getElementById("mcn-obs").value,
     motivo_invalido:_status==="Inválido"?document.getElementById("mcn-motivo-invalido").value||null:null,
+    cpl_contrato: _status!=="Inválido"?cplVal||null:null,
+    contrato_id: _status!=="Inválido"?contratoId:null,
+    empresa: _status!=="Inválido"?empresaAuto:null,
   };
-  // Upsert no controle
   const {error}=await sb.from("chamados_controle").upsert({...dados},{onConflict:"protocolo"});
   if(error){showMsg("mcn","Erro: "+error.message,"err");btn.disabled=false;btn.textContent="Salvar";return;}
-  // Atualizar local
   const r=chamadosNovosRows.find(x=>x.id===_cnAtual);
   if(r){ r._controle=dados; }
   filtrarChamadosNovos();
   atualizarBadgeCN();
+  // atualiza badge da fiscalização
+  atualizarBadgeFisc();
+  // força reload da fiscalização se já foi carregada
+  if(fiscalizacaoCarregado){ fiscalizacaoCarregado=false; }
   showMsg("mcn","✓ Salvo!","ok");
   btn.disabled=false;btn.textContent="Salvar";
   setTimeout(()=>document.getElementById("modal-cn").classList.remove("active"),1200);
@@ -3959,6 +4197,7 @@ async function loadData(){
     const lu=document.getElementById("last-update"); if(lu) lu.textContent="Atualizado em "+new Date().toLocaleString("pt-BR");
     document.getElementById("loading").style.display="none";
     document.getElementById("main").style.display="block";
+    setTimeout(_setTableOffset,50);
   }catch(e){
     document.getElementById("conn-pill").textContent="✗ Erro";
     document.getElementById("conn-pill").className="pill pill-err";
@@ -4723,6 +4962,488 @@ async function salvarStatus(){
   if(erros){showMsg("as",`⚠️ ${done} salvo(s), ${erros} com erro. Veja o console.`,"err");}
   else{showMsg("as",`✓ ${done} item(ns) atualizado(s)! Recarregando...`,"ok");}
   setTimeout(()=>loadData(),1200);
+}
+
+// ═══ FISCALIZAÇÃO DE CONTRATOS ═══
+let fiscalizacaoRows = [];
+let fiscalizacaoFiltrados = [];
+let fiscalizacaoCarregado = false;
+let _fiscAtual = null; // protocolo da OS em edição
+
+const SITUACAO_FISC = {
+  nao_fiscalizado: {label:'Não fiscalizado', color:'var(--red)', bg:'var(--red-bg)'},
+  pendente:        {label:'Pendente',         color:'var(--amber)', bg:'var(--amber-bg)'},
+  conforme:        {label:'Conforme',         color:'var(--green)', bg:'var(--green-bg)'},
+  conforme_ressalva:{label:'C/ ressalva',     color:'var(--amber)', bg:'var(--amber-bg)'},
+  parcial:         {label:'Parcial',          color:'#E67E22',  bg:'#FDF0E6'},
+  nao_conforme:    {label:'Não conforme',     color:'var(--red)', bg:'var(--red-bg)'},
+};
+function badgeSituacaoFisc(s){
+  const cfg=SITUACAO_FISC[s||'nao_fiscalizado']||SITUACAO_FISC.nao_fiscalizado;
+  return `<span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;background:${cfg.bg};color:${cfg.color}">${cfg.label}</span>`;
+}
+
+async function loadFiscalizacao(){
+  document.getElementById("fisc-loading").style.display="block";
+  document.getElementById("fisc-main").style.display="none";
+  const {data:controle,error}=await sb.from("chamados_controle")
+    .select("*")
+    .not("cpl_contrato","is",null);
+  if(error){document.getElementById("fisc-loading").innerHTML=`<div style="color:var(--red)">Erro: ${error.message}</div>`;return;}
+  // Pega protocolos pra buscar dados do chamado original
+  const protocolos=(controle||[]).map(c=>c.protocolo).filter(Boolean);
+  let chamados=[];
+  if(protocolos.length){
+    const {data:ch}=await sb.from("chamados").select("protocolo,carimbo,unidade,equipamento,patrimonio,fabricante,descricao,grau_urgencia,servico").in("protocolo",protocolos);
+    chamados=ch||[];
+  }
+  const chamadoMap={};
+  chamados.forEach(c=>chamadoMap[c.protocolo]=c);
+  fiscalizacaoRows=(controle||[]).map(c=>({
+    ...c,
+    _chamado: chamadoMap[c.protocolo]||{},
+    situacao_os: c.situacao_os||'nao_fiscalizado',
+  })).sort((a,b)=>{
+    // não fiscalizados primeiro
+    const ord={nao_fiscalizado:0,pendente:1,parcial:2,conforme_ressalva:3,nao_conforme:4,conforme:5};
+    return (ord[a.situacao_os]??0)-(ord[b.situacao_os]??0);
+  });
+  fiscalizacaoCarregado=true;
+  _popularFiltrosFisc();
+  filtrarFiscalizacao();
+  atualizarBadgeFisc();
+  document.getElementById("fisc-loading").style.display="none";
+  document.getElementById("fisc-main").style.display="block";
+  setTimeout(_setTableOffset,50);
+}
+
+// ── Filtros estilo Google Sheets para a tabela de fiscalização ──
+const FISC_FILTER_COLS = {
+  protocolo:   {get:r=>r.protocolo||'',              disp:v=>v||'(vazio)'},
+  unidade:     {get:r=>r._chamado?.unidade||'',      disp:v=>v||'(vazio)'},
+  equipamento: {get:r=>r._chamado?.equipamento||'',  disp:v=>v||'(vazio)'},
+  cpl:         {get:r=>r.cpl_contrato||'',           disp:v=>v||'(sem CPL)'},
+  situacao:    {get:r=>r.situacao_os||'nao_fiscalizado', disp:v=>(SITUACAO_FISC[v]?.label||v||'(vazio)')},
+  competencia: {get:r=>r.competencia||'',            disp:v=>v||'(vazio)'},
+};
+let fiscHeaderFilters = {protocolo:[],unidade:[],equipamento:[],cpl:[],situacao:[],competencia:[]};
+let _fiscHdrCol = null, _fiscHdrPending = [];
+
+function _fiscUnique(col){
+  const cfg=FISC_FILTER_COLS[col];
+  const vals=[...new Set(fiscalizacaoRows.map(cfg.get).map(v=>v==null?'':String(v)))];
+  return vals.sort((a,b)=>cfg.disp(a).localeCompare(cfg.disp(b),'pt-BR',{numeric:true}));
+}
+function _ensureFiscDropdown(){
+  let dd=document.getElementById('fisc-hdr-dropdown');
+  if(dd) return dd;
+  dd=document.createElement('div');
+  dd.id='fisc-hdr-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:240px;padding:.625rem';
+  dd.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:.375rem">
+      <button onclick="_fiscHdrSort(true)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↑ Classificar A → Z</button>
+      <button onclick="_fiscHdrSort(false)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↓ Classificar Z → A</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:.375rem 0">
+    <input type="text" id="fisc-hdr-search" placeholder="🔍 Buscar..." oninput="_fiscHdrRenderList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem">Selecionar <a href="#" onclick="_fiscHdrSelectAll(true);return false" style="color:var(--blue);text-decoration:none">tudo: <span id="fisc-hdr-count">0</span></a> — <a href="#" onclick="_fiscHdrSelectAll(false);return false" style="color:var(--blue);text-decoration:none">Limpar</a></div>
+    <div id="fisc-hdr-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeFiscFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmFiscFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd);
+  return dd;
+}
+function openFiscFilter(e,col){
+  e.stopPropagation();
+  const dd=_ensureFiscDropdown();
+  if(_fiscHdrCol===col && dd.style.display==='block'){dd.style.display='none';_fiscHdrCol=null;return;}
+  _fiscHdrCol=col;
+  const all=_fiscUnique(col); const cur=fiscHeaderFilters[col]||[];
+  _fiscHdrPending=cur.length?[...cur]:[...all];
+  document.getElementById('fisc-hdr-search').value='';
+  _fiscHdrRenderList();
+  const rect=e.currentTarget.getBoundingClientRect(); dd.style.display='block';
+  const ddW=dd.offsetWidth||240; let left=rect.left+window.scrollX;
+  if(left+ddW>window.scrollX+window.innerWidth-8) left=window.scrollX+window.innerWidth-ddW-8;
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px'; dd.style.left=Math.max(8,left)+'px';
+  setTimeout(()=>document.getElementById('fisc-hdr-search').focus(),50);
+}
+function _fiscHdrRenderList(){
+  const col=_fiscHdrCol; if(!col) return;
+  const q=normalizar(document.getElementById('fisc-hdr-search').value);
+  const all=_fiscUnique(col); const disp=FISC_FILTER_COLS[col].disp;
+  const vis=q?all.filter(v=>normalizar(disp(v)).includes(q)):all;
+  document.getElementById('fisc-hdr-count').textContent=all.length;
+  document.getElementById('fisc-hdr-list').innerHTML=vis.map(v=>{
+    const checked=_fiscHdrPending.includes(v)?'checked':'';
+    const safe=String(v).replace(/"/g,'&quot;');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px"><input type="checkbox" value="${safe}" ${checked} onchange="_fiscHdrToggle(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${disp(v)}</label>`;
+  }).join('')||'<div style="padding:10px;font-size:12px;color:var(--text3);text-align:center">Nenhum resultado</div>';
+}
+function _fiscHdrToggle(cb){ if(cb.checked){if(!_fiscHdrPending.includes(cb.value))_fiscHdrPending.push(cb.value);}else{_fiscHdrPending=_fiscHdrPending.filter(x=>x!==cb.value);} }
+function _fiscHdrSelectAll(all){ const col=_fiscHdrCol;if(!col)return; _fiscHdrPending=all?_fiscUnique(col):[]; _fiscHdrRenderList(); }
+function _fiscHdrSort(asc){
+  const list=document.getElementById('fisc-hdr-list');
+  const labels=[...list.querySelectorAll('label')];
+  labels.sort((a,b)=>asc?a.textContent.localeCompare(b.textContent,'pt-BR',{numeric:true}):b.textContent.localeCompare(a.textContent,'pt-BR',{numeric:true}));
+  labels.forEach(l=>list.appendChild(l));
+}
+function confirmFiscFilter(){
+  const col=_fiscHdrCol; if(!col) return;
+  const all=_fiscUnique(col);
+  fiscHeaderFilters[col]=(_fiscHdrPending.length===0||_fiscHdrPending.length===all.length)?[]:[..._fiscHdrPending];
+  document.getElementById('fisc-hdr-dropdown').style.display='none'; _fiscHdrCol=null;
+  _fiscUpdateHdrBtns(); filtrarFiscalizacao();
+}
+function closeFiscFilter(){ const dd=document.getElementById('fisc-hdr-dropdown');if(dd)dd.style.display='none';_fiscHdrCol=null; }
+function _fiscUpdateHdrBtns(){
+  Object.keys(FISC_FILTER_COLS).forEach(col=>{
+    const btn=document.getElementById('hff-'+col); if(!btn) return;
+    btn.classList.toggle('active',(fiscHeaderFilters[col]||[]).length>0);
+  });
+}
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('fisc-hdr-dropdown');
+  if(dd&&dd.style.display==='block'&&!dd.contains(e.target)&&!(e.target.closest&&e.target.closest('.hdr-filter-btn'))){dd.style.display='none';_fiscHdrCol=null;}
+});
+
+function _popularFiltrosFisc(){ _fiscUpdateHdrBtns(); }
+
+function filtrarFiscalizacao(){
+  const busca=(document.getElementById("fisc-busca")?.value||"").toLowerCase();
+  fiscalizacaoFiltrados=fiscalizacaoRows.filter(r=>{
+    for(const [col,sel] of Object.entries(fiscHeaderFilters)){
+      if(!sel.length) continue;
+      const val=String(FISC_FILTER_COLS[col].get(r)??'');
+      if(!sel.includes(val)) return false;
+    }
+    if(busca){
+      const hay=[r.protocolo,r._chamado?.equipamento,r._chamado?.unidade,r._chamado?.patrimonio,r.os,r.cpl_contrato,r.servico_realizado,r.feito].filter(Boolean).join(" ").toLowerCase();
+      if(!hay.includes(busca)) return false;
+    }
+    return true;
+  });
+  _renderFiscalizacao();
+}
+
+function _renderFiscalizacao(){
+  const rows=fiscalizacaoFiltrados;
+  const nao=rows.filter(r=>!r.situacao_os||r.situacao_os==='nao_fiscalizado').length;
+  const pend=rows.filter(r=>r.situacao_os==='pendente').length;
+  const conf=rows.filter(r=>r.situacao_os==='conforme').length;
+  document.getElementById("fm-total").textContent=rows.length;
+  document.getElementById("fm-nao").textContent=nao;
+  document.getElementById("fm-pend").textContent=pend;
+  document.getElementById("fm-conf").textContent=conf;
+  document.getElementById("fisc-count").textContent=`${rows.length} OS`;
+  document.getElementById("fisc-body").innerHTML=rows.map(r=>{
+    const ch=r._chamado||{};
+    const data=ch.carimbo||"—";
+    return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="fisc-check" data-protocolo="${r.protocolo}" style="accent-color:var(--blue);cursor:pointer"></td>
+      <td style="white-space:nowrap">
+        ${podeEditar('fiscalizacao')?`<button onclick="abrirModalFiscOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Fiscalizar OS">🔍</button>`:""}
+        <button onclick="abrirHistoricoOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Ver histórico">📋</button>
+      </td>
+      <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${data}</td>
+      <td style="font-size:12px">${ch.unidade||"—"}</td>
+      <td style="font-size:11px">${ch.equipamento||"—"}</td>
+      <td style="font-size:11px">${ch.patrimonio||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap"><strong>${r.cpl_contrato||"—"}</strong></td>
+      <td style="font-size:11px">${r.os||"—"}</td>
+      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.servico_realizado||r.feito||''}">${r.servico_realizado||r.feito||"—"}</td>
+      <td>${badgeSituacaoFisc(r.situacao_os)}</td>
+      <td style="font-size:11px">${r.competencia||"—"}</td>
+      <td style="font-size:11px">${r.nf_referencia||"—"}</td>
+      <td style="font-size:11px;text-align:center">${_calcSLA(r)}</td>
+      <td style="font-size:11px">${r.fiscalizado_por||"—"}</td>
+      <td style="font-size:11px">${r.fiscalizado_em||"—"}</td>
+      <td>${podeEditar('fiscalizacao')?`<button onclick="abrirModalEditarNF('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar NF e Competência">✏️</button>`:"—"}</td>
+    </tr>`;
+  }).join("");
+}
+
+function clearAllFiscalizacao(){
+  const el=document.getElementById("fisc-busca"); if(el) el.value="";
+  Object.keys(fiscHeaderFilters).forEach(k=>fiscHeaderFilters[k]=[]);
+  _fiscUpdateHdrBtns(); filtrarFiscalizacao();
+}
+
+function selecionarTodasFisc(v){
+  document.querySelectorAll(".fisc-check").forEach(c=>c.checked=v);
+  const all=document.getElementById("fisc-check-all"); if(all) all.checked=v;
+}
+
+function atualizarBadgeFisc(){
+  const naoFisc=fiscalizacaoRows.filter(r=>!r.situacao_os||r.situacao_os==='nao_fiscalizado').length;
+  const badge=document.getElementById("badge-fiscalizacao");
+  if(badge){ if(naoFisc>0){badge.textContent=naoFisc;badge.style.display="inline";}else badge.style.display="none"; }
+}
+
+function abrirModalFiscOS(protocolo){
+  const r=fiscalizacaoRows.find(x=>x.protocolo===protocolo); if(!r) return;
+  _fiscAtual=protocolo;
+  const ch=r._chamado||{};
+  document.getElementById("mfo-info").innerHTML=`<strong>${protocolo}</strong> · ${ch.equipamento||"—"} · ${ch.unidade||"—"} · <strong>${r.cpl_contrato||""}</strong>`;
+  document.getElementById("mfo-situacao").value=r.situacao_os==="nao_fiscalizado"?"":r.situacao_os||"";
+  // Pré-preenche data com 01 do mês anterior se o campo estiver vazio
+  const _dataExist=r.data_atendimento_os||"";
+  if(_dataExist){
+    document.getElementById("mfo-data-atendimento").value=_dataExist;
+  } else {
+    const _hoje=new Date();
+    const _mesAnt=new Date(_hoje.getFullYear(),_hoje.getMonth()-1,1);
+    document.getElementById("mfo-data-atendimento").value=
+      `${_mesAnt.getFullYear()}-${String(_mesAnt.getMonth()+1).padStart(2,'0')}-01`;
+  }
+  document.getElementById("mfo-servico").value=r.servico_realizado||r.feito||"";
+  document.getElementById("mfo-ocorrencias").value=r.ocorrencias||"";
+  document.getElementById("mfo-msg").className="fmsg";
+  // Mostra SLA preview se já tem data
+  _atualizarSLAPreview(r._chamado?.carimbo||r._chamado?.data_solicitacao||null, r.data_atendimento_os||null);
+  document.getElementById("mfo-data-atendimento").addEventListener("change", function(){
+    _atualizarSLAPreview(r._chamado?.carimbo||r._chamado?.data_solicitacao||null, this.value||null);
+  }, {once:false});
+  document.getElementById("modal-fisc-os").classList.add("active");
+}
+
+function _atualizarSLAPreview(dataAbertura, dataAtendimento){
+  const wrap=document.getElementById("mfo-sla-wrap");
+  const info=document.getElementById("mfo-sla-info");
+  if(!wrap||!info) return;
+  if(!dataAtendimento||!dataAbertura){wrap.style.display="none";return;}
+  const dias=_diasEntreDatas(dataAbertura, dataAtendimento);
+  if(dias===null){wrap.style.display="none";return;}
+  const cor=dias<=1?"var(--green)":dias<=3?"var(--amber)":"var(--red)";
+  info.innerHTML=`<span style="font-weight:600;color:${cor}">${dias} dia${dias!==1?'s':''}</span> entre abertura e atendimento`;
+  wrap.style.display="block";
+}
+
+function _diasEntreDatas(d1raw, d2raw){
+  // Aceita dd/mm/aaaa, yyyy-mm-dd ou ISO
+  const parse=s=>{
+    if(!s) return null;
+    s=String(s).trim();
+    let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    const d=new Date(s); return isNaN(d)?null:d;
+  };
+  const a=parse(d1raw), b=parse(d2raw);
+  if(!a||!b) return null;
+  return Math.round((b-a)/(1000*60*60*24));
+}
+
+function _calcSLA(r){
+  const ch=r._chamado||{};
+  const abertura=ch.carimbo||ch.data_solicitacao||null;
+  const atend=r.data_atendimento_os||null;
+  const dias=_diasEntreDatas(abertura, atend);
+  if(dias===null) return "—";
+  const cor=dias<=1?"var(--green)":dias<=3?"var(--amber)":"var(--red)";
+  return `<span style="font-weight:600;color:${cor}">${dias}d</span>`;
+}
+
+async function salvarFiscalizacaoOS(){
+  if(!_fiscAtual) return;
+  const situacao=document.getElementById("mfo-situacao").value;
+  if(!situacao){showMsg("mfo","Selecione a situação da OS.","err");return;}
+  const btn=document.querySelector("#modal-fisc-os .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const hoje=new Date().toISOString().split("T")[0];
+  const fiscNome=currentProfile?.nome||currentProfile?.email||"";
+  const dataAtend=document.getElementById("mfo-data-atendimento").value||null;
+  const patch={
+    situacao_os: situacao,
+    data_atendimento_os: dataAtend,
+    servico_realizado: document.getElementById("mfo-servico").value||null,
+    ocorrencias: document.getElementById("mfo-ocorrencias").value||null,
+    fiscalizado_por: fiscNome||null,
+    fiscalizado_em: hoje,
+  };
+  // Grava histórico antes de salvar
+  const rAtual=fiscalizacaoRows.find(x=>x.protocolo===_fiscAtual);
+  const sitAnterior=rAtual?.situacao_os||"nao_fiscalizado";
+  if(sitAnterior!==situacao){
+    await sb.from("fiscalizacao_historico").insert({
+      protocolo:_fiscAtual,
+      situacao_anterior:sitAnterior,
+      situacao_nova:situacao,
+      data_alteracao:hoje,
+      alterado_por:fiscNome||null,
+      observacao:document.getElementById("mfo-ocorrencias").value||null,
+    });
+  }
+  const {error}=await sb.from("chamados_controle").update(patch).eq("protocolo",_fiscAtual);
+  btn.disabled=false;btn.textContent="Salvar fiscalização";
+  if(error){showMsg("mfo","Erro: "+error.message,"err");return;}
+  if(rAtual) Object.assign(rAtual,patch);
+  filtrarFiscalizacao(); atualizarBadgeFisc();
+  showMsg("mfo","✓ Fiscalização salva!","ok");
+  setTimeout(()=>document.getElementById("modal-fisc-os").classList.remove("active"),1000);
+}
+
+// ── Modal editar NF + Competência ──
+let _editNFAtual = null;
+function abrirModalEditarNF(protocolo){
+  const r=fiscalizacaoRows.find(x=>x.protocolo===protocolo); if(!r) return;
+  _editNFAtual=protocolo;
+  document.getElementById("enf-info").textContent=`${protocolo} · ${r.cpl_contrato||"—"}`;
+  document.getElementById("enf-competencia").value=r.competencia||"";
+  document.getElementById("enf-nf").value=r.nf_referencia||"";
+  document.getElementById("enf-msg").className="fmsg";
+  document.getElementById("modal-editar-nf").classList.add("active");
+}
+async function salvarEditarNF(){
+  if(!_editNFAtual) return;
+  const btn=document.querySelector("#modal-editar-nf .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const comp=document.getElementById("enf-competencia").value.trim();
+  const nf=document.getElementById("enf-nf").value.trim();
+  const {error}=await sb.from("chamados_controle").update({competencia:comp||null,nf_referencia:nf||null}).eq("protocolo",_editNFAtual);
+  btn.disabled=false;btn.textContent="Salvar";
+  if(error){showMsg("enf","Erro: "+error.message,"err");return;}
+  const r=fiscalizacaoRows.find(x=>x.protocolo===_editNFAtual);
+  if(r){r.competencia=comp;r.nf_referencia=nf;}
+  filtrarFiscalizacao();
+  showMsg("enf","✓ Salvo!","ok");
+  setTimeout(()=>document.getElementById("modal-editar-nf").classList.remove("active"),900);
+}
+
+// ── Modal histórico ──
+async function abrirHistoricoOS(protocolo){
+  const r=fiscalizacaoRows.find(x=>x.protocolo===protocolo);
+  const ch=r?._chamado||{};
+  document.getElementById("hist-info").innerHTML=`<strong>${protocolo}</strong> · ${ch.equipamento||"—"} · ${ch.unidade||"—"}`;
+  document.getElementById("hist-body").innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">Carregando...</div>';
+  document.getElementById("modal-historico-os").classList.add("active");
+  const {data,error}=await sb.from("fiscalizacao_historico")
+    .select("*").eq("protocolo",protocolo).order("created_at",{ascending:true});
+  if(error||!data?.length){
+    document.getElementById("hist-body").innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">Nenhum histórico registrado ainda.</div>';
+    return;
+  }
+  document.getElementById("hist-body").innerHTML=data.map(h=>{
+    const sitAnt=SITUACAO_FISC[h.situacao_anterior]?.label||h.situacao_anterior||"Não fiscalizado";
+    const sitNov=SITUACAO_FISC[h.situacao_nova]?.label||h.situacao_nova||"—";
+    const corNov=SITUACAO_FISC[h.situacao_nova]?.color||"var(--text)";
+    return `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start">
+      <div style="flex-shrink:0;font-size:11px;color:var(--text3);white-space:nowrap;min-width:80px">${h.data_alteracao||"—"}</div>
+      <div style="flex:1">
+        <div style="font-size:13px"><span style="color:var(--text3)">${sitAnt}</span> → <span style="font-weight:600;color:${corNov}">${sitNov}</span></div>
+        ${h.alterado_por?`<div style="font-size:11px;color:var(--text3);margin-top:2px">por ${h.alterado_por}</div>`:''}
+        ${h.observacao?`<div style="font-size:12px;color:var(--text2);margin-top:4px;background:var(--surface2);padding:4px 8px;border-radius:4px">${h.observacao}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function gerarTermoAteste(){
+  const checks=[...document.querySelectorAll(".fisc-check:checked")];
+  if(!checks.length){alert("Selecione ao menos uma OS para gerar o termo.");return;}
+  const n=checks.length;
+  document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} — informe a competência e a nota fiscal que serão aplicadas a todas.`;
+  document.getElementById("mta-competencia").value="";
+  document.getElementById("mta-nf").value="";
+  document.getElementById("mta-msg").className="fmsg";
+  document.getElementById("modal-termo-ateste").classList.add("active");
+}
+
+async function confirmarGerarTermo(){
+  const competencia=document.getElementById("mta-competencia").value.trim();
+  const nf=document.getElementById("mta-nf").value.trim();
+  if(!competencia||!nf){showMsg("mta","Preencha a competência e o número da nota fiscal.","err");return;}
+  const btn=document.querySelector("#modal-termo-ateste .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const checks=[...document.querySelectorAll(".fisc-check:checked")];
+  const protocolos=checks.map(c=>c.dataset.protocolo);
+  const {error}=await sb.from("chamados_controle").update({competencia,nf_referencia:nf}).in("protocolo",protocolos);
+  if(error){showMsg("mta","Erro ao salvar: "+error.message,"err");btn.disabled=false;btn.textContent="Gerar PDF";return;}
+  fiscalizacaoRows.filter(r=>protocolos.includes(r.protocolo)).forEach(r=>{r.competencia=competencia;r.nf_referencia=nf;});
+  filtrarFiscalizacao();
+  document.getElementById("modal-termo-ateste").classList.remove("active");
+  btn.disabled=false;btn.textContent="Gerar PDF";
+  const selecionadas=fiscalizacaoRows.filter(r=>protocolos.includes(r.protocolo));
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  const fiscal=currentProfile?.nome||currentProfile?.email||"fiscal responsável";
+  const cpls=[...new Set(selecionadas.map(r=>r.cpl_contrato).filter(Boolean))];
+  // Pega nome da empresa dos contratos
+  const empresas=[...new Set(selecionadas.map(r=>{
+    const ct=(_contratosParaModal||[]).find(c=>c.cpl===r.cpl_contrato);
+    return ct?.prestador||r.empresa||null;
+  }).filter(Boolean))];
+  const tabelaRows=selecionadas.map((r,i)=>{
+    const ch=r._chamado||{};
+    const sit=SITUACAO_FISC[r.situacao_os]?.label||r.situacao_os||"—";
+    return `<tr style="border-bottom:1px solid #e0e0e0">
+      <td style="padding:5px 8px;font-size:12px">${i+1}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.protocolo||"—"}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.os||"—"}</td>
+      <td style="padding:5px 8px;font-size:12px">${ch.unidade||"—"}</td>
+      <td style="padding:5px 8px;font-size:12px">${ch.equipamento||"—"}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.servico_realizado||r.feito||"—"}</td>
+      <td style="padding:5px 8px;font-size:12px;font-weight:600">${sit}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.ocorrencias||"—"}</td>
+    </tr>`;
+  }).join("");
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Termo de Ateste</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:30px;color:#1a1a1a;font-size:13px}
+    .header{text-align:center;border-bottom:2px solid #1a5fa8;padding-bottom:12px;margin-bottom:20px}
+    .header h2{color:#1a5fa8;margin:4px 0;font-size:16px}
+    .header h3{margin:2px 0;font-size:13px;font-weight:400}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;background:#f5f8fc;padding:10px 14px;border-radius:6px;border:1px solid #dde3ed}
+    .info-item{font-size:12px}.info-label{color:#5f5e5a;margin-right:4px}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    th{background:#1a5fa8;color:#fff;padding:7px 8px;font-size:12px;text-align:left}
+    tr:nth-child(even){background:#f5f8fc}
+    .ateste-box{border:1px solid #1a5fa8;border-radius:6px;padding:14px 18px;margin-bottom:24px;background:#f0f7ff}
+    .ateste-box p{margin:4px 0;line-height:1.6}
+    .assinatura{margin-top:48px;text-align:center}
+    .linha-assinatura{border-top:1px solid #333;width:280px;margin:0 auto 4px}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <div class="header">
+    <h2>SECRETARIA MUNICIPAL DA SAÚDE · SOROCABA</h2>
+    <h3>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</h3>
+    <h2 style="margin-top:8px">TERMO DE ATESTE — RECEBIMENTO DEFINITIVO DE SERVIÇOS</h2>
+  </div>
+  <div class="info-grid">
+    <div class="info-item"><span class="info-label">Contrato(s) CPL:</span><strong>${cpls.join(", ")||"—"}</strong></div>
+    <div class="info-item"><span class="info-label">Empresa contratada:</span><strong>${empresas.join(", ")||"—"}</strong></div>
+    <div class="info-item"><span class="info-label">Competência:</span><strong>${competencia}</strong></div>
+    <div class="info-item"><span class="info-label">Nota Fiscal:</span><strong>${nf}</strong></div>
+    <div class="info-item"><span class="info-label">Data do ateste:</span><strong>${hoje}</strong></div>
+    <div class="info-item"><span class="info-label">Fiscal responsável:</span>${fiscal}</div>
+    <div class="info-item"><span class="info-label">Total de OS fiscalizadas:</span>${selecionadas.length}</div>
+  </div>
+  <table><thead><tr>
+    <th style="width:30px">#</th>
+    <th>Protocolo</th><th>Nº OS</th><th>Unidade</th><th>Equipamento</th>
+    <th>Serviço realizado</th><th>Situação</th><th>Ocorrências</th>
+  </tr></thead><tbody>${tabelaRows}</tbody></table>
+  <div class="ateste-box">
+    <p>A fiscalização técnica das ordens de serviço listadas acima foi realizada na data de <strong>${hoje}</strong>,
+    em conformidade com o disposto no art. 117 da Lei nº 14.133/2021, atestando-se o recebimento definitivo
+    dos serviços prestados${empresas.length?` pela empresa <strong>${empresas.join(", ")}</strong>`:''}${cpls.length?`, referentes ao(s) contrato(s) ${cpls.join(", ")}`:''},
+    competência <strong>${competencia}</strong>, conforme Nota Fiscal <strong>${nf}</strong>,
+    conforme registros individuais constantes neste documento.</p>
+  </div>
+  <div class="assinatura">
+    <div class="linha-assinatura"></div>
+    <div><strong>${fiscal}</strong></div>
+    <div style="font-size:11px;color:#555">Fiscal de Contrato — SMS Sorocaba</div>
+    <div style="font-size:11px;color:#555;margin-top:2px">${hoje}</div>
+  </div>
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+  await sb.from("termos_ateste").insert({cpl_contrato:cpls.join(",")||null,competencia,nf_referencia:nf,fiscalizado_por:fiscal,gerado_em:new Date().toISOString().split("T")[0]});
+  const w=window.open("","_blank"); w.document.write(html); w.document.close();
 }
 
 // ═══ CONTRATOS (SUPABASE) ═══
