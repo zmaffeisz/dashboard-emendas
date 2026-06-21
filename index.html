@@ -1528,8 +1528,7 @@
       <div class="form-group"><div class="form-label">Vigência atual</div><input id="ec-vigencia" type="text"></div>
       <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
       <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01"></div>
-      <div class="form-group"><div class="form-label">Valor atual</div><input id="ec-valor-atual" type="number" step="0.01"></div>
-      <div class="form-group"><div class="form-label">Valor total</div><input id="ec-valor-total" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
       <div class="form-group"><div class="form-label">Fiscalização</div><input id="ec-fiscalizacao" type="text"></div>
@@ -6806,7 +6805,7 @@ async function manterStatusContratos(){
 
 let _ctEdicaoId=null;
 const CT_EDIT_FIELDS={
-  'ec-cpl':'cpl','ec-numero':'numero_contrato','ec-prestador':'prestador','ec-objeto':'objeto','ec-cnpj':'cnpj','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-total':'valor_total','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
+  'ec-cpl':'cpl','ec-numero':'numero_contrato','ec-prestador':'prestador','ec-objeto':'objeto','ec-cnpj':'cnpj','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
 };
 function abrirEditarContrato(id){
   if(!_isAdmin()){alert('A edição completa de contratos é exclusiva para administradores.');return;}
@@ -6824,7 +6823,7 @@ async function salvarEdicaoContrato(){
   const dados={};
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{
     let valor=document.getElementById(campo).value;
-    if(['valor_inicial','valor_atual','valor_total','valor_mensal'].includes(coluna)) valor=valor===''?null:Number(valor);
+    if(['valor_inicial','valor_atual','valor_mensal'].includes(coluna)) valor=valor===''?null:Number(valor);
     else valor=String(valor).trim()||null;
     dados[coluna]=valor;
   });
@@ -6899,7 +6898,7 @@ async function abrirDetalheContrato(id){
   const c=_ctAtual;
   const cor=corVencimento(c.vencimento);
   let html=`<div class="ficha-grid" style="margin-bottom:1.25rem">
-    ${[["CPL",c.cpl],["Prestador",c.prestador],["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
+    ${[["CPL",c.cpl],["Prestador",c.prestador],["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",(c.valor_atual??c.valor_inicial)!=null?`R$ ${Number(c.valor_atual??c.valor_inicial).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
   </div>`;
 
   const vigs=vigRes.data||[];
@@ -6975,7 +6974,7 @@ async function salvarOperacaoContrato(op){
       const {error:e1}=await sb.from("contratos").update(upd).eq("id",id);
       if(e1) throw e1;
       await sb.from("contratos_vigencias").insert({contrato_id:id,data_inicio:inicio,data_fim:fim,valor_total:valor?parseFloat(valor):null,valor_mensal:valorMensal?parseFloat(valorMensal):null,obs});
-      await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Renovação",obs:`Novo período: ${inicio} a ${fim}${obs?". "+obs:""}`});
+      await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Renovação",data_evento:inicio,vigencia_nova_inicio:inicio,vigencia_nova_fim:fim,valor_novo:valor?String(parseFloat(valor)):null,valor_mensal_novo:valorMensal?String(parseFloat(valorMensal)):null,obs:`Valor anterior: ${_ctAtual.valor_atual??"—"}${obs?". "+obs:""}`});
       setMsg("✓ Contrato renovado!","ok");
 
     } else if(op==="reajuste"){
@@ -6993,9 +6992,11 @@ async function salvarOperacaoContrato(op){
       const pct=document.getElementById("ctad-pct").value;
       const valor=document.getElementById("ctad-valor").value;
       const obs=document.getElementById("ctad-obs").value.trim();
-      const {error}=await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Aditivo",obs:`${pct?pct+"%":""} ${valor?"R$ "+parseFloat(valor).toLocaleString("pt-BR",{minimumFractionDigits:2}):""}${obs?". "+obs:""} (${data})`.trim()});
+      const totalAntigo=Number(_ctAtual.valor_atual)||0;
+      const novoTotal=valor?totalAntigo+parseFloat(valor):totalAntigo;
+      const {error}=await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Aditivo",data_evento:data,percentual:pct||null,valor_novo:valor?String(novoTotal):null,obs:`${pct?pct+"%":""} ${valor?"R$ "+parseFloat(valor).toLocaleString("pt-BR",{minimumFractionDigits:2}):""}${obs?". "+obs:""}`.trim()});
       if(error) throw error;
-      if(valor) await sb.from("contratos").update({valor_total:(_ctAtual.valor_total||0)+parseFloat(valor)}).eq("id",id);
+      if(valor) await sb.from("contratos").update({valor_atual:novoTotal}).eq("id",id);
       setMsg("✓ Aditivo registrado!","ok");
 
     } else if(op==="prorrogacao"){
@@ -7026,7 +7027,7 @@ async function salvarOperacaoContrato(op){
       const {error}=await sb.from("contratos_fiscalizadores").insert({contrato_id:id,nome,data_inicio:inicio,cargo:cargo||null});
       if(error) throw error;
       await sb.from("contratos_historico").insert({contrato_id:id,tipo:"Troca de fiscal",obs:`Novo fiscal: ${nome}${cargo?" ("+cargo+")":""} a partir de ${inicio}`});
-      await sb.from("contratos").update({fiscal:nome}).eq("id",id);
+      await sb.from("contratos").update({fiscalizacao:nome}).eq("id",id);
       setMsg("✓ Fiscal adicionado!","ok");
     }
 
