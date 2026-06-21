@@ -1906,7 +1906,7 @@ function userCanView(tabKey){
   if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
   const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
   if(perm) return !!perm.can_view;
-  return !DEFAULT_HIDDEN_TABS.includes(tabKey); // por padrão vê tudo, exceto abas administrativas
+  return tabKey==='dashboard'; // conta nova vê apenas Emendas; admin libera o resto nas caixinhas
 }
 function userCanEdit(tabKey){
   if(_isAdmin()) return true;
@@ -2224,6 +2224,10 @@ function fecharModalEdicao(name){
 function showTab(name){
   if(name==='saldo-emendas'&&!podeEditar('dashboard')){
     alert("⛔ Você não tem permissão para acessar o saldo das emendas.");
+    return;
+  }
+  if(name!=='saldo-emendas'&&!userCanView(name)){
+    alert("⛔ Você não tem permissão para acessar esta aba.");
     return;
   }
   localStorage.setItem("ultima_aba", name);
@@ -3902,7 +3906,7 @@ function _defaultPerm(tabKey, papel){
   // Modelo de dois papéis: admin vê/edita tudo; usuário comum vê por padrão
   // (exceto abas administrativas) e só edita se liberado.
   if(papel==='admin') return {can_view:true, can_edit:true};
-  return {can_view: !DEFAULT_HIDDEN_TABS.includes(tabKey), can_edit:false};
+  return {can_view: tabKey==='dashboard', can_edit:false}; // conta nova: só vê Emendas
 }
 async function abrirDetalheUsuario(userId){
   const p=_usuariosCache.find(u=>u.id===userId);
