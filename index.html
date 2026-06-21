@@ -55,6 +55,7 @@
       <div class="sidebar-section-label">Contratos</div>
       <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
       <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
+      <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Configurações</div>
@@ -1899,7 +1900,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','sancoes','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -1940,16 +1941,6 @@ function _setTableOffset(){
   if(!wrap) return;
   const rect=wrap.getBoundingClientRect();
   // offset = distância do topo da viewport até o topo da tabela + padding inferior (20px)
-  const offset=Math.round(rect.top)+20;
-  document.documentElement.style.setProperty('--table-offset', offset+'px');
-}
-
-function _setTableOffset(){
-  const panel=document.querySelector('.panel.active');
-  if(!panel) return;
-  const wrap=panel.querySelector('.table-wrap, #pl-table-wrap');
-  if(!wrap) return;
-  const rect=wrap.getBoundingClientRect();
   const offset=Math.round(rect.top)+20;
   document.documentElement.style.setProperty('--table-offset', offset+'px');
 }
@@ -2041,7 +2032,7 @@ async function checkAuth(){
   document.head.appendChild(_editStyle);
 
   const ultimaAba=localStorage.getItem("ultima_aba");
-  if(ultimaAba) showTab(ultimaAba==="sancoes"?"dashboard":ultimaAba);
+  if(ultimaAba) showTab(ultimaAba);
   return true;
 }
 
@@ -2094,8 +2085,6 @@ async function fazerLogin(){
   await checkAuth();
 }
 
-const ATAS_ITENS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=1903295047&single=true&output=csv";
-const ATAS_EXEC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=330213664&single=true&output=csv";
 const CHAMADOS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzyU6Rfb6oiFzPao7yHyVWT8dyv79RFr_IzgNVcUB3mb6WaCx_pHhGiwDFzWY1JgsERQ/exec";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydum9CSR96g3NEy1lHRT1avj93xe3BOw9OZjkcKFDLNDcwnDQCoPAbW7Iyvgl5k5FItA/exec";
 
@@ -2105,8 +2094,6 @@ let atasItens = [];
 let atasExec = [];
 let chamadosRows = [];
 let controleRows = [];
-const SENHA = "";
-let autenticado = false;
 let filtered = [];
 let searchType = "todos";
 let lastSearchResults = [];
@@ -2172,43 +2159,6 @@ function tipoBadge(t){const m={"ESTADUAL":["#E1F5EE","#085041"],"FEDERAL":["#E6F
 function statusBadge(cat){const i=STATUS_MAP[cat]||{color:"#888",label:cat};return`<span class="badge" style="background:${i.color}22;color:${i.color}">${i.label}</span>`}
 
 // ═══ TABS ═══
-function tentarAba(name){
-  if(autenticado||name==='dashboard'||name==='consulta'||name==='chamados'||name==='inventario-ac'){showTab(name);return;}
-  document.getElementById("modal-senha").classList.add("active");
-  document.getElementById("input-senha").value="";
-  document.getElementById("modal-err").style.display="none";
-  document.getElementById("input-senha").focus();
-  // guarda qual aba foi solicitada
-  window._abaAlvo = name;
-}
-
-function verificarSenha(){
-  const v=document.getElementById("input-senha").value;
-  if(v===SENHA){
-    autenticado=true;
-    fecharModal();
-    // Remover cadeados das abas
-    ["atas"].forEach(n=>{
-      const btn=document.getElementById("tab-btn-"+n);
-      if(btn){
-        btn.classList.remove("tab-locked");
-        btn.textContent=btn.textContent.replace(" 🔒","");
-      }
-    });
-    if(window._abaAlvo) showTab(window._abaAlvo);
-  } else {
-    document.getElementById("modal-err").style.display="block";
-    document.getElementById("input-senha").select();
-  }
-}
-
-function fecharModal(){
-  document.getElementById("modal-senha").classList.remove("active");
-}
-
-function fecharModalFora(e){
-  if(e.target===document.getElementById("modal-senha")) fecharModal();
-}
 
 function abrirModalEdicao(name){
   if(bloquearSeVisualiz()) return;
@@ -2246,6 +2196,7 @@ function showTab(name){
   if(name==="contratos"&&!contratosCarregado) loadContratos();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
+  if(name==="sancoes") loadSancoes();
   if(name==="saldo-emendas"&&!saldoEmendaCarregado) loadSaldoEmendas();
   setTimeout(_setTableOffset,50);
 }
@@ -3902,6 +3853,7 @@ const PERM_TABS = [
   {key:'inventario-ac', label:'Inventário'},
   {key:'atas', label:'ATAs / Contratos'},
   {key:'contratos', label:'Contratos'},
+  {key:'sancoes', label:'Sanções'},
   {key:'planilhas', label:'Planilhas'},
 ];
 let _udUserId = null;
