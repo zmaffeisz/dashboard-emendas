@@ -160,3 +160,25 @@ tr:hover td{background:var(--row-hover)}
 /* ── UTILITÁRIOS ── */
 .visualizador-hidden{display:none!important}
 .hidden-by-default{display:none}
+
+/* ── MOBILE (8.2) ── */
+@media(max-width:768px){
+  html,body{max-width:100%;overflow-x:hidden}
+  .container{padding:.75rem}
+  .header{padding:.55rem .8rem}
+  .header-title{font-size:13px;line-height:1.25}
+  .header-sub{font-size:10px}
+  /* filtros empilham e ocupam a largura toda */
+  .filters{padding:.75rem;gap:8px}
+  .fg{width:100%}
+  .fg select,.fg input{width:100%;min-width:0;box-sizing:border-box}
+  /* buscas que tinham min-width grande embutido */
+  #ct-busca,#sa-busca,#exec-busca,#fat-busca,#ni-emenda{min-width:0!important;width:100%!important;box-sizing:border-box}
+  /* KPIs: 2 colunas que encolhem sem cortar */
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .metric{padding:.7rem .8rem}
+  .metric-value{font-size:18px}
+}
+@media(max-width:430px){
+  .metrics{grid-template-columns:1fr}
+}
