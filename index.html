@@ -1599,6 +1599,26 @@ select:not([class]){background:var(--surface);color:var(--text)}
   </div>
 </div>
 
+<!-- Modal E-mail da Empresa -->
+<div class="modal-overlay" id="modal-email-contrato" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:440px;max-width:96vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">E-mail da empresa</span>
+      <button onclick="document.getElementById('modal-email-contrato').classList.remove('active')" title="Fechar" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div id="ct-email-info" style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:1rem"></div>
+    <div class="form-group">
+      <div class="form-label">E-mail para recebimento dos chamados *</div>
+      <input type="email" id="ct-email-empresa" placeholder="contato@empresa.com" autocomplete="email">
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ct-email-salvar" onclick="salvarEmailContrato()">Salvar e-mail</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-email-contrato').classList.remove('active')">Cancelar</button>
+      <span id="ct-email-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Novo Contrato -->
 <div class="modal-overlay" id="modal-novo-contrato" onclick="if(event.target===this)this.classList.remove('active')" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
   <div class="modal-box" style="width:720px;max-width:98vw;max-height:90vh;overflow-y:auto">
@@ -4348,10 +4368,14 @@ function filtrarChamadosNovos(){
 
 async function enviarEmailChamadoNovo(id){
   const r=chamadosNovosRows.find(x=>x.id===id);
-  if(!r) return;
+  if(!r){alert("Chamado não encontrado.");return;}
   const ctrl=getControleCN(r);
   const cpl=ctrl.cpl_contrato||ctrl.cpl||ctrl.contrato||"";
   const contratoId=ctrl.contrato_id||null;
+  if(!contratoId&&!cpl){
+    alert("Este chamado ainda não possui uma CPL vinculada. Atualize o chamado para o status Aberto e selecione o contrato.");
+    return;
+  }
   let emailEmpresa="";
   if(contratoId||cpl){
     const local=(contratosRows||[]).find(c=>(contratoId&&String(c.id)===String(contratoId))||c.cpl===cpl||c.numero_contrato===cpl);
@@ -4363,7 +4387,12 @@ async function enviarEmailChamadoNovo(id){
       emailEmpresa=data?.[0]?.email_empresa||"";
     }
   }
-  const assunto=`Chamado de manutenção ${r.protocolo||""}`.trim();
+  emailEmpresa=String(emailEmpresa||"").trim();
+  if(!emailEmpresa){
+    alert(`A empresa do contrato ${cpl||contratoId} ainda não possui e-mail cadastrado. Acesse Contratos e clique no botão "E-mail" desse contrato.`);
+    return;
+  }
+  const assunto=[r.protocolo,r.unidade,r.equipamento].map(v=>String(v||"").trim()).filter(Boolean).join(" - ");
   const corpo=`Segue chamado de manutenção:\n\nProtocolo: ${r.protocolo||'—'}\nData de abertura: ${r.carimbo||new Date(r.created_at).toLocaleString("pt-BR")||'—'}\nEquipamento: ${r.equipamento||'—'}\nPatrimônio: ${r.patrimonio||'—'}\nUnidade: ${r.unidade||'—'}\nEndereço: ${r.endereco||'—'}\nResponsável: ${r.responsavel||'—'}\nTelefone: ${r.telefone||'—'}\nProblema relatado: ${r.descricao||r.problema||'—'}\nUrgência: ${r.grau_urgencia||'—'}\n\nAtenciosamente,`;
   const url=`mailto:${encodeURIComponent(emailEmpresa)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   window.location.href=url;
@@ -4373,7 +4402,7 @@ async function enviarEmailChamadoNovo(id){
 let _contratosParaModal = [];
 async function _ensureContratosModal(){
   if(_contratosParaModal.length) return;
-  const {data}=await sb.from("contratos").select("id,cpl,objeto,prestador,status,secao")
+  const {data}=await sb.from("contratos").select("id,cpl,objeto,prestador,status,secao,email_empresa")
     .eq("status","VIGENTE")
     .ilike("secao","SUEQ%")
     .order("cpl");
@@ -6494,8 +6523,11 @@ function renderTabelaContratos(){
     const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar('contratos')
       ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
       :"";
+    const btnEmailCt=podeEditar('contratos')
+      ?`<button onclick="abrirEmailContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ${r.email_empresa?'var(--blue-bg)':'var(--amber-bg)'};background:${r.email_empresa?'var(--blue-bg)':'var(--amber-bg)'};color:${r.email_empresa?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap" title="${r.email_empresa?'Alterar: '+r.email_empresa:'Cadastrar e-mail da empresa'}">📧 E-mail</button>`
+      :"";
     return `<tr>
-      <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button></td>
+      <td><div style="display:flex;gap:4px;align-items:center;white-space:nowrap"><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button>${btnEmailCt}</div></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
       <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
@@ -6511,6 +6543,38 @@ function renderTabelaContratos(){
       <td style="white-space:nowrap;font-size:11px;color:var(--text3)">${r.data_atualizacao||"—"}</td>
     </tr>`;
   }).join("");
+}
+
+let _ctEmailId=null;
+function abrirEmailContrato(id){
+  if(!podeEditar('contratos')){alert("Sem permissão para editar contratos.");return;}
+  const contrato=contratosRows.find(r=>String(r.id)===String(id));
+  if(!contrato){alert("Contrato não encontrado.");return;}
+  _ctEmailId=contrato.id;
+  document.getElementById("ct-email-info").innerHTML=`<strong>${contrato.cpl||"Contrato"}</strong> · ${contrato.prestador||"Empresa não informada"}`;
+  document.getElementById("ct-email-empresa").value=contrato.email_empresa||"";
+  const msg=document.getElementById("ct-email-msg");msg.className="fmsg";msg.textContent="";
+  document.getElementById("modal-email-contrato").classList.add("active");
+  setTimeout(()=>document.getElementById("ct-email-empresa").focus(),50);
+}
+
+async function salvarEmailContrato(){
+  if(!_ctEmailId||bloquearSeVisualiz('contratos')) return;
+  const input=document.getElementById("ct-email-empresa");
+  const email=input.value.trim();
+  const msg=document.getElementById("ct-email-msg");
+  if(!email){msg.textContent="Informe o e-mail da empresa.";msg.className="fmsg err";input.focus();return;}
+  if(!input.checkValidity()){msg.textContent="Informe um endereço de e-mail válido.";msg.className="fmsg err";input.focus();return;}
+  const btn=document.getElementById("ct-email-salvar");btn.disabled=true;btn.textContent="Salvando...";
+  const {data,error}=await sb.from("contratos").update({email_empresa:email}).eq("id",_ctEmailId).select("id,email_empresa");
+  btn.disabled=false;btn.textContent="Salvar e-mail";
+  if(error){msg.textContent="Erro: "+error.message;msg.className="fmsg err";return;}
+  if(!data?.length){msg.textContent="O e-mail não foi salvo. Verifique sua permissão de edição em Contratos.";msg.className="fmsg err";return;}
+  const local=contratosRows.find(r=>String(r.id)===String(_ctEmailId));if(local)local.email_empresa=email;
+  const modalCt=_contratosParaModal.find(r=>String(r.id)===String(_ctEmailId));if(modalCt)modalCt.email_empresa=email;
+  renderTabelaContratos();
+  msg.textContent="✓ E-mail salvo.";msg.className="fmsg ok";
+  setTimeout(()=>document.getElementById("modal-email-contrato").classList.remove("active"),700);
 }
 
 async function abrirDetalheContrato(id){
@@ -6540,7 +6604,7 @@ async function abrirDetalheContrato(id){
   const c=_ctAtual;
   const cor=corVencimento(c.vencimento);
   let html=`<div class="ficha-grid" style="margin-bottom:1.25rem">
-    ${[["CPL",c.cpl],["Prestador",c.prestador],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
+    ${[["CPL",c.cpl],["Prestador",c.prestador],["E-mail da empresa",c.email_empresa||"—"],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
   </div>`;
 
   const vigs=vigRes.data||[];
