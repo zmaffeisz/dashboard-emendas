@@ -6795,8 +6795,8 @@ async function manterStatusContratos(){
   const ids=[...contratosSelecionados];
   if(!confirm(`Atualizar data de ${ids.length} contratos selecionados?`)) return;
   const btn=document.getElementById('ct-manter-status');btn.disabled=true;btn.textContent='Atualizando...';
-  const hoje=new Date().toISOString().slice(0,10);
-  const {error}=await sb.from('contratos').update({atualizado_em:hoje}).in('id',ids);
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  const {error}=await sb.from('contratos').update({data_atualizacao:hoje}).in('id',ids);
   if(error){alert('Erro ao atualizar contratos: '+error.message);atualizarBotaoManterStatus();return;}
   contratosSelecionados.clear();
   contratosCarregado=false;
