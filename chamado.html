@@ -341,7 +341,28 @@ async function enviarChamado(){
     observacao: ''
   };
 
-  const {error} = await sb.from('chamados').insert(chamado);
+  const {error} = await sb.rpc('abrir_chamado_publico', {
+    p_protocolo:        chamado.protocolo,
+    p_carimbo:          chamado.carimbo,
+    p_data_solicitacao: chamado.data_solicitacao,
+    p_unidade:          chamado.unidade,
+    p_equipamento:      chamado.equipamento,
+    p_fabricante:       chamado.fabricante,
+    p_serie:            chamado.serie,
+    p_patrimonio:       chamado.patrimonio,
+    p_categoria:        chamado.categoria,
+    p_servico:          chamado.servico,
+    p_problema:         chamado.problema,
+    p_descricao:        chamado.descricao,
+    p_endereco:         chamado.endereco,
+    p_telefone:         chamado.telefone,
+    p_responsavel:      chamado.responsavel,
+    p_grau_urgencia:    chamado.grau_urgencia,
+    p_email_retorno:    chamado.email_retorno,
+    p_rechamado:        chamado.rechamado,
+    p_data_rechamado:   chamado.data_rechamado,
+    p_observacao:       chamado.observacao
+  });
 
   if(error){
     err.textContent='Erro ao enviar: '+error.message;
@@ -349,17 +370,6 @@ async function enviarChamado(){
     btn.disabled=false;btn.textContent='📨 Enviar solicitação';
     return;
   }
-
-  // Garante status inicial correto no controle (sobrepõe qualquer trigger que use "Aberto" como default)
-  await sb.from('chamados_controle').upsert({
-    protocolo: protocolo,
-    status: 'Aguardando abertura',
-    data_atendimento: null,
-    empresa: '',
-    os: '',
-    feito: '',
-    obs: ''
-  }, {onConflict: 'protocolo'});
 
   // Disparar e-mail em segundo plano (não bloqueia o formulário)
   const dadosEmail = {

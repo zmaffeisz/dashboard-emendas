@@ -1991,7 +1991,7 @@ async function checkAuth(){
   // Mostrar nome do usuário
   const greetEl = document.getElementById("user-greeting");
   if(greetEl){
-    greetEl.textContent = profile?.nome_completo || currentUser.email;
+    greetEl.textContent = profile?.nome || currentUser.email;
     greetEl.style.display = "inline";
   }
 
@@ -2106,7 +2106,7 @@ let atasItens = [];
 let atasExec = [];
 let chamadosRows = [];
 let controleRows = [];
-const SENHA = "patikolindo";
+const SENHA = "";
 let autenticado = false;
 let filtered = [];
 let searchType = "todos";
@@ -2468,28 +2468,28 @@ function filtrarChamados(){
           style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
       </td>
       <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
-      <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
-      <td style="font-size:11px;white-space:nowrap">${r.carimbo||"—"}</td>
-      <td style="font-size:11px;white-space:nowrap">${r.data_solicitacao||r.carimbo?.slice(0,10)||"—"}</td>
-      <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
-      <td style="font-size:11px" class="td-trunc" title="${r.endereco||''}">${r.endereco||"—"}</td>
-      <td style="font-size:11px;white-space:nowrap">${r.telefone||"—"}</td>
-      <td style="font-size:11px" class="td-trunc">${r.responsavel||"—"}</td>
-      <td style="font-size:11px">${r.grau_urgencia||"—"}</td>
-      <td style="font-size:11px">${r.patrimonio||"—"}${temAC?' <span class="badge" style="background:var(--blue-bg);color:var(--blue-text)">AC</span>':''}</td>
-      <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
-      <td style="font-size:11px">${r.fabricante||"—"}</td>
-      <td style="font-size:11px">${r.serie||"—"}</td>
-      <td style="font-size:11px">${r.categoria||"—"}</td>
-      <td style="font-size:11px">${r.servico||"—"}</td>
-      <td style="font-size:11px">${r.problema||"—"}</td>
-      <td class="td-trunc" style="max-width:180px" title="${r.descricao||''}">${r.descricao||"—"}</td>
-      <td style="font-size:11px">${r.rechamado||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.protocolo||"—")}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.carimbo||"—")}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.data_solicitacao||r.carimbo?.slice(0,10)||"—")}</td>
+      <td style="font-size:12px;white-space:nowrap">${_sanEsc(r.unidade||"—")}</td>
+      <td style="font-size:11px" class="td-trunc" title="${_sanEsc(r.endereco||'')}">${_sanEsc(r.endereco||"—")}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.telefone||"—")}</td>
+      <td style="font-size:11px" class="td-trunc">${_sanEsc(r.responsavel||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.grau_urgencia||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.patrimonio||"—")}${temAC?' <span class="badge" style="background:var(--blue-bg);color:var(--blue-text)">AC</span>':''}</td>
+      <td class="td-trunc" title="${_sanEsc(r.equipamento||'')}">${_sanEsc(r.equipamento||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.fabricante||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.serie||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.categoria||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.servico||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.problema||"—")}</td>
+      <td class="td-trunc" style="max-width:180px" title="${_sanEsc(r.descricao||'')}">${_sanEsc(r.descricao||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.rechamado||"—")}</td>
       <td>${statusBadgeChamado(ctrl.status)}</td>
-      <td style="font-size:11px">${ctrl.data_atendimento||"—"}</td>
-      <td style="font-size:11px">${ctrl.empresa||"—"}</td>
-      <td style="font-size:11px">${ctrl.os||"—"}</td>
-      <td class="td-trunc" style="max-width:160px" title="${ctrl.feito||''}">${ctrl.feito||"—"}</td>
+      <td style="font-size:11px">${_sanEsc(ctrl.data_atendimento||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(ctrl.empresa||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(ctrl.os||"—")}</td>
+      <td class="td-trunc" style="max-width:160px" title="${_sanEsc(ctrl.feito||'')}">${_sanEsc(ctrl.feito||"—")}</td>
       <td>${podeEditar('chamados')?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️ Atualizar</button>`:"—"}</td>
       <td><button onclick="enviarEmailChamado('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
       <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄 PDF</button></td>
@@ -4302,23 +4302,23 @@ function filtrarChamadosNovos(){
       <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
             <td><button onclick="enviarEmailChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
-      <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
-      <td style="font-size:11px;white-space:nowrap">${data}</td>
-      <td style="font-size:12px;white-space:nowrap">${r.unidade||"—"}</td>
-      <td class="td-trunc" title="${r.equipamento||''}">${r.equipamento||"—"}</td>
-      <td class="td-trunc" style="max-width:200px" title="${r.descricao||''}">${r.descricao||"—"}</td>
-      <td style="font-size:11px" class="td-trunc">${r.endereco||"—"}</td>
-      <td style="font-size:11px;white-space:nowrap">${r.telefone||"—"}</td>
-      <td style="font-size:11px" class="td-trunc">${r.responsavel||"—"}</td>
-      <td style="font-size:11px">${r.email_retorno||"—"}</td>
-      <td style="font-size:11px;white-space:nowrap">${r.grau_urgencia||"—"}</td>
-      <td style="font-size:11px">${r.patrimonio||"—"}</td>
-      <td style="font-size:11px">${r.fabricante||"—"}</td>
-      <td style="font-size:11px">${r.serie||"—"}</td>
-      <td style="font-size:11px">${r.categoria||"—"}</td>
-      <td style="font-size:11px">${r.servico||"—"}</td>
-      <td style="font-size:11px">${r.problema||"—"}</td>
-      <td style="font-size:11px">${r.rechamado||"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.protocolo||"—")}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(data)}</td>
+      <td style="font-size:12px;white-space:nowrap">${_sanEsc(r.unidade||"—")}</td>
+      <td class="td-trunc" title="${_sanEsc(r.equipamento||'')}">${_sanEsc(r.equipamento||"—")}</td>
+      <td class="td-trunc" style="max-width:200px" title="${_sanEsc(r.descricao||'')}">${_sanEsc(r.descricao||"—")}</td>
+      <td style="font-size:11px" class="td-trunc">${_sanEsc(r.endereco||"—")}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.telefone||"—")}</td>
+      <td style="font-size:11px" class="td-trunc">${_sanEsc(r.responsavel||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.email_retorno||"—")}</td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.grau_urgencia||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.patrimonio||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.fabricante||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.serie||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.categoria||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.servico||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.problema||"—")}</td>
+      <td style="font-size:11px">${_sanEsc(r.rechamado||"—")}</td>
     </tr>`;
   }).join("");
 }
