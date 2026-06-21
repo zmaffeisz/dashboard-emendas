@@ -2886,35 +2886,37 @@ async function loadAtas(){
   document.getElementById("atas-loading").style.display="block";
   document.getElementById("atas-main").style.display="none";
   try{
-    const [r1,r2]=await Promise.all([fetch(ATAS_ITENS_URL),fetch(ATAS_EXEC_URL)]);
-    const [t1,t2]=await Promise.all([r1.text(),r2.text()]);
-    const p1=Papa.parse(t1,{header:true,skipEmptyLines:true});
-    const p2=Papa.parse(t2,{header:true,skipEmptyLines:true});
-    atasItens=p1.data.filter(r=>r["CPL"]).map(r=>({
-      cpl:(r["CPL"]||"").trim(),
-      sim:(r["SIM"]||"").trim(),
-      item:(r["ITEM"]||"").trim(),
-      marca:(r["MARCA_MODELO"]||"").trim(),
-      qtde_contratada:parseFloat(r["QTDE_CONTRATADA"])||0,
-      valor_unit:parseBR(r["VALOR_UNIT"]),
-      vencimento:(r["VENCIMENTO"]||"").trim(),
-      status:(r["STATUS_CONTRATO"]||"VIGENTE").trim(),
-      empresa:(r["EMPRESA"]||"").trim(),
-      prazo_entrega:parseInt(r["PRAZO_ENTREGA"])||0,
+    const [r1,r2]=await Promise.all([
+      sb.from("atas_itens").select("*").order("cpl"),
+      sb.from("atas_execucao").select("*")
+    ]);
+    if(r1.error) throw r1.error;
+    if(r2.error) throw r2.error;
+    atasItens=(r1.data||[]).map(r=>({
+      cpl:(r.cpl||"").trim(),
+      sim:(r.sim||"").trim(),
+      item:(r.item||"").trim(),
+      marca:(r.marca_modelo||"").trim(),
+      qtde_contratada:Number(r.qtde_contratada)||0,
+      valor_unit:Number(r.valor_unit)||0,
+      vencimento:(r.vencimento||"").trim(),
+      status:(r.status_contrato||"VIGENTE").trim(),
+      empresa:(r.empresa||"").trim(),
+      prazo_entrega:parseInt(r.prazo_entrega)||0,
     }));
-    atasExec=p2.data.filter(r=>r["CPL"]).map((r,idx)=>({
+    atasExec=(r2.data||[]).map((r,idx)=>({
       _sancao_id:`exec-${idx}`,
-      cpl:(r["CPL"]||"").trim(),
-      sim:(r["SIM"]||"").trim(),
-      item:(r["ITEM"]||"").trim(),
-      unidade:(r["UNIDADE"]||"").trim(),
-      qtde:parseFloat(r["QTDE"])||0,
-      valor:parseBR(r["VALOR"]),
-      empenho:(r["EMPENHO"]||"").trim(),
-      data_af:(r["DATA_AF"]||"").trim(),
-      prev_entrega:(r["PREV_ENTREGA"]||"").trim(),
-      dt_entrega:(r["DT_ENTREGA"]||"").trim(),
-      nf:(r["NF"]||"").trim(),
+      cpl:(r.cpl||"").trim(),
+      sim:(r.sim||"").trim(),
+      item:(r.item||"").trim(),
+      unidade:(r.unidade||"").trim(),
+      qtde:Number(r.qtde)||0,
+      valor:Number(r.valor)||0,
+      empenho:(r.empenho||"").trim(),
+      data_af:(r.data_af||"").trim(),
+      prev_entrega:(r.prev_entrega||"").trim(),
+      dt_entrega:(r.dt_entrega||"").trim(),
+      nf:(r.nf||"").trim(),
     }));
     popularFiltrosAtas();
     filtrarAtas();
