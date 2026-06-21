@@ -248,7 +248,6 @@ select:not([class]){background:var(--surface);color:var(--text)}
       <div class="sidebar-section-label">Contratos</div>
       <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
       <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
-      <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções Administrativas</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Configurações</div>
@@ -319,7 +318,7 @@ select:not([class]){background:var(--surface);color:var(--text)}
     <div class="table-card">
       <div class="table-hdr">
         <span class="table-hdr-title">Itens detalhados</span>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
           <span class="table-hdr-count" id="table-count">—</span>
           <button onclick="exportarExcel()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:5px">⬇ Exportar Excel</button>
         </div>
@@ -348,6 +347,50 @@ select:not([class]){background:var(--surface);color:var(--text)}
           </thead>
           <tbody id="table-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-solicitar-sancao" onclick="if(event.target===this)this.classList.remove('active')">
+      <div class="modal-box" style="width:760px;max-width:96vw;max-height:92vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+          <span style="font-size:15px;font-weight:700">Solicitação de Aplicação de Sanção</span>
+          <button onclick="document.getElementById('modal-solicitar-sancao').classList.remove('active')" title="Fechar" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+        </div>
+
+        <div id="sancao-contrato-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem;font-size:12px;line-height:1.6"></div>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <div class="form-label">Tipo de sanção *</div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px" id="sancao-tipos">
+              <label><input type="radio" name="sancao-tipo" value="Advertência" onchange="atualizarCamposSancao()"> Advertência</label>
+              <label><input type="radio" name="sancao-tipo" value="Multa" onchange="atualizarCamposSancao()"> Multa</label>
+              <label><input type="radio" name="sancao-tipo" value="Impedimento de licitar e contratar" onchange="atualizarCamposSancao()"> Impedimento de licitar e contratar</label>
+              <label><input type="radio" name="sancao-tipo" value="Declaração de inidoneidade" onchange="atualizarCamposSancao()"> Declaração de inidoneidade</label>
+            </div>
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Motivo *</div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap">
+              <label><input type="radio" name="sancao-motivo" value="Atraso na entrega" checked onchange="atualizarCamposSancao()"> Atraso na entrega</label>
+              <label><input type="radio" name="sancao-motivo" value="Outro motivo" onchange="atualizarCamposSancao()"> Outro motivo</label>
+            </div>
+            <input type="text" id="sancao-motivo-livre" placeholder="Descreva o outro motivo" style="display:none;margin-top:8px">
+          </div>
+          <div class="form-group"><div class="form-label">Cláusula contratual</div><input type="text" id="sancao-clausula" placeholder="ex: Cláusula 10ª, §2º"></div>
+          <div class="form-group"><div class="form-label">Artigo adicional</div><input type="text" id="sancao-artigo" placeholder="ex: Art. 92 do Decreto X"></div>
+          <div class="form-group" id="sancao-percentual-wrap" style="display:none"><div class="form-label">Percentual de multa (% ao dia)</div><input type="number" id="sancao-percentual" min="0" step="0.01" placeholder="ex: 0,5"></div>
+          <div class="form-group"><div class="form-label">Dias de atraso</div><input type="number" id="sancao-dias" min="0" step="1" placeholder="Informe se não for calculado"></div>
+          <div class="form-group full">
+            <div class="form-label">Itens selecionados</div>
+            <div id="sancao-itens-modal" style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:220px;overflow:auto"></div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" id="btn-confirmar-sancao" onclick="gerarSolicitacaoSancaoAta()">Gerar documento</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-solicitar-sancao').classList.remove('active')">Cancelar</button>
+          <span id="sancao-doc-msg" class="fmsg"></span>
+        </div>
       </div>
     </div>
 
@@ -821,20 +864,20 @@ select:not([class]){background:var(--surface);color:var(--text)}
             <tr>
               <th style="width:32px"><input type="checkbox" id="fisc-check-all" onchange="selecionarTodasFisc(this.checked)" style="accent-color:var(--blue);cursor:pointer"></th>
               <th>Ações</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Protocolo<span class="hdr-filter-btn" id="hff-protocolo" onclick="openFiscFilter(event,'protocolo')" title="Filtrar">▾</span></span></th>
-              <th>Data</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Unidade<span class="hdr-filter-btn" id="hff-unidade" onclick="openFiscFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Equipamento<span class="hdr-filter-btn" id="hff-equipamento" onclick="openFiscFilter(event,'equipamento')" title="Filtrar">▾</span></span></th>
-              <th>Patrimônio</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">CPL / Contrato<span class="hdr-filter-btn" id="hff-cpl" onclick="openFiscFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th>Nº OS</th>
-              <th>Serviço realizado</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Situação<span class="hdr-filter-btn" id="hff-situacao" onclick="openFiscFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Competência<span class="hdr-filter-btn" id="hff-competencia" onclick="openFiscFilter(event,'competencia')" title="Filtrar">▾</span></span></th>
-              <th>NF Referência</th>
-              <th>Dias p/ atend.</th>
-              <th>Fiscalizado por</th>
-              <th>Fiscalizado em</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('protocolo')" style="cursor:pointer;user-select:none">Protocolo <span id="sort-fisc-protocolo"></span></span><span class="hdr-filter-btn" id="hff-protocolo" onclick="openFiscFilter(event,'protocolo')" title="Filtrar">▾</span></span></th>
+              <th onclick="ordenarFiscalizacao('data')" style="cursor:pointer;user-select:none;white-space:nowrap">Data <span id="sort-fisc-data"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-fisc-unidade"></span></span><span class="hdr-filter-btn" id="hff-unidade" onclick="openFiscFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('equipamento')" style="cursor:pointer;user-select:none">Equipamento <span id="sort-fisc-equipamento"></span></span><span class="hdr-filter-btn" id="hff-equipamento" onclick="openFiscFilter(event,'equipamento')" title="Filtrar">▾</span></span></th>
+              <th onclick="ordenarFiscalizacao('patrimonio')" style="cursor:pointer;user-select:none">Patrimônio <span id="sort-fisc-patrimonio"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('cpl')" style="cursor:pointer;user-select:none">CPL / Contrato <span id="sort-fisc-cpl"></span></span><span class="hdr-filter-btn" id="hff-cpl" onclick="openFiscFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th onclick="ordenarFiscalizacao('os')" style="cursor:pointer;user-select:none">Nº OS <span id="sort-fisc-os"></span></th>
+              <th onclick="ordenarFiscalizacao('servico')" style="cursor:pointer;user-select:none">Serviço realizado <span id="sort-fisc-servico"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('situacao')" style="cursor:pointer;user-select:none">Situação <span id="sort-fisc-situacao"></span></span><span class="hdr-filter-btn" id="hff-situacao" onclick="openFiscFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('competencia')" style="cursor:pointer;user-select:none">Competência <span id="sort-fisc-competencia"></span></span><span class="hdr-filter-btn" id="hff-competencia" onclick="openFiscFilter(event,'competencia')" title="Filtrar">▾</span></span></th>
+              <th onclick="ordenarFiscalizacao('nf')" style="cursor:pointer;user-select:none">NF Referência <span id="sort-fisc-nf"></span></th>
+              <th onclick="ordenarFiscalizacao('sla')" style="cursor:pointer;user-select:none">Dias p/ atend. <span id="sort-fisc-sla"></span></th>
+              <th onclick="ordenarFiscalizacao('fiscalizado_por')" style="cursor:pointer;user-select:none">Fiscalizado por <span id="sort-fisc-fiscalizado_por"></span></th>
+              <th onclick="ordenarFiscalizacao('fiscalizado_em')" style="cursor:pointer;user-select:none">Fiscalizado em <span id="sort-fisc-fiscalizado_em"></span></th>
               <th>Editar</th>
             </tr>
           </thead>
@@ -1199,6 +1242,8 @@ select:not([class]){background:var(--surface);color:var(--text)}
           <button class="sheet-toggle-btn" id="btn-toggle-atas-execs" onclick="toggleTabelaAtas('execs')">Mostrar</button>
           <input type="text" id="exec-busca" placeholder="🔍 empenho, unidade, NF..." oninput="filtrarExecs()" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:200px;background:var(--surface);color:var(--text)">
           <button onclick="togglePendentes()" id="btn-pendentes" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer" title="Mostrar apenas itens aguardando entrega">⚠️ Pendentes</button>
+          <span id="sancao-selecao-resumo" style="display:none;font-size:12px;color:var(--text2)"></span>
+          <button id="btn-gerar-sancao" onclick="abrirModalSolicitacaoSancaoAta()" style="display:none;font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar sanção</button>
           <span class="table-hdr-count" id="exec-count">—</span>
           <button onclick="exportarAtas()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar itens de ATA para Excel">⬇ ATAs</button>
           <button onclick="exportarExecs()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar execuções para Excel">⬇ Execuções</button>
@@ -1209,6 +1254,7 @@ select:not([class]){background:var(--surface);color:var(--text)}
         <table>
           <thead>
             <tr>
+              <th style="width:34px" title="Selecione solicitações pendentes da mesma empresa e CPL">Sel.</th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('item')" style="cursor:pointer;user-select:none">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
@@ -1909,7 +1955,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','sancoes','usuarios','planilhas'];
+const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -2051,7 +2097,7 @@ async function checkAuth(){
   document.head.appendChild(_editStyle);
 
   const ultimaAba=localStorage.getItem("ultima_aba");
-  if(ultimaAba) showTab(ultimaAba);
+  if(ultimaAba) showTab(ultimaAba==="sancoes"?"dashboard":ultimaAba);
   return true;
 }
 
@@ -2235,7 +2281,7 @@ function showTab(name){
   localStorage.setItem("ultima_aba", name);
   window._activeTab = name;
   document.body.classList.toggle('no-edit-tab', !userCanEdit(name));
-  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","sancoes","usuarios","planilhas"];
+  const names=["dashboard","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","atas","contratos","usuarios","planilhas"];
   document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
   fecharSidebar();
   document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
@@ -2246,7 +2292,6 @@ function showTab(name){
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="contratos"&&!contratosCarregado) loadContratos();
-  if(name==="sancoes"&&!sancoesCarregado) loadSancoes();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
 }
@@ -2878,7 +2923,8 @@ async function loadAtas(){
       empresa:(r["EMPRESA"]||"").trim(),
       prazo_entrega:parseInt(r["PRAZO_ENTREGA"])||0,
     }));
-    atasExec=p2.data.filter(r=>r["CPL"]).map(r=>({
+    atasExec=p2.data.filter(r=>r["CPL"]).map((r,idx)=>({
+      _sancao_id:`exec-${idx}`,
       cpl:(r["CPL"]||"").trim(),
       sim:(r["SIM"]||"").trim(),
       item:(r["ITEM"]||"").trim(),
@@ -3180,6 +3226,7 @@ function filtrarAtas(){
   });
   document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
   document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>`<tr>
+    ${_renderSancaoExecCheckbox(r)}
     <td style="font-size:11px">${r.cpl}</td>
     <td style="font-size:11px">${r.sim}</td>
     <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
@@ -3277,6 +3324,7 @@ function filtrarExecs(){
     else if(dias<=15) prazoCel=`<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
     else prazoCel=`<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
     return `<tr>
+    ${_renderSancaoExecCheckbox(r)}
     <td style="font-size:11px">${r.cpl}</td>
     <td style="font-size:11px">${r.sim}</td>
     <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
@@ -3314,6 +3362,101 @@ function calcDiasPrazo(r){
   if(!dAF) return null;
   dAF.setDate(dAF.getDate()+prazo);
   return Math.round((dAF-new Date())/(1000*60*60*24));
+}
+
+// Sanções são geradas exclusivamente a partir de ATAs / Contratos > Execuções / Solicitações.
+let sancaoEmpresaTravada = "";
+
+function _sancaoAtaDoExec(r){
+  return atasItens.find(a=>a.cpl===r.cpl&&a.sim===r.sim&&a.item===r.item)||null;
+}
+function _sancaoExecKey(r){
+  return String(r?._sancao_id||[r?.cpl,r?.sim,r?.item,r?.unidade,r?.empenho,r?.data_af].join("|"));
+}
+function _sancaoExecPendente(r){ return !!r&&!r.dt_entrega; }
+function _sancaoExecDisabled(r){
+  if(!podeEditar('atas')||!_sancaoExecPendente(r)) return true;
+  const ata=_sancaoAtaDoExec(r), empresa=ata?.empresa||"";
+  if(!empresa) return true;
+  return !!sancaoCplTravado&&(r.cpl!==sancaoCplTravado||empresa!==sancaoEmpresaTravada)&&!sancaoSelecionados.has(_sancaoExecKey(r));
+}
+function _sancaoExecTitulo(r){
+  if(!podeEditar('atas')) return "Sem permissão para editar ATAs / Contratos";
+  if(r?.dt_entrega) return "Item já entregue";
+  const empresa=_sancaoAtaDoExec(r)?.empresa||"";
+  if(!empresa) return "Empresa não informada no item da ATA";
+  if(sancaoCplTravado&&(r.cpl!==sancaoCplTravado||empresa!==sancaoEmpresaTravada)) return `Seleção limitada a ${sancaoCplTravado} · ${sancaoEmpresaTravada}`;
+  return "Selecionar esta solicitação pendente";
+}
+function _renderSancaoExecCheckbox(r){
+  const disabled=_sancaoExecDisabled(r), key=encodeURIComponent(_sancaoExecKey(r));
+  return `<td style="text-align:center"><input type="checkbox" class="sancao-exec-check" ${sancaoSelecionados.has(_sancaoExecKey(r))?'checked':''} ${disabled?'disabled':''} onchange="alternarItemSancaoExec(decodeURIComponent('${key}'),this)" title="${_sanEsc(_sancaoExecTitulo(r))}" style="accent-color:var(--amber);cursor:${disabled?'not-allowed':'pointer'}"></td>`;
+}
+function _execsSancaoSelecionadas(){
+  return atasExec.filter(r=>sancaoSelecionados.has(_sancaoExecKey(r)));
+}
+function alternarItemSancaoExec(key,cb){
+  const r=atasExec.find(x=>_sancaoExecKey(x)===key); if(!r) return;
+  if(cb.checked){
+    if(_sancaoExecDisabled(r)){cb.checked=false;alert(_sancaoExecTitulo(r));return;}
+    const empresa=_sancaoAtaDoExec(r)?.empresa||"";
+    if(!sancaoCplTravado){sancaoCplTravado=r.cpl;sancaoEmpresaTravada=empresa;}
+    sancaoSelecionados.add(key);
+  }else{
+    sancaoSelecionados.delete(key);
+    if(!sancaoSelecionados.size){sancaoCplTravado="";sancaoEmpresaTravada="";sancaoContrato=null;}
+  }
+  atualizarSelecaoSancaoAta(); filtrarExecs();
+}
+function atualizarSelecaoSancaoAta(){
+  const n=sancaoSelecionados.size, resumo=document.getElementById("sancao-selecao-resumo"), btn=document.getElementById("btn-gerar-sancao");
+  if(!resumo||!btn) return;
+  if(!n){resumo.style.display="none";btn.style.display="none";resumo.textContent="";return;}
+  resumo.textContent=`${n} item(ns) · ${sancaoCplTravado} · ${sancaoEmpresaTravada}`;
+  resumo.style.display="inline";btn.style.display=podeEditar('atas')?"inline-flex":"none";
+}
+function _diasAtrasoExecs(itens){
+  const atrasos=itens.map(calcDiasPrazo).filter(d=>typeof d==="number"&&d<0).map(d=>Math.abs(d));
+  return atrasos.length?Math.max(...atrasos):null;
+}
+async function abrirModalSolicitacaoSancaoAta(){
+  if(!sancaoSelecionados.size||bloquearSeVisualiz('atas')) return;
+  const itens=_execsSancaoSelecionadas(); if(!itens.length) return;
+  sancaoContrato=await _resolverContratoSancao(sancaoCplTravado);
+  const c=sancaoContrato||{}, primeiro=itens[0], numero=c.numero_contrato||primeiro.sim||"—";
+  const modal=document.getElementById("modal-solicitar-sancao"); document.body.appendChild(modal);
+  document.getElementById("sancao-contrato-info").innerHTML=`<strong>Processo/CPL:</strong> ${_sanEsc(sancaoCplTravado)} &nbsp;·&nbsp; <strong>Contrato/SIM:</strong> ${_sanEsc(numero)}<br><strong>Empresa:</strong> ${_sanEsc(sancaoEmpresaTravada)} &nbsp;·&nbsp; <strong>CNPJ:</strong> ${_sanEsc(c.cnpj||"—")}<br><strong>Objeto:</strong> ${_sanEsc(c.objeto||[...new Set(itens.map(i=>i.item))].join(", "))}`;
+  document.querySelectorAll('input[name="sancao-tipo"]').forEach(el=>el.checked=false);
+  document.querySelector('input[name="sancao-motivo"][value="Atraso na entrega"]').checked=true;
+  ["sancao-motivo-livre","sancao-clausula","sancao-artigo","sancao-percentual"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("sancao-dias").value=_diasAtrasoExecs(itens)??"";
+  document.getElementById("sancao-itens-modal").innerHTML=itens.map(i=>{
+    const ata=_sancaoAtaDoExec(i), unit=ata?.valor_unit||0;
+    return `<div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px"><strong>${_sanEsc(i.item)}</strong> · ${_sanEsc(i.unidade||"—")}<br><span style="color:var(--text3)">Qtde: ${i.qtde||"—"} · Unitário: ${unit?fmtFull(unit):"—"} · Total: ${i.valor?fmtFull(i.valor):"—"} · Empenho: ${_sanEsc(i.empenho||"—")} · Previsão: ${_sanEsc(i.prev_entrega||"—")}</span></div>`;
+  }).join("");
+  const msg=document.getElementById("sancao-doc-msg");msg.className="fmsg";msg.textContent="";atualizarCamposSancao();modal.classList.add("active");
+}
+async function gerarSolicitacaoSancaoAta(){
+  if(bloquearSeVisualiz('atas')) return;
+  const itens=_execsSancaoSelecionadas(), tipo=document.querySelector('input[name="sancao-tipo"]:checked')?.value||"", motivo=document.querySelector('input[name="sancao-motivo"]:checked')?.value||"";
+  const motivoLivre=document.getElementById("sancao-motivo-livre").value.trim(), clausula=document.getElementById("sancao-clausula").value.trim(), artigo=document.getElementById("sancao-artigo").value.trim();
+  const percentualRaw=document.getElementById("sancao-percentual").value, diasRaw=document.getElementById("sancao-dias").value, msg=document.getElementById("sancao-doc-msg"), c=sancaoContrato||{}, primeiro=itens[0]||{};
+  if(!itens.length){msg.textContent="Selecione ao menos uma solicitação.";msg.className="fmsg err";return;}
+  if(!tipo||!motivo){msg.textContent="Escolha o tipo e o motivo da sanção.";msg.className="fmsg err";return;}
+  if(motivo==="Outro motivo"&&!motivoLivre){msg.textContent="Descreva o outro motivo.";msg.className="fmsg err";return;}
+  if(!sancaoEmpresaTravada){msg.textContent="Empresa não localizada na ATA.";msg.className="fmsg err";return;}
+  const janela=window.open("","_blank");if(!janela){msg.textContent="Permita pop-ups e tente novamente.";msg.className="fmsg err";return;}
+  janela.document.write('<!doctype html><meta charset="utf-8"><title>Gerando documento...</title><p style="font-family:Arial;padding:24px">Registrando solicitação...</p>');
+  const btn=document.getElementById("btn-confirmar-sancao");btn.disabled=true;btn.textContent="Registrando...";
+  const snapshot={artigo_adicional:artigo||null,itens:itens.map(i=>{const a=_sancaoAtaDoExec(i);return{id:_sancaoExecKey(i),cpl:i.cpl,sim:i.sim,item:i.item,unidade:i.unidade,qtde:i.qtde,vl_unitario:a?.valor_unit||null,vl_total:i.valor,empenho:i.empenho,data_af:i.data_af,prev_entrega:i.prev_entrega,dt_entrega:i.dt_entrega};})};
+  const registro={cpl_contrato:sancaoCplTravado,contrato_id:c.id||null,empresa:sancaoEmpresaTravada,tipo_sancao:tipo,motivo,motivo_livre:motivo==="Outro motivo"?motivoLivre:null,clausula_contratual:clausula||null,percentual_multa:tipo==="Multa"&&percentualRaw!==""?Number(percentualRaw):null,dias_atraso:diasRaw!==""?Number(diasRaw):null,itens_ids:JSON.stringify(itens.map(_sancaoExecKey)),itens_json:JSON.stringify(snapshot),solicitado_por:currentProfile?.nome||currentProfile?.email||"Usuário do sistema",gerado_em:new Date().toISOString().slice(0,10)};
+  const {error}=await sb.from("sancoes_solicitadas").insert(registro);btn.disabled=false;btn.textContent="Gerar documento";
+  if(error){janela.close();msg.textContent="Erro ao registrar: "+error.message;msg.className="fmsg err";return;}
+  const incisos={"Advertência":"I","Multa":"II","Impedimento de licitar e contratar":"III","Declaração de inidoneidade":"IV"}, total=itens.reduce((s,i)=>s+(Number(i.valor)||0),0), hoje=new Date().toLocaleDateString("pt-BR"), numero=c.numero_contrato||primeiro.sim||"—";
+  const fundamento=motivo==="Atraso na entrega"?"ao ensejar o retardamento da entrega do objeto contratual sem motivo justificado":_sanEsc(motivoLivre);
+  const linhas=itens.map((i,idx)=>{const a=_sancaoAtaDoExec(i),d=calcDiasPrazo(i);return `<tr><td>${idx+1}</td><td><strong>${_sanEsc(i.cpl)}</strong><br>${_sanEsc(sancaoEmpresaTravada)}</td><td>${_sanEsc(i.item)}</td><td>${_sanEsc(i.unidade||"—")}</td><td>${i.qtde||"—"}</td><td>${a?.valor_unit?fmtFull(a.valor_unit):"—"}</td><td>${i.valor?fmtFull(i.valor):"—"}</td><td>${_sanEsc(i.empenho||"—")}</td><td>${d<0?Math.abs(d)+" dias de atraso":"Aguardando entrega"}</td></tr>`;}).join("");
+  janela.document.open();janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Solicitação de Sanção - ${_sanEsc(sancaoCplTravado)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:11pt;line-height:1.45;margin:0}header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:18px}header h1{font-size:15pt;margin:12px 0 4px}header p{margin:2px}.ident{border:1px solid #555;padding:12px;margin:14px 0;background:#f5f5f5}.ident div{margin:3px 0}h2{font-size:11pt;text-transform:uppercase;margin:18px 0 7px}table{width:100%;border-collapse:collapse;font-size:8pt}th,td{border:1px solid #777;padding:5px;vertical-align:top}th{background:#eee}.total{text-align:right;font-weight:bold;margin-top:7px}.assinatura{margin:70px auto 0;text-align:center;width:320px;border-top:1px solid #111;padding-top:6px}.corpo{text-align:justify}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><header><strong>SECRETARIA MUNICIPAL DA SAÚDE · SOROCABA</strong><p>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</p><h1>SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO ADMINISTRATIVA</h1><p>Gerado em ${hoje}</p></header><div class="ident"><div>Processo/CPL: <strong>${_sanEsc(sancaoCplTravado)}</strong></div><div>Contrato/SIM nº: <strong>${_sanEsc(numero)}</strong></div><div>Empresa contratada: <strong>${_sanEsc(sancaoEmpresaTravada)}</strong></div><div>CNPJ: ${_sanEsc(c.cnpj||"—")}</div><div>Objeto: ${_sanEsc(c.objeto||[...new Set(itens.map(i=>i.item))].join(", "))}</div></div><h2>Fundamentação legal</h2><p class="corpo">A contratada incorreu na infração prevista no art. 155, inciso VII, da Lei nº 14.133/2021, ${fundamento}, sujeitando-se às sanções previstas no art. 156, inciso ${incisos[tipo]} da mesma Lei. ${clausula?`Ademais, a conduta viola a ${_sanEsc(clausula)} do instrumento contratual.`:""} ${artigo?_sanEsc(artigo)+".":""}</p><h2>Execuções / Solicitações relacionadas</h2><table><thead><tr><th>#</th><th>Processo / Empresa</th><th>Item</th><th>Unidade</th><th>Qtde</th><th>Valor unit.</th><th>Valor total</th><th>Empenho</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table><div class="total">TOTAL: ${fmtFull(total)}</div><h2>Solicitação</h2><p class="corpo">Diante do exposto, esta Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde solicita à Secretaria de Administração a instauração de processo administrativo sancionador e aplicação de <strong>${_sanEsc(tipo.toUpperCase())}</strong> à empresa <strong>${_sanEsc(sancaoEmpresaTravada)}</strong>, inscrita no CNPJ ${_sanEsc(c.cnpj||"—")}, referente ao(s) item(ns) discriminado(s) acima, garantidos o contraditório e a ampla defesa, nos termos do art. 157 da Lei nº 14.133/2021.</p>${tipo==="Multa"&&percentualRaw!==""?`<p class="corpo">A multa sugerida é de <strong>${_sanEsc(percentualRaw)}% ao dia de atraso</strong> sobre o valor do(s) item(ns) em atraso, conforme previsto no instrumento contratual.</p>`:""}<div class="assinatura"><strong>${_sanEsc(registro.solicitado_por)}</strong><br>Supervisor — SUEQ / Secretaria Municipal da Saúde<br>${hoje}</div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);janela.document.close();
+  document.getElementById("modal-solicitar-sancao").classList.remove("active");sancaoSelecionados.clear();sancaoCplTravado="";sancaoEmpresaTravada="";sancaoContrato=null;atualizarSelecaoSancaoAta();filtrarExecs();
 }
 
 
@@ -3776,7 +3919,6 @@ const PERM_TABS = [
   {key:'inventario-ac', label:'Inventário'},
   {key:'atas', label:'ATAs / Contratos'},
   {key:'contratos', label:'Contratos'},
-  {key:'sancoes', label:'Sanções Administrativas'},
   {key:'planilhas', label:'Planilhas'},
 ];
 let _udUserId = null;
@@ -4855,6 +4997,165 @@ function renderTable(){
   </tr>`).join("");
 }
 
+// ═══ SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO — ITENS DE EMENDAS ═══
+let sancaoSelecionados = new Set();
+let sancaoCplTravado = "";
+let sancaoContrato = null;
+
+function _sanEsc(v){
+  return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function _sancaoItemElegivel(r){
+  const s=normalizar(r?.status_raw||"");
+  return !!r?.cpl && (s.includes("atras")||s.includes("penden")||s.includes("aguardando entrega"));
+}
+function _sancaoCheckboxDisabled(r){
+  if(!podeEditar('dashboard')||!_sancaoItemElegivel(r)) return true;
+  return !!sancaoCplTravado && r.cpl!==sancaoCplTravado && !sancaoSelecionados.has(String(r.id));
+}
+function _sancaoCheckboxTitulo(r){
+  if(!podeEditar('dashboard')) return "Sem permissão para gerar solicitações";
+  if(!r?.cpl) return "Item sem CPL vinculado";
+  if(!_sancaoItemElegivel(r)) return "Disponível apenas para itens pendentes, atrasados ou aguardando entrega";
+  if(sancaoCplTravado&&r.cpl!==sancaoCplTravado) return `Seleção limitada ao CPL ${sancaoCplTravado}`;
+  return "Selecionar item para a solicitação de sanção";
+}
+function _itensSancaoSelecionados(){
+  return allRows.filter(r=>sancaoSelecionados.has(String(r.id)));
+}
+async function _resolverContratoSancao(cpl){
+  if(!cpl) return null;
+  const {data,error}=await sb.from("contratos")
+    .select("id,cpl,objeto,prestador,cnpj,numero_contrato")
+    .eq("cpl",cpl).limit(1);
+  if(error){ console.error("Contrato da sanção:",error.message); return null; }
+  return data?.[0]||null;
+}
+async function alternarItemSancao(id,cb){
+  const r=allRows.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  if(cb.checked){
+    if(_sancaoCheckboxDisabled(r)){ cb.checked=false; alert(_sancaoCheckboxTitulo(r)); return; }
+    if(!sancaoCplTravado) sancaoCplTravado=r.cpl;
+    sancaoSelecionados.add(String(r.id));
+    if(!sancaoContrato||sancaoContrato.cpl!==sancaoCplTravado){
+      const cplBuscado=sancaoCplTravado;
+      sancaoContrato=await _resolverContratoSancao(cplBuscado);
+      if(sancaoCplTravado!==cplBuscado) sancaoContrato=null;
+    }
+  }else{
+    sancaoSelecionados.delete(String(r.id));
+    if(!sancaoSelecionados.size){ sancaoCplTravado=""; sancaoContrato=null; }
+  }
+  atualizarSelecaoSancao();
+  renderTable();
+}
+function atualizarSelecaoSancao(){
+  const n=sancaoSelecionados.size;
+  const resumo=document.getElementById("sancao-selecao-resumo");
+  const btn=document.getElementById("btn-gerar-sancao");
+  if(!resumo||!btn) return;
+  if(!n){ resumo.style.display="none"; btn.style.display="none"; resumo.textContent=""; return; }
+  const empresa=sancaoContrato?.prestador||"empresa não localizada";
+  resumo.textContent=`${n} item(ns) · ${sancaoCplTravado} · ${empresa}`;
+  resumo.style.display="inline";
+  btn.style.display=podeEditar('dashboard')?"inline-flex":"none";
+}
+function _parseDataSancao(raw){
+  if(!raw) return null;
+  const s=String(raw).trim(); let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+  return null;
+}
+function _diasAtrasoAutomatico(itens){
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const dias=itens.map(i=>_parseDataSancao(i.data_entrega)).filter(Boolean)
+    .map(d=>Math.max(0,Math.floor((hoje-d)/86400000)));
+  return dias.length?Math.max(...dias):null;
+}
+async function abrirModalSolicitacaoSancao(){
+  if(!sancaoSelecionados.size||bloquearSeVisualiz('dashboard')) return;
+  if(!sancaoContrato) sancaoContrato=await _resolverContratoSancao(sancaoCplTravado);
+  const itens=_itensSancaoSelecionados();
+  const c=sancaoContrato||{};
+  document.getElementById("sancao-contrato-info").innerHTML=`
+    <strong>Processo/CPL:</strong> ${_sanEsc(sancaoCplTravado||"—")} &nbsp;·&nbsp; <strong>Contrato:</strong> ${_sanEsc(c.numero_contrato||"—")}<br>
+    <strong>Empresa:</strong> ${_sanEsc(c.prestador||"Não localizada no cadastro de contratos")} &nbsp;·&nbsp; <strong>CNPJ:</strong> ${_sanEsc(c.cnpj||"—")}<br>
+    <strong>Objeto:</strong> ${_sanEsc(c.objeto||"—")}`;
+  document.querySelectorAll('input[name="sancao-tipo"]').forEach(el=>el.checked=false);
+  document.querySelector('input[name="sancao-motivo"][value="Atraso na entrega"]').checked=true;
+  ["sancao-motivo-livre","sancao-clausula","sancao-artigo","sancao-percentual"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("sancao-dias").value=_diasAtrasoAutomatico(itens)??"";
+  document.getElementById("sancao-itens-modal").innerHTML=itens.map(i=>`<div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px"><strong>${_sanEsc(i.item||i.item_cadastrado||"Item")}</strong><br><span style="color:var(--text3)">Qtde: ${_sanEsc(i.qtde||i.qtde_cadastrada||"—")} · Unitário: ${i.vl_unitario?fmtFull(i.vl_unitario):"—"} · Total: ${i.vl_total?fmtFull(i.vl_total):"—"} · Empenho: ${_sanEsc(i.empenho||"—")}</span></div>`).join("");
+  document.getElementById("sancao-doc-msg").className="fmsg";
+  document.getElementById("sancao-doc-msg").textContent="";
+  atualizarCamposSancao();
+  document.getElementById("modal-solicitar-sancao").classList.add("active");
+}
+function atualizarCamposSancao(){
+  const tipo=document.querySelector('input[name="sancao-tipo"]:checked')?.value||"";
+  const motivo=document.querySelector('input[name="sancao-motivo"]:checked')?.value||"";
+  document.getElementById("sancao-percentual-wrap").style.display=tipo==="Multa"?"block":"none";
+  document.getElementById("sancao-motivo-livre").style.display=motivo==="Outro motivo"?"block":"none";
+}
+async function gerarSolicitacaoSancao(){
+  if(bloquearSeVisualiz('dashboard')) return;
+  const itens=_itensSancaoSelecionados();
+  const tipo=document.querySelector('input[name="sancao-tipo"]:checked')?.value||"";
+  const motivo=document.querySelector('input[name="sancao-motivo"]:checked')?.value||"";
+  const motivoLivre=document.getElementById("sancao-motivo-livre").value.trim();
+  const clausula=document.getElementById("sancao-clausula").value.trim();
+  const artigo=document.getElementById("sancao-artigo").value.trim();
+  const percentualRaw=document.getElementById("sancao-percentual").value;
+  const diasRaw=document.getElementById("sancao-dias").value;
+  const c=sancaoContrato;
+  const msg=document.getElementById("sancao-doc-msg");
+  if(!itens.length){msg.textContent="Selecione ao menos um item.";msg.className="fmsg err";return;}
+  if(!tipo||!motivo){msg.textContent="Escolha o tipo e o motivo da sanção.";msg.className="fmsg err";return;}
+  if(motivo==="Outro motivo"&&!motivoLivre){msg.textContent="Descreva o outro motivo.";msg.className="fmsg err";return;}
+  if(!c?.prestador){msg.textContent="Empresa não localizada. Confira se o CPL está cadastrado em Contratos.";msg.className="fmsg err";return;}
+  const janela=window.open("","_blank");
+  if(!janela){msg.textContent="O navegador bloqueou a nova aba. Permita pop-ups e tente novamente.";msg.className="fmsg err";return;}
+  janela.document.write('<!doctype html><meta charset="utf-8"><title>Gerando documento...</title><p style="font-family:Arial;padding:24px">Registrando solicitação...</p>');
+  const btn=document.getElementById("btn-confirmar-sancao"); btn.disabled=true; btn.textContent="Registrando...";
+  const snapshot={artigo_adicional:artigo||null,itens:itens.map(i=>({id:i.id,item:i.item||i.item_cadastrado,qtde:i.qtde||i.qtde_cadastrada,vl_unitario:i.vl_unitario,vl_total:i.vl_total,cpl:i.cpl,status:i.status_raw,empenho:i.empenho,data_entrega:i.data_entrega}))};
+  const registro={
+    cpl_contrato:sancaoCplTravado, contrato_id:c.id, empresa:c.prestador, tipo_sancao:tipo,
+    motivo, motivo_livre:motivo==="Outro motivo"?motivoLivre:null,
+    clausula_contratual:clausula||null,
+    percentual_multa:tipo==="Multa"&&percentualRaw!==""?Number(percentualRaw):null,
+    dias_atraso:diasRaw!==""?Number(diasRaw):null,
+    itens_ids:JSON.stringify(itens.map(i=>i.id)), itens_json:JSON.stringify(snapshot),
+    solicitado_por:currentProfile?.nome||currentProfile?.email||"Usuário do sistema",
+    gerado_em:new Date().toISOString().slice(0,10)
+  };
+  const {error}=await sb.from("sancoes_solicitadas").insert(registro);
+  btn.disabled=false; btn.textContent="Gerar documento";
+  if(error){janela.close();msg.textContent="Erro ao registrar: "+error.message;msg.className="fmsg err";return;}
+  const incisos={"Advertência":"I","Multa":"II","Impedimento de licitar e contratar":"III","Declaração de inidoneidade":"IV"};
+  const total=itens.reduce((s,i)=>s+(Number(i.vl_total)||0),0);
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  const fundamento=motivo==="Atraso na entrega"
+    ? "ao ensejar o retardamento da entrega do objeto contratual sem motivo justificado"
+    : _sanEsc(motivoLivre);
+  const linhas=itens.map((i,idx)=>`<tr><td>${idx+1}</td><td><strong>${_sanEsc(i.cpl)}</strong><br>${_sanEsc(c.prestador)}</td><td>${_sanEsc(i.item||i.item_cadastrado||"—")}</td><td>${_sanEsc(i.qtde||i.qtde_cadastrada||"—")}</td><td>${i.vl_unitario?fmtFull(i.vl_unitario):"—"}</td><td>${i.vl_total?fmtFull(i.vl_total):"—"}</td><td>${_sanEsc(i.empenho||"—")}</td><td>${_sanEsc(i.status_raw||"—")}</td><td>${registro.dias_atraso??"—"}</td></tr>`).join("");
+  janela.document.open();
+  janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Solicitação de Sanção - ${_sanEsc(sancaoCplTravado)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:11pt;line-height:1.45;margin:0}header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:18px}header h1{font-size:15pt;margin:12px 0 4px}header p{margin:2px}.ident{border:1px solid #555;padding:12px;margin:14px 0;background:#f5f5f5}.ident div{margin:3px 0}h2{font-size:11pt;text-transform:uppercase;margin:18px 0 7px}table{width:100%;border-collapse:collapse;font-size:8pt}th,td{border:1px solid #777;padding:5px;vertical-align:top}th{background:#eee}.total{text-align:right;font-weight:bold;margin-top:7px}.assinatura{margin:70px auto 0;text-align:center;width:320px;border-top:1px solid #111;padding-top:6px}.corpo{text-align:justify}.no-print{display:none}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>
+    <header><strong>SECRETARIA MUNICIPAL DA SAÚDE · SOROCABA</strong><p>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</p><h1>SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO ADMINISTRATIVA</h1><p>Gerado em ${hoje}</p></header>
+    <div class="ident"><div>Processo/CPL: <strong>${_sanEsc(sancaoCplTravado)}</strong></div><div>Contrato nº: <strong>${_sanEsc(c.numero_contrato||"—")}</strong></div><div>Empresa contratada: <strong>${_sanEsc(c.prestador)}</strong></div><div>CNPJ: ${_sanEsc(c.cnpj||"—")}</div><div>Objeto: ${_sanEsc(c.objeto||"—")}</div></div>
+    <h2>Fundamentação legal</h2><p class="corpo">A contratada incorreu na infração prevista no art. 155, inciso VII, da Lei nº 14.133/2021, ${fundamento}, sujeitando-se às sanções previstas no art. 156, inciso ${incisos[tipo]} da mesma Lei. ${clausula?`Ademais, a conduta viola a ${_sanEsc(clausula)} do instrumento contratual.`:""} ${artigo?_sanEsc(artigo)+".":""}</p>
+    <h2>Itens relacionados</h2><table><thead><tr><th>#</th><th>Processo / Empresa</th><th>Item</th><th>Qtde</th><th>Valor unit.</th><th>Valor total</th><th>Empenho</th><th>Status</th><th>Dias atraso</th></tr></thead><tbody>${linhas}</tbody></table><div class="total">TOTAL: ${fmtFull(total)}</div>
+    <h2>Solicitação</h2><p class="corpo">Diante do exposto, esta Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde solicita à Secretaria de Administração a instauração de processo administrativo sancionador e aplicação de <strong>${_sanEsc(tipo.toUpperCase())}</strong> à empresa <strong>${_sanEsc(c.prestador)}</strong>, inscrita no CNPJ ${_sanEsc(c.cnpj||"—")}, referente ao(s) item(ns) discriminado(s) acima, garantidos o contraditório e a ampla defesa, nos termos do art. 157 da Lei nº 14.133/2021.</p>
+    ${tipo==="Multa"&&percentualRaw!==""?`<p class="corpo">A multa sugerida é de <strong>${_sanEsc(percentualRaw)}% ao dia de atraso</strong> sobre o valor do(s) item(ns) em atraso, conforme previsto no instrumento contratual.</p>`:""}
+    <div class="assinatura"><strong>${_sanEsc(registro.solicitado_por)}</strong><br>Supervisor — SUEQ / Secretaria Municipal da Saúde<br>${hoje}</div>
+    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  janela.document.close();
+  document.getElementById("modal-solicitar-sancao").classList.remove("active");
+  sancaoSelecionados.clear(); sancaoCplTravado=""; sancaoContrato=null; atualizarSelecaoSancao(); renderTable();
+}
+
 // ═══ CONSULTA RÁPIDA ═══
 function setSearchType(type,btn){
   searchType=type;
@@ -5425,6 +5726,54 @@ document.addEventListener('click',function(e){
 
 function _popularFiltrosFisc(){ _fiscUpdateHdrBtns(); }
 
+let fiscSortCol = "data";
+let fiscSortAsc = false;
+const FISC_SORT_COLS = ["protocolo","data","unidade","equipamento","patrimonio","cpl","os","servico","situacao","competencia","nf","sla","fiscalizado_por","fiscalizado_em"];
+
+function _fiscDataMs(raw){
+  if(!raw) return null;
+  const s=String(raw).trim(); let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0),+(m[6]||0)).getTime();
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m) return new Date(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0)).getTime();
+  const d=new Date(s); return Number.isNaN(d.getTime())?null:d.getTime();
+}
+function _fiscSortValue(r,col){
+  const ch=r._chamado||{};
+  if(col==="data") return _fiscDataMs(ch.carimbo||ch.data_solicitacao);
+  if(col==="fiscalizado_em") return _fiscDataMs(r.fiscalizado_em);
+  if(col==="sla") return _diasEntreDatas(ch.carimbo||ch.data_solicitacao||null,r.data_atendimento_os||null);
+  if(col==="competencia"){
+    const m=String(r.competencia||"").match(/(\d{1,2})\D+(\d{4})/);
+    return m?(+m[2]*12+(+m[1]-1)):null;
+  }
+  const vals={protocolo:r.protocolo,unidade:ch.unidade,equipamento:ch.equipamento,patrimonio:ch.patrimonio,cpl:r.cpl_contrato,os:r.os,servico:r.servico_realizado||r.feito,situacao:SITUACAO_FISC[r.situacao_os]?.label||r.situacao_os,nf:r.nf_referencia,fiscalizado_por:r.fiscalizado_por};
+  return vals[col]??"";
+}
+function ordenarFiscalizacao(col){
+  if(fiscSortCol===col) fiscSortAsc=!fiscSortAsc;
+  else{ fiscSortCol=col; fiscSortAsc=true; }
+  _renderFiscalizacao();
+}
+function _ordenarRowsFiscalizacao(rows){
+  return [...rows].sort((a,b)=>{
+    const va=_fiscSortValue(a,fiscSortCol), vb=_fiscSortValue(b,fiscSortCol);
+    const vazioA=va===null||va===undefined||va==="", vazioB=vb===null||vb===undefined||vb==="";
+    if(vazioA!==vazioB) return vazioA?1:-1;
+    let cmp=0;
+    if(typeof va==="number"&&typeof vb==="number") cmp=va-vb;
+    else cmp=String(va).localeCompare(String(vb),"pt-BR",{numeric:true,sensitivity:"base"});
+    if(cmp===0) cmp=String(a.protocolo||"").localeCompare(String(b.protocolo||""),"pt-BR",{numeric:true});
+    return fiscSortAsc?cmp:-cmp;
+  });
+}
+function _atualizarIconesSortFisc(){
+  FISC_SORT_COLS.forEach(col=>{
+    const el=document.getElementById("sort-fisc-"+col);
+    if(el) el.textContent=fiscSortCol===col?(fiscSortAsc?"▲":"▼"):"";
+  });
+}
+
 function filtrarFiscalizacao(){
   const busca=(document.getElementById("fisc-busca")?.value||"").toLowerCase();
   fiscalizacaoFiltrados=fiscalizacaoRows.filter(r=>{
@@ -5443,7 +5792,8 @@ function filtrarFiscalizacao(){
 }
 
 function _renderFiscalizacao(){
-  const rows=fiscalizacaoFiltrados;
+  const rows=_ordenarRowsFiscalizacao(fiscalizacaoFiltrados);
+  _atualizarIconesSortFisc();
   const nao=rows.filter(r=>!r.situacao_os||r.situacao_os==='nao_fiscalizado').length;
   const pend=rows.filter(r=>r.situacao_os==='pendente').length;
   const conf=rows.filter(r=>r.situacao_os==='conforme').length;
