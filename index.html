@@ -3429,8 +3429,9 @@ async function gerarSolicitacaoSancaoAta(){
   const btn=document.getElementById("btn-confirmar-sancao");btn.disabled=true;btn.textContent="Registrando...";
   const snapshot={artigo_adicional:artigo||null,itens:itens.map(i=>{const a=_sancaoAtaDoExec(i);return{id:_sancaoExecKey(i),cpl:i.cpl,sim:i.sim,item:i.item,unidade:i.unidade,qtde:i.qtde,vl_unitario:a?.valor_unit||null,vl_total:i.valor,empenho:i.empenho,data_af:i.data_af,prev_entrega:i.prev_entrega,dt_entrega:i.dt_entrega};})};
   const registro={cpl_contrato:sancaoCplTravado,contrato_id:c.id||null,empresa:sancaoEmpresaTravada,tipo_sancao:tipo,motivo,motivo_livre:motivo==="Outro motivo"?motivoLivre:null,clausula_contratual:clausula||null,percentual_multa:tipo==="Multa"&&percentualRaw!==""?Number(percentualRaw):null,dias_atraso:diasRaw!==""?Number(diasRaw):null,itens_ids:JSON.stringify(itens.map(_sancaoExecKey)),itens_json:JSON.stringify(snapshot),solicitado_por:currentProfile?.nome||currentProfile?.email||"Usuário do sistema",gerado_em:new Date().toISOString().slice(0,10)};
-  const {error}=await sb.from("sancoes_solicitadas").insert(registro);btn.disabled=false;btn.textContent="Gerar documento";
+  const {data:_san,error}=await sb.from("sancoes_solicitadas").insert(registro).select().single();btn.disabled=false;btn.textContent="Gerar documento";
   if(error){janela.close();msg.textContent="Erro ao registrar: "+error.message;msg.className="fmsg err";return;}
+  if(_san) await sb.from("sancao_itens").insert(snapshot.itens.map(it=>({sancao_id:_san.id,ref_origem:it.id,descricao:it.item,cpl:it.cpl,sim:it.sim,unidade:it.unidade,qtde:it.qtde,vl_unitario:it.vl_unitario,vl_total:it.vl_total,empenho:it.empenho,data_af:it.data_af,prev_entrega:it.prev_entrega,dt_entrega:it.dt_entrega})));
   const incisos={"Advertência":"I","Multa":"II","Impedimento de licitar e contratar":"III","Declaração de inidoneidade":"IV"}, total=itens.reduce((s,i)=>s+(Number(i.valor)||0),0), hoje=new Date().toLocaleDateString("pt-BR"), numero=c.numero_contrato||primeiro.sim||"—";
   const fundamento=motivo==="Atraso na entrega"?"ao ensejar o retardamento da entrega do objeto contratual sem motivo justificado":_sanEsc(motivoLivre);
   const linhas=itens.map((i,idx)=>{const a=_sancaoAtaDoExec(i),d=calcDiasPrazo(i);return `<tr><td>${idx+1}</td><td><strong>${_sanEsc(i.cpl)}</strong><br>${_sanEsc(sancaoEmpresaTravada)}</td><td>${_sanEsc(i.item)}</td><td>${_sanEsc(i.unidade||"—")}</td><td>${i.qtde||"—"}</td><td>${a?.valor_unit?fmtFull(a.valor_unit):"—"}</td><td>${i.valor?fmtFull(i.valor):"—"}</td><td>${_sanEsc(i.empenho||"—")}</td><td>${d<0?Math.abs(d)+" dias de atraso":"Aguardando entrega"}</td></tr>`;}).join("");
@@ -5369,9 +5370,10 @@ async function gerarSolicitacaoSancao(){
     solicitado_por:currentProfile?.nome||currentProfile?.email||"Usuário do sistema",
     gerado_em:new Date().toISOString().slice(0,10)
   };
-  const {error}=await sb.from("sancoes_solicitadas").insert(registro);
+  const {data:_san,error}=await sb.from("sancoes_solicitadas").insert(registro).select().single();
   btn.disabled=false; btn.textContent="Gerar documento";
   if(error){janela.close();msg.textContent="Erro ao registrar: "+error.message;msg.className="fmsg err";return;}
+  if(_san) await sb.from("sancao_itens").insert(snapshot.itens.map(it=>({sancao_id:_san.id,emenda_item_id:it.id,ref_origem:it.id,descricao:it.item,cpl:it.cpl,qtde:it.qtde,vl_unitario:it.vl_unitario,vl_total:it.vl_total,empenho:it.empenho,dt_entrega:it.data_entrega})));
   const incisos={"Advertência":"I","Multa":"II","Impedimento de licitar e contratar":"III","Declaração de inidoneidade":"IV"};
   const total=itens.reduce((s,i)=>s+(Number(i.vl_total)||0),0);
   const hoje=new Date().toLocaleDateString("pt-BR");
@@ -6343,7 +6345,13 @@ async function confirmarGerarTermo(){
   </div>
   <script>window.onload=()=>window.print();<\/script>
   <\/body><\/html>`;
-  await sb.from("termos_ateste").insert({cpl_contrato:cpls.join(",")||null,competencia,nf_referencia:nf,fiscalizado_por:fiscal,gerado_em:new Date().toISOString().split("T")[0]});
+  const _contratoIds=[...new Set(cpls.map(cpl=>((_contratosParaModal||[]).find(c=>c.cpl===cpl)||{}).id).filter(Boolean))];
+  const {data:_termo}=await sb.from("termos_ateste").insert({cpl_contrato:cpls.join(",")||null,contrato_id:_contratoIds.length===1?_contratoIds[0]:null,competencia,nf_referencia:nf,fiscalizado_por:fiscal,gerado_em:new Date().toISOString().split("T")[0]}).select().single();
+  if(_termo){
+    if(_contratoIds.length) await sb.from("termo_contratos").insert(_contratoIds.map(cid=>({termo_id:_termo.id,contrato_id:cid})));
+    const _chIds=[...new Set(selecionadas.map(r=>r.chamado_id).filter(Boolean))];
+    if(_chIds.length) await sb.from("termo_chamados").insert(_chIds.map(chid=>({termo_id:_termo.id,chamado_id:chid})));
+  }
   const w=window.open("","_blank"); w.document.write(html); w.document.close();
 }
 
