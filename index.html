@@ -7,9 +7,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="dashboard.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
 
 </head>
 <body>
@@ -2202,7 +2200,8 @@ function showTab(name){
 }
 
 // ═══ LOAD ═══
-function exportarExcel(){
+async function exportarExcel(){
+  await ensureLib('xlsx');
   if(!filtered.length){alert("Nenhum dado para exportar.");return}
   const colunas=[
     "TIPO","EMENDA","PARLAMENTAR","PROCESSO SEI DA EMENDA","VALOR CEDIDO",
@@ -2227,12 +2226,34 @@ function exportarExcel(){
   XLSX.writeFile(wb,"emendas_filtradas_"+data+".xlsx");
 }
 
+// ═══ CARREGAMENTO SOB DEMANDA DE BIBLIOTECAS PESADAS ═══
+const _libUrls={
+  xlsx:"https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  html2pdf:"https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",
+  papa:"https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
+};
+const _libCheck={xlsx:()=>window.XLSX,html2pdf:()=>window.html2pdf,papa:()=>window.Papa};
+const _libPromise={};
+function ensureLib(name){
+  if(_libCheck[name] && _libCheck[name]()) return Promise.resolve();
+  if(_libPromise[name]) return _libPromise[name];
+  _libPromise[name]=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src=_libUrls[name];
+    s.onload=()=>resolve();
+    s.onerror=()=>{_libPromise[name]=null;reject(new Error("Falha ao carregar "+name));};
+    document.head.appendChild(s);
+  });
+  return _libPromise[name];
+}
+
 // ═══ CARREGAR CHAMADOS E AC ═══
 async function loadChamados(){
   localStorage.removeItem('chamados_data_corte');
   document.getElementById("chamados-loading").style.display="block";
   document.getElementById("chamados-main").style.display="none";
   try{
+    await ensureLib('papa');
     // Carregar chamados
     const r1=await fetch(CHAMADOS_CSV_URL);
     const t1=await r1.text();
@@ -2669,6 +2690,7 @@ async function gerarPDFChamado(protocolo,controleOverride=null){
     const prefixo=await _prefixoContratoDoChamado(ctrl);
     const partes=[_parteNomePDF(r.protocolo),_parteNomePDF(prefixo),_parteNomePDF(r.unidade)].filter(Boolean);
     const nome=(partes.join(" - ")||"chamado")+".pdf";
+    await ensureLib('html2pdf');
     const worker=html2pdf().set({margin:[10,10,10,10],html2canvas:{scale:2,useCORS:true,letterRendering:true,backgroundColor:"#ffffff"},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(html,"string");
     const blob=await worker.outputPdf("blob");
     const url=URL.createObjectURL(blob);
@@ -3525,7 +3547,8 @@ function togglePendentes(){
 }
 
 // ═══ EXPORTAR EXCEL ═══
-function exportarAtas(){
+async function exportarAtas(){
+  await ensureLib('xlsx');
   const colunas=["CPL","SIM","ITEM","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
   const cpl=document.getElementById("fat-cpl")?.value||"";
   const sim=document.getElementById("fat-sim")?.value||"";
@@ -3543,7 +3566,8 @@ function exportarAtas(){
   XLSX.writeFile(wb,"atas_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");
 }
 
-function exportarExecs(){
+async function exportarExecs(){
+  await ensureLib('xlsx');
   const colunas=["CPL","SIM","ITEM","UNIDADE","QTDE","VALOR","EMPENHO","DATA_AF","PREV_ENTREGA","DT_ENTREGA","NF"];
   const rows=window._execRowsFiltered||atasExec;
   const dados=rows.map(r=>[r.cpl,r.sim,r.item,r.unidade,r.qtde,r.valor,r.empenho,r.data_af,r.prev_entrega,r.dt_entrega,r.nf]);
@@ -5357,8 +5381,9 @@ function setSearchType(type,btn){
   btn.classList.add("active");
 }
 
-function exportarConsulta(){
+async function exportarConsulta(){
   if(!lastSearchResults.length){alert("Nenhum resultado para exportar.");return}
+  await ensureLib('xlsx');
   const colunas=["TIPO","EMENDA","PARLAMENTAR","UNIDADE BENEFICIADA","ITEM","QTDE","VALOR TOTAL","CPL / PROCESSO","STATUS","NOTA FISCAL","Nº EMPENHO","Nº PATRIMÔNIO","UNIDADE ENTREGA","DATA ENTREGA","ORDEM PAGAMENTO"];
   const dados=lastSearchResults.map(r=>[r.tipo,r.emenda,r.parlamentar,r.unidade,r.item,r.qtde,r.vl_total,r.cpl,r.status_raw,r.nota_fiscal,r.empenho,r.patrimonio,r.unidade_entrega,r.data_entrega,r.ordem_pagamento]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
@@ -6062,9 +6087,9 @@ function abrirModalFiscOS(protocolo){
   document.getElementById("mfo-msg").className="fmsg";
   // Mostra SLA preview se já tem data
   _atualizarSLAPreview(r._chamado?.carimbo||r._chamado?.data_solicitacao||null, r.data_atendimento_os||null);
-  document.getElementById("mfo-data-atendimento").addEventListener("change", function(){
+  document.getElementById("mfo-data-atendimento").onchange = function(){
     _atualizarSLAPreview(r._chamado?.carimbo||r._chamado?.data_solicitacao||null, this.value||null);
-  }, {once:false});
+  };
   document.getElementById("modal-fisc-os").classList.add("active");
 }
 
