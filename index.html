@@ -4,207 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde · SMS Sorocaba</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="dashboard.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#f0f4f8;--surface:#ffffff;--surface2:#f4f7fb;--border:#dde3ed;
-  --text:#1a2233;--text2:#4a5568;--text3:#8896a8;
-  --green:#1D9E75;--green-bg:#E1F5EE;--green-text:#085041;
-  --blue:#1a5fa8;--blue-bg:#deeaf8;--blue-text:#0c3060;
-  --amber:#EF9F27;--amber-bg:#FAEEDA;--amber-text:#633806;
-  --red:#E24B4A;--red-bg:#FCEBEB;--red-text:#501313;
-  --purple:#7F77DD;--purple-bg:#EEEDFE;--purple-text:#26215C;
-  --radius:10px;--radius-sm:6px;
-  --sorocaba-verde:#1a6b3c;--sorocaba-azul:#1a5fa8;--sorocaba-ouro:#c9a84c;
-  --tabs-bg:#fff;--filters-bg:#f5f8fc;--dropdown-bg:#fff;
-  --th-bg:#dde8f5;--th-text:#1a3a6b;--td-border:#ccd6e0;--row-odd:#ffffff;--row-even:#f0f4f8;--row-hover:#e8f0fb;
-}
-html[data-theme="dark"]{
-  --bg:#0f141c;--surface:#15202e;--surface2:#1b2735;--border:#243040;
-  --text:#e6edf5;--text2:#c3ccd8;--text3:#8b97a8;
-  --green:#34d399;--green-bg:#0e3b2e;--green-text:#6ee7b7;
-  --blue:#5eb3f5;--blue-bg:#173049;--blue-text:#9ecbf5;
-  --amber:#fbbf24;--amber-bg:#3d2f12;--amber-text:#fcd97a;
-  --red:#f87171;--red-bg:#3d1b1b;--red-text:#fca5a5;
-  --purple:#a59cf5;--purple-bg:#23204a;--purple-text:#c4bdfb;
-  --tabs-bg:#0b0f16;--filters-bg:#15202e;--dropdown-bg:#15202e;
-  --th-bg:#1b2a3d;--th-text:#9ec5ef;--td-border:#243040;--row-odd:#15202e;--row-even:#111a25;--row-hover:#1e2c3d;
-}
-html{transition:background .2s}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-button{color:var(--text)}
-button[style*="background:var(--surface)"],button[style*="background: var(--surface)"]{color:var(--text2)}
-button[style*="background:none"],button[style*="background: none"]{color:var(--text2)}
-.header{background:linear-gradient(135deg,#1a5fa8 0%,#1a3a6b 100%);border-bottom:3px solid var(--sorocaba-ouro);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,63,107,.25)}
-.header-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.01em}
-.header-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:2px}
-.pill{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
-.pill-ok{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3)}
-.pill-loading{background:rgba(239,159,39,.2);color:#fff}
-.pill-err{background:rgba(226,75,74,.2);color:#fff}
-.refresh-btn{font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;backdrop-filter:blur(4px)}.refresh-btn:hover{background:rgba(255,255,255,.25)}
-.hamburger{display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;line-height:1;width:38px;height:38px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;margin-right:4px}
-.sidebar{position:fixed;top:var(--header-h,64px);left:0;width:220px;height:calc(100vh - var(--header-h,64px));background:var(--surface);border-right:1px solid var(--border);padding:.75rem 0;overflow-y:auto;z-index:96;transition:transform .25s ease}
-.sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 .5rem}
-.sidebar-section{display:flex;flex-direction:column;gap:2px}
-.sidebar-section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:.75rem .75rem .25rem}
-.sidebar-item{display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:background .12s,color .12s;user-select:none}
-.sidebar-item:hover{background:var(--surface2);color:var(--text)}
-.sidebar-item.active{background:var(--blue-bg);color:var(--blue-text);font-weight:600}
-.sidebar-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
-.sidebar-label{flex:1}
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:999;align-items:center;justify-content:center}
-.modal-overlay.active{display:flex}
-.modal-box{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-.modal-title{font-size:15px;font-weight:600;margin-bottom:.5rem}
-.modal-sub{font-size:13px;color:var(--text2);margin-bottom:1rem}
-.modal-input{width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.75rem}
-.modal-input:focus{outline:none;border-color:var(--blue)}
-.modal-err{font-size:12px;color:var(--red);margin-bottom:.75rem;display:none}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end}
-.modal-filter-btn{width:100%;text-align:left;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer}
-.modal-filter-btn:hover{border-color:var(--blue)}
-.modal-filter-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
-.container{max-width:none;margin:0 auto;padding:1.25rem}
-@media(min-width:769px){.container{margin-left:220px}}
-@media(max-width:768px){
-  .hamburger{display:inline-flex;align-items:center;justify-content:center}
-  .sidebar{transform:translateX(-100%);box-shadow:2px 0 16px rgba(0,0,0,.25)}
-  body.sidebar-open .sidebar{transform:translateX(0)}
-}
-.panel{display:none}.panel.active{display:block}
-.loading{text-align:center;padding:3rem;color:var(--text3);font-size:14px}
-.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-/* FILTROS */
-.filters{background:var(--filters-bg);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1.125rem;margin-bottom:1.125rem;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.fg{display:flex;flex-direction:column;gap:3px}
-.fg-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:4px}
-.fg-label button{font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text3);line-height:1.4}
-.fg-label button:hover{background:var(--border)}
-.fg select,.fg input{font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:145px}
-.fg select:focus,.fg input:focus{outline:none;border-color:var(--blue)}
-.fg select[multiple]{min-height:76px}
-.clear-btn{font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text2)}
-/* MÉTRICAS */
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.125rem}
-.metric{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--sorocaba-azul);border-radius:var(--radius);padding:.875rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.10);transition:box-shadow .15s}.metric:hover{box-shadow:0 3px 10px rgba(0,0,0,.1)}
-.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
-.metric-value{font-size:21px;font-weight:600;line-height:1}
-.metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
-/* PROGRESSO */
-.prog-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.125rem}
-.prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
-.prog-pct{font-size:20px;font-weight:600;color:var(--green)}
-.prog-track{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;margin-bottom:5px}
-.prog-fill{height:100%;background:var(--green);border-radius:5px;transition:width .5s}
-.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3)}
-/* GRID */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.125rem;margin-bottom:1.125rem}
-@media(max-width:700px){.grid2{grid-template-columns:1fr}}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.125rem}
-.card-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.875rem}
-/* STATUS */
-.status-list{display:flex;flex-direction:column;gap:5px}
-.status-row{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:var(--radius-sm);cursor:pointer}
-.status-row:hover{background:var(--surface2)}
-.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.sname{font-size:13px;flex:1}
-.sbar-wrap{width:80px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
-.sbar{height:100%;border-radius:3px}
-.scnt{font-size:12px;font-weight:500;color:var(--text2);min-width:28px;text-align:right}
-/* BARS */
-.bar-list{display:flex;flex-direction:column;gap:7px}
-.bar-row{display:flex;align-items:center;gap:8px}
-.bar-lbl{font-size:12px;color:var(--text2);width:135px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-track{flex:1;height:16px;background:var(--surface2);border-radius:3px;overflow:hidden;cursor:pointer}
-.bar-fill{height:100%;border-radius:3px;transition:width .4s}
-.bar-val{font-size:11px;color:var(--text3);min-width:55px}
-/* TABELA */
-.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1.125rem;box-shadow:0 2px 8px rgba(0,0,0,.10)}
-.table-hdr{padding:.75rem 1.125rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.table-hdr-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
-.table-hdr-count{font-size:12px;color:var(--text3)}
-.table-wrap{overflow-x:auto;overflow-y:auto;height:calc(100vh - var(--header-h,64px) - var(--table-offset,300px))}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:var(--th-bg);font-weight:500;color:var(--th-text);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap;cursor:pointer}
-th:hover{background:var(--border)}
-td{padding:6px 10px;border-bottom:1px solid var(--td-border);vertical-align:top}tr:nth-child(odd) td{background:var(--row-odd)}tr:nth-child(even) td{background:var(--row-even)}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--row-hover)}
-.td-trunc{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sort-icon{font-size:10px;color:var(--text3);margin-left:3px}
-.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
-/* FORMULÁRIOS */
-.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.125rem}
-.form-title{font-size:14px;font-weight:600;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
-.form-group{display:flex;flex-direction:column;gap:4px}
-.form-group.full{grid-column:1/-1}
-.form-label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
-.form-group input,.form-group select{font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)}
-.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue)}
-.form-group input[readonly]{background:var(--surface2);color:var(--text3)}
-.form-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap}
-.btn-primary{font-size:13px;padding:8px 20px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500}
-.btn-primary:hover{opacity:.9}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
-.btn-secondary{font-size:13px;padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
-.btn-secondary:hover{background:var(--surface2)}
-.fmsg{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);display:none}
-.fmsg.ok{background:var(--green-bg);color:var(--green-text);display:inline-block}
-.fmsg.err{background:var(--red-bg);color:var(--red-text);display:inline-block}
-/* CONSULTA RÁPIDA */
-.search-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.125rem}
-.search-input-wrap{display:flex;gap:8px;margin-bottom:1rem}
-.search-input-wrap input{flex:1;font-size:15px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm)}
-.search-input-wrap input:focus{outline:none;border-color:var(--blue)}
-.search-input-wrap button{padding:10px 20px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;font-size:13px;cursor:pointer;font-weight:500}
-.search-type-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.5rem}
-.search-type-btn{font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)}
-.search-type-btn.active{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue)}
-.ficha{background:var(--surface2);border-radius:var(--radius);padding:1.25rem;display:none}
-.ficha-title{font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)}
-.ficha-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-.ficha-field{background:var(--surface);border-radius:var(--radius-sm);padding:.625rem .875rem;border:1px solid var(--border)}
-.ficha-field-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
-.ficha-field-value{font-size:13px;font-weight:500;color:var(--text)}
-.ficha-field-value.empty{color:var(--text3);font-weight:400}
-.visualizador-hidden{display:none!important}
-/* Garante que selects e inputs inline respeitem o tema dark */
-select,input,textarea{color-scheme:light dark}
-select:not([class]){background:var(--surface);color:var(--text)}
 
-/* CHECKBOX LIST */
-.check-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)}
-.check-item-row{border-bottom:1px solid var(--border);padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
-.check-item-row:last-child{border-bottom:none}
-.check-item-row:hover{background:var(--surface2)}
-.check-item-row input[type=checkbox]{margin-top:14px;accent-color:var(--blue)}
-.item-info{display:flex;flex-direction:column;gap:6px}
-.item-name{font-size:13px;font-weight:500}
-.item-meta{font-size:11px;color:var(--text3)}
-.item-fields{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.item-field{display:flex;flex-direction:column;gap:2px}
-.item-field-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
-.item-field input{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:150px}
-.check-actions-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
-.check-actions-row button{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)}
-/* Dashboard filter column - prevent overflow */
-.dash-filters-col{overflow:hidden}
-.dash-filters-col .filters{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
-.dash-filters-col .fg{width:100%;max-width:100%;box-sizing:border-box}
-.dash-filters-col .fg select,.dash-filters-col .fg input{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
-.hdr-filter-btn{cursor:pointer;font-size:9px;color:var(--text3);padding:2px 5px;border-radius:4px;border:1px solid transparent;line-height:1;transition:background .12s,color .12s,border-color .12s}
-.hdr-filter-btn:hover{background:var(--surface2);color:var(--text)}
-.hdr-filter-btn.active{color:var(--blue);background:var(--blue-bg);border-color:var(--blue)}
-.sheet-toggle-btn{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
-.sheet-toggle-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
-.hidden-by-default{display:none}
-</style>
 </head>
 <body>
 
@@ -232,6 +38,7 @@ select:not([class]){background:var(--surface);color:var(--text)}
   <nav class="sidebar-nav">
     <div class="sidebar-section">
       <div class="sidebar-item active" id="sidebar-dashboard" onclick="showTab('dashboard')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Emendas</span></div>
+      <div class="sidebar-item" id="sidebar-saldo-emendas" style="display:none" onclick="showTab('saldo-emendas')"><span class="sidebar-icon">💰</span><span class="sidebar-label">Saldo das Emendas</span></div>
       <div class="sidebar-item" id="sidebar-consulta" style="display:none" onclick="showTab('consulta')"><span class="sidebar-icon">🔍</span><span class="sidebar-label">Consulta rápida</span></div>
     </div>
     <div class="sidebar-section">
@@ -327,12 +134,15 @@ select:not([class]){background:var(--surface);color:var(--text)}
         <table>
           <thead>
             <tr>
+              <th style="white-space:nowrap">Editar</th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></span><span class="hdr-filter-btn" id="hf-unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
               <th onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></th>
               <th onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></th>
+              <th onclick="sortTable('vl_unitario_cadastrado')">Vl. unit. plan. <span class="sort-icon" id="si-vl_unitario_cadastrado"></span></th>
+              <th onclick="sortTable('vl_total_cadastrado')">Vl. total plan. <span class="sort-icon" id="si-vl_total_cadastrado"></span></th>
               <th onclick="sortTable('vl_total')">Valor total <span class="sort-icon" id="si-vl_total"></span></th>
               <th onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></span><span class="hdr-filter-btn" id="hf-status_cat" onclick="openHeaderFilter(event,'status_cat')" title="Filtrar">▾</span></span></th>
@@ -343,6 +153,7 @@ select:not([class]){background:var(--surface);color:var(--text)}
               <th onclick="sortTable('patrimonio')">Patrimônio <span class="sort-icon" id="si-patrimonio"></span></th>
               <th onclick="sortTable('unidade_entrega')">Un. entrega <span class="sort-icon" id="si-unidade_entrega"></span></th>
               <th onclick="sortTable('data_entrega')">Dt. entrega <span class="sort-icon" id="si-data_entrega"></span></th>
+              <th id="th-saldo-emenda" style="white-space:nowrap;display:none">Saldo emenda</th>
             </tr>
           </thead>
           <tbody id="table-body"></tbody>
@@ -414,6 +225,74 @@ select:not([class]){background:var(--surface);color:var(--text)}
       </div>
     </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SALDO DAS EMENDAS ══════════════════════ -->
+<div id="panel-saldo-emendas" class="panel">
+  <div id="se-loading" class="loading"><span class="spinner"></span>Carregando saldo das emendas...</div>
+  <div id="se-main" style="display:none">
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Total de emendas</div><div class="metric-value" id="se-kpi-total">—</div></div>
+      <div class="metric"><div class="metric-label">Valor total cedido</div><div class="metric-value" id="se-kpi-cedido">—</div></div>
+      <div class="metric"><div class="metric-label">Total comprometido</div><div class="metric-value" id="se-kpi-comprometido">—</div></div>
+      <div class="metric" style="border-left-color:var(--green)"><div class="metric-label">Saldo total disponível</div><div class="metric-value" id="se-kpi-saldo">—</div></div>
+    </div>
+    <div class="filters" style="align-items:center">
+      <div class="fg" style="flex:1;min-width:240px">
+        <div class="fg-label">Filtro livre por palavra</div>
+        <input type="text" id="se-busca" placeholder="Busque por emenda, parlamentar, unidade, status..." oninput="renderSaldoEmendas()" style="width:100%;background:var(--surface);color:var(--text)">
+      </div>
+      <button onclick="limparFiltrosSaldo()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;cursor:pointer">Limpar filtros</button>
+    </div>
+    <div class="table-card">
+      <div class="table-hdr"><span class="table-hdr-title">Saldo consolidado por emenda</span><span class="table-hdr-count" id="se-count">—</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th onclick="sortSaldoEmendas('numero_emenda')">Nº Emenda <span class="sort-icon" id="se-si-numero_emenda"></span><button class="hdr-filter-btn" id="se-hf-numero_emenda" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'numero_emenda')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('tipo')">Tipo <span class="sort-icon" id="se-si-tipo"></span><button class="hdr-filter-btn" id="se-hf-tipo" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'tipo')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('parlamentar')">Parlamentar <span class="sort-icon" id="se-si-parlamentar"></span><button class="hdr-filter-btn" id="se-hf-parlamentar" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'parlamentar')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('unidade')">Unidade <span class="sort-icon" id="se-si-unidade"></span><button class="hdr-filter-btn" id="se-hf-unidade" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'unidade')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('valor_cedido')">Valor cedido <span class="sort-icon" id="se-si-valor_cedido"></span><button class="hdr-filter-btn" id="se-hf-valor_cedido" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'valor_cedido')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('total_planejado')">Total planejado <span class="sort-icon" id="se-si-total_planejado"></span><button class="hdr-filter-btn" id="se-hf-total_planejado" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_planejado')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('total_executado')">Total executado <span class="sort-icon" id="se-si-total_executado"></span><button class="hdr-filter-btn" id="se-hf-total_executado" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_executado')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('total_comprometido')">Comprometido <span class="sort-icon" id="se-si-total_comprometido"></span><button class="hdr-filter-btn" id="se-hf-total_comprometido" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_comprometido')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('saldo_remanescente')">Saldo disponível <span class="sort-icon" id="se-si-saldo_remanescente"></span><button class="hdr-filter-btn" id="se-hf-saldo_remanescente" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'saldo_remanescente')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('_percentual')">% exec. <span class="sort-icon" id="se-si-_percentual"></span><button class="hdr-filter-btn" id="se-hf-_percentual" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'_percentual')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('status_execucao')">Status <span class="sort-icon" id="se-si-status_execucao"></span><button class="hdr-filter-btn" id="se-hf-status_execucao" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'status_execucao')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('qtd_itens')">Itens <span class="sort-icon" id="se-si-qtd_itens"></span><button class="hdr-filter-btn" id="se-hf-qtd_itens" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'qtd_itens')" title="Filtrar">▾</button></th>
+            <th aria-label="Expandir">▶</th>
+          </tr></thead>
+          <tbody id="se-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-editar-item" onclick="if(event.target===this)fecharEditarItem()">
+  <div class="modal-box" style="width:760px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div class="modal-title">Editar item executado</div>
+    <div id="ei-planejado" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;margin:.75rem 0 1rem;font-size:12px;line-height:1.7"></div>
+    <div class="form-grid">
+      <div class="form-group full"><div class="form-label">Item executado *</div><input type="text" id="ei-item" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Qtde executada *</div><input type="number" id="ei-qtde" min="0" step="any" oninput="recalcularEditarItem()" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Valor unitário executado *</div><input type="number" id="ei-vl-unit" min="0" step="0.01" oninput="recalcularEditarItem()" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Valor total executado</div><input type="number" id="ei-vl-total" step="0.01" readonly style="background:var(--surface2);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">CPL / Processo</div><input type="text" id="ei-cpl" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Status da contratação</div><input type="text" id="ei-status" list="ei-status-opcoes" style="background:var(--surface);color:var(--text)"><datalist id="ei-status-opcoes"><option value="Não iniciada"><option value="Em andamento"><option value="Aguardando entrega"><option value="Entregue"><option value="Concluído"></datalist></div>
+      <div class="form-group"><div class="form-label">Nota fiscal</div><input type="text" id="ei-nf" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="ei-empenho" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Patrimônio</div><input type="text" id="ei-patrimonio" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Unidade de entrega</div><input type="text" id="ei-unidade-entrega" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Data de entrega</div><input type="date" id="ei-data-entrega" style="background:var(--surface);color:var(--text)"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ei-salvar" onclick="salvarEditarItem()" style="background:var(--surface);color:var(--text);border:1px solid var(--border)">Salvar</button>
+      <button class="btn-secondary" onclick="fecharEditarItem()" style="background:var(--surface);color:var(--text)">Cancelar</button>
+      <span id="msg-ei" class="fmsg"></span>
     </div>
   </div>
 </div>
@@ -1568,6 +1447,7 @@ select:not([class]){background:var(--surface);color:var(--text)}
         <span class="table-hdr-title">Contratos</span>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="table-hdr-count" id="ct-count">—</span>
+          <button id="ct-manter-status" onclick="manterStatusContratos()" disabled style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Manter Status</button>
           <button onclick="abrirModalNovoContrato()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">➕ Novo contrato</button>
         </div>
       </div>
@@ -1575,20 +1455,22 @@ select:not([class]){background:var(--surface);color:var(--text)}
         <table>
           <thead>
             <tr>
+              <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
               <th style="width:40px">Ações</th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">CPL<span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Prestador<span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('objeto')" style="cursor:pointer;user-select:none">Objeto <span id="sort-ct-objeto"></span></th>
-              <th onclick="sortContratos('vigencia_atual')" style="cursor:pointer;user-select:none">Vigência atual <span id="sort-ct-vigencia_atual"></span></th>
-              <th onclick="sortContratos('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-ct-vencimento"></span></th>
-              <th onclick="sortContratos('dias')" style="cursor:pointer;user-select:none">Dias <span id="sort-ct-dias"></span></th>
+              <th onclick="sortContratos('objeto')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vigencia_atual')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vencimento')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('dias')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Status<span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap">Ação</th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Seção<span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('fiscalizacao')" style="cursor:pointer;user-select:none">Fiscalização <span id="sort-ct-fiscalizacao"></span></th>
-              <th onclick="sortContratos('valor_mensal')" style="cursor:pointer;user-select:none;text-align:right">Valor mensal <span id="sort-ct-valor_mensal"></span></th>
-              <th onclick="sortContratos('valor_total')" style="cursor:pointer;user-select:none;text-align:right">Valor total <span id="sort-ct-valor_total"></span></th>
-              <th onclick="sortContratos('data_atualizacao')" style="cursor:pointer;user-select:none;white-space:nowrap">Atualizado em <span id="sort-ct-data_atualizacao"></span></th>
+              <th onclick="sortContratos('fiscalizacao')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_mensal')" style="cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor mensal <span id="sort-ct-valor_mensal"></span><span class="hdr-filter-btn" id="hfc-valor_mensal" onclick="openContratoFilter(event,'valor_mensal')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_total')" style="cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor total <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('atualizado_em')" style="cursor:pointer;user-select:none;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap">Editar</th>
             </tr>
           </thead>
           <tbody id="ct-tbody"></tbody>
@@ -1599,22 +1481,65 @@ select:not([class]){background:var(--surface);color:var(--text)}
   </div>
 </div>
 
-<!-- Modal E-mail da Empresa -->
+<!-- Modal de Vinculações do Contrato -->
 <div class="modal-overlay" id="modal-email-contrato" onclick="if(event.target===this)this.classList.remove('active')">
   <div class="modal-box" style="width:440px;max-width:96vw">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
-      <span style="font-size:15px;font-weight:700">E-mail da empresa</span>
+      <span style="font-size:15px;font-weight:700">🔗 Vinculações</span>
       <button onclick="document.getElementById('modal-email-contrato').classList.remove('active')" title="Fechar" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
     </div>
     <div id="ct-email-info" style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:1rem"></div>
     <div class="form-group">
-      <div class="form-label">E-mail para recebimento dos chamados *</div>
+      <div class="form-label">E-mail para recebimento dos chamados</div>
       <input type="email" id="ct-email-empresa" placeholder="contato@empresa.com" autocomplete="email">
     </div>
+    <div class="form-group" style="margin-top:.75rem">
+      <div class="form-label">Prefixo de Chamado</div>
+      <input type="text" id="ct-prefixo-chamado" placeholder="ex: OD, ME, ARC" inputmode="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')" style="background:var(--surface);color:var(--text)">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Somente letras, sem números, espaços ou caracteres especiais.</div>
+    </div>
     <div class="form-actions">
-      <button class="btn-primary" id="ct-email-salvar" onclick="salvarEmailContrato()">Salvar e-mail</button>
+      <button class="btn-primary" id="ct-email-salvar" onclick="salvarEmailContrato()">Salvar vinculações</button>
       <button class="btn-secondary" onclick="document.getElementById('modal-email-contrato').classList.remove('active')">Cancelar</button>
       <span id="ct-email-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Edição Completa do Contrato (admin) -->
+<div class="modal-overlay" id="modal-editar-contrato" onclick="if(event.target===this)this.classList.remove('active')" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:780px;max-width:98vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Editar contrato</span>
+      <button onclick="document.getElementById('modal-editar-contrato').classList.remove('active')" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">CPL</div><input id="ec-cpl" type="text"></div>
+      <div class="form-group"><div class="form-label">Nº do contrato</div><input id="ec-numero" type="text"></div>
+      <div class="form-group full"><div class="form-label">Prestador</div><input id="ec-prestador" type="text"></div>
+      <div class="form-group full"><div class="form-label">Objeto</div><input id="ec-objeto" type="text"></div>
+      <div class="form-group"><div class="form-label">CNPJ</div><input id="ec-cnpj" type="text"></div>
+      <div class="form-group"><div class="form-label">E-mail</div><input id="ec-email" type="email"></div>
+      <div class="form-group"><div class="form-label">Prefixo de chamado</div><input id="ec-prefixo" type="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"></div>
+      <div class="form-group"><div class="form-label">Seção</div><input id="ec-secao" type="text"></div>
+      <div class="form-group"><div class="form-label">Status</div><select id="ec-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="ENCERRADO">ENCERRADO</option></select></div>
+      <div class="form-group"><div class="form-label">Data de início</div><input id="ec-inicio" type="date"></div>
+      <div class="form-group"><div class="form-label">Data de assinatura</div><input id="ec-assinatura" type="date"></div>
+      <div class="form-group"><div class="form-label">Vigência atual</div><input id="ec-vigencia" type="text"></div>
+      <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
+      <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor atual</div><input id="ec-valor-atual" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor total</div><input id="ec-valor-total" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
+      <div class="form-group"><div class="form-label">Fiscalização</div><input id="ec-fiscalizacao" type="text"></div>
+      <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
+      <div class="form-group full"><div class="form-label">Observações</div><textarea id="ec-obs" rows="3" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ec-salvar" onclick="salvarEdicaoContrato()">Salvar alterações</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-editar-contrato').classList.remove('active')">Cancelar</button>
+      <span id="ec-msg" class="fmsg"></span>
     </div>
   </div>
 </div>
@@ -1975,7 +1900,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -1994,7 +1919,7 @@ function userCanEdit(tabKey){
 function aplicarVisibilidadeAbas(){
   SIDEBAR_TABS.forEach(n=>{
     const el=document.getElementById("sidebar-"+n);
-    if(el) el.style.display = userCanView(n) ? "flex" : "none";
+    if(el) el.style.display = (n==='saldo-emendas' ? userCanEdit('dashboard') : userCanView(n)) ? "flex" : "none";
   });
   updateSidebarSections();
 }
@@ -2298,10 +2223,14 @@ function fecharModalEdicao(name){
 }
 
 function showTab(name){
+  if(name==='saldo-emendas'&&!podeEditar('dashboard')){
+    alert("⛔ Você não tem permissão para acessar o saldo das emendas.");
+    return;
+  }
   localStorage.setItem("ultima_aba", name);
   window._activeTab = name;
-  document.body.classList.toggle('no-edit-tab', !userCanEdit(name));
-  const names=["dashboard","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","atas","contratos","usuarios","planilhas"];
+  document.body.classList.toggle('no-edit-tab', !userCanEdit(name==='saldo-emendas'?'dashboard':name));
+  const names=["dashboard","saldo-emendas","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","atas","contratos","usuarios","planilhas"];
   document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
   fecharSidebar();
   document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
@@ -2314,6 +2243,8 @@ function showTab(name){
   if(name==="contratos"&&!contratosCarregado) loadContratos();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
+  if(name==="saldo-emendas"&&!saldoEmendaCarregado) loadSaldoEmendas();
+  setTimeout(_setTableOffset,50);
 }
 
 // ═══ LOAD ═══
@@ -2610,10 +2541,25 @@ async function marcarTodosChamados(){
   alert(`✓ ${protocolos.length} chamados marcados e salvos!`);
 }
 
-function gerarPDFChamado(protocolo){
+async function _prefixoContratoDoChamado(ctrl){
+  const contratoId=ctrl?.contrato_id||null;
+  const cpl=ctrl?.cpl_contrato||ctrl?.cpl||ctrl?.contrato||"";
+  if(!contratoId&&!cpl) return "";
+  const local=(contratosRows||[]).find(c=>(contratoId&&String(c.id)===String(contratoId))||c.cpl===cpl||c.numero_contrato===cpl);
+  if(local?.prefixo_chamado) return String(local.prefixo_chamado).trim().toUpperCase();
+  let query=sb.from("contratos").select("prefixo_chamado").limit(1);
+  query=contratoId?query.eq("id",contratoId):query.eq("cpl",cpl);
+  const {data,error}=await query;
+  if(error){console.warn("Prefixo do contrato:",error.message);return "";}
+  return String(data?.[0]?.prefixo_chamado||"").trim().toUpperCase();
+}
+function _parteNomePDF(valor){
+  return String(valor||"").replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").replace(/^-+|-+$/g,"").trim();
+}
+async function gerarPDFChamado(protocolo,controleOverride=null){
   const r=chamadosRows.find(x=>x.protocolo===protocolo);
   if(!r){alert("Chamado não encontrado.");return;}
-  const ctrl=getControle(protocolo);
+  const ctrl=controleOverride||getControle(protocolo);
 
   const chk=(v)=>v?'(X)':'(  )';
   const chkExato=(v)=>v?'(X)':'(  )';
@@ -2629,32 +2575,35 @@ function gerarPDFChamado(protocolo){
 <head>
 <meta charset="UTF-8">
 <style>
-  @page{size:A4;margin:15mm 15mm 15mm 15mm}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;font-size:10px;color:#000}
-  .page{width:100%}
-  .header{display:flex;align-items:center;justify-content:center;margin-bottom:6px;position:relative}
-  .brasao{width:70px;height:60px;position:absolute;left:0}
-  .header-text{text-align:center}
-  .header-text .pref{font-size:11px;font-weight:bold}
-  .header-text .sec{font-size:10px}
-  table{width:100%;border-collapse:collapse;margin-bottom:4px}
-  td,th{border:1px solid #000;padding:3px 5px;vertical-align:top}
-  .titulo{text-align:center;font-weight:bold;font-size:10px;background:#e0e0e0;padding:4px}
-  .label{font-weight:bold;font-size:9px}
-  .rotulo{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:8px;font-weight:bold;text-align:center;width:16px;background:#e0e0e0;padding:2px}
-  .footer{text-align:center;font-size:8px;margin-top:8px;border-top:1px solid #000;padding-top:4px}
+  @page{size:A4;margin:10mm}
+  .pdf-os,.pdf-os *{box-sizing:border-box;color:#000!important;color-scheme:light}
+  .pdf-os{width:190mm;max-width:190mm;margin:0;padding:0;background:#fff!important;font-family:Arial,sans-serif;font-size:10px;line-height:1.2}
+  .pdf-os .header{display:flex!important;align-items:center!important;justify-content:center!important;min-height:68px;margin:0 0 6px!important;padding:0!important;position:relative!important;top:auto!important;z-index:auto!important;background:#fff!important;border:0!important;border-bottom:1px solid #000!important;box-shadow:none!important}
+  .pdf-os .brasao{width:70px;height:60px;position:absolute;left:0;object-fit:contain}
+  .pdf-os .header-text{text-align:center}
+  .pdf-os .header-text .pref{font-size:12px;font-weight:bold;margin-bottom:2px}
+  .pdf-os .header-text .sec{font-size:11px;font-weight:bold;margin-bottom:2px}
+  .pdf-os .header-text .setor{font-size:9px;font-weight:normal}
+  .pdf-os table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;table-layout:fixed;margin:0 0 4px!important;background:#fff!important}
+  .pdf-os tr,.pdf-os tr:nth-child(odd),.pdf-os tr:nth-child(even),.pdf-os td,.pdf-os th,.pdf-os tr:nth-child(odd) td,.pdf-os tr:nth-child(even) td{background:#fff!important;color:#000!important}
+  .pdf-os td,.pdf-os th{border:1px solid #000!important;padding:3px 5px!important;vertical-align:top!important;overflow-wrap:anywhere;word-break:normal;white-space:normal}
+  .pdf-os .titulo{background:#e0e0e0!important;text-align:center;font-weight:bold;font-size:10px;padding:4px!important}
+  .pdf-os .label{font-weight:bold;font-size:9px}
+  .pdf-os .rotulo{display:none!important}
+  .pdf-os .servico-opcao{display:inline-block;white-space:nowrap;margin:1px 10px 1px 0}
+  .pdf-os .footer{text-align:center;font-size:8px;margin-top:8px;border-top:1px solid #000;padding-top:4px}
   @media print{button{display:none}}
 </style>
 </head>
 <body>
-<div class="page">
+<div class="page pdf-os">
 
   <div class="header">
     <img src="${"https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg"}" class="brasao" alt="Brasão">
     <div class="header-text">
-      <div class="pref">SECRETARIA DA SAÚDE</div>
-      <div class="sec">SEÇÃO DE UNIDADES E EQUIPAMENTOS - BENS PERMANENTES</div>
+      <div class="pref">PREFEITURA DE SOROCABA</div>
+      <div class="sec">SECRETARIA DA SAÚDE</div>
+      <div class="setor">SEÇÃO DE AQUISIÇÃO E MANUTENÇÃO DE EQUIPAMENTOS E MOBILIÁRIOS DA SAÚDE</div>
     </div>
   </div>
 
@@ -2707,7 +2656,7 @@ function gerarPDFChamado(protocolo){
     <tr>
       <td colspan="3">
         <span class="label">Serviço Solicitado</span><br>
-        ${servicos.map(s=>`${chk(serv===s)} ${s}`).join(" &nbsp; ")}
+        ${servicos.map(s=>`<span class="servico-opcao">${chk(serv===s)} ${s}</span>`).join("")}
       </td>
     </tr>
     <tr>
@@ -2755,21 +2704,28 @@ function gerarPDFChamado(protocolo){
   </div>
 
   <div style="text-align:center;margin-top:12px">
-    <button onclick="window.print()" style="padding:8px 24px;background:#378ADD;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+    <button data-html2canvas-ignore="true" style="display:none">Imprimir</button>
   </div>
 
 </div>
-<script>
-function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
-function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
-aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'light');
-<\/script>
-</body>
-</html>`;
+<\/body>
+<\/html>`;
 
-  const win=window.open("","_blank","width=800,height:900");
-  win.document.write(html);
-  win.document.close();
+  try{
+    const prefixo=await _prefixoContratoDoChamado(ctrl);
+    const partes=[_parteNomePDF(r.protocolo),_parteNomePDF(prefixo),_parteNomePDF(r.unidade)].filter(Boolean);
+    const nome=(partes.join(" - ")||"chamado")+".pdf";
+    const worker=html2pdf().set({margin:[10,10,10,10],html2canvas:{scale:2,useCORS:true,letterRendering:true,backgroundColor:"#ffffff"},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(html,"string");
+    const blob=await worker.outputPdf("blob");
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;link.download=nome;link.style.display="none";
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){
+    console.error("Erro ao gerar PDF:",e);
+    alert("Não foi possível gerar o PDF: "+(e.message||e));
+  }
 }
 
 async function marcarChamadoAberto(protocolo, marcado){
@@ -3475,7 +3431,7 @@ async function gerarSolicitacaoSancaoAta(){
   const incisos={"Advertência":"I","Multa":"II","Impedimento de licitar e contratar":"III","Declaração de inidoneidade":"IV"}, total=itens.reduce((s,i)=>s+(Number(i.valor)||0),0), hoje=new Date().toLocaleDateString("pt-BR"), numero=c.numero_contrato||primeiro.sim||"—";
   const fundamento=motivo==="Atraso na entrega"?"ao ensejar o retardamento da entrega do objeto contratual sem motivo justificado":_sanEsc(motivoLivre);
   const linhas=itens.map((i,idx)=>{const a=_sancaoAtaDoExec(i),d=calcDiasPrazo(i);return `<tr><td>${idx+1}</td><td><strong>${_sanEsc(i.cpl)}</strong><br>${_sanEsc(sancaoEmpresaTravada)}</td><td>${_sanEsc(i.item)}</td><td>${_sanEsc(i.unidade||"—")}</td><td>${i.qtde||"—"}</td><td>${a?.valor_unit?fmtFull(a.valor_unit):"—"}</td><td>${i.valor?fmtFull(i.valor):"—"}</td><td>${_sanEsc(i.empenho||"—")}</td><td>${d<0?Math.abs(d)+" dias de atraso":"Aguardando entrega"}</td></tr>`;}).join("");
-  janela.document.open();janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Solicitação de Sanção - ${_sanEsc(sancaoCplTravado)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:11pt;line-height:1.45;margin:0}header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:18px}header h1{font-size:15pt;margin:12px 0 4px}header p{margin:2px}.ident{border:1px solid #555;padding:12px;margin:14px 0;background:#f5f5f5}.ident div{margin:3px 0}h2{font-size:11pt;text-transform:uppercase;margin:18px 0 7px}table{width:100%;border-collapse:collapse;font-size:8pt}th,td{border:1px solid #777;padding:5px;vertical-align:top}th{background:#eee}.total{text-align:right;font-weight:bold;margin-top:7px}.assinatura{margin:70px auto 0;text-align:center;width:320px;border-top:1px solid #111;padding-top:6px}.corpo{text-align:justify}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><header><strong>SECRETARIA MUNICIPAL DA SAÚDE · SOROCABA</strong><p>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</p><h1>SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO ADMINISTRATIVA</h1><p>Gerado em ${hoje}</p></header><div class="ident"><div>Processo/CPL: <strong>${_sanEsc(sancaoCplTravado)}</strong></div><div>Contrato/SIM nº: <strong>${_sanEsc(numero)}</strong></div><div>Empresa contratada: <strong>${_sanEsc(sancaoEmpresaTravada)}</strong></div><div>CNPJ: ${_sanEsc(c.cnpj||"—")}</div><div>Objeto: ${_sanEsc(c.objeto||[...new Set(itens.map(i=>i.item))].join(", "))}</div></div><h2>Fundamentação legal</h2><p class="corpo">A contratada incorreu na infração prevista no art. 155, inciso VII, da Lei nº 14.133/2021, ${fundamento}, sujeitando-se às sanções previstas no art. 156, inciso ${incisos[tipo]} da mesma Lei. ${clausula?`Ademais, a conduta viola a ${_sanEsc(clausula)} do instrumento contratual.`:""} ${artigo?_sanEsc(artigo)+".":""}</p><h2>Execuções / Solicitações relacionadas</h2><table><thead><tr><th>#</th><th>Processo / Empresa</th><th>Item</th><th>Unidade</th><th>Qtde</th><th>Valor unit.</th><th>Valor total</th><th>Empenho</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table><div class="total">TOTAL: ${fmtFull(total)}</div><h2>Solicitação</h2><p class="corpo">Diante do exposto, esta Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde solicita à Secretaria de Administração a instauração de processo administrativo sancionador e aplicação de <strong>${_sanEsc(tipo.toUpperCase())}</strong> à empresa <strong>${_sanEsc(sancaoEmpresaTravada)}</strong>, inscrita no CNPJ ${_sanEsc(c.cnpj||"—")}, referente ao(s) item(ns) discriminado(s) acima, garantidos o contraditório e a ampla defesa, nos termos do art. 157 da Lei nº 14.133/2021.</p>${tipo==="Multa"&&percentualRaw!==""?`<p class="corpo">A multa sugerida é de <strong>${_sanEsc(percentualRaw)}% ao dia de atraso</strong> sobre o valor do(s) item(ns) em atraso, conforme previsto no instrumento contratual.</p>`:""}<div class="assinatura"><strong>${_sanEsc(registro.solicitado_por)}</strong><br>Supervisor — SUEQ / Secretaria Municipal da Saúde<br>${hoje}</div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);janela.document.close();
+  janela.document.open();janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Solicitação de Sanção - ${_sanEsc(sancaoCplTravado)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:11pt;line-height:1.45;margin:0}header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:18px}header h1{font-size:15pt;margin:12px 0 4px}header p{margin:2px}.ident{border:1px solid #555;padding:12px;margin:14px 0;background:#f5f5f5}.ident div{margin:3px 0}h2{font-size:11pt;text-transform:uppercase;margin:18px 0 7px}table{width:100%;border-collapse:collapse;font-size:8pt}th,td{border:1px solid #777;padding:5px;vertical-align:top}th{background:#eee}.total{text-align:right;font-weight:bold;margin-top:7px}.assinatura{margin:70px auto 0;text-align:center;width:320px;border-top:1px solid #111;padding-top:6px}.corpo{text-align:justify}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><header><strong>SECRETARIA MUNICIPAL DA SAÚDE · SOROCABA</strong><p>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</p><h1>SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO ADMINISTRATIVA</h1><p>Gerado em ${hoje}</p></header><div class="ident"><div>Processo/CPL: <strong>${_sanEsc(sancaoCplTravado)}</strong></div><div>Contrato/SIM nº: <strong>${_sanEsc(numero)}</strong></div><div>Empresa contratada: <strong>${_sanEsc(sancaoEmpresaTravada)}</strong></div><div>CNPJ: ${_sanEsc(c.cnpj||"—")}</div><div>Objeto: ${_sanEsc(c.objeto||[...new Set(itens.map(i=>i.item))].join(", "))}</div></div><h2>Fundamentação legal</h2><p class="corpo">A contratada incorreu na infração prevista no art. 155, inciso VII, da Lei nº 14.133/2021, ${fundamento}, sujeitando-se às sanções previstas no art. 156, inciso ${incisos[tipo]} da mesma Lei. ${clausula?`Ademais, a conduta viola a ${_sanEsc(clausula)} do instrumento contratual.`:""} ${artigo?_sanEsc(artigo)+".":""}</p><h2>Execuções / Solicitações relacionadas</h2><table><thead><tr><th>#</th><th>Processo / Empresa</th><th>Item</th><th>Unidade</th><th>Qtde</th><th>Valor unit.</th><th>Valor total</th><th>Empenho</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table><div class="total">TOTAL: ${fmtFull(total)}</div><h2>Solicitação</h2><p class="corpo">Diante do exposto, esta Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde solicita à Secretaria de Administração a instauração de processo administrativo sancionador e aplicação de <strong>${_sanEsc(tipo.toUpperCase())}</strong> à empresa <strong>${_sanEsc(sancaoEmpresaTravada)}</strong>, inscrita no CNPJ ${_sanEsc(c.cnpj||"—")}, referente ao(s) item(ns) discriminado(s) acima, garantidos o contraditório e a ampla defesa, nos termos do art. 157 da Lei nº 14.133/2021.</p>${tipo==="Multa"&&percentualRaw!==""?`<p class="corpo">A multa sugerida é de <strong>${_sanEsc(percentualRaw)}% ao dia de atraso</strong> sobre o valor do(s) item(ns) em atraso, conforme previsto no instrumento contratual.</p>`:""}<div class="assinatura"><strong>${_sanEsc(registro.solicitado_por)}</strong><br>Supervisor — SUEQ / Secretaria Municipal da Saúde<br>${hoje}</div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script><\/body><\/html>`);janela.document.close();
   document.getElementById("modal-solicitar-sancao").classList.remove("active");sancaoSelecionados.clear();sancaoCplTravado="";sancaoEmpresaTravada="";sancaoContrato=null;atualizarSelecaoSancaoAta();filtrarExecs();
 }
 
@@ -3932,6 +3888,7 @@ async function salvarEditExec(){
 let _usuariosCache = [];
 const PERM_TABS = [
   {key:'dashboard', label:'Emendas'},
+  {key:'saldo-emendas', label:'Saldo das Emendas'},
   {key:'consulta', label:'Consulta rápida'},
   {key:'chamados', label:'Chamados Antigos'},
   {key:'chamados-novos', label:'Chamados novos'},
@@ -4389,7 +4346,7 @@ async function enviarEmailChamadoNovo(id){
   }
   emailEmpresa=String(emailEmpresa||"").trim();
   if(!emailEmpresa){
-    alert(`A empresa do contrato ${cpl||contratoId} ainda não possui e-mail cadastrado. Acesse Contratos e clique no botão "E-mail" desse contrato.`);
+    alert(`A empresa do contrato ${cpl||contratoId} ainda não possui e-mail cadastrado. Acesse Contratos e clique no botão "Vinculações" desse contrato.`);
     return;
   }
   const assunto=[r.protocolo,r.unidade,r.equipamento].map(v=>String(v||"").trim()).filter(Boolean).join(" - ");
@@ -4495,7 +4452,7 @@ async function salvarChamadoNovo(){
   setTimeout(()=>document.getElementById("modal-cn").classList.remove("active"),1200);
 }
 
-function gerarPDFChamadoNovo(id){
+async function gerarPDFChamadoNovo(id){
   const r=chamadosNovosRows.find(x=>x.id===id);
   if(!r) return;
   // Reutilizar gerarPDFChamado adaptando o objeto
@@ -4523,7 +4480,7 @@ function gerarPDFChamadoNovo(id){
   // Adicionar temporariamente ao chamadosRows e chamar PDF
   const tempIdx=chamadosRows.findIndex(x=>x.protocolo===r.protocolo);
   if(tempIdx<0) chamadosRows.push(chamadoAdaptado);
-  gerarPDFChamado(r.protocolo);
+  await gerarPDFChamado(r.protocolo,getControleCN(r));
   if(tempIdx<0) chamadosRows.pop();
 }
 
@@ -4666,6 +4623,7 @@ async function loadData(){
         data_atualizacao:(i.data_atualizacao||"").toString().trim(),
       };
     }).map(r=>({...r,status_cat:catStatus(r.status_raw)}));
+    saldoEmendaCarregado=false;
     populateFilters();
     applyFilters();
     document.getElementById("conn-pill").textContent="✓ Conectado";
@@ -4977,6 +4935,247 @@ function renderParlBars(){
 }
 function filterByParl(p){headerFilters.parlamentar=[p];updateHeaderFilterIndicators();applyFilters()}
 
+// ═══ SALDO DAS EMENDAS ═══
+let saldoEmendaCarregado = false;
+let saldoEmendasRows = [];
+
+function _valorComprometidoItem(r){
+  const executado=Number(r?.vl_total)||0;
+  return executado>0?executado:(Number(r?.vl_total_cadastrado)||0);
+}
+function _saldoEmendaValor(emendaId){
+  const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
+  const cedido=Number(itens[0]?.valor_cedido)||0;
+  return cedido-itens.reduce((total,r)=>total+_valorComprometidoItem(r),0);
+}
+function getSaldoEmenda(emendaId){
+  const saldo=_saldoEmendaValor(emendaId);
+  const cor=saldo>0?'var(--green)':saldo<0?'var(--red)':'var(--text2)';
+  return `<span style="font-weight:600;color:${cor};white-space:nowrap">${fmtFull(saldo)}</span>`;
+}
+function _seDomId(emendaId){ return 'se-detail-'+String(emendaId).replace(/[^a-zA-Z0-9_-]/g,'-'); }
+function _saldoStatusBadge(status){
+  const s=String(status||'Não iniciada');
+  const estilo=s==='Executada'
+    ?'background:var(--green-bg);color:var(--green-text)'
+    :s==='Em andamento'
+      ?'background:var(--blue-bg);color:var(--blue-text)'
+      :'background:var(--surface2);color:var(--text2);border:1px solid var(--border)';
+  return `<span class="badge" style="${estilo}">${_sanEsc(s)}</span>`;
+}
+function _renderSaldoDetalhes(emendaId){
+  const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
+  if(!itens.length) return '<div style="padding:12px;color:var(--text3)">Nenhum item encontrado para esta emenda.</div>';
+  return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="font-size:11px;background:var(--surface)">
+    <thead><tr><th>Item planejado</th><th>Qtde plan.</th><th>Vl. plan.</th><th>Item executado</th><th>Qtde exec.</th><th>Vl. exec.</th><th>Comprometido</th><th>CPL</th><th>Status</th></tr></thead>
+    <tbody>${itens.map(r=>`<tr>
+      <td>${_sanEsc(r.item_cadastrado||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total_cadastrado)||0)}</td>
+      <td>${_sanEsc(r.item||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total)||0)}</td>
+      <td style="text-align:right;white-space:nowrap;font-weight:600">${fmtFull(_valorComprometidoItem(r))}</td><td>${_sanEsc(r.cpl||'—')}</td><td>${statusBadge(r.status_cat)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+function toggleSaldoEmenda(emendaId,button){
+  const detalhe=document.getElementById(_seDomId(emendaId));
+  if(!detalhe) return;
+  const abrir=detalhe.style.display==='none';
+  detalhe.style.display=abrir?'table-row':'none';
+  if(button) button.textContent=abrir?'▼':'▶';
+  setTimeout(_setTableOffset,50);
+}
+const SALDO_FILTER_COLS={
+  numero_emenda:{label:'Nº Emenda',get:r=>r.numero_emenda},tipo:{label:'Tipo',get:r=>r.tipo},
+  parlamentar:{label:'Parlamentar',get:r=>r.parlamentar},unidade:{label:'Unidade',get:r=>r.unidade},
+  valor_cedido:{label:'Valor cedido',get:r=>r.valor_cedido,numeric:true},total_planejado:{label:'Total planejado',get:r=>r.total_planejado,numeric:true},
+  total_executado:{label:'Total executado',get:r=>r.total_executado,numeric:true},total_comprometido:{label:'Comprometido',get:r=>r.total_comprometido,numeric:true},
+  saldo_remanescente:{label:'Saldo disponível',get:r=>r.saldo_remanescente,numeric:true},_percentual:{label:'% exec.',get:r=>r._percentual,numeric:true},
+  status_execucao:{label:'Status',get:r=>r.status_execucao},qtd_itens:{label:'Itens',get:r=>r.qtd_itens,numeric:true}
+};
+let saldoHeaderFilters={};
+let saldoSortCol=null, saldoSortAsc=true, _saldoFilterCol=null, _saldoFilterPending=[];
+
+function _saldoComPercentual(r){
+  return {...r,_percentual:Number(r.valor_cedido)>0?Math.round((Number(r.total_executado)||0)/Number(r.valor_cedido)*100):0};
+}
+function _saldoFilterValue(col,r){
+  const valor=SALDO_FILTER_COLS[col].get(r);
+  return valor==null?'':String(valor);
+}
+function _saldoFilterDisplay(col,valor){
+  if(valor==='') return '(vazio)';
+  if(SALDO_FILTER_COLS[col].numeric){
+    if(col==='_percentual') return `${valor}%`;
+    if(col==='qtd_itens') return Number(valor).toLocaleString('pt-BR');
+    return fmtFull(Number(valor)||0);
+  }
+  return valor;
+}
+function _saldoUniqueValues(col){
+  const vals=[...new Set(saldoEmendasRows.map(_saldoComPercentual).map(r=>_saldoFilterValue(col,r)))];
+  return vals.sort((a,b)=>SALDO_FILTER_COLS[col].numeric?(Number(a)||0)-(Number(b)||0):a.localeCompare(b,'pt-BR',{numeric:true}));
+}
+function _ensureSaldoFilterDropdown(){
+  let dd=document.getElementById('se-filter-dropdown');
+  if(dd) return dd;
+  dd=document.createElement('div'); dd.id='se-filter-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:260px;padding:.625rem';
+  dd.innerHTML=`<div id="se-filter-title" style="font-size:12px;font-weight:600;margin-bottom:.5rem"></div>
+    <input type="text" id="se-filter-search" placeholder="Buscar valores..." oninput="_renderSaldoFilterList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem"><button onclick="_selecionarTudoSaldo(true)" style="border:none;background:var(--surface);color:var(--text);cursor:pointer">Selecionar tudo</button> · <button onclick="_selecionarTudoSaldo(false)" style="border:none;background:var(--surface);color:var(--text);cursor:pointer">Limpar</button></div>
+    <div id="se-filter-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end"><button onclick="closeSaldoHeaderFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer">Cancelar</button><button onclick="confirmSaldoHeaderFilter()" style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer;font-weight:600">OK</button></div>`;
+  document.body.appendChild(dd); return dd;
+}
+function openSaldoHeaderFilter(event,col){
+  const dd=_ensureSaldoFilterDropdown();
+  _saldoFilterCol=col;
+  const todos=_saldoUniqueValues(col), atual=saldoHeaderFilters[col];
+  _saldoFilterPending=Array.isArray(atual)?[...atual]:[...todos];
+  document.getElementById('se-filter-title').textContent='Filtrar: '+SALDO_FILTER_COLS[col].label;
+  document.getElementById('se-filter-search').value=''; _renderSaldoFilterList();
+  const rect=event.currentTarget.getBoundingClientRect(); dd.style.display='block';
+  const largura=dd.offsetWidth||260;
+  dd.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-largura-8))+'px';
+  dd.style.top=Math.min(rect.bottom+4,window.innerHeight-dd.offsetHeight-8)+'px';
+}
+function _renderSaldoFilterList(){
+  if(!_saldoFilterCol) return;
+  const busca=normalizar(document.getElementById('se-filter-search').value);
+  const vis=_saldoUniqueValues(_saldoFilterCol).filter(v=>!busca||normalizar(_saldoFilterDisplay(_saldoFilterCol,v)).includes(busca));
+  document.getElementById('se-filter-list').innerHTML=vis.map(v=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px"><input type="checkbox" data-value="${encodeURIComponent(v)}" ${_saldoFilterPending.includes(v)?'checked':''} onchange="_toggleSaldoFilterValue(this)" style="accent-color:var(--blue)">${_sanEsc(_saldoFilterDisplay(_saldoFilterCol,v))}</label>`).join('')||'<div style="padding:10px;color:var(--text3);font-size:12px">Nenhum valor</div>';
+}
+function _toggleSaldoFilterValue(input){
+  const valor=decodeURIComponent(input.dataset.value);
+  if(input.checked){if(!_saldoFilterPending.includes(valor))_saldoFilterPending.push(valor)}else _saldoFilterPending=_saldoFilterPending.filter(v=>v!==valor);
+}
+function _selecionarTudoSaldo(selecionar){ _saldoFilterPending=selecionar?_saldoUniqueValues(_saldoFilterCol):[];_renderSaldoFilterList(); }
+function closeSaldoHeaderFilter(){const dd=document.getElementById('se-filter-dropdown');if(dd)dd.style.display='none';}
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('se-filter-dropdown');
+  if(dd&&dd.style.display==='block'&&!dd.contains(e.target)&&!e.target.closest('[id^="se-hf-"]')) closeSaldoHeaderFilter();
+});
+function confirmSaldoHeaderFilter(){
+  const todos=_saldoUniqueValues(_saldoFilterCol);
+  if(_saldoFilterPending.length===todos.length) delete saldoHeaderFilters[_saldoFilterCol];
+  else saldoHeaderFilters[_saldoFilterCol]=[..._saldoFilterPending];
+  closeSaldoHeaderFilter(); renderSaldoEmendas();
+}
+function sortSaldoEmendas(col){
+  if(saldoSortCol===col) saldoSortAsc=!saldoSortAsc; else{saldoSortCol=col;saldoSortAsc=true;}
+  renderSaldoEmendas();
+}
+function limparFiltrosSaldo(){
+  document.getElementById('se-busca').value=''; saldoHeaderFilters={}; saldoSortCol=null; saldoSortAsc=true; closeSaldoHeaderFilter(); renderSaldoEmendas();
+}
+function _saldoRowsVisiveis(){
+  const busca=normalizar(document.getElementById('se-busca')?.value||'');
+  const rows=saldoEmendasRows.map(_saldoComPercentual).filter(r=>{
+    if(busca&&!normalizar([r.numero_emenda,r.tipo,r.parlamentar,r.unidade,r.status_execucao,r.valor_cedido,r.total_planejado,r.total_executado,r.total_comprometido,r.saldo_remanescente,r.qtd_itens].join(' ')).includes(busca)) return false;
+    return Object.entries(saldoHeaderFilters).every(([col,selecionados])=>selecionados.includes(_saldoFilterValue(col,r)));
+  });
+  if(saldoSortCol){
+    const cfg=SALDO_FILTER_COLS[saldoSortCol];
+    rows.sort((a,b)=>{
+      const va=cfg.get(a),vb=cfg.get(b);
+      const cmp=cfg.numeric?(Number(va)||0)-(Number(vb)||0):String(va||'').localeCompare(String(vb||''),'pt-BR',{numeric:true});
+      return saldoSortAsc?cmp:-cmp;
+    });
+  }
+  return rows;
+}
+function renderSaldoEmendas(){
+  const rows=_saldoRowsVisiveis();
+  const soma=campo=>rows.reduce((total,r)=>total+(Number(r[campo])||0),0);
+  const totalCedido=soma('valor_cedido'), totalComprometido=soma('total_comprometido'), totalSaldo=soma('saldo_remanescente');
+  document.getElementById('se-kpi-total').textContent=rows.length.toLocaleString('pt-BR');
+  document.getElementById('se-kpi-cedido').textContent=fmtFull(totalCedido);
+  document.getElementById('se-kpi-comprometido').textContent=fmtFull(totalComprometido);
+  const saldoEl=document.getElementById('se-kpi-saldo');
+  saldoEl.textContent=fmtFull(totalSaldo); saldoEl.style.color=totalSaldo>=0?'var(--green)':'var(--red)';
+  document.getElementById('se-count').textContent=`${rows.length.toLocaleString('pt-BR')} de ${saldoEmendasRows.length.toLocaleString('pt-BR')} emendas`;
+  document.querySelectorAll('[id^="se-si-"]').forEach(el=>el.textContent='');
+  if(saldoSortCol){const icon=document.getElementById('se-si-'+saldoSortCol);if(icon)icon.textContent=saldoSortAsc?' ↑':' ↓';}
+  Object.keys(SALDO_FILTER_COLS).forEach(col=>{const btn=document.getElementById('se-hf-'+col);if(btn)btn.classList.toggle('active',Object.prototype.hasOwnProperty.call(saldoHeaderFilters,col));});
+  document.getElementById('se-body').innerHTML=rows.map(r=>{
+    const id=String(r.id||'');
+    const pct=r._percentual;
+    const saldo=Number(r.saldo_remanescente)||0;
+    const saldoCor=saldo>0?'var(--green)':saldo<0?'var(--red)':'var(--text2)';
+    return `<tr>
+      <td style="white-space:nowrap;font-weight:600">${_sanEsc(r.numero_emenda||'—')}</td><td>${tipoBadge(r.tipo)}</td><td>${_sanEsc(r.parlamentar||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td>
+      <td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.valor_cedido)||0)}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_planejado)||0)}</td>
+      <td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_executado)||0)}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_comprometido)||0)}</td>
+      <td style="text-align:right;white-space:nowrap;font-weight:600;color:${saldoCor}">${fmtFull(saldo)}</td><td style="text-align:right">${pct}%</td><td>${_saldoStatusBadge(r.status_execucao)}</td>
+      <td style="text-align:right">${Number(r.qtd_itens)||0}</td><td><button onclick="toggleSaldoEmenda(decodeURIComponent('${encodeURIComponent(id)}'),this)" aria-label="Expandir itens" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer">▶</button></td>
+    </tr><tr id="${_seDomId(id)}" style="display:none"><td colspan="13" style="padding:0">${_renderSaldoDetalhes(id)}</td></tr>`;
+  }).join('');
+}
+async function loadSaldoEmendas(){
+  if(!podeEditar('dashboard')) return;
+  const loading=document.getElementById('se-loading'), main=document.getElementById('se-main');
+  loading.style.display='block'; main.style.display='none';
+  loading.innerHTML='<span class="spinner"></span>Carregando saldo das emendas...';
+  const {data,error}=await sb.from('vw_emendas_saldo').select('*').order('numero_emenda');
+  if(error){loading.innerHTML=`<div style="color:var(--red)">Erro ao carregar saldos: ${_sanEsc(error.message)}</div>`;return;}
+  saldoEmendasRows=data||[];
+  renderSaldoEmendas();
+  saldoEmendaCarregado=true;
+  loading.style.display='none'; main.style.display='block';
+  setTimeout(_setTableOffset,50);
+}
+
+// ═══ EDIÇÃO DE ITEM EXECUTADO ═══
+let _editItemId = null;
+function _numeroEditarItem(id){
+  const valor=document.getElementById(id).value.trim().replace(',','.');
+  return valor===''?null:Number(valor);
+}
+function recalcularEditarItem(){
+  const qtde=_numeroEditarItem('ei-qtde'), unit=_numeroEditarItem('ei-vl-unit');
+  document.getElementById('ei-vl-total').value=qtde==null||unit==null?'':(qtde*unit).toFixed(2);
+}
+function abrirEditarItem(id){
+  if(!podeEditar('dashboard')) return;
+  const r=allRows.find(item=>String(item.id)===String(id));
+  if(!r) return;
+  _editItemId=r.id;
+  document.getElementById('ei-planejado').innerHTML=`<strong>Item planejado:</strong> ${_sanEsc(r.item_cadastrado||'—')}<br><strong>Qtde planejada:</strong> ${_sanEsc(r.qtde_cadastrada||'—')} &nbsp;·&nbsp; <strong>Vl. unit. planejado:</strong> ${fmtFull(Number(r.vl_unitario_cadastrado)||0)} &nbsp;·&nbsp; <strong>Vl. total planejado:</strong> ${fmtFull(Number(r.vl_total_cadastrado)||0)}`;
+  const valores={'ei-item':r.item,'ei-qtde':r.qtde,'ei-vl-unit':r.vl_unitario,'ei-cpl':r.cpl,'ei-status':r.status_raw,'ei-nf':r.nota_fiscal,'ei-empenho':r.empenho,'ei-patrimonio':r.patrimonio,'ei-unidade-entrega':r.unidade_entrega,'ei-data-entrega':r.data_entrega};
+  Object.entries(valores).forEach(([campo,valor])=>document.getElementById(campo).value=valor??'');
+  recalcularEditarItem();
+  document.getElementById('msg-ei').className='fmsg';
+  document.getElementById('modal-editar-item').classList.add('active');
+}
+function fecharEditarItem(){
+  document.getElementById('modal-editar-item').classList.remove('active');
+  _editItemId=null;
+}
+async function salvarEditarItem(){
+  if(!_editItemId||!podeEditar('dashboard')) return;
+  const item=document.getElementById('ei-item').value.trim();
+  const qtde=_numeroEditarItem('ei-qtde'), vlUnit=_numeroEditarItem('ei-vl-unit');
+  if(!item){showMsg('ei','Informe o item executado.','err');return;}
+  if(qtde==null||!Number.isFinite(qtde)||qtde<0){showMsg('ei','Informe uma quantidade válida.','err');return;}
+  if(vlUnit==null||!Number.isFinite(vlUnit)||vlUnit<0){showMsg('ei','Informe um valor unitário válido.','err');return;}
+  const payload={
+    item,qtde,vl_unitario:vlUnit,vl_total:Number((qtde*vlUnit).toFixed(2)),
+    cpl:document.getElementById('ei-cpl').value.trim(),status:document.getElementById('ei-status').value.trim(),
+    nota_fiscal:document.getElementById('ei-nf').value.trim(),empenho:document.getElementById('ei-empenho').value.trim(),
+    patrimonio:document.getElementById('ei-patrimonio').value.trim(),unidade_entrega:document.getElementById('ei-unidade-entrega').value.trim(),
+    data_entrega:document.getElementById('ei-data-entrega').value||null
+  };
+  const btn=document.getElementById('ei-salvar'); btn.disabled=true; btn.textContent='Salvando...';
+  const {error}=await sb.from('emenda_itens').update(payload).eq('id',_editItemId);
+  if(error){showMsg('ei','Erro: '+error.message,'err');btn.disabled=false;btn.textContent='Salvar';return;}
+  const r=allRows.find(item=>String(item.id)===String(_editItemId));
+  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_cat:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade_entrega:payload.unidade_entrega,data_entrega:payload.data_entrega||''});
+  saldoEmendaCarregado=false;
+  applyFilters();
+  renderTable();
+  showMsg('ei','✓ Item atualizado.','ok');
+  btn.disabled=false;btn.textContent='Salvar';
+  setTimeout(fecharEditarItem,700);
+}
+
 function sortTable(col){
   if(sortCol===col){sortAsc=!sortAsc}else{sortCol=col;sortAsc=true}
   // Atualizar ícones
@@ -4992,7 +5191,7 @@ function renderTable(){
     rows.sort((a,b)=>{
       let va=a[sortCol],vb=b[sortCol];
       // Numérico
-      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"){
+      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
       } else if(sortCol==="qtde"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
@@ -5005,14 +5204,20 @@ function renderTable(){
     });
   }
   rows=rows.slice(0,500);
+  const podeVerSaldo=podeEditar('dashboard');
+  const thSaldo=document.getElementById('th-saldo-emenda');
+  if(thSaldo) thSaldo.style.display=podeVerSaldo?'':'none';
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>`<tr>
+    <td>${podeEditar('dashboard')?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">✏️ Editar</button>`:'—'}</td>
     <td>${tipoBadge(r.tipo)}</td>
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}</td>
     <td class="td-trunc" title="${r.item}">${r.item||"—"}</td>
     <td style="text-align:right">${r.qtde||"—"}</td>
+    <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>
+    <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${r.cpl||"—"}</td>
     <td>${statusBadge(r.status_cat)}</td>
@@ -5023,6 +5228,7 @@ function renderTable(){
     <td style="font-size:11px">${r.patrimonio||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.unidade_entrega||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.data_entrega||"—"}</td>
+    ${podeVerSaldo?`<td>${getSaldoEmenda(r.emenda_id)}</td>`:''}
   </tr>`).join("");
 }
 
@@ -5179,7 +5385,7 @@ async function gerarSolicitacaoSancao(){
     <h2>Solicitação</h2><p class="corpo">Diante do exposto, esta Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde solicita à Secretaria de Administração a instauração de processo administrativo sancionador e aplicação de <strong>${_sanEsc(tipo.toUpperCase())}</strong> à empresa <strong>${_sanEsc(c.prestador)}</strong>, inscrita no CNPJ ${_sanEsc(c.cnpj||"—")}, referente ao(s) item(ns) discriminado(s) acima, garantidos o contraditório e a ampla defesa, nos termos do art. 157 da Lei nº 14.133/2021.</p>
     ${tipo==="Multa"&&percentualRaw!==""?`<p class="corpo">A multa sugerida é de <strong>${_sanEsc(percentualRaw)}% ao dia de atraso</strong> sobre o valor do(s) item(ns) em atraso, conforme previsto no instrumento contratual.</p>`:""}
     <div class="assinatura"><strong>${_sanEsc(registro.solicitado_por)}</strong><br>Supervisor — SUEQ / Secretaria Municipal da Saúde<br>${hoje}</div>
-    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script><\/body><\/html>`);
   janela.document.close();
   document.getElementById("modal-solicitar-sancao").classList.remove("active");
   sancaoSelecionados.clear(); sancaoCplTravado=""; sancaoContrato=null; atualizarSelecaoSancao(); renderTable();
@@ -6133,7 +6339,7 @@ async function confirmarGerarTermo(){
     <div style="font-size:11px;color:#555;margin-top:2px">${hoje}</div>
   </div>
   <script>window.onload=()=>window.print();<\/script>
-  </body></html>`;
+  <\/body><\/html>`;
   await sb.from("termos_ateste").insert({cpl_contrato:cpls.join(",")||null,competencia,nf_referencia:nf,fiscalizado_por:fiscal,gerado_em:new Date().toISOString().split("T")[0]});
   const w=window.open("","_blank"); w.document.write(html); w.document.close();
 }
@@ -6265,10 +6471,18 @@ async function salvarSancao(){
 const CONTRATO_FILTER_COLS = {
   cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
   prestador:{get:r=>r.prestador||'',disp:v=>v||'(vazio)'},
+  objeto:{get:r=>r.objeto||'',disp:v=>v||'(vazio)'},
+  vigencia_atual:{get:r=>r.vigencia_atual||'',disp:v=>v||'(vazio)'},
+  vencimento:{get:r=>r.vencimento||'',disp:v=>v||'(vazio)'},
+  dias:{get:r=>{const d=diasContratoVencer(r.vencimento);return d==null?'':String(d);},disp:v=>v===''?'(vazio)':Number(v)<0?`Vencido (${Math.abs(Number(v))}d)`:`${v} dias`},
   status:{get:r=>r.status||'',disp:v=>v||'(vazio)'},
   secao:{get:r=>r.secao||'',disp:v=>v||'(vazio)'},
+  fiscalizacao:{get:r=>r.fiscalizacao||'',disp:v=>v||'(vazio)'},
+  valor_mensal:{get:r=>r.valor_mensal??'',disp:v=>v===''?'(vazio)':fmtFull(Number(v)||0)},
+  valor_total:{get:r=>(r.valor_atual??r.valor_total??r.valor_inicial)??'',disp:v=>v===''?'(vazio)':fmtFull(Number(v)||0)},
+  atualizado_em:{get:r=>r.atualizado_em||r.data_atualizacao||'',disp:v=>v||'(vazio)'},
 };
-let contratoHeaderFilters={cpl:[],prestador:[],status:[],secao:[]};
+let contratoHeaderFilters=Object.fromEntries(Object.keys(CONTRATO_FILTER_COLS).map(k=>[k,[]]));
 let _ctHdrCol=null,_ctHdrPending=[];
 function _ctUnique(col){
   const cfg=CONTRATO_FILTER_COLS[col];
@@ -6329,6 +6543,7 @@ let contratosCarregado = false;
 let _ctAtual = null;
 let ctSortCol = null;
 let ctSortAsc = true;
+let contratosSelecionados = new Set();
 
 async function loadContratos(){
   document.getElementById("contratos-loading").style.display="block";
@@ -6412,7 +6627,7 @@ function filtrarContratos(){
   contratosFiltrados=contratosRows.filter(r=>{
     for(const [col,sel] of Object.entries(contratoHeaderFilters)){
       if(!sel.length) continue;
-      const val=String((r[col]??'')||'');
+      const val=String(CONTRATO_FILTER_COLS[col].get(r)??'');
       if(!sel.includes(val)) return false;
     }
     // Se não há filtro de status ativo, esconde ENCERRADO por padrão
@@ -6474,7 +6689,8 @@ function ctGetSortVal(r,col){
     return d?d.getTime():(ctSortAsc?Infinity:-Infinity);
   }
   if(col==="valor_mensal") return r.valor_mensal??-Infinity;
-  if(col==="valor_total") return (r.valor_atual??r.valor_inicial)??-Infinity;
+  if(col==="valor_total") return (r.valor_atual??r.valor_total??r.valor_inicial)??-Infinity;
+  if(col==="atualizado_em") return (r.atualizado_em||r.data_atualizacao||'').toString().toLowerCase();
   return ((r[col])||"").toString().toLowerCase();
 }
 
@@ -6491,12 +6707,16 @@ function renderTabelaContratos(){
   if(!tbody) return;
 
   // Atualizar ícones de ordenação
-  ["objeto","vigencia_atual","vencimento","dias","fiscalizacao","valor_mensal","valor_total","data_atualizacao"].forEach(col=>{
+  ["objeto","vigencia_atual","vencimento","dias","fiscalizacao","valor_mensal","valor_total","atualizado_em"].forEach(col=>{
     const el=document.getElementById("sort-ct-"+col);
     if(el) el.textContent=ctSortCol===col?(ctSortAsc?" ▲":" ▼"):"";
   });
 
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  const podeManter=podeEditar('contratos');
+  const selectAll=document.getElementById('ct-select-all');
+  if(selectAll){selectAll.disabled=!podeManter;selectAll.checked=false;}
+  atualizarBotaoManterStatus();
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="16" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
 
   let rows=[...contratosFiltrados];
   if(ctSortCol){
@@ -6507,6 +6727,7 @@ function renderTabelaContratos(){
       return 0;
     });
   }
+  if(selectAll) selectAll.checked=rows.length>0&&rows.every(r=>contratosSelecionados.has(String(r.id)));
 
   tbody.innerHTML=rows.map(r=>{
     const cor=corVencimento(r.vencimento);
@@ -6519,14 +6740,16 @@ function renderTabelaContratos(){
       else diasHtml=`<span style="color:var(--green)">${dias}d</span>`;
     }
     const vm=r.valor_mensal!=null?r.valor_mensal:"—";
-    const vt=(r.valor_atual??r.valor_inicial)!=null?(r.valor_atual??r.valor_inicial):"—";
+    const vt=(r.valor_atual??r.valor_total??r.valor_inicial)!=null?(r.valor_atual??r.valor_total??r.valor_inicial):"—";
     const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar('contratos')
       ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
       :"";
+    const temVinculacao=!!(r.email_empresa||r.prefixo_chamado);
     const btnEmailCt=podeEditar('contratos')
-      ?`<button onclick="abrirEmailContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ${r.email_empresa?'var(--blue-bg)':'var(--amber-bg)'};background:${r.email_empresa?'var(--blue-bg)':'var(--amber-bg)'};color:${r.email_empresa?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap" title="${r.email_empresa?'Alterar: '+r.email_empresa:'Cadastrar e-mail da empresa'}">📧 E-mail</button>`
+      ?`<button onclick="abrirEmailContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};background:${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};color:${temVinculacao?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap" title="Configurar e-mail e prefixo de chamado">🔗 Vinculações</button>`
       :"";
     return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} ${podeManter?'':'disabled'} onchange="selecionarContrato('${r.id}',this.checked)" style="accent-color:var(--blue)"></td>
       <td><div style="display:flex;gap:4px;align-items:center;white-space:nowrap"><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button>${btnEmailCt}</div></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
@@ -6540,9 +6763,79 @@ function renderTabelaContratos(){
       <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
       <td style="text-align:right;white-space:nowrap">${vm}</td>
       <td style="text-align:right;white-space:nowrap">${vt}</td>
-      <td style="white-space:nowrap;font-size:11px;color:var(--text3)">${r.data_atualizacao||"—"}</td>
+      <td style="white-space:nowrap;font-size:11px;color:var(--text3)">${r.atualizado_em||r.data_atualizacao||"—"}</td>
+      <td>${_isAdmin()?`<button onclick="abrirEditarContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">✏️ Editar</button>`:'—'}</td>
     </tr>`;
   }).join("");
+}
+
+function atualizarBotaoManterStatus(){
+  const btn=document.getElementById('ct-manter-status');
+  if(!btn) return;
+  const permitido=podeEditar('contratos');
+  btn.style.display=permitido?'':'none';
+  btn.disabled=!permitido||contratosSelecionados.size===0;
+  btn.textContent=contratosSelecionados.size?`Manter Status (${contratosSelecionados.size})`:'Manter Status';
+}
+function selecionarContrato(id,selecionado){
+  if(!podeEditar('contratos')) return;
+  if(selecionado) contratosSelecionados.add(String(id)); else contratosSelecionados.delete(String(id));
+  const visiveis=contratosFiltrados.map(r=>String(r.id));
+  const todos=document.getElementById('ct-select-all');
+  if(todos) todos.checked=visiveis.length>0&&visiveis.every(id=>contratosSelecionados.has(id));
+  atualizarBotaoManterStatus();
+}
+function selecionarTodosContratos(checkbox){
+  if(!podeEditar('contratos')){checkbox.checked=false;return;}
+  contratosFiltrados.forEach(r=>checkbox.checked?contratosSelecionados.add(String(r.id)):contratosSelecionados.delete(String(r.id)));
+  renderTabelaContratos();
+}
+async function manterStatusContratos(){
+  if(!podeEditar('contratos')||!contratosSelecionados.size) return;
+  const ids=[...contratosSelecionados];
+  if(!confirm(`Atualizar data de ${ids.length} contratos selecionados?`)) return;
+  const btn=document.getElementById('ct-manter-status');btn.disabled=true;btn.textContent='Atualizando...';
+  const hoje=new Date().toISOString().slice(0,10);
+  const {error}=await sb.from('contratos').update({atualizado_em:hoje}).in('id',ids);
+  if(error){alert('Erro ao atualizar contratos: '+error.message);atualizarBotaoManterStatus();return;}
+  contratosSelecionados.clear();
+  contratosCarregado=false;
+  await loadContratos();
+  atualizarBotaoManterStatus();
+}
+
+let _ctEdicaoId=null;
+const CT_EDIT_FIELDS={
+  'ec-cpl':'cpl','ec-numero':'numero_contrato','ec-prestador':'prestador','ec-objeto':'objeto','ec-cnpj':'cnpj','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-total':'valor_total','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
+};
+function abrirEditarContrato(id){
+  if(!_isAdmin()){alert('A edição completa de contratos é exclusiva para administradores.');return;}
+  const contrato=contratosRows.find(r=>String(r.id)===String(id));
+  if(!contrato) return;
+  _ctEdicaoId=contrato.id;
+  Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
+  document.getElementById('ec-msg').className='fmsg';
+  document.getElementById('modal-editar-contrato').classList.add('active');
+}
+async function salvarEdicaoContrato(){
+  if(!_isAdmin()||!_ctEdicaoId) return;
+  const prefixo=document.getElementById('ec-prefixo').value.trim().toUpperCase();
+  if(prefixo&&!/^[A-Z]+$/.test(prefixo)){showMsg('ec','O prefixo deve conter somente letras.','err');return;}
+  const dados={};
+  Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{
+    let valor=document.getElementById(campo).value;
+    if(['valor_inicial','valor_atual','valor_total','valor_mensal'].includes(coluna)) valor=valor===''?null:Number(valor);
+    else valor=String(valor).trim()||null;
+    dados[coluna]=valor;
+  });
+  dados.prefixo_chamado=prefixo||null;
+  const btn=document.getElementById('ec-salvar');btn.disabled=true;btn.textContent='Salvando...';
+  const {error}=await sb.from('contratos').update(dados).eq('id',_ctEdicaoId);
+  btn.disabled=false;btn.textContent='Salvar alterações';
+  if(error){showMsg('ec','Erro: '+error.message,'err');return;}
+  showMsg('ec','✓ Contrato atualizado.','ok');
+  contratosCarregado=false;await loadContratos();
+  setTimeout(()=>document.getElementById('modal-editar-contrato').classList.remove('active'),700);
 }
 
 let _ctEmailId=null;
@@ -6553,6 +6846,7 @@ function abrirEmailContrato(id){
   _ctEmailId=contrato.id;
   document.getElementById("ct-email-info").innerHTML=`<strong>${contrato.cpl||"Contrato"}</strong> · ${contrato.prestador||"Empresa não informada"}`;
   document.getElementById("ct-email-empresa").value=contrato.email_empresa||"";
+  document.getElementById("ct-prefixo-chamado").value=contrato.prefixo_chamado||"";
   const msg=document.getElementById("ct-email-msg");msg.className="fmsg";msg.textContent="";
   document.getElementById("modal-email-contrato").classList.add("active");
   setTimeout(()=>document.getElementById("ct-email-empresa").focus(),50);
@@ -6562,18 +6856,19 @@ async function salvarEmailContrato(){
   if(!_ctEmailId||bloquearSeVisualiz('contratos')) return;
   const input=document.getElementById("ct-email-empresa");
   const email=input.value.trim();
+  const prefixo=document.getElementById("ct-prefixo-chamado").value.trim().toUpperCase();
   const msg=document.getElementById("ct-email-msg");
-  if(!email){msg.textContent="Informe o e-mail da empresa.";msg.className="fmsg err";input.focus();return;}
-  if(!input.checkValidity()){msg.textContent="Informe um endereço de e-mail válido.";msg.className="fmsg err";input.focus();return;}
+  if(email&&!input.checkValidity()){msg.textContent="Informe um endereço de e-mail válido.";msg.className="fmsg err";input.focus();return;}
+  if(prefixo&&!/^[A-Z]+$/.test(prefixo)){msg.textContent="O prefixo deve conter somente letras.";msg.className="fmsg err";return;}
   const btn=document.getElementById("ct-email-salvar");btn.disabled=true;btn.textContent="Salvando...";
-  const {data,error}=await sb.from("contratos").update({email_empresa:email}).eq("id",_ctEmailId).select("id,email_empresa");
-  btn.disabled=false;btn.textContent="Salvar e-mail";
+  const {data,error}=await sb.from("contratos").update({email_empresa:email||null,prefixo_chamado:prefixo||null}).eq("id",_ctEmailId).select("id,email_empresa,prefixo_chamado");
+  btn.disabled=false;btn.textContent="Salvar vinculações";
   if(error){msg.textContent="Erro: "+error.message;msg.className="fmsg err";return;}
-  if(!data?.length){msg.textContent="O e-mail não foi salvo. Verifique sua permissão de edição em Contratos.";msg.className="fmsg err";return;}
-  const local=contratosRows.find(r=>String(r.id)===String(_ctEmailId));if(local)local.email_empresa=email;
-  const modalCt=_contratosParaModal.find(r=>String(r.id)===String(_ctEmailId));if(modalCt)modalCt.email_empresa=email;
+  if(!data?.length){msg.textContent="As vinculações não foram salvas. Verifique sua permissão de edição em Contratos.";msg.className="fmsg err";return;}
+  const local=contratosRows.find(r=>String(r.id)===String(_ctEmailId));if(local)Object.assign(local,{email_empresa:email||null,prefixo_chamado:prefixo||null});
+  const modalCt=_contratosParaModal.find(r=>String(r.id)===String(_ctEmailId));if(modalCt)Object.assign(modalCt,{email_empresa:email||null,prefixo_chamado:prefixo||null});
   renderTabelaContratos();
-  msg.textContent="✓ E-mail salvo.";msg.className="fmsg ok";
+  msg.textContent="✓ Vinculações salvas.";msg.className="fmsg ok";
   setTimeout(()=>document.getElementById("modal-email-contrato").classList.remove("active"),700);
 }
 
@@ -6604,7 +6899,7 @@ async function abrirDetalheContrato(id){
   const c=_ctAtual;
   const cor=corVencimento(c.vencimento);
   let html=`<div class="ficha-grid" style="margin-bottom:1.25rem">
-    ${[["CPL",c.cpl],["Prestador",c.prestador],["E-mail da empresa",c.email_empresa||"—"],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
+    ${[["CPL",c.cpl],["Prestador",c.prestador],["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",c.valor_total!=null?`R$ ${Number(c.valor_total).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
   </div>`;
 
   const vigs=vigRes.data||[];

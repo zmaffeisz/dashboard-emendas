@@ -1,0 +1,162 @@
+/* ============================================================
+   dashboard.css — SMS Sorocaba · Dashboard SUEQ
+   CSS exclusivo do index.html (sidebar, tabelas, painéis, etc.)
+   ============================================================ */
+
+/* ── LAYOUT GERAL ── */
+.container{max-width:none;margin:0 auto;padding:1.25rem}
+@media(min-width:769px){.container{margin-left:220px}}
+
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,#1a5fa8 0%,#1a3a6b 100%);border-bottom:3px solid var(--sorocaba-ouro);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,63,107,.25)}
+.header-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.01em}
+.header-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:2px}
+.refresh-btn{font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;backdrop-filter:blur(4px)}
+.refresh-btn:hover{background:rgba(255,255,255,.25)}
+.hamburger{display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;line-height:1;width:38px;height:38px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;margin-right:4px}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;top:var(--header-h,64px);left:0;width:220px;height:calc(100vh - var(--header-h,64px));background:var(--surface);border-right:1px solid var(--border);padding:.75rem 0;overflow-y:auto;z-index:96;transition:transform .25s ease}
+.sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 .5rem}
+.sidebar-section{display:flex;flex-direction:column;gap:2px}
+.sidebar-section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:.75rem .75rem .25rem}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:background .12s,color .12s;user-select:none}
+.sidebar-item:hover{background:var(--surface2);color:var(--text)}
+.sidebar-item.active{background:var(--blue-bg);color:var(--blue-text);font-weight:600}
+.sidebar-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sidebar-label{flex:1}
+
+/* ── RESPONSIVO ── */
+@media(max-width:768px){
+  .hamburger{display:inline-flex;align-items:center;justify-content:center}
+  .sidebar{transform:translateX(-100%);box-shadow:2px 0 16px rgba(0,0,0,.25)}
+  body.sidebar-open .sidebar{transform:translateX(0)}
+}
+
+/* ── PAINÉIS ── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── FILTROS ── */
+.filters{background:var(--filters-bg);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1.125rem;margin-bottom:1.125rem;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:4px}
+.fg-label button{font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text3);line-height:1.4}
+.fg-label button:hover{background:var(--border)}
+.fg select,.fg input{font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:145px}
+.fg select:focus,.fg input:focus{outline:none;border-color:var(--blue)}
+.fg select[multiple]{min-height:76px}
+.clear-btn{font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text2)}
+
+/* Filtros coluna lateral do dashboard */
+.dash-filters-col{overflow:hidden}
+.dash-filters-col .filters{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
+.dash-filters-col .fg{width:100%;max-width:100%;box-sizing:border-box}
+.dash-filters-col .fg select,.dash-filters-col .fg input{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+
+/* ── MÉTRICAS ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.125rem}
+.metric{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--sorocaba-azul);border-radius:var(--radius);padding:.875rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.10);transition:box-shadow .15s}
+.metric:hover{box-shadow:0 3px 10px rgba(0,0,0,.1)}
+.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.metric-value{font-size:21px;font-weight:600;line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* ── PROGRESSO ── */
+.prog-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.125rem}
+.prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.prog-pct{font-size:20px;font-weight:600;color:var(--green)}
+.prog-track{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;margin-bottom:5px}
+.prog-fill{height:100%;background:var(--green);border-radius:5px;transition:width .5s}
+.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3)}
+
+/* ── GRID 2 COLUNAS ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.125rem;margin-bottom:1.125rem}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.125rem}
+.card-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.875rem}
+
+/* ── STATUS LIST ── */
+.status-list{display:flex;flex-direction:column;gap:5px}
+.status-row{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:var(--radius-sm);cursor:pointer}
+.status-row:hover{background:var(--surface2)}
+.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sname{font-size:13px;flex:1}
+.sbar-wrap{width:80px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.sbar{height:100%;border-radius:3px}
+.scnt{font-size:12px;font-weight:500;color:var(--text2);min-width:28px;text-align:right}
+
+/* ── BARRAS ── */
+.bar-list{display:flex;flex-direction:column;gap:7px}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-lbl{font-size:12px;color:var(--text2);width:135px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:16px;background:var(--surface2);border-radius:3px;overflow:hidden;cursor:pointer}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.bar-val{font-size:11px;color:var(--text3);min-width:55px}
+
+/* ── TABELA ── */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1.125rem;box-shadow:0 2px 8px rgba(0,0,0,.10)}
+.table-hdr{padding:.75rem 1.125rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.table-hdr-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.table-hdr-count{font-size:12px;color:var(--text3)}
+.table-wrap{overflow-x:auto;overflow-y:auto;height:calc(100vh - var(--header-h,64px) - var(--table-offset,300px))}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--th-bg);font-weight:500;color:var(--th-text);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap;cursor:pointer}
+th:hover{background:var(--border)}
+td{padding:6px 10px;border-bottom:1px solid var(--td-border);vertical-align:top}
+tr:nth-child(odd) td{background:var(--row-odd)}
+tr:nth-child(even) td{background:var(--row-even)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--row-hover)}
+.td-trunc{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sort-icon{font-size:10px;color:var(--text3);margin-left:3px}
+
+/* ── FORMULÁRIOS (dashboard) ── */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.125rem}
+.form-title{font-size:14px;font-weight:600;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+
+/* ── CONSULTA RÁPIDA ── */
+.search-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.125rem}
+.search-input-wrap{display:flex;gap:8px;margin-bottom:1rem}
+.search-input-wrap input{flex:1;font-size:15px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm)}
+.search-input-wrap input:focus{outline:none;border-color:var(--blue)}
+.search-input-wrap button{padding:10px 20px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;font-size:13px;cursor:pointer;font-weight:500}
+.search-type-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.5rem}
+.search-type-btn{font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)}
+.search-type-btn.active{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue)}
+.ficha{background:var(--surface2);border-radius:var(--radius);padding:1.25rem;display:none}
+.ficha-title{font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)}
+.ficha-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.ficha-field{background:var(--surface);border-radius:var(--radius-sm);padding:.625rem .875rem;border:1px solid var(--border)}
+.ficha-field-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.ficha-field-value{font-size:13px;font-weight:500;color:var(--text)}
+.ficha-field-value.empty{color:var(--text3);font-weight:400}
+
+/* ── CHECKBOX LIST ── */
+.check-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.check-item-row{border-bottom:1px solid var(--border);padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.check-item-row:last-child{border-bottom:none}
+.check-item-row:hover{background:var(--surface2)}
+.check-item-row input[type=checkbox]{margin-top:14px;accent-color:var(--blue)}
+.item-info{display:flex;flex-direction:column;gap:6px}
+.item-name{font-size:13px;font-weight:500}
+.item-meta{font-size:11px;color:var(--text3)}
+.item-fields{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.item-field{display:flex;flex-direction:column;gap:2px}
+.item-field-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.item-field input{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:150px}
+.check-actions-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.check-actions-row button{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)}
+
+/* ── BOTÕES DE FILTRO DE CABEÇALHO ── */
+.hdr-filter-btn{cursor:pointer;font-size:9px;color:var(--text3);padding:2px 5px;border-radius:4px;border:1px solid transparent;line-height:1;transition:background .12s,color .12s,border-color .12s}
+.hdr-filter-btn:hover{background:var(--surface2);color:var(--text)}
+.hdr-filter-btn.active{color:var(--blue);background:var(--blue-bg);border-color:var(--blue)}
+
+/* ── TOGGLE DE ABAS ── */
+.sheet-toggle-btn{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
+.sheet-toggle-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
+
+/* ── UTILITÁRIOS ── */
+.visualizador-hidden{display:none!important}
+.hidden-by-default{display:none}
