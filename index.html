@@ -36,6 +36,9 @@ html[data-theme="dark"]{
 }
 html{transition:background .2s}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button{color:var(--text)}
+button[style*="background:var(--surface)"],button[style*="background: var(--surface)"]{color:var(--text2)}
+button[style*="background:none"],button[style*="background: none"]{color:var(--text2)}
 .header{background:linear-gradient(135deg,#1a5fa8 0%,#1a3a6b 100%);border-bottom:3px solid var(--sorocaba-ouro);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,63,107,.25)}
 .header-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.01em}
 .header-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:2px}
@@ -171,6 +174,9 @@ tr:hover td{background:var(--row-hover)}
 .ficha-field-value{font-size:13px;font-weight:500;color:var(--text)}
 .ficha-field-value.empty{color:var(--text3);font-weight:400}
 .visualizador-hidden{display:none!important}
+/* Garante que selects e inputs inline respeitem o tema dark */
+select,input,textarea{color-scheme:light dark}
+select:not([class]){background:var(--surface);color:var(--text)}
 
 /* CHECKBOX LIST */
 .check-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)}
@@ -195,6 +201,9 @@ tr:hover td{background:var(--row-hover)}
 .hdr-filter-btn{cursor:pointer;font-size:9px;color:var(--text3);padding:2px 5px;border-radius:4px;border:1px solid transparent;line-height:1;transition:background .12s,color .12s,border-color .12s}
 .hdr-filter-btn:hover{background:var(--surface2);color:var(--text)}
 .hdr-filter-btn.active{color:var(--blue);background:var(--blue-bg);border-color:var(--blue)}
+.sheet-toggle-btn{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
+.sheet-toggle-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
+.hidden-by-default{display:none}
 </style>
 </head>
 <body>
@@ -239,6 +248,7 @@ tr:hover td{background:var(--row-hover)}
       <div class="sidebar-section-label">Contratos</div>
       <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
       <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
+      <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções Administrativas</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Configurações</div>
@@ -606,6 +616,7 @@ tr:hover td{background:var(--row-hover)}
               <th>Nº OS</th>
               <th>O que foi feito</th>
               <th>Ações</th>
+              <th>📧</th>
               <th>PDF</th>
             </tr>
           </thead>
@@ -622,7 +633,7 @@ tr:hover td{background:var(--row-hover)}
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
           <div class="form-group full">
             <div class="form-label">Status *</div>
-            <select id="mc-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <select id="mc-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
               <option value="Aberto">Aberto</option>
               <option value="Em andamento">Em andamento</option>
               <option value="Concluído">Concluído</option>
@@ -631,7 +642,7 @@ tr:hover td{background:var(--row-hover)}
           </div>
           <div class="form-group">
             <div class="form-label">Data do atendimento</div>
-            <input type="date" id="mc-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <input type="date" id="mc-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           </div>
           <div class="form-group">
             <div class="form-label">Empresa</div>
@@ -722,7 +733,7 @@ tr:hover td{background:var(--row-hover)}
         <table>
           <thead>
             <tr>
-              <th>Ações</th><th>PDF</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
+              <th>Ações</th><th>PDF</th><th>E-mail</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
               <th>Equipamento</th><th>Descrição</th><th>Endereço</th>
               <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
               <th>Fabricante/Modelo</th><th>Série</th>
@@ -742,7 +753,7 @@ tr:hover td{background:var(--row-hover)}
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
           <div class="form-group full">
             <div class="form-label">Status *</div>
-            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)" onchange="_mcnOnStatusChange()">
+            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)" onchange="_mcnOnStatusChange()">
               <option>Aguardando abertura</option>
               <option>Aberto</option>
               <option>Inválido</option>
@@ -753,8 +764,9 @@ tr:hover td{background:var(--row-hover)}
             </div>
           </div>
           <div class="form-group full" id="mcn-cpl-wrap">
-            <div class="form-label">Contrato / CPL * <span style="font-size:10px;color:var(--text3);font-weight:400">(obrigatório para status Aberto)</span></div>
-            <select id="mcn-cpl" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+            <div class="form-label">Contrato / CPL * <span style="font-size:10px;color:var(--text3);font-weight:400">(obrigatório para status Aberto — somente SUEQ EQUIP)</span></div>
+            <input type="text" id="mcn-cpl-busca" placeholder="🔍 Buscar por CPL, objeto ou empresa..." oninput="_filtrarCplModal()" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box">
+            <select id="mcn-cpl" size="5" style="font-size:13px;padding:4px;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface);color:var(--text);width:100%;box-sizing:border-box">
               <option value="">Selecione o contrato...</option>
             </select>
           </div>
@@ -842,7 +854,7 @@ tr:hover td{background:var(--row-hover)}
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
           <div class="form-group full">
             <div class="form-label">Situação da OS *</div>
-            <select id="mfo-situacao" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+            <select id="mfo-situacao" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
               <option value="">Selecione...</option>
               <option value="conforme">✅ Conforme</option>
               <option value="conforme_ressalva">⚠️ Conforme com ressalva</option>
@@ -1022,7 +1034,7 @@ tr:hover td{background:var(--row-hover)}
     </div>
 
     <div style="margin-bottom:.75rem;display:flex;gap:8px">
-      <input type="text" id="pl-busca" placeholder="🔍 Buscar..." oninput="filtrarPlanilhaAC()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:250px">
+      <input type="text" id="pl-busca" placeholder="🔍 Buscar..." oninput="filtrarPlanilhaAC()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:250px;background:var(--surface);color:var(--text)">
       <span id="pl-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
       <span style="font-size:11px;color:var(--text3);align-self:center;margin-left:auto">Clique em qualquer célula para editar</span>
     </div>
@@ -1040,7 +1052,7 @@ tr:hover td{background:var(--row-hover)}
       <div class="modal-box" style="width:420px">
         <div class="modal-title" id="mc-titulo">Editar</div>
         <div style="font-size:12px;color:var(--text2);margin:.5rem 0 .75rem" id="mc-ctx"></div>
-        <input type="text" id="mc-valor" style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm)" onkeydown="if(event.key==='Enter')salvarCelula();if(event.key==='Escape')fecharModalCelula()">
+        <input type="text" id="mc-valor" style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)" onkeydown="if(event.key==='Enter')salvarCelula();if(event.key==='Escape')fecharModalCelula()">
         <div class="form-actions" style="margin-top:1rem">
           <button class="btn-primary" onclick="salvarCelula()">Salvar</button>
           <button class="btn-secondary" onclick="fecharModalCelula()">Cancelar</button>
@@ -1151,25 +1163,26 @@ tr:hover td{background:var(--row-hover)}
       <div class="table-hdr">
         <span class="table-hdr-title">Itens das ATAs / Contratos</span>
         <div style="display:flex;gap:8px;align-items:center">
+          <button class="sheet-toggle-btn" id="btn-toggle-atas-itens" onclick="toggleTabelaAtas('itens')">Mostrar</button>
           <span class="table-hdr-count" id="atas-count">—</span>
           <button onclick="abrirModalNovaAta()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Nova ATA</button>
         </div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap hidden-by-default" id="atas-itens-wrap">
         <table>
           <thead>
             <tr>
-              <th onclick="sortAtas('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-atas-cpl"></span></th>
-              <th onclick="sortAtas('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-atas-sim"></span></th>
-              <th onclick="sortAtas('item')" style="cursor:pointer;user-select:none">Item <span id="sort-atas-item"></span></th>
-              <th onclick="sortAtas('marca')" style="cursor:pointer;user-select:none">Marca/Modelo <span id="sort-atas-marca"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-atas-cpl"></span></span><span class="hdr-filter-btn" id="hfa-cpl" onclick="openAtaFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-atas-sim"></span></span><span class="hdr-filter-btn" id="hfa-sim" onclick="openAtaFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('item')" style="cursor:pointer;user-select:none">Item <span id="sort-atas-item"></span></span><span class="hdr-filter-btn" id="hfa-item" onclick="openAtaFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('marca')" style="cursor:pointer;user-select:none">Marca/Modelo <span id="sort-atas-marca"></span></span><span class="hdr-filter-btn" id="hfa-marca" onclick="openAtaFilter(event,'marca')" title="Filtrar">▾</span></span></th>
               <th onclick="sortAtas('qtde_contratada')" style="cursor:pointer;user-select:none;text-align:right">Qtde contrat. <span id="sort-atas-qtde_contratada"></span></th>
               <th onclick="sortAtas('exec')" style="cursor:pointer;user-select:none;text-align:right">Executado <span id="sort-atas-exec"></span></th>
               <th onclick="sortAtas('saldo')" style="cursor:pointer;user-select:none;text-align:right">Saldo <span id="sort-atas-saldo"></span></th>
               <th onclick="sortAtas('valor_unit')" style="cursor:pointer;user-select:none;text-align:right">Valor unit. <span id="sort-atas-valor_unit"></span></th>
               <th onclick="sortAtas('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-atas-vencimento"></span></th>
-              <th onclick="sortAtas('status')" style="cursor:pointer;user-select:none">Status <span id="sort-atas-status"></span></th>
-              <th onclick="sortAtas('empresa')" style="cursor:pointer;user-select:none">Empresa <span id="sort-atas-empresa"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('status')" style="cursor:pointer;user-select:none">Status <span id="sort-atas-status"></span></span><span class="hdr-filter-btn" id="hfa-status" onclick="openAtaFilter(event,'status')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('empresa')" style="cursor:pointer;user-select:none">Empresa <span id="sort-atas-empresa"></span></span><span class="hdr-filter-btn" id="hfa-empresa" onclick="openAtaFilter(event,'empresa')" title="Filtrar">▾</span></span></th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -1183,7 +1196,8 @@ tr:hover td{background:var(--row-hover)}
       <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
         <span class="table-hdr-title">Execuções / Solicitações</span>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="exec-busca" placeholder="🔍 empenho, unidade, NF..." oninput="filtrarExecs()" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:200px">
+          <button class="sheet-toggle-btn" id="btn-toggle-atas-execs" onclick="toggleTabelaAtas('execs')">Mostrar</button>
+          <input type="text" id="exec-busca" placeholder="🔍 empenho, unidade, NF..." oninput="filtrarExecs()" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:200px;background:var(--surface);color:var(--text)">
           <button onclick="togglePendentes()" id="btn-pendentes" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer" title="Mostrar apenas itens aguardando entrega">⚠️ Pendentes</button>
           <span class="table-hdr-count" id="exec-count">—</span>
           <button onclick="exportarAtas()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar itens de ATA para Excel">⬇ ATAs</button>
@@ -1191,17 +1205,17 @@ tr:hover td{background:var(--row-hover)}
           <button onclick="abrirModalNovaExec()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer" title="Adicionar nova solicitação">+ Nova solicitação</button>
         </div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap hidden-by-default" id="atas-execs-wrap">
         <table>
           <thead>
             <tr>
-              <th onclick="sortExecs('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-exec-cpl"></span></th>
-              <th onclick="sortExecs('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-exec-sim"></span></th>
-              <th onclick="sortExecs('item')" style="cursor:pointer;user-select:none">Item <span id="sort-exec-item"></span></th>
-              <th onclick="sortExecs('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-exec-unidade"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('item')" style="cursor:pointer;user-select:none">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-exec-unidade"></span></span><span class="hdr-filter-btn" id="hfe-unidade" onclick="openExecFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
               <th onclick="sortExecs('qtde')" style="cursor:pointer;user-select:none;text-align:right">Qtde <span id="sort-exec-qtde"></span></th>
               <th onclick="sortExecs('valor')" style="cursor:pointer;user-select:none;text-align:right">Valor total <span id="sort-exec-valor"></span></th>
-              <th onclick="sortExecs('empenho')" style="cursor:pointer;user-select:none">Empenho <span id="sort-exec-empenho"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('empenho')" style="cursor:pointer;user-select:none">Empenho <span id="sort-exec-empenho"></span></span><span class="hdr-filter-btn" id="hfe-empenho" onclick="openExecFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
               <th onclick="sortExecs('data_af')" style="cursor:pointer;user-select:none">Data AF <span id="sort-exec-data_af"></span></th>
               <th onclick="sortExecs('prev_entrega')" style="cursor:pointer;user-select:none">Prev. entrega <span id="sort-exec-prev_entrega"></span></th>
               <th onclick="sortExecs('dt_entrega')" style="cursor:pointer;user-select:none">Dt. entrega <span id="sort-exec-dt_entrega"></span></th>
@@ -1336,7 +1350,7 @@ tr:hover td{background:var(--row-hover)}
                 <div style="font-size:13px;font-weight:500">Reajustar valor</div>
                 <div id="rv-novo-valor-wrap" style="display:none;margin-top:6px">
                   <input type="number" id="rv-novo-valor" placeholder="Novo valor unitário (R$)" step="0.01"
-                    style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:220px">
+                    style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:220px;background:var(--surface);color:var(--text)">
                 </div>
               </div>
             </label>
@@ -1350,11 +1364,11 @@ tr:hover td{background:var(--row-hover)}
           </div>
           <div class="form-group">
             <div class="form-label">Nova vigência *</div>
-            <input type="date" id="rv-nova" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <input type="date" id="rv-nova" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           </div>
           <div class="form-group full">
             <div class="form-label">Novo status</div>
-            <input list="status-ata-opts" id="rv-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+            <input list="status-ata-opts" id="rv-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
           </div>
         </div>
         <div class="form-actions">
@@ -1398,7 +1412,7 @@ tr:hover td{background:var(--row-hover)}
         </div>
         <div class="form-group" style="margin-bottom:1rem">
           <div class="form-label">Motivo do encerramento (opcional)</div>
-          <input type="text" id="enc-motivo" placeholder="ex: Não renovado, esgotado..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+          <input type="text" id="enc-motivo" placeholder="ex: Não renovado, esgotado..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
         </div>
         <div class="form-actions">
           <button class="btn-primary" style="background:var(--red)" onclick="confirmarEncerramento()">⛔ Encerrar</button>
@@ -1468,11 +1482,11 @@ tr:hover td{background:var(--row-hover)}
         <div class="form-grid">
           <div class="form-group">
             <div class="form-label">Novo prazo de entrega *</div>
-            <input type="date" id="pp-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <input type="date" id="pp-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           </div>
           <div class="form-group">
             <div class="form-label">Observação</div>
-            <input type="text" id="pp-obs" placeholder="ex: Prorrogado a pedido da empresa" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <input type="text" id="pp-obs" placeholder="ex: Prorrogado a pedido da empresa" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           </div>
         </div>
         <div class="form-actions">
@@ -1490,21 +1504,8 @@ tr:hover td{background:var(--row-hover)}
 
     <div class="filters" style="margin-bottom:1rem">
       <div class="fg">
-        <div class="fg-label">Seção <button onclick="clearF('ct-secao')">✕</button></div>
-        <select id="ct-secao" onchange="filtrarContratos()"><option value="">Todas</option></select>
-      </div>
-      <div class="fg">
-        <div class="fg-label">Status <button onclick="clearF('ct-status')">✕</button></div>
-        <select id="ct-status" onchange="filtrarContratos()">
-          <option value="">Todos</option>
-          <option value="VIGENTE">VIGENTE</option>
-          <option value="ENCERRADO">ENCERRADO</option>
-          <option value="SUSPENSO">SUSPENSO</option>
-        </select>
-      </div>
-      <div class="fg">
         <div class="fg-label">Buscar <button onclick="clearF('ct-busca')">✕</button></div>
-        <input type="text" id="ct-busca" placeholder="CPL, prestador, objeto..." oninput="filtrarContratos()" style="min-width:220px">
+        <input type="text" id="ct-busca" placeholder="CPL, prestador, objeto..." oninput="filtrarContratos()" style="min-width:280px">
       </div>
       <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
     </div>
@@ -1519,25 +1520,29 @@ tr:hover td{background:var(--row-hover)}
     <div class="table-card">
       <div class="table-hdr">
         <span class="table-hdr-title">Contratos</span>
-        <span class="table-hdr-count" id="ct-count">—</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="ct-count">—</span>
+          <button onclick="abrirModalNovoContrato()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">➕ Novo contrato</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th style="width:40px">Ações</th>
-              <th onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-ct-cpl"></span></th>
-              <th onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">CPL<span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Prestador<span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('objeto')" style="cursor:pointer;user-select:none">Objeto <span id="sort-ct-objeto"></span></th>
               <th onclick="sortContratos('vigencia_atual')" style="cursor:pointer;user-select:none">Vigência atual <span id="sort-ct-vigencia_atual"></span></th>
               <th onclick="sortContratos('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-ct-vencimento"></span></th>
               <th onclick="sortContratos('dias')" style="cursor:pointer;user-select:none">Dias <span id="sort-ct-dias"></span></th>
-              <th onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Status<span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap">Ação</th>
-              <th onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Seção<span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('fiscalizacao')" style="cursor:pointer;user-select:none">Fiscalização <span id="sort-ct-fiscalizacao"></span></th>
               <th onclick="sortContratos('valor_mensal')" style="cursor:pointer;user-select:none;text-align:right">Valor mensal <span id="sort-ct-valor_mensal"></span></th>
               <th onclick="sortContratos('valor_total')" style="cursor:pointer;user-select:none;text-align:right">Valor total <span id="sort-ct-valor_total"></span></th>
+              <th onclick="sortContratos('data_atualizacao')" style="cursor:pointer;user-select:none;white-space:nowrap">Atualizado em <span id="sort-ct-data_atualizacao"></span></th>
             </tr>
           </thead>
           <tbody id="ct-tbody"></tbody>
@@ -1545,6 +1550,43 @@ tr:hover td{background:var(--row-hover)}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Modal Novo Contrato -->
+<div class="modal-overlay" id="modal-novo-contrato" onclick="if(event.target===this)this.classList.remove('active')" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:720px;max-width:98vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">➕ Novo contrato</span>
+      <button onclick="document.getElementById('modal-novo-contrato').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">CPL *</div><input type="text" id="nc-cpl" placeholder="ex: CPL 086/2025"></div>
+      <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" placeholder="ex: 123/2025"></div>
+      <div class="form-group full"><div class="form-label">Prestador *</div><input type="text" id="nc-prestador" placeholder="Razão social da empresa"></div>
+      <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="nc-objeto" placeholder="Objeto do contrato"></div>
+      <div class="form-group"><div class="form-label">CNPJ</div><input type="text" id="nc-cnpj" placeholder="00.000.000/0000-00"></div>
+      <div class="form-group"><div class="form-label">E-mail da empresa</div><input type="email" id="nc-email" placeholder="contato@empresa.com"></div>
+      <div class="form-group"><div class="form-label">Seção</div><input type="text" id="nc-secao" placeholder="ex: SUEQ - EQUIP"></div>
+      <div class="form-group"><div class="form-label">Status</div>
+        <select id="nc-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="ENCERRADO">ENCERRADO</option></select>
+      </div>
+      <div class="form-group"><div class="form-label">Data de início</div><input type="date" id="nc-inicio"></div>
+      <div class="form-group"><div class="form-label">Data de assinatura</div><input type="date" id="nc-assinatura"></div>
+      <div class="form-group"><div class="form-label">Vigência atual</div><input type="text" id="nc-vigencia" placeholder="ex: 12 meses"></div>
+      <div class="form-group"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
+      <div class="form-group"><div class="form-label">Valor inicial (R$)</div><input type="text" id="nc-valor-inicial" placeholder="ex: 120000,00"></div>
+      <div class="form-group"><div class="form-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
+      <div class="form-group"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
+      <div class="form-group"><div class="form-label">Fiscalização</div><input type="text" id="nc-fiscalizacao" placeholder="Nome do fiscal"></div>
+      <div class="form-group"><div class="form-label">Contato</div><input type="text" id="nc-contato" placeholder="Telefone / contato"></div>
+      <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="nc-obs" placeholder="Observações gerais"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarNovoContrato()">Salvar contrato</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-novo-contrato').classList.remove('active')">Cancelar</button>
+      <span id="nc-msg" class="fmsg"></span>
+    </div>
   </div>
 </div>
 
@@ -1694,6 +1736,92 @@ tr:hover td{background:var(--row-hover)}
   </div>
 </div>
 
+<!-- Sanções Administrativas -->
+<div id="panel-sancoes" class="panel">
+  <div id="sancoes-loading" class="loading"><span class="spinner"></span>Carregando sanções...</div>
+  <div id="sancoes-main" style="display:none">
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('sa-busca')">×</button></div>
+        <input type="text" id="sa-busca" placeholder="empresa, contrato, processo..." oninput="filtrarSancoes()" style="min-width:280px">
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('sa-status')">×</button></div>
+        <select id="sa-status" onchange="filtrarSancoes()">
+          <option value="">Todos ativos</option>
+          <option>Em análise</option>
+          <option>Notificada</option>
+          <option>Em defesa</option>
+          <option>Aplicada</option>
+          <option>Encerrada</option>
+          <option>Cancelada</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Tipo <button onclick="clearF('sa-tipo')">×</button></div>
+        <select id="sa-tipo" onchange="filtrarSancoes()">
+          <option value="">Todos</option>
+          <option>Advertência</option>
+          <option>Multa</option>
+          <option>Suspensão</option>
+          <option>Impedimento de licitar</option>
+          <option>Declaração de inidoneidade</option>
+        </select>
+      </div>
+      <button class="clear-btn" onclick="clearAllSancoes()">× Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="sa-m-total">—</div><div class="metric-sub">registros</div></div>
+      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="sa-m-abertas" style="color:var(--amber)">—</div><div class="metric-sub">pendentes</div></div>
+      <div class="metric"><div class="metric-label">Aplicadas</div><div class="metric-value" id="sa-m-aplicadas" style="color:var(--red)">—</div><div class="metric-sub">sanções</div></div>
+      <div class="metric"><div class="metric-label">Encerradas</div><div class="metric-value" id="sa-m-encerradas" style="color:var(--green)">—</div><div class="metric-sub">concluídas</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Sanções Administrativas</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="sa-count">—</span>
+          <button onclick="abrirModalSancao()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">+ Nova sanção</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ações</th><th>Processo</th><th>Empresa</th><th>Contrato</th><th>Tipo</th><th>Status</th><th>Valor</th><th>Data</th><th>Prazo defesa</th><th>Observações</th>
+            </tr>
+          </thead>
+          <tbody id="sa-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-sancao" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal-box" style="width:620px;max-width:96vw">
+    <div class="modal-title">⚖️ Sanção administrativa</div>
+    <div class="form-grid" style="margin-top:.875rem">
+      <div class="form-group"><div class="form-label">Processo SEI</div><input type="text" id="sa-processo" placeholder="ex: 3552205.404.00000000/2026-00"></div>
+      <div class="form-group"><div class="form-label">Contrato / CPL</div><input type="text" id="sa-contrato" placeholder="CPL ou contrato"></div>
+      <div class="form-group full"><div class="form-label">Empresa *</div><input type="text" id="sa-empresa" placeholder="Nome da empresa"></div>
+      <div class="form-group"><div class="form-label">Tipo *</div><select id="sa-modal-tipo"><option>Advertência</option><option>Multa</option><option>Suspensão</option><option>Impedimento de licitar</option><option>Declaração de inidoneidade</option></select></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="sa-modal-status"><option>Em análise</option><option>Notificada</option><option>Em defesa</option><option>Aplicada</option><option>Encerrada</option><option>Cancelada</option></select></div>
+      <div class="form-group"><div class="form-label">Valor da multa (R$)</div><input type="number" id="sa-valor" step="0.01" min="0" placeholder="0,00"></div>
+      <div class="form-group"><div class="form-label">Data</div><input type="date" id="sa-data"></div>
+      <div class="form-group"><div class="form-label">Prazo defesa</div><input type="date" id="sa-prazo"></div>
+      <div class="form-group full"><div class="form-label">Motivo / observações</div><textarea id="sa-obs" rows="4" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);resize:vertical" placeholder="Descreva o motivo, notificações e andamento"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarSancao()">Salvar</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-sancao').classList.remove('active')">Cancelar</button>
+      <span id="sa-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Login -->
 <div class="modal-overlay" id="modal-login" onclick="if(event.target===this)this.classList.remove('active')">
   <div class="modal-box" style="width:380px">
@@ -1781,7 +1909,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','usuarios','planilhas'];
+const SIDEBAR_TABS = ['consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','sancoes','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -2107,7 +2235,7 @@ function showTab(name){
   localStorage.setItem("ultima_aba", name);
   window._activeTab = name;
   document.body.classList.toggle('no-edit-tab', !userCanEdit(name));
-  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","usuarios","planilhas"];
+  const names=["dashboard","consulta","chamados","chamados-novos","inventario-ac","atas","contratos","sancoes","usuarios","planilhas"];
   document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
   fecharSidebar();
   document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
@@ -2118,6 +2246,7 @@ function showTab(name){
   if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="contratos"&&!contratosCarregado) loadContratos();
+  if(name==="sancoes"&&!sancoesCarregado) loadSancoes();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
 }
@@ -2365,10 +2494,25 @@ function filtrarChamados(){
       <td style="font-size:11px">${ctrl.empresa||"—"}</td>
       <td style="font-size:11px">${ctrl.os||"—"}</td>
       <td class="td-trunc" style="max-width:160px" title="${ctrl.feito||''}">${ctrl.feito||"—"}</td>
-      <td>${podeEditar('chamados')?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️</button>`:"—"}</td>
-      <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄</button></td>
+      <td>${podeEditar('chamados')?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️ Atualizar</button>`:"—"}</td>
+      <td><button onclick="enviarEmailChamado('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
+      <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄 PDF</button></td>
     </tr>`;
   }).join("");
+}
+
+function enviarEmailChamado(protocolo){
+  const r=chamadosRows.find(x=>x.protocolo===protocolo);
+  if(!r){alert("Chamado não encontrado.");return;}
+  const ctrl=getControle(protocolo)||{};
+  // Busca e-mail da empresa pelo contrato vinculado no controle
+  const cplVinc=ctrl.cpl_contrato||"";
+  const contrato=cplVinc?contratosRows.find(c=>c.cpl===cplVinc):null;
+  const emailEmpresa=contrato?.email_empresa||"";
+  const assunto=`${r.protocolo} - ${r.unidade||''} - ${r.equipamento||''}`;
+  const corpo=`Segue chamado de manutenção:\n\nProtocolo: ${r.protocolo}\nData de abertura: ${r.carimbo||r.data_solicitacao||'—'}\nEquipamento: ${r.equipamento||'—'}\nPatrimônio: ${r.patrimonio||'—'}\nUnidade: ${r.unidade||'—'}\nEndereço: ${r.endereco||'—'}\nProblema relatado: ${r.descricao||r.problema||'—'}\nUrgência: ${r.grau_urgencia||'—'}\n\nAtenciosamente,`;
+  const url=`mailto:${encodeURIComponent(emailEmpresa)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  window.location.href=url;
 }
 
 async function marcarTodosChamados(){
@@ -2796,6 +2940,105 @@ function renderAlertas(){
   document.getElementById("atas-alertas").innerHTML=html;
 }
 
+// Filtros estilo Google Sheets para ATAs / Execuções
+const ATA_FILTER_COLS = {
+  cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
+  sim:{get:r=>r.sim||'',disp:v=>v||'(vazio)'},
+  item:{get:r=>r.item||'',disp:v=>v||'(vazio)'},
+  marca:{get:r=>r.marca||'',disp:v=>v||'(vazio)'},
+  status:{get:r=>r.status||'',disp:v=>v||'(vazio)'},
+  empresa:{get:r=>r.empresa||'',disp:v=>v||'(vazio)'},
+};
+const EXEC_FILTER_COLS = {
+  cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
+  sim:{get:r=>r.sim||'',disp:v=>v||'(vazio)'},
+  item:{get:r=>r.item||'',disp:v=>v||'(vazio)'},
+  unidade:{get:r=>r.unidade||'',disp:v=>v||'(vazio)'},
+  empenho:{get:r=>r.empenho||'',disp:v=>v||'(vazio)'},
+};
+let ataHeaderFilters={cpl:[],sim:[],item:[],marca:[],status:[],empresa:[]};
+let execHeaderFilters={cpl:[],sim:[],item:[],unidade:[],empenho:[]};
+let _sheetFilterKind=null,_sheetFilterCol=null,_sheetFilterPending=[];
+let _atasTableVisible={itens:false,execs:false};
+
+function toggleTabelaAtas(tipo){
+  const wrap=document.getElementById(tipo==='itens'?'atas-itens-wrap':'atas-execs-wrap');
+  const btn=document.getElementById(tipo==='itens'?'btn-toggle-atas-itens':'btn-toggle-atas-execs');
+  if(!wrap||!btn) return;
+  _atasTableVisible[tipo]=!_atasTableVisible[tipo];
+  wrap.style.display=_atasTableVisible[tipo]?'block':'none';
+  btn.textContent=_atasTableVisible[tipo]?'Ocultar':'Mostrar';
+  btn.classList.toggle('active',_atasTableVisible[tipo]);
+  setTimeout(_setTableOffset,0);
+}
+function _sheetCfg(kind){return kind==='ata'?ATA_FILTER_COLS:EXEC_FILTER_COLS;}
+function _sheetRows(kind){return kind==='ata'?atasItens:atasExec;}
+function _sheetFilters(kind){return kind==='ata'?ataHeaderFilters:execHeaderFilters;}
+function _sheetPrefix(kind){return kind==='ata'?'hfa':'hfe';}
+function _sheetUnique(kind,col){
+  const cfg=_sheetCfg(kind)[col];
+  return [...new Set(_sheetRows(kind).map(cfg.get).map(v=>v==null?'':String(v)))]
+    .sort((a,b)=>cfg.disp(a).localeCompare(cfg.disp(b),'pt-BR',{numeric:true}));
+}
+function _ensureSheetDropdown(){
+  let dd=document.getElementById('sheet-hdr-dropdown'); if(dd) return dd;
+  dd=document.createElement('div'); dd.id='sheet-hdr-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:240px;padding:.625rem';
+  dd.innerHTML=`<div style="display:flex;flex-direction:column;gap:1px;margin-bottom:.375rem">
+      <button onclick="_sheetHdrSort(true)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↑ Classificar A → Z</button>
+      <button onclick="_sheetHdrSort(false)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↓ Classificar Z → A</button>
+    </div><hr style="border:none;border-top:1px solid var(--border);margin:.375rem 0">
+    <input type="text" id="sheet-hdr-search" placeholder="🔍 Buscar..." oninput="_sheetHdrRenderList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem">Selecionar <a href="#" onclick="_sheetHdrSelectAll(true);return false" style="color:var(--blue);text-decoration:none">tudo: <span id="sheet-hdr-count">0</span></a> — <a href="#" onclick="_sheetHdrSelectAll(false);return false" style="color:var(--blue);text-decoration:none">Limpar</a></div>
+    <div id="sheet-hdr-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeSheetFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmSheetFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd); return dd;
+}
+function _openSheetFilter(e,kind,col){
+  e.stopPropagation(); const dd=_ensureSheetDropdown();
+  if(_sheetFilterKind===kind&&_sheetFilterCol===col&&dd.style.display==='block'){closeSheetFilter();return;}
+  _sheetFilterKind=kind; _sheetFilterCol=col;
+  const all=_sheetUnique(kind,col), cur=_sheetFilters(kind)[col]||[];
+  _sheetFilterPending=cur.length?[...cur]:[...all];
+  document.getElementById('sheet-hdr-search').value=''; _sheetHdrRenderList();
+  const rect=e.currentTarget.getBoundingClientRect(); dd.style.display='block';
+  const ddW=dd.offsetWidth||240; let left=rect.left+window.scrollX;
+  if(left+ddW>window.scrollX+window.innerWidth-8) left=window.scrollX+window.innerWidth-ddW-8;
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px'; dd.style.left=Math.max(8,left)+'px';
+  setTimeout(()=>document.getElementById('sheet-hdr-search').focus(),50);
+}
+function openAtaFilter(e,col){_openSheetFilter(e,'ata',col);}
+function openExecFilter(e,col){_openSheetFilter(e,'exec',col);}
+function _sheetHdrRenderList(){
+  const kind=_sheetFilterKind,col=_sheetFilterCol; if(!kind||!col) return;
+  const q=normalizar(document.getElementById('sheet-hdr-search').value);
+  const all=_sheetUnique(kind,col), disp=_sheetCfg(kind)[col].disp;
+  const vis=q?all.filter(v=>normalizar(disp(v)).includes(q)):all;
+  document.getElementById('sheet-hdr-count').textContent=all.length;
+  document.getElementById('sheet-hdr-list').innerHTML=vis.map(v=>{
+    const checked=_sheetFilterPending.includes(v)?'checked':''; const safe=String(v).replace(/"/g,'&quot;');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px;color:var(--text)"><input type="checkbox" value="${safe}" ${checked} onchange="_sheetHdrToggle(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${disp(v)}</label>`;
+  }).join('')||'<div style="padding:10px;font-size:12px;color:var(--text3);text-align:center">Nenhum resultado</div>';
+}
+function _sheetHdrToggle(cb){if(cb.checked){if(!_sheetFilterPending.includes(cb.value))_sheetFilterPending.push(cb.value);}else{_sheetFilterPending=_sheetFilterPending.filter(x=>x!==cb.value);}}
+function _sheetHdrSelectAll(all){if(!_sheetFilterKind||!_sheetFilterCol)return;_sheetFilterPending=all?_sheetUnique(_sheetFilterKind,_sheetFilterCol):[];_sheetHdrRenderList();}
+function _sheetHdrSort(asc){const list=document.getElementById('sheet-hdr-list');const ls=[...list.querySelectorAll('label')];ls.sort((a,b)=>asc?a.textContent.localeCompare(b.textContent,'pt-BR',{numeric:true}):b.textContent.localeCompare(a.textContent,'pt-BR',{numeric:true}));ls.forEach(l=>list.appendChild(l));}
+function confirmSheetFilter(){
+  const kind=_sheetFilterKind,col=_sheetFilterCol; if(!kind||!col)return;
+  const all=_sheetUnique(kind,col), filters=_sheetFilters(kind);
+  filters[col]=(_sheetFilterPending.length===0||_sheetFilterPending.length===all.length)?[]:[..._sheetFilterPending];
+  closeSheetFilter(); _sheetUpdateHdrBtns(); filtrarAtas();
+}
+function closeSheetFilter(){const dd=document.getElementById('sheet-hdr-dropdown');if(dd)dd.style.display='none';_sheetFilterKind=null;_sheetFilterCol=null;}
+function _sheetUpdateHdrBtns(){
+  Object.keys(ATA_FILTER_COLS).forEach(col=>{const btn=document.getElementById('hfa-'+col);if(btn)btn.classList.toggle('active',(ataHeaderFilters[col]||[]).length>0);});
+  Object.keys(EXEC_FILTER_COLS).forEach(col=>{const btn=document.getElementById('hfe-'+col);if(btn)btn.classList.toggle('active',(execHeaderFilters[col]||[]).length>0);});
+}
+document.addEventListener('click',function(e){const dd=document.getElementById('sheet-hdr-dropdown');if(dd&&dd.style.display==='block'&&!dd.contains(e.target)&&!(e.target.closest&&e.target.closest('.hdr-filter-btn'))){closeSheetFilter();}});
+
 function popularFiltrosAtas(){
   const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
   sel("fat-cpl",[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort());
@@ -2807,10 +3050,14 @@ function popularFiltrosAtas(){
     return r.status;
   }).filter(Boolean))].sort();
   sel("fat-status",statusUnicos);
+  _sheetUpdateHdrBtns();
 }
 
 function clearAllAtas(){
   ["fat-cpl","fat-sim","fat-empresa","fat-status","fat-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  Object.keys(ataHeaderFilters).forEach(k=>ataHeaderFilters[k]=[]);
+  Object.keys(execHeaderFilters).forEach(k=>execHeaderFilters[k]=[]);
+  _sheetUpdateHdrBtns();
   filtrarAtas();
 }
 
@@ -2825,8 +3072,14 @@ function filtrarAtas(){
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
     if(emp&&r.empresa!==emp) return false;
+    for(const [col,sel] of Object.entries(ataHeaderFilters)){
+      if(!sel.length) continue;
+      const cfg=ATA_FILTER_COLS[col];
+      const val=String(cfg.get(r)??'');
+      if(!sel.includes(val)) return false;
+    }
     // Ocultar encerrados por padrão (a menos que filtro de status seja "ENCERRADO")
-    if(!st&&r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return false;
+    if(!st&&!ataHeaderFilters.status.length&&r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return false;
     if(st==="ENCERRADO"&&!r.status.toUpperCase().startsWith("ENCERRADO")) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
     if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
@@ -2887,12 +3140,12 @@ function filtrarAtas(){
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
         ${r.status&&r.status.toUpperCase().startsWith("ENCERRADO")?`
-        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver solicitações deste item">📋</button>
+        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver solicitações deste item">📋 Solicitações</button>
         `:`
-        <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️</button>
-        <button onclick="renovarAta('${r.cpl}','${r.sim}','${r.item}','${r.vencimento}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência">🔄</button>
-        <button onclick="encerrarContrato('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔</button>
-        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋</button>
+        <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️ Solicitação</button>
+        <button onclick="renovarAta('${r.cpl}','${r.sim}','${r.item}','${r.vencimento}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência">🔄 Prorrogar</button>
+        <button onclick="encerrarContrato('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔ Encerrar</button>
+        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋 Solicitações</button>
         `}
       </td>
     </tr>`;
@@ -2902,6 +3155,12 @@ function filtrarAtas(){
   let execRows=atasExec.filter(r=>{
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
+    for(const [col,sel] of Object.entries(execHeaderFilters)){
+      if(!sel.length) continue;
+      const cfg=EXEC_FILTER_COLS[col];
+      const val=String(cfg.get(r)??'');
+      if(!sel.includes(val)) return false;
+    }
     if(busca&&!matchBusca(r.item+" "+r.cpl+" "+r.sim+" "+r.unidade,busca)) return false;
     return true;
   });
@@ -2942,8 +3201,8 @@ function filtrarAtas(){
     })()}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-    <button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️</button>
-    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅</button>`:''}
+    <button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
+    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:''}
     <button onclick="excluirExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
   </td>
   </tr>`).join("");
@@ -2981,6 +3240,12 @@ function filtrarExecs(){
   let execRows=atasExec.filter(r=>{
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
+    for(const [col,sel] of Object.entries(execHeaderFilters)){
+      if(!sel.length) continue;
+      const cfg=EXEC_FILTER_COLS[col];
+      const val=String(cfg.get(r)??'');
+      if(!sel.includes(val)) return false;
+    }
     if(_filtroPendentes&&r.dt_entrega) return false;
     if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
     return true;
@@ -3025,8 +3290,8 @@ function filtrarExecs(){
     ${prazoCel}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-      <button onclick="abrirModalEditExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️</button>
-      ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅</button>`:""}
+      <button onclick="abrirModalEditExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
+      ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:""}
       <button onclick="excluirExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
     </td>
   </tr>`;
@@ -3511,6 +3776,7 @@ const PERM_TABS = [
   {key:'inventario-ac', label:'Inventário'},
   {key:'atas', label:'ATAs / Contratos'},
   {key:'contratos', label:'Contratos'},
+  {key:'sancoes', label:'Sanções Administrativas'},
   {key:'planilhas', label:'Planilhas'},
 ];
 let _udUserId = null;
@@ -3913,8 +4179,9 @@ function filtrarChamadosNovos(){
     const data=r.carimbo||new Date(r.created_at).toLocaleString("pt-BR");
     const aguardando=!ctrl.status||ctrl.status==="Aguardando abertura";  // amarelo só se aguardando
     return`<tr style="${aguardando?'background:var(--amber-bg)':''}">
-      <td>${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️</button>`:"—"}</td>
+      <td>${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️ Atualizar</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
+            <td><button onclick="enviarEmailChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
@@ -3937,17 +4204,55 @@ function filtrarChamadosNovos(){
   }).join("");
 }
 
+async function enviarEmailChamadoNovo(id){
+  const r=chamadosNovosRows.find(x=>x.id===id);
+  if(!r) return;
+  const ctrl=getControleCN(r);
+  const cpl=ctrl.cpl_contrato||ctrl.cpl||ctrl.contrato||"";
+  const contratoId=ctrl.contrato_id||null;
+  let emailEmpresa="";
+  if(contratoId||cpl){
+    const local=(contratosRows||[]).find(c=>(contratoId&&String(c.id)===String(contratoId))||c.cpl===cpl||c.numero_contrato===cpl);
+    emailEmpresa=local?.email_empresa||"";
+    if(!emailEmpresa){
+      let q=sb.from("contratos").select("email_empresa").limit(1);
+      q=contratoId?q.eq("id",contratoId):q.eq("cpl",cpl);
+      const {data}=await q;
+      emailEmpresa=data?.[0]?.email_empresa||"";
+    }
+  }
+  const assunto=`Chamado de manutenção ${r.protocolo||""}`.trim();
+  const corpo=`Segue chamado de manutenção:\n\nProtocolo: ${r.protocolo||'—'}\nData de abertura: ${r.carimbo||new Date(r.created_at).toLocaleString("pt-BR")||'—'}\nEquipamento: ${r.equipamento||'—'}\nPatrimônio: ${r.patrimonio||'—'}\nUnidade: ${r.unidade||'—'}\nEndereço: ${r.endereco||'—'}\nResponsável: ${r.responsavel||'—'}\nTelefone: ${r.telefone||'—'}\nProblema relatado: ${r.descricao||r.problema||'—'}\nUrgência: ${r.grau_urgencia||'—'}\n\nAtenciosamente,`;
+  const url=`mailto:${encodeURIComponent(emailEmpresa)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  window.location.href=url;
+}
+
 // carrega contratos no select do modal de chamados novos
 let _contratosParaModal = [];
 async function _ensureContratosModal(){
   if(_contratosParaModal.length) return;
-  const {data}=await sb.from("contratos").select("id,cpl,objeto,prestador,status").eq("status","VIGENTE").order("cpl");
+  const {data}=await sb.from("contratos").select("id,cpl,objeto,prestador,status,secao")
+    .eq("status","VIGENTE")
+    .ilike("secao","SUEQ%")
+    .order("cpl");
   _contratosParaModal=(data||[]);
   const sel=document.getElementById("mcn-cpl");
+  const busca=document.getElementById("mcn-cpl-busca");
+  if(busca) busca.value='';
   if(sel){
     sel.innerHTML='<option value="">Selecione o contrato...</option>'+
       _contratosParaModal.map(c=>`<option value="${c.cpl}" data-id="${c.id}" data-prestador="${(c.prestador||'').replace(/"/g,'&quot;')}">${c.cpl} — ${c.objeto||''} — ${c.prestador||''}</option>`).join('');
   }
+}
+
+function _filtrarCplModal(){
+  const q=(document.getElementById('mcn-cpl-busca').value||'').toLowerCase().trim();
+  const sel=document.getElementById('mcn-cpl'); if(!sel) return;
+  const list=_contratosParaModal.filter(c=>!q||[c.cpl,c.objeto,c.prestador].filter(Boolean).join(' ').toLowerCase().includes(q));
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Selecione o contrato...</option>'+
+    list.map(c=>`<option value="${c.cpl}" data-id="${c.id}" data-prestador="${(c.prestador||'').replace(/"/g,'&quot;')}">${c.cpl} — ${c.objeto||''} — ${c.prestador||''}</option>`).join('');
+  if(cur) sel.value=cur; // restaura seleção se ainda na lista
 }
 
 function _mcnOnStatusChange(){
@@ -4420,7 +4725,15 @@ document.addEventListener('click',function(e){
   }
 });
 
-function clearF(id){const el=document.getElementById(id);if(el)el.value="";applyFilters()}
+function clearF(id){
+  const el=document.getElementById(id);if(el)el.value="";
+  if(id.startsWith("fat-")) return filtrarAtas();
+  if(id.startsWith("ct-")) return filtrarContratos();
+  if(id.startsWith("sa-")) return filtrarSancoes();
+  if(id.startsWith("fc-")) return filtrarChamados();
+  if(id.startsWith("cn-")) return filtrarChamadosNovos();
+  applyFilters();
+}
 function clearAllFilters(){
   ["f-cpl","f-empenho","f-patrimonio","f-nf","f-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   Object.keys(headerFilters).forEach(c=>headerFilters[c]=[]);
@@ -4800,12 +5113,12 @@ function autoPreencherEmenda(){
       </div>
       <div>
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Unidade beneficiada *</div>
-        <input type="text" class="ni-row-unidade" placeholder="ex: UBS CAJURU" value="${prev.unidade||""}" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%">
+        <input type="text" class="ni-row-unidade" placeholder="ex: UBS CAJURU" value="${prev.unidade||""}" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Qtde *</div>
-          <input type="number" class="ni-row-qtde" placeholder="ex: 2" value="${prev.qtde||""}" oninput="recalcTotais()" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);width:80px">
+          <input type="number" class="ni-row-qtde" placeholder="ex: 2" value="${prev.qtde||""}" oninput="recalcTotais()" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);width:80px;background:var(--surface);color:var(--text)">
         </div>
         <div>
           <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Vl. total</div>
@@ -5145,8 +5458,8 @@ function _renderFiscalizacao(){
     return `<tr>
       <td style="text-align:center"><input type="checkbox" class="fisc-check" data-protocolo="${r.protocolo}" style="accent-color:var(--blue);cursor:pointer"></td>
       <td style="white-space:nowrap">
-        ${podeEditar('fiscalizacao')?`<button onclick="abrirModalFiscOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Fiscalizar OS">🔍</button>`:""}
-        <button onclick="abrirHistoricoOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Ver histórico">📋</button>
+        ${podeEditar('fiscalizacao')?`<button onclick="abrirModalFiscOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Fiscalizar OS">🔍 Fiscalizar</button>`:""}
+        <button onclick="abrirHistoricoOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Ver histórico">📋 Histórico</button>
       </td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
@@ -5162,7 +5475,7 @@ function _renderFiscalizacao(){
       <td style="font-size:11px;text-align:center">${_calcSLA(r)}</td>
       <td style="font-size:11px">${r.fiscalizado_por||"—"}</td>
       <td style="font-size:11px">${r.fiscalizado_em||"—"}</td>
-      <td>${podeEditar('fiscalizacao')?`<button onclick="abrirModalEditarNF('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar NF e Competência">✏️</button>`:"—"}</td>
+      <td>${podeEditar('fiscalizacao')?`<button onclick="abrirModalEditarNF('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar NF e Competência">✏️ NF/Comp.</button>`:"—"}</td>
     </tr>`;
   }).join("");
 }
@@ -5446,7 +5759,191 @@ async function confirmarGerarTermo(){
   const w=window.open("","_blank"); w.document.write(html); w.document.close();
 }
 
+// ═══ SANÇÕES ADMINISTRATIVAS ═══
+let sancoesRows = [];
+let sancoesFiltradas = [];
+let sancoesCarregado = false;
+let _sancaoAtual = null;
+
+function badgeSancao(status){
+  const cfg={
+    "Em análise":{bg:"var(--amber-bg)",color:"var(--amber-text)"},
+    "Notificada":{bg:"var(--blue-bg)",color:"var(--blue-text)"},
+    "Em defesa":{bg:"var(--purple-bg)",color:"var(--purple-text)"},
+    "Aplicada":{bg:"var(--red-bg)",color:"var(--red-text)"},
+    "Encerrada":{bg:"var(--green-bg)",color:"var(--green-text)"},
+    "Cancelada":{bg:"var(--surface2)",color:"var(--text3)"},
+  };
+  const c=cfg[status]||{bg:"var(--surface2)",color:"var(--text3)"};
+  return `<span class="badge" style="background:${c.bg};color:${c.color}">${status||"—"}</span>`;
+}
+
+async function loadSancoes(){
+  document.getElementById("sancoes-loading").style.display="block";
+  document.getElementById("sancoes-main").style.display="none";
+  const {data,error}=await sb.from("sancoes_administrativas").select("*").order("created_at",{ascending:false});
+  if(error){
+    document.getElementById("sancoes-loading").innerHTML=`<div style="color:var(--red);max-width:720px;margin:0 auto;text-align:left;line-height:1.5">Não foi possível carregar sanções administrativas.<br><strong>Detalhe:</strong> ${error.message}<br><br>Crie no Supabase a tabela <code>sancoes_administrativas</code> com as colunas: <code>id</code>, <code>processo</code>, <code>empresa</code>, <code>contrato</code>, <code>tipo</code>, <code>status</code>, <code>valor_multa</code>, <code>data_ocorrencia</code>, <code>prazo_defesa</code>, <code>observacoes</code>, <code>created_at</code>.</div>`;
+    return;
+  }
+  sancoesRows=data||[];
+  sancoesCarregado=true;
+  filtrarSancoes();
+  document.getElementById("sancoes-loading").style.display="none";
+  document.getElementById("sancoes-main").style.display="block";
+}
+
+function clearAllSancoes(){
+  ["sa-busca","sa-status","sa-tipo"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  filtrarSancoes();
+}
+
+function filtrarSancoes(){
+  const busca=normalizar(document.getElementById("sa-busca")?.value||"");
+  const status=document.getElementById("sa-status")?.value||"";
+  const tipo=document.getElementById("sa-tipo")?.value||"";
+  sancoesFiltradas=sancoesRows.filter(r=>{
+    if(status){ if(r.status!==status) return false; }
+    else if(["Encerrada","Cancelada"].includes(r.status)) return false;
+    if(tipo&&r.tipo!==tipo) return false;
+    if(busca&&!normalizar([r.processo,r.empresa,r.contrato,r.tipo,r.status,r.observacoes].filter(Boolean).join(" ")).includes(busca)) return false;
+    return true;
+  });
+  document.getElementById("sa-m-total").textContent=sancoesFiltradas.length;
+  document.getElementById("sa-m-abertas").textContent=sancoesFiltradas.filter(r=>!["Aplicada","Encerrada","Cancelada"].includes(r.status)).length;
+  document.getElementById("sa-m-aplicadas").textContent=sancoesFiltradas.filter(r=>r.status==="Aplicada").length;
+  document.getElementById("sa-m-encerradas").textContent=sancoesFiltradas.filter(r=>r.status==="Encerrada").length;
+  document.getElementById("sa-count").textContent=`${sancoesFiltradas.length} registro(s)`;
+  renderSancoes();
+}
+
+function renderSancoes(){
+  const tbody=document.getElementById("sa-body");
+  if(!tbody) return;
+  if(!sancoesFiltradas.length){tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma sanção encontrada</td></tr>`;return;}
+  tbody.innerHTML=sancoesFiltradas.map(r=>`<tr>
+    <td style="white-space:nowrap">${podeEditar('sancoes')?`<button onclick="abrirModalSancao('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar">✏️ Editar</button>`:"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.processo||"—"}</td>
+    <td class="td-trunc" style="max-width:220px" title="${r.empresa||''}">${r.empresa||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.contrato||"—"}</td>
+    <td>${r.tipo||"—"}</td>
+    <td>${badgeSancao(r.status)}</td>
+    <td style="text-align:right">${r.valor_multa?fmtFull(Number(r.valor_multa)):"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${fmtDate(r.data_ocorrencia)||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap;color:${corVencimento(r.prazo_defesa)}">${fmtDate(r.prazo_defesa)||"—"}</td>
+    <td class="td-trunc" style="max-width:260px" title="${r.observacoes||''}">${r.observacoes||"—"}</td>
+  </tr>`).join("");
+}
+
+function abrirModalSancao(id=null){
+  if(!podeEditar('sancoes')){alert("Sem permissão para editar sanções.");return;}
+  _sancaoAtual=id;
+  const r=id?sancoesRows.find(x=>String(x.id)===String(id)):null;
+  document.getElementById("sa-processo").value=r?.processo||"";
+  document.getElementById("sa-contrato").value=r?.contrato||"";
+  document.getElementById("sa-empresa").value=r?.empresa||"";
+  document.getElementById("sa-modal-tipo").value=r?.tipo||"Advertência";
+  document.getElementById("sa-modal-status").value=r?.status||"Em análise";
+  document.getElementById("sa-valor").value=r?.valor_multa??"";
+  document.getElementById("sa-data").value=r?.data_ocorrencia||"";
+  document.getElementById("sa-prazo").value=r?.prazo_defesa||"";
+  document.getElementById("sa-obs").value=r?.observacoes||"";
+  document.getElementById("sa-msg").className="fmsg";
+  document.getElementById("modal-sancao").classList.add("active");
+}
+
+async function salvarSancao(){
+  if(bloquearSeVisualiz('sancoes')) return;
+  const empresa=document.getElementById("sa-empresa").value.trim();
+  const tipo=document.getElementById("sa-modal-tipo").value;
+  const status=document.getElementById("sa-modal-status").value;
+  if(!empresa||!tipo||!status){showMsg("sa","Preencha empresa, tipo e status.","err");return;}
+  const btn=document.querySelector("#modal-sancao .btn-primary");
+  btn.disabled=true;btn.textContent="Salvando...";
+  const dados={
+    processo:document.getElementById("sa-processo").value.trim()||null,
+    contrato:document.getElementById("sa-contrato").value.trim()||null,
+    empresa,tipo,status,
+    valor_multa:document.getElementById("sa-valor").value?Number(document.getElementById("sa-valor").value):null,
+    data_ocorrencia:document.getElementById("sa-data").value||null,
+    prazo_defesa:document.getElementById("sa-prazo").value||null,
+    observacoes:document.getElementById("sa-obs").value.trim()||null,
+  };
+  const res=_sancaoAtual
+    ? await sb.from("sancoes_administrativas").update(dados).eq("id",_sancaoAtual).select().single()
+    : await sb.from("sancoes_administrativas").insert(dados).select().single();
+  btn.disabled=false;btn.textContent="Salvar";
+  if(res.error){showMsg("sa","Erro: "+res.error.message,"err");return;}
+  showMsg("sa","✓ Salvo!","ok");
+  if(_sancaoAtual) sancoesRows=sancoesRows.map(r=>String(r.id)===String(_sancaoAtual)?res.data:r);
+  else sancoesRows=[res.data,...sancoesRows];
+  filtrarSancoes();
+  setTimeout(()=>document.getElementById("modal-sancao").classList.remove("active"),900);
+}
+
 // ═══ CONTRATOS (SUPABASE) ═══
+// ── Filtros estilo Google Sheets para Contratos ──
+const CONTRATO_FILTER_COLS = {
+  cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
+  prestador:{get:r=>r.prestador||'',disp:v=>v||'(vazio)'},
+  status:{get:r=>r.status||'',disp:v=>v||'(vazio)'},
+  secao:{get:r=>r.secao||'',disp:v=>v||'(vazio)'},
+};
+let contratoHeaderFilters={cpl:[],prestador:[],status:[],secao:[]};
+let _ctHdrCol=null,_ctHdrPending=[];
+function _ctUnique(col){
+  const cfg=CONTRATO_FILTER_COLS[col];
+  return [...new Set(contratosRows.map(cfg.get).map(v=>v==null?'':String(v)))]
+    .sort((a,b)=>cfg.disp(a).localeCompare(cfg.disp(b),'pt-BR',{numeric:true}));
+}
+function _ensureCtDropdown(){
+  let dd=document.getElementById('ct-hdr-dropdown'); if(dd) return dd;
+  dd=document.createElement('div'); dd.id='ct-hdr-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:240px;padding:.625rem';
+  dd.innerHTML=`<div style="display:flex;flex-direction:column;gap:1px;margin-bottom:.375rem">
+      <button onclick="_ctHdrSort(true)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↑ Classificar A → Z</button>
+      <button onclick="_ctHdrSort(false)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↓ Classificar Z → A</button>
+    </div><hr style="border:none;border-top:1px solid var(--border);margin:.375rem 0">
+    <input type="text" id="ct-hdr-search" placeholder="🔍 Buscar..." oninput="_ctHdrRenderList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem">Selecionar <a href="#" onclick="_ctHdrSelectAll(true);return false" style="color:var(--blue);text-decoration:none">tudo: <span id="ct-hdr-count">0</span></a> — <a href="#" onclick="_ctHdrSelectAll(false);return false" style="color:var(--blue);text-decoration:none">Limpar</a></div>
+    <div id="ct-hdr-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeContratoFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmContratoFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd); return dd;
+}
+function openContratoFilter(e,col){
+  e.stopPropagation(); const dd=_ensureCtDropdown();
+  if(_ctHdrCol===col&&dd.style.display==='block'){dd.style.display='none';_ctHdrCol=null;return;}
+  _ctHdrCol=col; const all=_ctUnique(col); const cur=contratoHeaderFilters[col]||[];
+  _ctHdrPending=cur.length?[...cur]:[...all];
+  document.getElementById('ct-hdr-search').value=''; _ctHdrRenderList();
+  const rect=e.currentTarget.getBoundingClientRect(); dd.style.display='block';
+  const ddW=dd.offsetWidth||240; let left=rect.left+window.scrollX;
+  if(left+ddW>window.scrollX+window.innerWidth-8) left=window.scrollX+window.innerWidth-ddW-8;
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px'; dd.style.left=Math.max(8,left)+'px';
+  setTimeout(()=>document.getElementById('ct-hdr-search').focus(),50);
+}
+function _ctHdrRenderList(){
+  const col=_ctHdrCol; if(!col) return;
+  const q=normalizar(document.getElementById('ct-hdr-search').value);
+  const all=_ctUnique(col); const disp=CONTRATO_FILTER_COLS[col].disp;
+  const vis=q?all.filter(v=>normalizar(disp(v)).includes(q)):all;
+  document.getElementById('ct-hdr-count').textContent=all.length;
+  document.getElementById('ct-hdr-list').innerHTML=vis.map(v=>{
+    const checked=_ctHdrPending.includes(v)?'checked':''; const safe=String(v).replace(/"/g,'&quot;');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px"><input type="checkbox" value="${safe}" ${checked} onchange="_ctHdrToggle(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${disp(v)}</label>`;
+  }).join('')||'<div style="padding:10px;font-size:12px;color:var(--text3);text-align:center">Nenhum resultado</div>';
+}
+function _ctHdrToggle(cb){if(cb.checked){if(!_ctHdrPending.includes(cb.value))_ctHdrPending.push(cb.value);}else{_ctHdrPending=_ctHdrPending.filter(x=>x!==cb.value);}}
+function _ctHdrSelectAll(all){const col=_ctHdrCol;if(!col)return;_ctHdrPending=all?_ctUnique(col):[];_ctHdrRenderList();}
+function _ctHdrSort(asc){const list=document.getElementById('ct-hdr-list');const ls=[...list.querySelectorAll('label')];ls.sort((a,b)=>asc?a.textContent.localeCompare(b.textContent,'pt-BR',{numeric:true}):b.textContent.localeCompare(a.textContent,'pt-BR',{numeric:true}));ls.forEach(l=>list.appendChild(l));}
+function confirmContratoFilter(){const col=_ctHdrCol;if(!col)return;const all=_ctUnique(col);contratoHeaderFilters[col]=(_ctHdrPending.length===0||_ctHdrPending.length===all.length)?[]:[..._ctHdrPending];document.getElementById('ct-hdr-dropdown').style.display='none';_ctHdrCol=null;_ctUpdateHdrBtns();filtrarContratos();}
+function closeContratoFilter(){const dd=document.getElementById('ct-hdr-dropdown');if(dd)dd.style.display='none';_ctHdrCol=null;}
+function _ctUpdateHdrBtns(){Object.keys(CONTRATO_FILTER_COLS).forEach(col=>{const btn=document.getElementById('hfc-'+col);if(btn)btn.classList.toggle('active',(contratoHeaderFilters[col]||[]).length>0);});}
+document.addEventListener('click',function(e){const dd=document.getElementById('ct-hdr-dropdown');if(dd&&dd.style.display==='block'&&!dd.contains(e.target)&&!(e.target.closest&&e.target.closest('.hdr-filter-btn'))){dd.style.display='none';_ctHdrCol=null;}});
+
 let contratosRows = [];
 let contratosFiltrados = [];
 let contratosCarregado = false;
@@ -5475,28 +5972,72 @@ async function loadContratos(){
   document.getElementById("contratos-main").style.display="block";
 }
 
-function popularFiltrosContratos(){
-  const secoes=[...new Set(contratosRows.map(r=>r.secao).filter(Boolean))].sort();
-  const sel=document.getElementById("ct-secao");
-  if(sel) sel.innerHTML='<option value="">Todas</option>'+secoes.map(s=>`<option value="${s}">${s}</option>`).join("");
+function popularFiltrosContratos(){ _ctUpdateHdrBtns(); }
+
+function abrirModalNovoContrato(){
+  if(!podeEditar('contratos')){alert("Sem permissão para cadastrar contratos.");return;}
+  ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("nc-status").value="VIGENTE";
+  document.getElementById("nc-msg").className="fmsg";
+  document.getElementById("modal-novo-contrato").classList.add("active");
+}
+
+async function salvarNovoContrato(){
+  const cpl=document.getElementById("nc-cpl").value.trim();
+  const prestador=document.getElementById("nc-prestador").value.trim();
+  const objeto=document.getElementById("nc-objeto").value.trim();
+  if(!cpl||!prestador||!objeto){showMsg("nc","Preencha CPL, Prestador e Objeto (*)","err");return;}
+  const btn=document.querySelector("#modal-novo-contrato .btn-primary");
+  const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
+  const _mn=id=>{const v=document.getElementById(id).value.trim();return v||null;};
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  const dados={
+    cpl, prestador, objeto,
+    numero_contrato:_mn("nc-numero"),
+    cnpj:_mn("nc-cnpj"),
+    email_empresa:_mn("nc-email"),
+    secao:_mn("nc-secao"),
+    status:document.getElementById("nc-status").value,
+    data_inicio:document.getElementById("nc-inicio").value||null,
+    data_assinatura:document.getElementById("nc-assinatura").value||null,
+    vigencia_atual:_mn("nc-vigencia"),
+    vencimento:_mn("nc-vencimento"),
+    valor_inicial:_mn("nc-valor-inicial"),
+    valor_mensal:document.getElementById("nc-valor-mensal").value.trim()?parseFloat(document.getElementById("nc-valor-mensal").value.replace(/\./g,'').replace(',','.')):null,
+    fonte:_mn("nc-fonte"),
+    fiscalizacao:_mn("nc-fiscalizacao"),
+    contato:_mn("nc-contato"),
+    obs:_mn("nc-obs"),
+    data_atualizacao:hoje,
+  };
+  const {error}=await sb.from("contratos").insert(dados);
+  btn.disabled=false;btn.textContent=label;
+  if(error){showMsg("nc","Erro: "+error.message,"err");return;}
+  showMsg("nc","✓ Contrato cadastrado! Atualizando...","ok");
+  contratosCarregado=false;
+  setTimeout(()=>{loadContratos();document.getElementById("modal-novo-contrato").classList.remove("active");},1200);
 }
 
 function clearAllContratos(){
-  ["ct-secao","ct-status","ct-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  const el=document.getElementById("ct-busca");if(el)el.value="";
+  Object.keys(contratoHeaderFilters).forEach(k=>contratoHeaderFilters[k]=[]);
+  _ctUpdateHdrBtns();
   filtrarContratos();
 }
 
 function filtrarContratos(){
-  const secao=document.getElementById("ct-secao")?.value||"";
-  const status=document.getElementById("ct-status")?.value||"";
   const busca=(document.getElementById("ct-busca")?.value||"").toLowerCase();
   const hoje=new Date();
   const d90=new Date(hoje);d90.setDate(d90.getDate()+90);
 
   contratosFiltrados=contratosRows.filter(r=>{
-    if(secao&&r.secao!==secao) return false;
-    if(status){if(r.status!==status) return false;}
-    else{if(r.status==="ENCERRADO") return false;}
+    for(const [col,sel] of Object.entries(contratoHeaderFilters)){
+      if(!sel.length) continue;
+      const val=String((r[col]??'')||'');
+      if(!sel.includes(val)) return false;
+    }
+    // Se não há filtro de status ativo, esconde ENCERRADO por padrão
+    if(!contratoHeaderFilters.status.length && r.status==="ENCERRADO") return false;
     if(busca&&![r.cpl,r.prestador,r.objeto,r.secao].filter(Boolean).join(" ").toLowerCase().includes(busca)) return false;
     return true;
   });
@@ -5571,12 +6112,12 @@ function renderTabelaContratos(){
   if(!tbody) return;
 
   // Atualizar ícones de ordenação
-  ["cpl","prestador","objeto","vigencia_atual","vencimento","dias","status","secao","fiscalizacao","valor_mensal","valor_total"].forEach(col=>{
+  ["objeto","vigencia_atual","vencimento","dias","fiscalizacao","valor_mensal","valor_total","data_atualizacao"].forEach(col=>{
     const el=document.getElementById("sort-ct-"+col);
     if(el) el.textContent=ctSortCol===col?(ctSortAsc?" ▲":" ▼"):"";
   });
 
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
 
   let rows=[...contratosFiltrados];
   if(ctSortCol){
@@ -5604,7 +6145,7 @@ function renderTabelaContratos(){
       ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
       :"";
     return `<tr>
-      <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋</button></td>
+      <td><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
       <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
@@ -5617,6 +6158,7 @@ function renderTabelaContratos(){
       <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
       <td style="text-align:right;white-space:nowrap">${vm}</td>
       <td style="text-align:right;white-space:nowrap">${vt}</td>
+      <td style="white-space:nowrap;font-size:11px;color:var(--text3)">${r.data_atualizacao||"—"}</td>
     </tr>`;
   }).join("");
 }
