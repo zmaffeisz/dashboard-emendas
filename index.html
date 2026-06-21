@@ -2247,6 +2247,42 @@ function ensureLib(name){
   return _libPromise[name];
 }
 
+// ═══ FEEDBACK UNIFICADO: toast + confirmação (8.4) ═══
+(function(){
+  const st=document.createElement("style");
+  st.textContent=`
+  #toast-wrap{position:fixed;top:14px;right:14px;z-index:99999;display:flex;flex-direction:column;gap:8px;max-width:min(360px,92vw)}
+  .toast{padding:11px 14px;border-radius:8px;font-size:13px;line-height:1.4;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;word-break:break-word}
+  .toast.show{opacity:1;transform:none}
+  .toast.info{background:#2563eb}.toast.success{background:#059669}.toast.error{background:#dc2626}.toast.warn{background:#d97706}
+  #uiconfirm-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:none;align-items:center;justify-content:center;padding:16px}
+  #uiconfirm-ov.show{display:flex}
+  #uiconfirm-box{background:var(--surface,#fff);color:var(--text,#111);border-radius:12px;max-width:400px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  #uiconfirm-msg{font-size:14px;line-height:1.5;white-space:pre-line;margin-bottom:18px}
+  #uiconfirm-btns{display:flex;gap:8px;justify-content:flex-end}
+  #uiconfirm-btns button{padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border,#ddd)}
+  #uiconfirm-no{background:var(--surface,#fff);color:var(--text,#111)}
+  #uiconfirm-yes{background:#dc2626;color:#fff;border-color:#dc2626;font-weight:600}`;
+  (document.head||document.documentElement).appendChild(st);
+  function wrapEl(){let w=document.getElementById("toast-wrap");if(!w&&document.body){w=document.createElement("div");w.id="toast-wrap";document.body.appendChild(w);}return w;}
+  window.toast=function(msg,type){type=type||'info';const w=wrapEl();if(!w)return;const t=document.createElement("div");t.className="toast "+type;t.textContent=String(msg);w.appendChild(t);requestAnimationFrame(()=>t.classList.add("show"));setTimeout(()=>{t.classList.remove("show");setTimeout(()=>t.remove(),250);},type==='error'?6000:3500);};
+  window.alert=function(msg){const s=String(msg);const type=/erro|falha|⛔|permiss|inv[aá]lid/i.test(s)?'error':/✓|sucesso/i.test(s)?'success':'info';window.toast(s,type);};
+  let _ov=null,_resolve=null;
+  function _close(v){if(_ov)_ov.classList.remove("show");if(_resolve){_resolve(v);_resolve=null;}}
+  function ovEl(){
+    if(_ov)return _ov;
+    _ov=document.createElement("div");_ov.id="uiconfirm-ov";
+    _ov.innerHTML='<div id="uiconfirm-box" role="dialog" aria-modal="true"><div id="uiconfirm-msg"></div><div id="uiconfirm-btns"><button id="uiconfirm-no" type="button">Cancelar</button><button id="uiconfirm-yes" type="button">Confirmar</button></div></div>';
+    document.body.appendChild(_ov);
+    _ov.querySelector("#uiconfirm-no").onclick=()=>_close(false);
+    _ov.querySelector("#uiconfirm-yes").onclick=()=>_close(true);
+    _ov.onclick=e=>{if(e.target===_ov)_close(false);};
+    document.addEventListener("keydown",e=>{if(_ov&&_ov.classList.contains("show")&&e.key==="Escape")_close(false);});
+    return _ov;
+  }
+  window.uiConfirm=function(msg){const ov=ovEl();ov.querySelector("#uiconfirm-msg").textContent=String(msg);ov.classList.add("show");return new Promise(r=>{_resolve=r;});};
+})();
+
 // ═══ CARREGAR CHAMADOS E AC ═══
 async function loadChamados(){
   localStorage.removeItem('chamados_data_corte');
@@ -2490,7 +2526,7 @@ async function marcarTodosChamados(){
   if(currentProfile?.papel==="visualizador"){alert("Sem permissão.");return;}
   const checkboxes=document.querySelectorAll('#chamados-body input[type=checkbox]:not(:checked)');
   if(!checkboxes.length){alert("Nenhum chamado pendente.");return;}
-  if(!confirm(`Marcar ${checkboxes.length} chamados como enviados à empresa?`)) return;
+  if(!await uiConfirm(`Marcar ${checkboxes.length} chamados como enviados à empresa?`)) return;
   const btn=document.querySelector('[onclick="marcarTodosChamados()"]');
   btn.disabled=true;btn.textContent="Salvando...";
   // Coletar protocolos
@@ -3673,7 +3709,7 @@ async function confirmarEncerramento(){
 // ═══ EXCLUIR EXECUÇÃO ═══
 async function excluirExec(idx,cpl,sim,item,unidade){
   if(bloquearSeVisualiz()) return;
-  if(!confirm(`Excluir esta solicitação?\n${item} · ${unidade}\n\nEsta ação não pode ser desfeita.`)) return;
+  if(!await uiConfirm(`Excluir esta solicitação?\n${item} · ${unidade}\n\nEsta ação não pode ser desfeita.`)) return;
   await enviarViaGet({acao:"excluir_execucao",cpl,sim,item,unidade});
   // Remover localmente
   const globalIdx=atasExec.findIndex(r=>r.cpl===cpl&&r.sim===sim&&r.item===item&&r.unidade===unidade);
@@ -4132,7 +4168,7 @@ async function salvarCelula(){
 async function excluirLinhaAC(id){
   if(bloquearSeVisualiz()) return;
   const row=_plAcData.find(r=>r.id===id);
-  if(!confirm(`Excluir equipamento ${row?.estabelecimento||""} - Pat: ${row?.patrimonio||""}?`)) return;
+  if(!await uiConfirm(`Excluir equipamento ${row?.estabelecimento||""} - Pat: ${row?.patrimonio||""}?`)) return;
   const {data, error}=await sb.from("inventario_ac").delete().eq("id",id).select();
   if(error){alert("Erro: "+error.message);return;}
   if(!data || data.length===0){alert("⚠️ Sem permissão para excluir. Verifique a política RLS da tabela 'inventario_ac' no Supabase.");return;}
@@ -4528,7 +4564,7 @@ function editarCelulaChamado(id, key, label, valor){
 async function excluirLinhaChamado(id){
   if(bloquearSeVisualiz()) return;
   const row=_plChamadosData.find(r=>r.id===id);
-  if(!confirm(`Excluir chamado ${row?.protocolo||""}?`)) return;
+  if(!await uiConfirm(`Excluir chamado ${row?.protocolo||""}?`)) return;
   const {data, error}=await sb.from("chamados").delete().eq("id",id).select();
   if(error){alert("Erro: "+error.message);return;}
   if(!data || data.length===0){alert("⚠️ Sem permissão para excluir. Verifique a política RLS da tabela 'chamados' no Supabase.");return;}
@@ -6783,7 +6819,7 @@ function selecionarTodosContratos(checkbox){
 async function manterStatusContratos(){
   if(!podeEditar('contratos')||!contratosSelecionados.size) return;
   const ids=[...contratosSelecionados];
-  if(!confirm(`Atualizar data de ${ids.length} contratos selecionados?`)) return;
+  if(!await uiConfirm(`Atualizar data de ${ids.length} contratos selecionados?`)) return;
   const btn=document.getElementById('ct-manter-status');btn.disabled=true;btn.textContent='Atualizando...';
   const hoje=new Date().toLocaleDateString('pt-BR');
   const {error}=await sb.from('contratos').update({data_atualizacao:hoje}).in('id',ids);
@@ -6934,7 +6970,7 @@ function abrirModalContratoOp(op){
 }
 
 async function removerFiscalizador(fiscId){
-  if(!confirm("Remover este fiscalizador?")) return;
+  if(!await uiConfirm("Remover este fiscalizador?")) return;
   const hoje=new Date().toISOString().substring(0,10);
   const {error}=await sb.from("contratos_fiscalizadores").update({data_fim:hoje}).eq("id",fiscId);
   if(error){alert("Erro: "+error.message);return;}
