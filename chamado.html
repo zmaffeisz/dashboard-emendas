@@ -412,54 +412,32 @@ async function enviarChamado(){
   btn.disabled=true;btn.textContent='Enviando...';
 
   const agora = new Date();
-  const protocolo = await gerarProximoProtocolo();
   const carimbo = agora.toLocaleString('pt-BR');
   const data_solicitacao = agora.toLocaleDateString('pt-BR');
+  const fabricante = document.getElementById('f-fabricante').value.trim();
+  const serie = document.getElementById('f-serie').value.trim();
+  const data_rechamado = document.getElementById('f-data-rechamado').value || null;
 
-  const chamado = {
-    protocolo,
-    carimbo,
-    data_solicitacao,
-    unidade,
-    endereco,
-    telefone,
-    responsavel,
-    email_retorno,
-    grau_urgencia: _urgencia,
-    patrimonio,
-    equipamento,
-    fabricante: document.getElementById('f-fabricante').value.trim(),
-    serie: document.getElementById('f-serie').value.trim(),
-    categoria: _categoria,
-    servico: _servico,
-    problema: _problema,
-    descricao,
-    rechamado: _rechamado,
-    data_rechamado: document.getElementById('f-data-rechamado').value || null,
-    observacao: ''
-  };
-
-  const {error} = await sb.rpc('abrir_chamado_publico', {
-    p_protocolo:        chamado.protocolo,
-    p_carimbo:          chamado.carimbo,
-    p_data_solicitacao: chamado.data_solicitacao,
-    p_unidade:          chamado.unidade,
-    p_equipamento:      chamado.equipamento,
-    p_fabricante:       chamado.fabricante,
-    p_serie:            chamado.serie,
-    p_patrimonio:       chamado.patrimonio,
-    p_categoria:        chamado.categoria,
-    p_servico:          chamado.servico,
-    p_problema:         chamado.problema,
-    p_descricao:        chamado.descricao,
-    p_endereco:         chamado.endereco,
-    p_telefone:         chamado.telefone,
-    p_responsavel:      chamado.responsavel,
-    p_grau_urgencia:    chamado.grau_urgencia,
-    p_email_retorno:    chamado.email_retorno,
-    p_rechamado:        chamado.rechamado,
-    p_data_rechamado:   chamado.data_rechamado,
-    p_observacao:       chamado.observacao
+  const {data: rpcData, error} = await sb.rpc('abrir_chamado_publico', {
+    p_carimbo:          carimbo,
+    p_data_solicitacao: data_solicitacao,
+    p_unidade:          unidade,
+    p_equipamento:      equipamento,
+    p_fabricante:       fabricante,
+    p_serie:            serie,
+    p_patrimonio:       patrimonio,
+    p_categoria:        _categoria,
+    p_servico:          _servico,
+    p_problema:         _problema,
+    p_descricao:        descricao,
+    p_endereco:         endereco,
+    p_telefone:         telefone,
+    p_responsavel:      responsavel,
+    p_grau_urgencia:    _urgencia,
+    p_email_retorno:    email_retorno,
+    p_rechamado:        _rechamado,
+    p_data_rechamado:   data_rechamado,
+    p_observacao:       ''
   });
 
   if(error){
@@ -468,6 +446,9 @@ async function enviarChamado(){
     btn.disabled=false;btn.textContent='📨 Enviar solicitação';
     return;
   }
+
+  // Protocolo agora vem do banco (gerado atomicamente pela sequence)
+  const protocolo = rpcData;
 
   // Upload de fotos (se houver)
   if(_fotos.length>0){
@@ -501,9 +482,7 @@ async function enviarChamado(){
     protocolo, carimbo,
     unidade, endereco, telefone, responsavel, email_retorno,
     urgencia: _urgencia,
-    patrimonio, equipamento,
-    fabricante: document.getElementById('f-fabricante').value.trim(),
-    serie: document.getElementById('f-serie').value.trim(),
+    patrimonio, equipamento, fabricante, serie,
     categoria: _categoria, servico: _servico, problema: _problema, descricao,
     rechamado: _rechamado,
   };
