@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="login-body">
-<button id="tema-btn" onclick="alternarTema()" class="tema-btn" aria-label="Alternar tema">🌙</button>
+<button id="tema-btn" onclick="alternarTema()" class="tema-btn" aria-label="Alternar tema" style="position:fixed;top:16px;right:16px;z-index:100">🌙</button>
 <div class="login-card">
   <div class="login-logo">
     <div style="font-size:34px;line-height:1;margin-bottom:.5rem">🏥</div>
@@ -35,7 +35,7 @@
 <script>
 function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
 function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
-aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'light');
+aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'dark');
 </script>
 <script>
 const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
