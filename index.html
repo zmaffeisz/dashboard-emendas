@@ -655,7 +655,7 @@
         <table>
           <thead>
             <tr>
-              <th>Ações</th><th>PDF</th><th>E-mail</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
+              <th>Ações</th><th>PDF</th><th>E-mail</th><th>Fotos</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
               <th>Equipamento</th><th>Descrição</th><th>Endereço</th>
               <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
               <th>Fabricante/Modelo</th><th>Série</th>
@@ -4332,7 +4332,15 @@ async function loadChamadosNovos(){
   const controleMap={};
   if(controleData) controleData.forEach(c=>controleMap[c.protocolo]=c);
   
-  chamadosNovosRows=data.map(r=>({...r, _controle: controleMap[r.protocolo]||null}));
+  // Carregar anexos de fotos
+  const {data:anexosData}=await sb.from("chamados_anexos").select("*");
+  const anexosMap={};
+  if(anexosData) anexosData.forEach(a=>{
+    if(!anexosMap[a.chamado_id]) anexosMap[a.chamado_id]=[];
+    anexosMap[a.chamado_id].push(a);
+  });
+
+  chamadosNovosRows=data.map(r=>({...r, _controle: controleMap[r.protocolo]||null, _anexos: anexosMap[r.id]||[]}));
   chamadosNovosCarregado=true;
   popularFiltrosCN();
   filtrarChamadosNovos();
@@ -4410,7 +4418,8 @@ function filtrarChamadosNovos(){
     return`<tr style="${rowBg}">
       <td>${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️ Atualizar</button>`:"—"}</td>
       <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
-            <td><button onclick="enviarEmailChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
+      <td><button onclick="enviarEmailChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
+      <td style="white-space:nowrap">${(r._anexos&&r._anexos.length>0)?r._anexos.map((a,i)=>a.apagado_em?`<span style="font-size:10px;color:var(--text3)">Removida</span>`:`<button onclick="verFotoChamado('${a.storage_path}')" style="font-size:11px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin:1px" title="${_sanEsc(a.nome_original||'')}">📷 Foto ${i+1}</button>`).join(''):'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.protocolo||"—")}</td>
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(data)}</td>
@@ -4431,6 +4440,12 @@ function filtrarChamadosNovos(){
       <td style="font-size:11px">${_sanEsc(r.rechamado||"—")}</td>
     </tr>`;
   }).join("");
+}
+
+async function verFotoChamado(path){
+  const {data,error}=await sb.storage.from('chamados-fotos').createSignedUrl(path,3600);
+  if(error||!data?.signedUrl){alert('Não foi possível gerar o link da foto. Tente novamente.');return;}
+  window.open(data.signedUrl,'_blank');
 }
 
 async function enviarEmailChamadoNovo(id){

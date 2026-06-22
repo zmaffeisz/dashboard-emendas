@@ -173,6 +173,20 @@
           <label class="form-label">Descrição completa e detalhada do problema <span class="req">*</span></label>
           <textarea class="form-textarea" id="f-descricao" placeholder="Descreva detalhadamente o problema apresentado pelo equipamento..."></textarea>
         </div>
+
+        <!-- FOTOS -->
+        <div class="form-group full">
+          <label class="form-label">Fotos do problema <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — máx. 2 fotos)</span></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            <button type="button" onclick="document.getElementById('input-galeria').click()" class="btn-foto" id="btn-galeria">📎 Anexar fotos</button>
+            <button type="button" onclick="document.getElementById('input-camera').click()" class="btn-foto" id="btn-camera">📷 Tirar foto</button>
+          </div>
+          <input type="file" id="input-galeria" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="adicionarFotos(this.files)">
+          <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none" onchange="adicionarFotos(this.files)">
+          <div id="fotos-preview" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+          <div id="fotos-contador" style="font-size:12px;color:var(--text3);margin-top:4px"></div>
+          <div id="fotos-erro" style="font-size:12px;color:var(--red,#e24b4a);margin-top:4px;display:none"></div>
+        </div>
       </div>
     </div>
 
@@ -226,6 +240,85 @@ let _categoria = "";
 let _servico = "";
 let _problema = "";
 let _rechamado = "";
+let _fotos = []; // [{file, blob, nome}]
+
+async function comprimirImagem(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=1600;
+        let w=img.width, h=img.height;
+        if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>{
+          if(!blob){reject(new Error('Falha na compressão'));return;}
+          resolve(blob);
+        },'image/jpeg',0.82);
+      };
+      img.onerror=()=>reject(new Error('Imagem inválida'));
+      img.src=e.target.result;
+    };
+    reader.onerror=()=>reject(new Error('Erro ao ler arquivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function atualizarPreviewFotos(){
+  const preview=document.getElementById('fotos-preview');
+  const contador=document.getElementById('fotos-contador');
+  const btnGal=document.getElementById('btn-galeria');
+  const btnCam=document.getElementById('btn-camera');
+  preview.innerHTML=_fotos.map((f,i)=>`
+    <div style="position:relative;display:inline-block">
+      <img src="${URL.createObjectURL(f.blob)}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
+      <button type="button" onclick="removerFoto(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--red,#e24b4a);color:#fff;cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button>
+      <div style="font-size:10px;color:var(--text3);text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.nome}</div>
+    </div>`).join('');
+  contador.textContent=_fotos.length>0?`${_fotos.length}/2 foto${_fotos.length>1?'s':''} selecionada${_fotos.length>1?'s':''}` :'';
+  const bloqueado=_fotos.length>=2;
+  btnGal.disabled=bloqueado; btnCam.disabled=bloqueado;
+  btnGal.style.opacity=bloqueado?'0.5':'1';
+  btnCam.style.opacity=bloqueado?'0.5':'1';
+  document.getElementById('fotos-erro').style.display='none';
+}
+
+function removerFoto(i){
+  _fotos.splice(i,1);
+  atualizarPreviewFotos();
+  document.getElementById('input-galeria').value='';
+  document.getElementById('input-camera').value='';
+}
+
+async function adicionarFotos(files){
+  const erroEl=document.getElementById('fotos-erro');
+  erroEl.style.display='none';
+  const disponiveis=2-_fotos.length;
+  if(disponiveis<=0){
+    erroEl.textContent='É permitido anexar no máximo 2 fotos por chamado.';
+    erroEl.style.display='block'; return;
+  }
+  const lista=Array.from(files).slice(0,disponiveis);
+  if(Array.from(files).length>disponiveis){
+    erroEl.textContent=`Apenas ${disponiveis} foto${disponiveis>1?'s':''} adicionada${disponiveis>1?'s':''}. Limite máximo de 2 fotos atingido.`;
+    erroEl.style.display='block';
+  }
+  for(const file of lista){
+    try{
+      const blob=await comprimirImagem(file);
+      _fotos.push({file, blob, nome:file.name});
+    }catch(e){
+      erroEl.textContent='Erro ao processar imagem: '+e.message;
+      erroEl.style.display='block';
+    }
+  }
+  atualizarPreviewFotos();
+  document.getElementById('input-galeria').value='';
+  document.getElementById('input-camera').value='';
+}
 
 function selecionarUrgencia(el, valor){
   document.querySelectorAll('.urgencia-item').forEach(x=>x.classList.remove('selected'));
@@ -376,6 +469,33 @@ async function enviarChamado(){
     return;
   }
 
+  // Upload de fotos (se houver)
+  if(_fotos.length>0){
+    btn.textContent='Enviando fotos...';
+    // Buscar o id do chamado pelo protocolo
+    const {data:chRow}=await sb.from('chamados').select('id').eq('protocolo',protocolo).single();
+    if(chRow?.id){
+      for(const f of _fotos){
+        try{
+          const ext='jpg';
+          const ts=Date.now();
+          const nomeSeg=f.nome.replace(/[^a-zA-Z0-9._-]/g,'_');
+          const path=`chamados/${chRow.id}/${ts}-${nomeSeg}`;
+          const {error:upErr}=await sb.storage.from('chamados-fotos').upload(path,f.blob,{contentType:'image/jpeg',upsert:false});
+          if(!upErr){
+            await sb.from('chamados_anexos').insert({
+              chamado_id:chRow.id,
+              storage_path:path,
+              nome_original:f.nome,
+              tamanho_bytes:f.blob.size,
+              mime_type:'image/jpeg'
+            });
+          }
+        }catch(_){}
+      }
+    }
+  }
+
   // O chamado fica salvo no Supabase e o Apps Script envia apenas o alerta por e-mail.
   const dadosEmail = {
     protocolo, carimbo,
@@ -402,6 +522,8 @@ function novoFormulario(){
   document.getElementById('success-card').style.display='none';
   document.getElementById('btn-enviar').disabled=false;
   document.getElementById('btn-enviar').textContent='📨 Enviar solicitação';
+  _fotos=[];
+  atualizarPreviewFotos();
   // Limpar campos
   document.querySelectorAll('.form-input,.form-select,.form-textarea').forEach(el=>el.value='');
   document.querySelectorAll('.radio-item-inline,.urgencia-item').forEach(el=>el.classList.remove('selected'));
