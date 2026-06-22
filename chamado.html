@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitação de Manutenção — SMS Sorocaba</title>
+
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="chamado.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" alt="Brasão">
+    <div class="header-text">
+      <div class="title">Secretaria Municipal da Saúde — Sorocaba</div>
+      <div class="sub">Solicitação de Manutenção de Equipamentos e Bens Permanentes</div>
+    </div>
+    <button id="tema-btn" onclick="alternarTema()" class="tema-btn" aria-label="Alternar tema">🌙</button>
+  </div>
+
+  <!-- Formulário -->
+  <div id="form-container">
+    <p class="required-note" style="margin-left:4px">Campos marcados com <span style="color:#E24B4A">*</span> são obrigatórios.</p>
+
+    <!-- IDENTIFICAÇÃO DA UNIDADE -->
+    <div class="card">
+      <div class="section-title">🏥 Identificação da Unidade</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Unidade solicitante <span class="req">*</span></label>
+          <select class="form-select" id="f-unidade">
+            <option value="">Selecione a unidade...</option>
+            <option>CAF – CENTRO DE ABASTECIMENTO FARMACÊUTICO</option>
+            <option>CMAE</option>
+            <option>CANIL (CONTROLE ANIMAL)</option>
+            <option>CAPS AD III – SACA SÓ</option>
+            <option>CEREST</option>
+            <option>CRF - CENTRAL REDE DE FRIO</option>
+            <option>DIVISÃO DE FROTA</option>
+            <option>MÓDULO I</option><option>MÓDULO II</option><option>MÓDULO III</option><option>MÓDULO IV</option><option>MÓDULO V</option>
+            <option>PA LARANJEIRAS</option>
+            <option>PALÁCIO DA SAÚDE</option>
+            <option>PALÁCIO DA SAÚDE - CENTRAL DE REGULAÇÃO DE LEITOS</option>
+            <option>PALÁCIO DA SAÚDE - COORDENAÇÃO DE SAÚDE MENTAL</option>
+            <option>PALÁCIO DA SAÚDE - EDUCAÇÃO EM SAÚDE</option>
+            <option>PALÁCIO DA SAÚDE - GABINETE SES (RETAGUARDA)</option>
+            <option>PALÁCIO DA SAÚDE - GESTÃO ADMINISTRATIVA (RETAGUARDA)</option>
+            <option>PALÁCIO DA SAÚDE - LABAC</option>
+            <option>PALÁCIO DA SAÚDE - REGULAÇÃO MUNICIPAL (CREDAC)</option>
+            <option>PALÁCIO DA SAÚDE - SAD</option>
+            <option>PALÁCIO DA SAÚDE - SAMU</option>
+            <option>PALÁCIO DA SAÚDE - SAÚDE DIGITAL</option>
+            <option>POLICLÍNICA</option>
+            <option>SAMU - PITICO</option>
+            <option>SECRETARIA DA SAÚDE - SES</option>
+            <option>TRAILER I</option><option>TRAILER II</option><option>TRAILER III</option><option>TRAILER IV - PRÓTESE</option>
+            <option>UBS ANGÉLICA</option>
+            <option>UBS CARLOS AMORIM (ULYSSES GUIMARÃES)</option>
+            <option>UBS/PA APARECIDINHA</option>
+            <option>UBS BARÃO</option><option>UBS BARCELONA</option>
+            <option>UBS/PA BRIGADEIRO TOBIAS</option>
+            <option>UBS CAJURÚ</option>
+            <option>UBS/PA CARANDÁ</option>
+            <option>UBS CERRADO</option><option>UBS ÉDEN</option><option>UBS ESCOLA</option>
+            <option>UBS FIORE</option>
+            <option>UBS/PA HABITETO</option>
+            <option>UBS HARO</option><option>UBS HORTÊNCIA</option><option>UBS LARANJEIRAS</option>
+            <option>UBS LOPES DE OLIVEIRA</option>
+            <option>UBS MÁRCIA MENDES</option><option>UBS MARIA DO CARMO</option>
+            <option>UBS MARIA EUGÊNIA</option><option>UBS MINEIRÃO</option>
+            <option>UBS NOVA ESPERANÇA</option><option>UBS NOVA SOROCABA</option>
+            <option>UBS PAINEIRAS</option><option>UBS RODRIGO</option><option>UBS SABIÁ</option>
+            <option>UBS SANTANA</option>
+            <option>UBS/PA SÃO BENTO</option><option>UBS/PA SÃO GUILHERME</option>
+            <option>UBS SIMUS</option>
+            <option>UBS/PA SOROCABA I</option>
+            <option>UBS VITÓRIA RÉGIA</option><option>UBS WANEL VILLE</option>
+            <option>VIGILÂNCIA EPIDEMIOLÓGICA</option>
+            <option>VIGILÂNCIA SANITÁRIA</option>
+            <option>ZOONOSES – AGENTES</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Endereço <span class="req">*</span></label>
+          <input type="text" class="form-input" id="f-endereco" placeholder="Rua, número, bairro">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefone <span class="req">*</span></label>
+          <input type="tel" class="form-input" id="f-telefone" placeholder="(15) 99999-9999">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Responsável pelo chamado <span class="req">*</span></label>
+          <input type="text" class="form-input" id="f-responsavel" placeholder="Nome completo">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">E-mail para retorno do chamado <span class="req">*</span></label>
+          <input type="email" class="form-input" id="f-email" placeholder="email@exemplo.com.br">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Grau de urgência <span class="req">*</span></label>
+          <div class="urgencia-grid">
+            <label class="urgencia-item p1" onclick="selecionarUrgencia(this,'P1 (interrupção de atendimento)')">
+              <input type="radio" name="urgencia" value="P1 (interrupção de atendimento)">
+              <div class="badge">P1</div>
+              <div class="desc">Interrupção de atendimento</div>
+            </label>
+            <label class="urgencia-item p2" onclick="selecionarUrgencia(this,'P2 (atendimento parcialmente prejudicado)')">
+              <input type="radio" name="urgencia" value="P2 (atendimento parcialmente prejudicado)">
+              <div class="badge">P2</div>
+              <div class="desc">Atendimento parcialmente prejudicado</div>
+            </label>
+            <label class="urgencia-item p3" onclick="selecionarUrgencia(this,'P3 (pouco urgente)')">
+              <input type="radio" name="urgencia" value="P3 (pouco urgente)">
+              <div class="badge">P3</div>
+              <div class="desc">Pouco urgente</div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DADOS DO BEM PERMANENTE -->
+    <div class="card">
+      <div class="section-title">🔧 Dados do Bem Permanente</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Número do patrimônio <span class="req">*</span></label>
+          <input type="text" class="form-input" id="f-patrimonio" placeholder="ex: 354547">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição do bem <span class="req">*</span></label>
+          <input type="text" class="form-input" id="f-equipamento" placeholder="ex: PURIFICADOR DE ÁGUA">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fabricante / Modelo</label>
+          <input type="text" class="form-input" id="f-fabricante" placeholder="ex: LIBELL / TRIPLA FILTRAGEM">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Nº de série</label>
+          <input type="text" class="form-input" id="f-serie" placeholder="ex: ABC123456">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Categoria <span class="req">*</span></label>
+          <div class="radio-group-inline">
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'categoria')"><input type="radio" name="categoria" value="Eletroeletrônico"> Eletroeletrônico</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'categoria')"><input type="radio" name="categoria" value="Equipamento médico/odontológico"> Equipamento médico/odontológico</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'categoria')"><input type="radio" name="categoria" value="Mobiliário médico"> Mobiliário médico</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'categoria')"><input type="radio" name="categoria" value="Mobiliário geral"> Mobiliário geral</label>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Serviço solicitado <span class="req">*</span></label>
+          <div class="radio-group-inline">
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'servico')"><input type="radio" name="servico" value="Manutenção corretiva"> Manutenção corretiva</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'servico')"><input type="radio" name="servico" value="Manutenção preventiva"> Manutenção preventiva</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'servico')"><input type="radio" name="servico" value="Instalação"> Instalação</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'servico')"><input type="radio" name="servico" value="Desinstalação"> Desinstalação</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'servico')"><input type="radio" name="servico" value="Treinamento"> Treinamento</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'servico')"><input type="radio" name="servico" value="Calibração"> Calibração</label>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Problema apresentado <span class="req">*</span></label>
+          <div class="radio-group-inline">
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'problema')"><input type="radio" name="problema" value="No bem permanente"> No bem permanente</label>
+            <label class="radio-item-inline" onclick="selecionarOpcao(this,'problema')"><input type="radio" name="problema" value="No acessório"> No acessório</label>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Descrição completa e detalhada do problema <span class="req">*</span></label>
+          <textarea class="form-textarea" id="f-descricao" placeholder="Descreva detalhadamente o problema apresentado pelo equipamento..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECHAMADO -->
+    <div class="card">
+      <div class="section-title">🔁 Rechamado</div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">É rechamado? <span style="font-size:11px;color:var(--text3);font-weight:400">(quando após manutenção o equipamento apresenta o mesmo problema em curto intervalo)</span></label>
+        <div class="radio-group-inline" style="margin-top:6px">
+          <label class="radio-item-inline" onclick="selecionarRechamado(this,'Sim')"><input type="radio" name="rechamado" value="Sim"> Sim</label>
+          <label class="radio-item-inline" onclick="selecionarRechamado(this,'Não')"><input type="radio" name="rechamado" value="Não"> Não</label>
+        </div>
+      </div>
+      <div class="form-group" id="data-rechamado-wrap" style="display:none">
+        <label class="form-label">Data do chamado anterior</label>
+        <input type="date" class="form-input" id="f-data-rechamado" style="max-width:200px">
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn-enviar" id="btn-enviar" onclick="enviarChamado()">📨 Enviar solicitação</button>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- Sucesso -->
+  <div class="success-card" id="success-card">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Solicitação enviada com sucesso!</div>
+    <div class="success-proto" id="success-proto"></div>
+    <div class="success-sub">Guarde o número do protocolo acima.<br>Aguarde a visita do técnico.</div>
+    <button onclick="novoFormulario()" style="margin-top:1.5rem;padding:10px 24px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px">+ Abrir nova solicitação</button>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:var(--text3);margin:1rem 0">
+    Secretaria Municipal da Saúde de Sorocaba — SUEQ<br>
+    Av. Eng. Carlos Reinaldo Mendes 3.041 – Sorocaba – SP | (15) 3238-2421
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_62rlfRwV8Lzg_kFLJCEn4g_heoU6pqk";
+const EMAIL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtsCvpSQsnFEXks3GcJyRB-UNh3z5M2-3kAoMGAJeoFTFXioSyMHsmxhDsW8g4_ZLMJQ/exec";
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let _urgencia = "";
+let _categoria = "";
+let _servico = "";
+let _problema = "";
+let _rechamado = "";
+
+function selecionarUrgencia(el, valor){
+  document.querySelectorAll('.urgencia-item').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  _urgencia = valor;
+}
+
+function selecionarOpcao(el, campo){
+  const grupo = el.closest('.radio-group-inline');
+  grupo.querySelectorAll('.radio-item-inline').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  if(campo==='categoria') _categoria=el.querySelector('input').value;
+  if(campo==='servico') _servico=el.querySelector('input').value;
+  if(campo==='problema') _problema=el.querySelector('input').value;
+}
+
+function selecionarRechamado(el, valor){
+  const grupo = el.closest('.radio-group-inline');
+  grupo.querySelectorAll('.radio-item-inline').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  _rechamado = valor;
+  document.getElementById('data-rechamado-wrap').style.display = valor==='Sim' ? 'block' : 'none';
+}
+
+function gerarProtocolo(){
+  // Buscar último protocolo do Supabase e incrementar
+  const agora = new Date();
+  const mm = String(agora.getMonth()+1).padStart(2,'0');
+  const aaaa = agora.getFullYear();
+  return `SES-${Date.now().toString().slice(-4)}/${mm}${aaaa}`;
+}
+
+async function gerarProximoProtocolo(){
+  const agora = new Date();
+  const mm = String(agora.getMonth()+1).padStart(2,'0');
+  const aaaa = agora.getFullYear();
+  const prefixo = `SES-`;
+  const sufixo = `/${mm}${aaaa}`;
+
+  // Buscar o maior número do mês atual
+  const {data} = await sb.from('chamados')
+    .select('protocolo')
+    .like('protocolo', `%${sufixo}`)
+    .order('protocolo', {ascending:false})
+    .limit(1);
+
+  let proximo = 1;
+  if(data && data.length > 0){
+    const ultimo = data[0].protocolo;
+    const num = parseInt(ultimo.replace(prefixo,'').replace(sufixo,''));
+    if(!isNaN(num)) proximo = num + 1;
+  }
+
+  return `${prefixo}${String(proximo).padStart(4,'0')}${sufixo}`;
+}
+
+async function enviarChamado(){
+  const err = document.getElementById('error-msg');
+  err.style.display='none';
+
+  // Validar campos obrigatórios
+  const unidade = document.getElementById('f-unidade').value;
+  const endereco = document.getElementById('f-endereco').value.trim();
+  const telefone = document.getElementById('f-telefone').value.trim();
+  const responsavel = document.getElementById('f-responsavel').value.trim();
+  const email_retorno = document.getElementById('f-email').value.trim();
+  const patrimonio = document.getElementById('f-patrimonio').value.trim();
+  const equipamento = document.getElementById('f-equipamento').value.trim();
+  const descricao = document.getElementById('f-descricao').value.trim();
+
+  if(!unidade){err.textContent='Selecione a unidade solicitante.';err.style.display='block';return;}
+  if(!endereco){err.textContent='Informe o endereço.';err.style.display='block';return;}
+  if(!telefone){err.textContent='Informe o telefone.';err.style.display='block';return;}
+  if(!responsavel){err.textContent='Informe o responsável.';err.style.display='block';return;}
+  if(!email_retorno){err.textContent='Informe o e-mail para retorno.';err.style.display='block';return;}
+  if(!_urgencia){err.textContent='Selecione o grau de urgência.';err.style.display='block';return;}
+  if(!patrimonio){err.textContent='Informe o número do patrimônio.';err.style.display='block';return;}
+  if(!equipamento){err.textContent='Informe a descrição do bem.';err.style.display='block';return;}
+  if(!_categoria){err.textContent='Selecione a categoria.';err.style.display='block';return;}
+  if(!_servico){err.textContent='Selecione o serviço solicitado.';err.style.display='block';return;}
+  if(!_problema){err.textContent='Selecione o problema apresentado.';err.style.display='block';return;}
+  if(!descricao){err.textContent='Descreva o problema detalhadamente.';err.style.display='block';return;}
+  if(!_rechamado){err.textContent='Informe se é rechamado.';err.style.display='block';return;}
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled=true;btn.textContent='Enviando...';
+
+  const agora = new Date();
+  const protocolo = await gerarProximoProtocolo();
+  const carimbo = agora.toLocaleString('pt-BR');
+  const data_solicitacao = agora.toLocaleDateString('pt-BR');
+
+  const chamado = {
+    protocolo,
+    carimbo,
+    data_solicitacao,
+    unidade,
+    endereco,
+    telefone,
+    responsavel,
+    email_retorno,
+    grau_urgencia: _urgencia,
+    patrimonio,
+    equipamento,
+    fabricante: document.getElementById('f-fabricante').value.trim(),
+    serie: document.getElementById('f-serie').value.trim(),
+    categoria: _categoria,
+    servico: _servico,
+    problema: _problema,
+    descricao,
+    rechamado: _rechamado,
+    data_rechamado: document.getElementById('f-data-rechamado').value || null,
+    observacao: ''
+  };
+
+  const {error} = await sb.rpc('abrir_chamado_publico', {
+    p_protocolo:        chamado.protocolo,
+    p_carimbo:          chamado.carimbo,
+    p_data_solicitacao: chamado.data_solicitacao,
+    p_unidade:          chamado.unidade,
+    p_equipamento:      chamado.equipamento,
+    p_fabricante:       chamado.fabricante,
+    p_serie:            chamado.serie,
+    p_patrimonio:       chamado.patrimonio,
+    p_categoria:        chamado.categoria,
+    p_servico:          chamado.servico,
+    p_problema:         chamado.problema,
+    p_descricao:        chamado.descricao,
+    p_endereco:         chamado.endereco,
+    p_telefone:         chamado.telefone,
+    p_responsavel:      chamado.responsavel,
+    p_grau_urgencia:    chamado.grau_urgencia,
+    p_email_retorno:    chamado.email_retorno,
+    p_rechamado:        chamado.rechamado,
+    p_data_rechamado:   chamado.data_rechamado,
+    p_observacao:       chamado.observacao
+  });
+
+  if(error){
+    err.textContent='Erro ao enviar: '+error.message;
+    err.style.display='block';
+    btn.disabled=false;btn.textContent='📨 Enviar solicitação';
+    return;
+  }
+
+  // O chamado fica salvo no Supabase e o Apps Script envia apenas o alerta por e-mail.
+  const dadosEmail = {
+    protocolo, carimbo,
+    unidade, endereco, telefone, responsavel, email_retorno,
+    urgencia: _urgencia,
+    patrimonio, equipamento,
+    fabricante: document.getElementById('f-fabricante').value.trim(),
+    serie: document.getElementById('f-serie').value.trim(),
+    categoria: _categoria, servico: _servico, problema: _problema, descricao,
+    rechamado: _rechamado,
+  };
+  fetch(EMAIL_SCRIPT_URL + "?dados=" + encodeURIComponent(JSON.stringify(dadosEmail)), {
+    method: "GET", mode: "no-cors"
+  }).catch(()=>{});
+
+  // Sucesso
+  document.getElementById('form-container').style.display='none';
+  document.getElementById('success-card').style.display='block';
+  document.getElementById('success-proto').textContent=protocolo;
+}
+
+function novoFormulario(){
+  document.getElementById('form-container').style.display='block';
+  document.getElementById('success-card').style.display='none';
+  document.getElementById('btn-enviar').disabled=false;
+  document.getElementById('btn-enviar').textContent='📨 Enviar solicitação';
+  // Limpar campos
+  document.querySelectorAll('.form-input,.form-select,.form-textarea').forEach(el=>el.value='');
+  document.querySelectorAll('.radio-item-inline,.urgencia-item').forEach(el=>el.classList.remove('selected'));
+  _urgencia=_categoria=_servico=_problema=_rechamado='';
+  document.getElementById('data-rechamado-wrap').style.display='none';
+}
+</script>
+<script>
+function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
+function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
+aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'dark');
+</script>
+</body>
+</html>

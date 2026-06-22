@@ -1,0 +1,55 @@
+/* ============================================================
+   chamado.css — SMS Sorocaba
+   CSS exclusivo do chamado.html (formulário de manutenção)
+   ============================================================ */
+
+.page{max-width:760px;margin:0 auto}
+.header{background:var(--surface);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.header img{width:72px;height:62px;object-fit:contain}
+.header-text .title{font-size:15px;font-weight:700;color:var(--text)}
+.header-text .sub{font-size:12px;color:var(--text2);margin-top:2px}
+.card{background:var(--surface);border-radius:12px;padding:1.5rem 2rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--accent-soft)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.form-label .req{color:#E24B4A}
+.form-input,.form-select,.form-textarea{font-size:14px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);transition:border-color .15s;width:100%;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(55,138,221,.1)}
+.form-textarea{resize:vertical;min-height:100px}
+.radio-group,.check-group{display:flex;flex-direction:column;gap:6px}
+.radio-item,.check-item{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text);padding:6px 10px;border-radius:6px;border:1.5px solid var(--border);transition:all .15s}
+.radio-item:hover,.check-item:hover{border-color:var(--accent);background:var(--accent-bg)}
+.radio-item input,.check-item input{accent-color:var(--accent);width:16px;height:16px}
+.radio-item.selected,.check-item.selected{border-color:var(--accent);background:var(--accent-bg)}
+.radio-group-inline{display:flex;flex-wrap:wrap;gap:8px}
+.radio-item-inline{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);transition:all .15s}
+.radio-item-inline:hover{border-color:var(--accent)}
+.radio-item-inline.selected{border-color:var(--accent);background:var(--accent);color:#fff}
+.radio-item-inline input{display:none}
+.urgencia-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.urgencia-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:10px;border-radius:8px;border:1.5px solid var(--border);text-align:center;transition:all .15s}
+.urgencia-item:hover{border-color:var(--accent)}
+.urgencia-item input{display:none}
+.urgencia-item .badge{font-size:18px;font-weight:800;padding:4px 12px;border-radius:6px}
+.urgencia-item .desc{font-size:10px;color:var(--text2);line-height:1.3}
+.urgencia-item.p1{border-color:#E24B4A;background:var(--accent-bg)}.urgencia-item.p1 .badge{color:#E24B4A}
+.urgencia-item.p2{border-color:#EF9F27;background:var(--accent-bg)}.urgencia-item.p2 .badge{color:#EF9F27}
+.urgencia-item.p3{border-color:#1D9E75;background:var(--accent-bg)}.urgencia-item.p3 .badge{color:#1D9E75}
+.urgencia-item.selected.p1{background:#E24B4A;border-color:#E24B4A}.urgencia-item.selected.p1 .badge{color:#fff}.urgencia-item.selected.p1 .desc{color:#fff}
+.urgencia-item.selected.p2{background:#EF9F27;border-color:#EF9F27}.urgencia-item.selected.p2 .badge{color:#fff}.urgencia-item.selected.p2 .desc{color:#fff}
+.urgencia-item.selected.p3{background:#1D9E75;border-color:#1D9E75}.urgencia-item.selected.p3 .badge{color:#fff}.urgencia-item.selected.p3 .desc{color:#fff}
+.btn-enviar{width:100%;padding:14px;font-size:15px;font-weight:600;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;transition:opacity .15s;margin-top:.5rem}
+.btn-enviar:hover{opacity:.9}
+.btn-enviar:disabled{opacity:.5;cursor:not-allowed}
+.error-msg{font-size:13px;color:#E24B4A;background:#FCEBEB;border-radius:6px;padding:8px 12px;margin-top:.5rem;display:none}
+.success-card{background:var(--surface);border-radius:12px;padding:3rem 2rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);display:none}
+.success-icon{font-size:48px;margin-bottom:1rem}
+.success-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:.5rem}
+.success-proto{font-size:24px;font-weight:800;color:var(--accent);background:var(--accent-bg);padding:12px 24px;border-radius:8px;display:inline-block;margin:1rem 0}
+.success-sub{font-size:14px;color:var(--text2)}
+.required-note{font-size:12px;color:var(--text3);margin-bottom:1rem}
+.tema-btn{margin-left:auto}
+body{padding:20px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.urgencia-grid{grid-template-columns:1fr}}

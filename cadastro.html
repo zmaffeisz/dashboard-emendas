@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar conta — Secretaria da Saúde · Sorocaba</title>
+
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="login-body">
+<button id="tema-btn" onclick="alternarTema()" class="tema-btn" aria-label="Alternar tema" style="position:fixed;top:16px;right:16px;z-index:100">🌙</button>
+<div class="login-card">
+  <div class="login-logo">
+    <div style="font-size:34px;line-height:1;margin-bottom:.5rem">🏥</div>
+    <div class="login-logo-title">Secretaria da Saúde · Sorocaba</div>
+    <div class="login-logo-sub">Criar conta de acesso</div>
+  </div>
+
+  <div class="login-info">ℹ️ Novas contas começam como <strong>Visualizador</strong>. Um administrador pode alterar suas permissões.</div>
+
+  <div class="form-group">
+    <label class="login-label">Nome completo</label>
+    <input type="text" class="login-input" id="nome" placeholder="Seu nome">
+  </div>
+  <div class="form-group">
+    <label class="login-label">E-mail</label>
+    <input type="email" class="login-input" id="email" placeholder="seu@email.com">
+  </div>
+  <div class="form-group">
+    <label class="login-label">Senha</label>
+    <input type="password" class="login-input" id="senha" placeholder="Mínimo 6 caracteres">
+  </div>
+  <div class="form-group">
+    <label class="login-label">Confirmar senha</label>
+    <input type="password" class="login-input" id="senha2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')cadastrar()">
+  </div>
+
+  <button class="login-btn" id="btn-cadastro" onclick="cadastrar()">Criar conta</button>
+  <button class="login-btn login-btn-sec" onclick="window.location.href='login.html'">Já tenho conta</button>
+
+  <div class="login-error" id="error-msg"></div>
+  <div class="login-success" id="success-msg"></div>
+
+  <div class="login-footer">Secretaria Municipal da Saúde</div>
+</div>
+
+<script>
+function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
+function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
+aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'dark');
+</script>
+<script>
+const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_62rlfRwV8Lzg_kFLJCEn4g_heoU6pqk";
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function cadastrar(){
+  const nome=document.getElementById("nome").value.trim();
+  const email=document.getElementById("email").value.trim();
+  const senha=document.getElementById("senha").value;
+  const senha2=document.getElementById("senha2").value;
+  const btn=document.getElementById("btn-cadastro");
+  const err=document.getElementById("error-msg");
+  const suc=document.getElementById("success-msg");
+
+  err.style.display="none";
+  suc.style.display="none";
+
+  if(!nome||!email||!senha||!senha2){
+    err.textContent="Preencha todos os campos.";err.style.display="block";return;
+  }
+  if(senha.length<6){
+    err.textContent="A senha deve ter pelo menos 6 caracteres.";err.style.display="block";return;
+  }
+  if(senha!==senha2){
+    err.textContent="As senhas não conferem.";err.style.display="block";return;
+  }
+
+  btn.disabled=true;btn.textContent="Criando conta...";
+
+  const {data,error}=await sb.auth.signUp({email,password:senha});
+
+  if(error){
+    err.textContent=error.message==="User already registered"?"Este e-mail já está cadastrado.":error.message;
+    err.style.display="block";
+    btn.disabled=false;btn.textContent="Criar conta";
+    return;
+  }
+
+  // Criar perfil como visualizador
+  if(data.user){
+    const {error:profileError}=await sb.from("profiles").insert({
+      id: data.user.id,
+      nome: nome,
+      email: email,
+      papel: "visualizador"
+    });
+    if(profileError){
+      console.error("Erro ao criar perfil:", profileError);
+    }
+  }
+
+  suc.textContent="✓ Conta criada! Redirecionando para o login...";
+  suc.style.display="block";
+  btn.disabled=false;btn.textContent="Criar conta";
+  setTimeout(()=>window.location.href="login.html",2000);
+}
+</script>
+</body>
+</html>
