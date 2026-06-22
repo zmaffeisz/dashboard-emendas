@@ -1086,7 +1086,7 @@
         <div style="display:flex;gap:8px;align-items:center">
           <button class="sheet-toggle-btn" id="btn-toggle-atas-itens" onclick="toggleTabelaAtas('itens')">Mostrar</button>
           <span class="table-hdr-count" id="atas-count">—</span>
-          <button onclick="abrirModalNovaAta()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Nova ATA</button>
+          <button onclick="abrirModalNovaAta()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Novo item de ATA</button>
         </div>
       </div>
       <div class="table-wrap hidden-by-default" id="atas-itens-wrap">
@@ -1152,25 +1152,21 @@
       </div>
     </div>
 
-    <!-- Modal Nova ATA -->
+    <!-- Modal Novo Item de ATA -->
     <div class="modal-overlay" id="modal-nova-ata" onclick="if(event.target===this)this.classList.remove('active')">
       <div class="modal-box" style="width:560px">
         <div class="modal-title">📄 Cadastrar item de ATA</div>
         <div class="form-grid" style="margin-top:.875rem">
-          <div class="form-group"><div class="form-label">CPL *</div><input type="text" id="na-cpl" placeholder="ex: CPL 455/2023"></div>
-          <div class="form-group"><div class="form-label">SIM (nº contrato) *</div><input type="text" id="na-sim" placeholder="ex: SIM 578/2025"></div>
+          <div class="form-group full">
+            <div class="form-label">Contrato cadastrado como ATA *</div>
+            <select id="na-contrato" onchange="naContratoChange()"><option value="">Selecione a ATA...</option></select>
+            <div id="na-contrato-resumo" style="display:none;margin-top:6px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-size:12px;color:var(--text2)"></div>
+          </div>
           <div class="form-group full"><div class="form-label">Item *</div><input type="text" id="na-item" placeholder="ex: AR CONDICIONADO INVERTER 24.000 BTU"></div>
           <div class="form-group"><div class="form-label">Marca/Modelo</div><input type="text" id="na-marca" placeholder="ex: AGRATTO LCST24F"></div>
-          <div class="form-group"><div class="form-label">Empresa</div><input type="text" id="na-empresa" placeholder="ex: AGASERV"></div>
           <div class="form-group"><div class="form-label">Qtde contratada *</div><input type="number" id="na-qtde" placeholder="ex: 46"></div>
           <div class="form-group"><div class="form-label">Valor unitário (R$)</div><input type="number" id="na-valor" placeholder="ex: 3749.82" step="0.01"></div>
-          <div class="form-group"><div class="form-label">Vencimento</div><input type="date" id="na-vencimento"></div>
-          <div class="form-group"><div class="form-label">Status do contrato</div>
-            <input list="status-ata-opts" id="na-status" placeholder="ex: VIGENTE">
-            <datalist id="status-ata-opts">
-              <option value="VIGENTE"><option value="ENCERRADO"><option value="SUSPENSO"><option value="PRORROGADO">
-            </datalist>
-          </div>
+          <div class="form-group"><div class="form-label">Prazo de entrega (dias)</div><input type="number" id="na-prazo" placeholder="ex: 30" min="0"></div>
         </div>
         <div class="form-actions">
           <button class="btn-primary" onclick="salvarNovaAta()">Salvar</button>
@@ -1456,6 +1452,7 @@
             <tr>
               <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
               <th style="width:40px">Ações</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Tipo<span class="hdr-filter-btn" id="hfc-tipo_instrumento" onclick="openContratoFilter(event,'tipo_instrumento')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">CPL<span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Prestador<span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('objeto')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
@@ -1513,6 +1510,7 @@
       <button onclick="document.getElementById('modal-editar-contrato').classList.remove('active')" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:4px 8px">✕</button>
     </div>
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">Tipo de instrumento</div><select id="ec-tipo" onchange="ecTipoInstrumentoChange()"><option value="CONTRATO">CONTRATO</option><option value="ATA">ATA</option></select></div>
       <div class="form-group"><div class="form-label">CPL</div><input id="ec-cpl" type="text"></div>
       <div class="form-group"><div class="form-label">Nº do contrato</div><input id="ec-numero" type="text"></div>
       <div class="form-group full"><div class="form-label">Prestador</div><input id="ec-prestador" type="text"></div>
@@ -1528,7 +1526,7 @@
       <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
       <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01"></div>
-      <div class="form-group"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
+      <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
       <div class="form-group"><div class="form-label">Fiscalização</div><input id="ec-fiscalizacao" type="text"></div>
       <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
@@ -1550,6 +1548,10 @@
       <button onclick="document.getElementById('modal-novo-contrato').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
     </div>
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group full"><div class="form-label">Tipo de instrumento *</div>
+        <select id="nc-tipo" onchange="ncTipoInstrumentoChange()"><option value="CONTRATO">CONTRATO</option><option value="ATA">ATA</option></select>
+        <div id="nc-tipo-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Contratos comuns podem ter valor mensal. ATAs possuem itens, quantidades e saldo de execução.</div>
+      </div>
       <div class="form-group"><div class="form-label">CPL *</div><input type="text" id="nc-cpl" placeholder="ex: CPL 086/2025"></div>
       <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" placeholder="ex: 123/2025"></div>
       <div class="form-group full"><div class="form-label">Prestador *</div>
@@ -1568,7 +1570,7 @@
       <div class="form-group"><div class="form-label">Vigência atual</div><input type="text" id="nc-vigencia" placeholder="ex: 12 meses"></div>
       <div class="form-group"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
       <div class="form-group"><div class="form-label">Valor inicial (R$)</div><input type="text" id="nc-valor-inicial" placeholder="ex: 120000,00"></div>
-      <div class="form-group"><div class="form-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
+      <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
       <div class="form-group"><div class="form-label">Fiscalização</div><input type="text" id="nc-fiscalizacao" placeholder="Nome do fiscal"></div>
       <div class="form-group"><div class="form-label">Contato</div><input type="text" id="nc-contato" placeholder="Telefone / contato"></div>
@@ -1624,7 +1626,7 @@
       <div class="form-group"><div class="form-label">Nova vigência início *</div><input type="date" id="ctr-inicio"></div>
       <div class="form-group"><div class="form-label">Nova vigência fim *</div><input type="date" id="ctr-fim"></div>
       <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="ctr-valor" placeholder="0,00" step="0.01" min="0"></div>
-      <div class="form-group"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="ctr-valor-mensal" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group" id="ctr-valor-mensal-wrap"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="ctr-valor-mensal" placeholder="0,00" step="0.01" min="0"></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctr-obs" placeholder="ex: Renovado conforme parecer jurídico..."></div>
     </div>
     <div class="form-actions">
@@ -2086,13 +2088,11 @@ async function fazerLogin(){
   await checkAuth();
 }
 
-const CHAMADOS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzyU6Rfb6oiFzPao7yHyVWT8dyv79RFr_IzgNVcUB3mb6WaCx_pHhGiwDFzWY1JgsERQ/exec";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydum9CSR96g3NEy1lHRT1avj93xe3BOw9OZjkcKFDLNDcwnDQCoPAbW7Iyvgl5k5FItA/exec";
-
 let allRows = [];
 let acRows = [];
 let atasItens = [];
 let atasExec = [];
+let atasContratos = [];
 let chamadosRows = [];
 let controleRows = [];
 let filtered = [];
@@ -2538,17 +2538,11 @@ async function marcarTodosChamados(){
     const proto=cb.closest('tr')?.querySelector('td:nth-child(3)')?.textContent?.trim();
     if(!proto||proto==="—") continue;
     protocolos.push(proto);
-    const idx=controleRows.findIndex(r=>r.protocolo===proto);
-    const novo={protocolo:proto,status:"Em andamento",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
-    if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
-    cb.checked=true;
   }
-  // Salvar em lote no Apps Script (um por um mas em paralelo)
-  const promises=protocolos.map(proto=>{
-    const dados={acao:"salvar_controle",protocolo:proto,status:"Em andamento",data_atendimento:"",empresa:"",os:"",feito:"",obs:""};
-    return fetch(CHAMADOS_SCRIPT_URL+"?dados="+encodeURIComponent(JSON.stringify(dados)),{method:"GET",mode:"cors"}).catch(()=>{});
-  });
-  await Promise.all(promises);
+  const registros=protocolos.map(protocolo=>({protocolo,status:"Em andamento",data_atendimento:"",empresa:"",os:"",feito:"",obs:"",updated_at:new Date().toISOString()}));
+  const {error}=await sb.from("chamados_controle").upsert(registros,{onConflict:"protocolo"});
+  if(error){btn.disabled=false;btn.textContent="✅ Marcar todos como enviados";alert("Erro ao salvar chamados: "+error.message);return;}
+  registros.forEach(novo=>{const idx=controleRows.findIndex(r=>r.protocolo===novo.protocolo);if(idx>=0)controleRows[idx]=novo;else controleRows.push(novo);});
   atualizarBadgeChamados();
   filtrarChamados();
   btn.disabled=false;btn.textContent="✅ Marcar todos como enviados";
@@ -2748,7 +2742,6 @@ async function marcarChamadoAberto(protocolo, marcado){
   // marcado=false = desmarcado = voltou para Aberto
   const novoStatus = marcado ? "Em andamento" : "Aberto";
   const dados = {
-    acao: "salvar_controle",
     protocolo,
     status: novoStatus,
     data_atendimento: "",
@@ -2757,12 +2750,12 @@ async function marcarChamadoAberto(protocolo, marcado){
     feito: "",
     obs: ""
   };
-  // Atualizar localmente
+  dados.updated_at=new Date().toISOString();
+  const {error}=await sb.from("chamados_controle").upsert(dados,{onConflict:"protocolo"});
+  if(error){alert("Erro ao salvar chamado: "+error.message);filtrarChamados();return;}
   const idx = controleRows.findIndex(r=>r.protocolo===protocolo);
   const novo = {protocolo, status:novoStatus, data_atendimento:"", empresa:"", os:"", feito:"", obs:""};
   if(idx>=0) controleRows[idx]=novo; else controleRows.push(novo);
-  const urlParams = encodeURIComponent(JSON.stringify(dados));
-  await fetch(CHAMADOS_SCRIPT_URL + "?dados=" + urlParams, {method:"GET", mode:"cors"}).catch(()=>{});
   atualizarBadgeChamados();
   filtrarChamados();
 }
@@ -2790,7 +2783,6 @@ async function salvarControleChamado(){
   const protocolo=_chamadoAtual;
   if(!protocolo) return;
   const dados={
-    acao:"salvar_controle",
     protocolo,
     status:document.getElementById("mc-status").value,
     data_atendimento:document.getElementById("mc-data").value,
@@ -2801,8 +2793,9 @@ async function salvarControleChamado(){
   };
   const btn=document.querySelector("#modal-chamado .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  const urlParams = encodeURIComponent(JSON.stringify(dados));
-  await fetch(CHAMADOS_SCRIPT_URL + "?dados=" + urlParams, {method:"GET", mode:"cors"}).catch(()=>{});
+  dados.updated_at=new Date().toISOString();
+  const {error}=await sb.from("chamados_controle").upsert(dados,{onConflict:"protocolo"});
+  if(error){btn.disabled=false;btn.textContent="Salvar";showMsg("mc","Erro: "+error.message,"err");return;}
   // Atualizar localmente
   const idx=controleRows.findIndex(r=>r.protocolo===protocolo);
   const novo={protocolo,status:dados.status,data_atendimento:dados.data_atendimento,empresa:dados.empresa,os:dados.os,feito:dados.feito,obs:dados.obs};
@@ -2898,29 +2891,56 @@ async function loadAtas(){
   document.getElementById("atas-loading").style.display="block";
   document.getElementById("atas-main").style.display="none";
   try{
-    const [r1,r2]=await Promise.all([
-      sb.from("atas_itens").select("*").order("cpl"),
-      sb.from("atas_execucao").select("*")
+    const [r1,r2,r3,r4]=await Promise.all([
+      sb.from("atas_itens").select("*").order("created_at"),
+      sb.from("atas_execucao").select("*").order("created_at",{ascending:false}),
+      sb.from("contratos").select("*").eq("tipo_instrumento","ATA"),
+      sb.from("fornecedores").select("id,razao_social,cnpj_normalizado")
     ]);
     if(r1.error) throw r1.error;
     if(r2.error) throw r2.error;
-    atasItens=(r1.data||[]).map(r=>({
-      cpl:(r.cpl||"").trim(),
-      sim:(r.sim||"").trim(),
+    if(r3.error) throw r3.error;
+    if(r4.error) throw r4.error;
+    const fornecedorPorId=new Map((r4.data||[]).map(f=>[String(f.id),f]));
+    atasContratos=(r3.data||[]).map(c=>{
+      const fornecedor=fornecedorPorId.get(String(c.fornecedor_id))||null;
+      return {...c,
+        empresa:(fornecedor?.razao_social||c.prestador||"").trim(),
+        cnpj_fornecedor:fornecedor?.cnpj_normalizado||c.cnpj||""
+      };
+    });
+    const contratoPorId=new Map(atasContratos.map(c=>[String(c.id),c]));
+    atasItens=(r1.data||[]).map(r=>{
+      const contrato=contratoPorId.get(String(r.contrato_id));
+      if(!contrato) return null;
+      return {
+      id:r.id,
+      contrato_id:r.contrato_id,
+      fornecedor_id:contrato.fornecedor_id,
+      cpl:(contrato.cpl||"").trim(),
+      sim:(contrato.numero_contrato||"").trim(),
       item:(r.item||"").trim(),
       marca:(r.marca_modelo||"").trim(),
       qtde_contratada:Number(r.qtde_contratada)||0,
       valor_unit:Number(r.valor_unit)||0,
-      vencimento:(r.vencimento||"").trim(),
-      status:(r.status_contrato||"VIGENTE").trim(),
-      empresa:(r.empresa||"").trim(),
+      vencimento:(contrato.vencimento||"").trim(),
+      status:(contrato.status||"VIGENTE").trim(),
+      empresa:contrato.empresa,
       prazo_entrega:parseInt(r.prazo_entrega)||0,
-    }));
-    atasExec=(r2.data||[]).map((r,idx)=>({
-      _sancao_id:`exec-${idx}`,
-      cpl:(r.cpl||"").trim(),
-      sim:(r.sim||"").trim(),
-      item:(r.item||"").trim(),
+      contrato
+    };}).filter(Boolean);
+    const itemPorId=new Map(atasItens.map(i=>[String(i.id),i]));
+    atasExec=(r2.data||[]).map(r=>{
+      const ata=itemPorId.get(String(r.ata_item_id));
+      if(!ata) return null;
+      return {
+      id:r.id,
+      _sancao_id:r.id,
+      ata_item_id:r.ata_item_id,
+      contrato_id:ata.contrato_id,
+      cpl:ata.cpl,
+      sim:ata.sim,
+      item:ata.item,
       unidade:(r.unidade||"").trim(),
       qtde:Number(r.qtde)||0,
       valor:Number(r.valor)||0,
@@ -2929,7 +2949,8 @@ async function loadAtas(){
       prev_entrega:(r.prev_entrega||"").trim(),
       dt_entrega:(r.dt_entrega||"").trim(),
       nf:(r.nf||"").trim(),
-    }));
+      obs_prazo:(r.obs_prazo||"").trim()
+    };}).filter(Boolean);
     popularFiltrosAtas();
     filtrarAtas();
     renderAlertas();
@@ -2940,15 +2961,23 @@ async function loadAtas(){
   }
 }
 
+function _resolverAtaItemRef(cplOuId,sim,item){
+  if(cplOuId&&typeof cplOuId==="object") return cplOuId;
+  if(sim===undefined&&item===undefined) return atasItens.find(r=>String(r.id)===String(cplOuId))||null;
+  return atasItens.find(r=>r.cpl===cplOuId&&r.sim===sim&&r.item===item)||null;
+}
+
 function getSaldo(cpl,sim,item){
-  const at=atasItens.find(r=>r.cpl===cpl&&r.sim===sim&&r.item===item);
+  const at=_resolverAtaItemRef(cpl,sim,item);
   if(!at) return 0;
-  const exec=atasExec.filter(r=>r.cpl===cpl&&r.sim===sim&&r.item===item).reduce((a,r)=>a+r.qtde,0);
+  const exec=atasExec.filter(r=>String(r.ata_item_id)===String(at.id)).reduce((a,r)=>a+r.qtde,0);
   return at.qtde_contratada-exec;
 }
 
 function getExecutado(cpl,sim,item){
-  return atasExec.filter(r=>r.cpl===cpl&&r.sim===sim&&r.item===item).reduce((a,r)=>a+r.qtde,0);
+  const at=_resolverAtaItemRef(cpl,sim,item);
+  if(!at) return 0;
+  return atasExec.filter(r=>String(r.ata_item_id)===String(at.id)).reduce((a,r)=>a+r.qtde,0);
 }
 
 function diasParaVencer(vencimento){
@@ -3179,12 +3208,12 @@ function filtrarAtas(){
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
         ${r.status&&r.status.toUpperCase().startsWith("ENCERRADO")?`
-        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver solicitações deste item">📋 Solicitações</button>
+        <button onclick="verExecsItem('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver solicitações deste item">📋 Solicitações</button>
         `:`
-        <button onclick="abrirModalEditAta('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️ Solicitação</button>
-        <button onclick="renovarAta('${r.cpl}','${r.sim}','${r.item}','${r.vencimento}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência">🔄 Prorrogar</button>
-        <button onclick="encerrarContrato('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔ Encerrar</button>
-        <button onclick="verExecsItem('${r.cpl}','${r.sim}','${r.item}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋 Solicitações</button>
+        <button onclick="abrirModalEditAta('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️ Solicitação</button>
+        <button onclick="renovarAta('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência do contrato">🔄 Prorrogar</button>
+        <button onclick="encerrarContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔ Encerrar</button>
+        <button onclick="verExecsItem('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋 Solicitações</button>
         `}
       </td>
     </tr>`;
@@ -3241,9 +3270,9 @@ function filtrarAtas(){
     })()}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-    <button onclick="abrirModalEditExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
-    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:''}
-    <button onclick="excluirExec(${i},'${r.cpl}','${r.sim}','${r.item}','${r.unidade}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+    <button onclick="abrirModalEditExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
+    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:''}
+    <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
   </td>
   </tr>`).join("");
   window._execRowsFiltered=execRows;
@@ -3331,9 +3360,9 @@ function filtrarExecs(){
     ${prazoCel}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-      <button onclick="abrirModalEditExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
-      ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:""}
-      <button onclick="excluirExec(${i},'${r.cpl.replace(/'/g,"\'")}','${r.sim.replace(/'/g,"\'")}','${r.item.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}' )" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+      <button onclick="abrirModalEditExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
+      ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:""}
+      <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
     </td>
   </tr>`;
   }).join("");
@@ -3361,7 +3390,7 @@ function calcDiasPrazo(r){
 let sancaoEmpresaTravada = "";
 
 function _sancaoAtaDoExec(r){
-  return atasItens.find(a=>a.cpl===r.cpl&&a.sim===r.sim&&a.item===r.item)||null;
+  return atasItens.find(a=>String(a.id)===String(r.ata_item_id))||null;
 }
 function _sancaoExecKey(r){
   return String(r?._sancao_id||[r?.cpl,r?.sim,r?.item,r?.unidade,r?.empenho,r?.data_af].join("|"));
@@ -3415,7 +3444,7 @@ function _diasAtrasoExecs(itens){
 async function abrirModalSolicitacaoSancaoAta(){
   if(!sancaoSelecionados.size||bloquearSeVisualiz('atas')) return;
   const itens=_execsSancaoSelecionadas(); if(!itens.length) return;
-  sancaoContrato=await _resolverContratoSancao(sancaoCplTravado);
+  sancaoContrato=await _resolverContratoSancao(sancaoCplTravado,itens[0]?.contrato_id);
   const c=sancaoContrato||{}, primeiro=itens[0], numero=c.numero_contrato||primeiro.sim||"—";
   const modal=document.getElementById("modal-solicitar-sancao"); document.body.appendChild(modal);
   document.getElementById("sancao-contrato-info").innerHTML=`<strong>Processo/CPL:</strong> ${_sanEsc(sancaoCplTravado)} &nbsp;·&nbsp; <strong>Contrato/SIM:</strong> ${_sanEsc(numero)}<br><strong>Empresa:</strong> ${_sanEsc(sancaoEmpresaTravada)} &nbsp;·&nbsp; <strong>CNPJ:</strong> ${_sanEsc(c.cnpj||"—")}<br><strong>Objeto:</strong> ${_sanEsc(c.objeto||[...new Set(itens.map(i=>i.item))].join(", "))}`;
@@ -3460,16 +3489,18 @@ function toggleNovoValor(){
   if(alterar) document.getElementById("rv-novo-valor").focus();
 }
 
-let _renovarKey=null;
-function renovarAta(cpl,sim,item,vencAtual){
-  _renovarKey={cpl,sim,item};
-  document.getElementById("rv-info").textContent=`${cpl} · ${sim} · ${item}`;
-  document.getElementById("rv-atual").value=vencAtual||"";
+let _renovarItemId=null;
+function renovarAta(itemId){
+  const at=_resolverAtaItemRef(itemId);
+  if(!at) return;
+  _renovarItemId=at.id;
+  const vencAtual=at.vencimento||"";
+  document.getElementById("rv-info").textContent=`${at.cpl} · ${at.sim} · ${at.item}`;
+  document.getElementById("rv-atual").value=vencAtual;
 
   // Popular saldo info
-  const at=atasItens.find(r=>r.cpl===cpl&&r.sim===sim&&r.item===item);
-  const exec=getExecutado(cpl,sim,item);
-  const saldo=getSaldo(cpl,sim,item);
+  const exec=getExecutado(at);
+  const saldo=getSaldo(at);
   const qtde=at?.qtde_contratada||0;
   document.getElementById("rv-qtde-contratada").textContent=qtde;
   document.getElementById("rv-executado").textContent=exec;
@@ -3501,7 +3532,8 @@ function renovarAta(cpl,sim,item,vencAtual){
 
 async function salvarRenovacao(){
   if(bloquearSeVisualiz()) return;
-  if(!_renovarKey) return;
+  const at=_resolverAtaItemRef(_renovarItemId);
+  if(!at) return;
   const novaData=document.getElementById("rv-nova").value;
   const novoStatus=document.getElementById("rv-status").value||"VIGENTE";
   if(!novaData){showMsg("rv","Informe a nova data (*)","err");return}
@@ -3514,42 +3546,34 @@ async function salvarRenovacao(){
   const alterarValor=document.getElementById("rv-valor-alterar").checked;
   const novoValor=alterarValor?parseFloat(document.getElementById("rv-novo-valor").value)||0:0;
   if(alterarValor&&!novoValor){showMsg("rv","Informe o novo valor unitário","err");btn.disabled=false;btn.textContent="Salvar renovação";return;}
-  const dadosRenovar={
-    acao:"atualizar_ata_status",
-    cpl:_renovarKey.cpl,
-    sim:_renovarKey.sim,
-    item:_renovarKey.item,
-    status_contrato:novoStatus,
-    vencimento:novaFormatada,
-    reiniciar_saldo:reiniciarSaldo,
-    novo_valor_unit:alterarValor?novoValor:0
-  };
-  await enviarViaGet(dadosRenovar);
-
-  // Se reiniciar saldo: remover todas as execuções deste item do array local
-  // (o Apps Script vai excluir da planilha)
-  if(reiniciarSaldo){
-    const before=atasExec.length;
-    // Remover localmente
-    for(let i=atasExec.length-1;i>=0;i--){
-      const r=atasExec[i];
-      if(r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item){
-        atasExec.splice(i,1);
-      }
+  try{
+    const {error:errContrato}=await sb.from("contratos")
+      .update({vencimento:novaFormatada,status:novoStatus})
+      .eq("id",at.contrato_id);
+    if(errContrato) throw errContrato;
+    if(alterarValor){
+      const {error:errItem}=await sb.from("atas_itens").update({valor_unit:novoValor}).eq("id",at.id);
+      if(errItem) throw errItem;
     }
+    if(reiniciarSaldo){
+      const {error:errExec}=await sb.from("atas_execucao").delete().eq("ata_item_id",at.id);
+      if(errExec) throw errExec;
+    }
+    const {error:errHist}=await sb.from("contratos_historico").insert({
+      contrato_id:at.contrato_id,
+      tipo:"Prorrogação de ATA",
+      data_evento:novaData,
+      obs:`Nova data fim: ${novaFormatada}; saldo ${reiniciarSaldo?"reiniciado":"mantido"}${alterarValor?`; valor unitário: ${novoValor}`:""}`
+    });
+    if(errHist) throw errHist;
+    await Promise.all([loadAtas(),contratosCarregado?loadContratos():Promise.resolve()]);
+    showMsg("rv","✓ Vigência atualizada no contrato.","ok");
+    setTimeout(()=>document.getElementById("modal-renovar").classList.remove("active"),1200);
+  }catch(e){
+    showMsg("rv","Erro: "+(e.message||e),"err");
+  }finally{
+    btn.disabled=false;btn.textContent="Salvar";
   }
-
-  // Atualizar local
-  const atRen=atasItens.find(r=>r.cpl===_renovarKey.cpl&&r.sim===_renovarKey.sim&&r.item===_renovarKey.item);
-  if(atRen){
-    atRen.vencimento=novaFormatada;
-    atRen.status=novoStatus;
-    if(alterarValor&&novoValor) atRen.valor_unit=novoValor;
-  }
-  filtrarAtas();renderAlertas();
-  showMsg("rv","✓ Vigência atualizada! Aguarde o Apps Script processar.","ok");
-  btn.disabled=false;btn.textContent="Salvar";
-  setTimeout(()=>document.getElementById("modal-renovar").classList.remove("active"),2000);
 }
 
 // ═══ ORDENAÇÃO ATAS ═══
@@ -3685,48 +3709,62 @@ async function confirmarEncerramentoCt(){
 }
 
 // ═══ ENCERRAR CONTRATO ═══
-let _encerrarKey=null;
-function encerrarContrato(cpl,sim,item){
-  _encerrarKey={cpl,sim,item};
-  document.getElementById("enc-info").textContent=`${cpl} · ${sim} · ${item}`;
+let _encerrarAtaContratoId=null;
+function encerrarContrato(contratoId){
+  const contrato=atasContratos.find(c=>String(c.id)===String(contratoId));
+  if(!contrato) return;
+  _encerrarAtaContratoId=contrato.id;
+  document.getElementById("enc-info").textContent=`${contrato.cpl||""} · ${contrato.numero_contrato||""} · ${contrato.empresa||""}`;
   document.getElementById("enc-motivo").value="";
   document.getElementById("enc-msg").className="fmsg";
   document.getElementById("modal-encerrar").classList.add("active");
 }
 async function confirmarEncerramento(){
   if(bloquearSeVisualiz()) return;
-  if(!_encerrarKey) return;
+  if(!_encerrarAtaContratoId) return;
   const btn=document.querySelector("#modal-encerrar .btn-primary");
   btn.disabled=true;btn.textContent="Encerrando...";
   const motivo=document.getElementById("enc-motivo").value.trim();
-  await enviarViaGet({acao:"atualizar_ata_status",..._encerrarKey,status_contrato:"ENCERRADO"+(motivo?" - "+motivo:""),vencimento:""});
-  const at=atasItens.find(r=>r.cpl===_encerrarKey.cpl&&r.sim===_encerrarKey.sim&&r.item===_encerrarKey.item);
-  if(at){at.status="ENCERRADO"+(motivo?" - "+motivo:"");}
-  filtrarAtas();
-  renderAlertas();
-  showMsg("enc","✓ Contrato encerrado!","ok");
-  btn.disabled=false;btn.textContent="⛔ Encerrar";
-  setTimeout(()=>document.getElementById("modal-encerrar").classList.remove("active"),1500);
+  try{
+    const {error}=await sb.from("contratos").update({status:"ENCERRADO"}).eq("id",_encerrarAtaContratoId);
+    if(error) throw error;
+    const {error:histError}=await sb.from("contratos_historico").insert({
+      contrato_id:_encerrarAtaContratoId,
+      tipo:"Encerramento",
+      data_evento:new Date().toISOString().slice(0,10),
+      obs:motivo||"Encerrado pela aba de ATAs"
+    });
+    if(histError) throw histError;
+    await Promise.all([loadAtas(),contratosCarregado?loadContratos():Promise.resolve()]);
+    showMsg("enc","✓ Contrato encerrado!","ok");
+    setTimeout(()=>document.getElementById("modal-encerrar").classList.remove("active"),1200);
+  }catch(e){
+    showMsg("enc","Erro: "+(e.message||e),"err");
+  }finally{
+    btn.disabled=false;btn.textContent="⛔ Encerrar";
+  }
 }
 
 // ═══ EXCLUIR EXECUÇÃO ═══
-async function excluirExec(idx,cpl,sim,item,unidade){
+async function excluirExec(execId){
   if(bloquearSeVisualiz()) return;
-  if(!await uiConfirm(`Excluir esta solicitação?\n${item} · ${unidade}\n\nEsta ação não pode ser desfeita.`)) return;
-  await enviarViaGet({acao:"excluir_execucao",cpl,sim,item,unidade});
-  // Remover localmente
-  const globalIdx=atasExec.findIndex(r=>r.cpl===cpl&&r.sim===sim&&r.item===item&&r.unidade===unidade);
-  if(globalIdx>=0) atasExec.splice(globalIdx,1);
-  filtrarAtas();filtrarExecs();
+  const exec=atasExec.find(r=>String(r.id)===String(execId));
+  if(!exec) return;
+  if(!await uiConfirm(`Excluir esta solicitação?\n${exec.item} · ${exec.unidade}\n\nEsta ação não pode ser desfeita.`)) return;
+  const {data,error}=await sb.from("atas_execucao").delete().eq("id",exec.id).select("id");
+  if(error){alert("Erro ao excluir solicitação: "+error.message);return;}
+  if(!data?.length){alert("A solicitação não foi excluída. Verifique sua permissão na aba ATAs.");return;}
+  atasExec=atasExec.filter(r=>String(r.id)!==String(exec.id));
+  filtrarAtas();
 }
 
 // ═══ PRORROGAR PRAZO DE ENTREGA ═══
-let _prorrogarKey=null,_prorrogarIdx=null;
-function abrirModalProrrogarPrazo(idx,cpl,sim,item,unidade){
-  _prorrogarKey={cpl,sim,item,unidade};
-  _prorrogarIdx=idx;
-  const r=window._execRowsFiltered?.[idx];
-  document.getElementById("pp-info").textContent=`${item} · ${unidade}`;
+let _prorrogarExecId=null;
+function abrirModalProrrogarPrazo(execId){
+  const r=atasExec.find(x=>String(x.id)===String(execId));
+  if(!r) return;
+  _prorrogarExecId=r.id;
+  document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade}`;
   document.getElementById("pp-data").value=r?.prev_entrega||"";
   document.getElementById("pp-obs").value="";
   document.getElementById("pp-msg").className="fmsg";
@@ -3734,26 +3772,28 @@ function abrirModalProrrogarPrazo(idx,cpl,sim,item,unidade){
 }
 async function salvarProrrogarPrazo(){
   if(bloquearSeVisualiz()) return;
+  const r=atasExec.find(x=>String(x.id)===String(_prorrogarExecId));
+  if(!r) return;
   const data=document.getElementById("pp-data").value;
   const obs=document.getElementById("pp-obs").value.trim();
   if(!data){showMsg("pp","Informe a nova data (*)","err");return}
   const btn=document.querySelector("#modal-prorrogar-prazo .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  await enviarViaGet({acao:"atualizar_execucao",..._prorrogarKey,prev_entrega:data,obs_prazo:obs?"Prorrogado: "+obs:""});
-  const r=window._execRowsFiltered?.[_prorrogarIdx];
-  if(r){r.prev_entrega=data;r.obs_prazo=obs?"Prorrogado: "+obs:"";}
-  const gr=atasExec.find(x=>x.cpl===_prorrogarKey.cpl&&x.sim===_prorrogarKey.sim&&x.item===_prorrogarKey.item&&x.unidade===_prorrogarKey.unidade);
-  if(gr){gr.prev_entrega=data;}
+  const obsPrazo=obs?"Prorrogado: "+obs:"";
+  const {data:salvo,error}=await sb.from("atas_execucao").update({prev_entrega:data,obs_prazo:obsPrazo||null}).eq("id",r.id).select("id,prev_entrega,obs_prazo");
+  btn.disabled=false;btn.textContent="Salvar";
+  if(error){showMsg("pp","Erro: "+error.message,"err");return;}
+  if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
+  Object.assign(r,{prev_entrega:data,obs_prazo:obsPrazo});
   filtrarExecs();
   showMsg("pp","✓ Prazo prorrogado!","ok");
-  btn.disabled=false;btn.textContent="Salvar";
-  setTimeout(()=>document.getElementById("modal-prorrogar-prazo").classList.remove("active"),1500);
+  setTimeout(()=>document.getElementById("modal-prorrogar-prazo").classList.remove("active"),1000);
 }
 
 // ═══ AUTO PREENCHER CPL/SIM AO SELECIONAR ITEM ═══
 function autoPreencherCplSim(){
-  const item=document.getElementById("ne2-item").value;
-  const at=atasItens.find(r=>r.item===item);
+  const itemId=document.getElementById("ne2-item").value;
+  const at=_resolverAtaItemRef(itemId);
   if(at){
     document.getElementById("ne2-cpl").value=at.cpl||"";
     document.getElementById("ne2-sim").value=at.sim||"";
@@ -3762,42 +3802,65 @@ function autoPreencherCplSim(){
   }
 }
 
-function verExecsItem(cpl,sim,item){
-  document.getElementById("fat-cpl").value=cpl;
-  document.getElementById("fat-sim").value=sim;
-  document.getElementById("fat-busca").value=item;
+function verExecsItem(itemId){
+  const at=_resolverAtaItemRef(itemId);
+  if(!at) return;
+  document.getElementById("fat-cpl").value=at.cpl;
+  document.getElementById("fat-sim").value=at.sim;
+  document.getElementById("fat-busca").value=at.item;
   filtrarAtas();
   document.getElementById("exec-body").scrollIntoView({behavior:"smooth"});
 }
 
-function abrirModalNovaAta(){
-  ["na-cpl","na-sim","na-item","na-marca","na-empresa","na-qtde","na-valor","na-vencimento","na-status"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+async function abrirModalNovaAta(contratoId=null){
+  if(!podeEditar('atas')){alert("Sem permissão para cadastrar itens de ATA.");return;}
+  if(!atasContratos.length){
+    const [ctRes,forRes]=await Promise.all([
+      sb.from("contratos").select("*").eq("tipo_instrumento","ATA").order("cpl"),
+      sb.from("fornecedores").select("id,razao_social,cnpj_normalizado")
+    ]);
+    if(ctRes.error||forRes.error){alert("Erro ao carregar contratos de ATA: "+(ctRes.error?.message||forRes.error?.message));return;}
+    const fornecedores=new Map((forRes.data||[]).map(f=>[String(f.id),f]));
+    atasContratos=(ctRes.data||[]).map(c=>({...c,empresa:fornecedores.get(String(c.fornecedor_id))?.razao_social||c.prestador||""}));
+  }
+  ["na-item","na-marca","na-qtde","na-valor","na-prazo"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  const sel=document.getElementById("na-contrato");
+  sel.innerHTML='<option value="">Selecione a ATA...</option>'+atasContratos
+    .slice().sort((a,b)=>(a.cpl||"").localeCompare(b.cpl||"",'pt-BR',{numeric:true}))
+    .map(c=>`<option value="${c.id}">${_sanEsc(c.cpl||"Sem CPL")} · ${_sanEsc(c.numero_contrato||"Sem número")} · ${_sanEsc(c.empresa||"")}</option>`).join("");
+  sel.value=contratoId?String(contratoId):"";
+  naContratoChange();
   document.getElementById("na-msg").className="fmsg";
   document.getElementById("modal-nova-ata").classList.add("active");
+}
+
+function naContratoChange(){
+  const id=document.getElementById("na-contrato")?.value;
+  const c=atasContratos.find(x=>String(x.id)===String(id));
+  const resumo=document.getElementById("na-contrato-resumo");
+  if(!c){resumo.style.display="none";resumo.textContent="";return;}
+  resumo.style.display="block";
+  resumo.innerHTML=`<strong>${_sanEsc(c.empresa||"")}</strong><br>${_sanEsc(c.cpl||"")} · ${_sanEsc(c.numero_contrato||"")} · ${_sanEsc(c.status||"")} · vence em ${_sanEsc(c.vencimento||"—")}`;
 }
 
 function popularItensExec(){
   const cpl=document.getElementById("ne2-cpl").value;
   const sim=document.getElementById("ne2-sim").value;
-  const itens=atasItens.filter(r=>(!cpl||r.cpl===cpl)&&(!sim||r.sim===sim)).map(r=>r.item);
+  const itens=atasItens.filter(r=>(!cpl||r.cpl===cpl)&&(!sim||r.sim===sim));
   const el=document.getElementById("ne2-item");
-  el.innerHTML='<option value="">Selecione...</option>'+itens.map(i=>`<option value="${i}">${i}</option>`).join("");
+  el.innerHTML='<option value="">Selecione...</option>'+itens.map(i=>`<option value="${i.id}">${_sanEsc(i.item)}</option>`).join("");
 }
 
 function calcValorExec(){
-  const item=document.getElementById("ne2-item").value;
-  const atItem=atasItens.find(r=>r.item===item)||{};
-  const cpl=document.getElementById("ne2-cpl").value||atItem.cpl||"";
-  const sim=document.getElementById("ne2-sim").value||atItem.sim||"";
+  const atItem=_resolverAtaItemRef(document.getElementById("ne2-item").value)||{};
   const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
   if(atItem&&atItem.valor_unit&&qtde) document.getElementById("ne2-valor").value=(atItem.valor_unit*qtde).toFixed(2);
 }
 
 function abrirModalNovaExec(){
-  // Popular lista de itens (sem duplicatas)
-  const itensUnicos=[...new Map(atasItens.filter(r=>r.status!=="ENCERRADO").map(r=>[r.item,r])).values()].sort((a,b)=>a.item.localeCompare(b.item));
+  const itensUnicos=atasItens.filter(r=>!String(r.status||"").toUpperCase().startsWith("ENCERRADO")).sort((a,b)=>a.item.localeCompare(b.item,'pt-BR'));
   const itemSel=document.getElementById("ne2-item");
-  itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.item}">${r.item} (${r.cpl} / ${r.sim})</option>`).join("");
+  itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
   document.getElementById("ne2-cpl").value="";
   document.getElementById("ne2-sim").value="";
   ["ne2-unidade","ne2-qtde","ne2-valor","ne2-empenho","ne2-data-af","ne2-prev","ne2-dt-entrega","ne2-nf"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
@@ -3805,12 +3868,12 @@ function abrirModalNovaExec(){
   document.getElementById("modal-nova-exec").classList.add("active");
 }
 
-let _editExecIdx=null,_editExecKey=null;
-function abrirModalEditExec(idx,cpl,sim,item,unidade){
-  _editExecIdx=idx;
-  _editExecKey={cpl,sim,item,unidade};
-  const r=window._execRowsFiltered?.[idx]||{};
-  document.getElementById("ee-info").textContent=`${cpl} · ${sim} · ${item} · ${unidade}`;
+let _editExecId=null;
+function abrirModalEditExec(execId){
+  const r=atasExec.find(x=>String(x.id)===String(execId));
+  if(!r) return;
+  _editExecId=r.id;
+  document.getElementById("ee-info").textContent=`${r.cpl} · ${r.sim} · ${r.item} · ${r.unidade}`;
   document.getElementById("ee-empenho").value=r.empenho||"";
   document.getElementById("ee-data-af").value=r.data_af||"";
   document.getElementById("ee-prev").value=r.prev_entrega||"";
@@ -3820,53 +3883,51 @@ function abrirModalEditExec(idx,cpl,sim,item,unidade){
   document.getElementById("modal-edit-exec").classList.add("active");
 }
 
-function abrirModalEditAta(cpl,sim,item){
-  // Por simplicidade, abre modal de nova execução já com CPL/SIM/item pré-selecionados
+function abrirModalEditAta(itemId){
+  const at=_resolverAtaItemRef(itemId);
+  if(!at) return;
   abrirModalNovaExec();
   setTimeout(()=>{
-    document.getElementById("ne2-cpl").value=cpl;
-    document.getElementById("ne2-sim").value=sim;
-    popularItensExec();
-    setTimeout(()=>{document.getElementById("ne2-item").value=item;},100);
-  },100);
+    document.getElementById("ne2-item").value=at.id;
+    autoPreencherCplSim();
+  },50);
 }
 
 async function salvarNovaAta(){
-  if(bloquearSeVisualiz()) return;
-  const cpl=document.getElementById("na-cpl").value.trim();
-  const sim=document.getElementById("na-sim").value.trim();
+  if(bloquearSeVisualiz('atas')) return;
+  const contratoId=Number(document.getElementById("na-contrato").value)||null;
   const item=document.getElementById("na-item").value.trim();
   const qtde=parseFloat(document.getElementById("na-qtde").value)||0;
-  if(!cpl||!sim||!item||!qtde){showMsg("na","Preencha CPL, SIM, Item e Qtde (*)","err");return}
+  if(!contratoId||!item||!qtde){showMsg("na","Selecione a ATA e preencha Item e Quantidade (*)","err");return}
   const btn=document.querySelector("#modal-nova-ata .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  const dados={acao:"nova_ata_item",cpl,sim,item,
+  const dados={contrato_id:contratoId,item,
     marca_modelo:document.getElementById("na-marca").value.trim(),
-    empresa:document.getElementById("na-empresa").value.trim(),
     qtde_contratada:qtde,
     valor_unit:parseFloat(document.getElementById("na-valor").value)||0,
-    vencimento:document.getElementById("na-vencimento").value,
-    status_contrato:document.getElementById("na-status").value||"VIGENTE"
+    prazo_entrega:parseInt(document.getElementById("na-prazo").value)||null
   };
-  await enviarViaGet(dados);
-  atasItens.push({...dados,qtde_contratada:qtde,valor_unit:dados.valor_unit,status:dados.status_contrato,marca:dados.marca_modelo});
-  popularFiltrosAtas();filtrarAtas();renderAlertas();
-  showMsg("na","✓ Salvo!","ok");
+  const {data,error}=await sb.from("atas_itens").insert(dados).select("id").single();
   btn.disabled=false;btn.textContent="Salvar";
-  setTimeout(()=>document.getElementById("modal-nova-ata").classList.remove("active"),1500);
+  if(error){showMsg("na","Erro: "+error.message,"err");return;}
+  if(!data?.id){showMsg("na","O item não foi salvo. Verifique sua permissão.","err");return;}
+  await loadAtas();
+  showMsg("na","✓ Item vinculado à ATA!","ok");
+  if(_ctAtual&&String(_ctAtual.id)===String(contratoId)) await abrirDetalheContrato(contratoId);
+  setTimeout(()=>document.getElementById("modal-nova-ata").classList.remove("active"),1000);
 }
 
 async function salvarNovaExec(){
-  if(bloquearSeVisualiz()) return;
-  const cpl=document.getElementById("ne2-cpl").value;
-  const sim=document.getElementById("ne2-sim").value;
-  const item=document.getElementById("ne2-item").value;
+  if(bloquearSeVisualiz('atas')) return;
+  const at=_resolverAtaItemRef(document.getElementById("ne2-item").value);
   const unidade=document.getElementById("ne2-unidade").value.trim();
   const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
-  if(!cpl||!sim||!item||!unidade||!qtde){showMsg("ne2","Preencha CPL, SIM, Item, Unidade e Qtde (*)","err");return}
+  if(!at||!unidade||!qtde){showMsg("ne2","Selecione o item e preencha Unidade e Quantidade (*)","err");return}
+  const saldo=getSaldo(at);
+  if(qtde>saldo){showMsg("ne2",`Quantidade maior que o saldo disponível (${saldo}).`,"err");return;}
   const btn=document.querySelector("#modal-nova-exec .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  const dados={acao:"nova_execucao",cpl,sim,item,unidade,qtde,
+  const dados={ata_item_id:at.id,unidade,qtde,
     valor:parseFloat(document.getElementById("ne2-valor").value)||0,
     empenho:document.getElementById("ne2-empenho").value.trim(),
     data_af:document.getElementById("ne2-data-af").value,
@@ -3874,34 +3935,36 @@ async function salvarNovaExec(){
     dt_entrega:document.getElementById("ne2-dt-entrega").value,
     nf:document.getElementById("ne2-nf").value.trim()
   };
-  await enviarViaGet(dados);
-  atasExec.push(dados);
-  filtrarAtas();
-  showMsg("ne2","✓ Salvo!","ok");
+  const {data,error}=await sb.from("atas_execucao").insert(dados).select("id").single();
   btn.disabled=false;btn.textContent="Salvar";
-  setTimeout(()=>document.getElementById("modal-nova-exec").classList.remove("active"),1500);
+  if(error){showMsg("ne2","Erro: "+error.message,"err");return;}
+  if(!data?.id){showMsg("ne2","A solicitação não foi salva. Verifique sua permissão.","err");return;}
+  await loadAtas();
+  showMsg("ne2","✓ Solicitação salva!","ok");
+  setTimeout(()=>document.getElementById("modal-nova-exec").classList.remove("active"),1000);
 }
 
 async function salvarEditExec(){
-  if(bloquearSeVisualiz()) return;
-  if(!_editExecKey) return;
+  if(bloquearSeVisualiz('atas')) return;
+  const exec=atasExec.find(r=>String(r.id)===String(_editExecId));
+  if(!exec) return;
   const btn=document.querySelector("#modal-edit-exec .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  const dados={acao:"atualizar_execucao",..._editExecKey,
+  const dados={
     empenho:document.getElementById("ee-empenho").value.trim(),
     data_af:document.getElementById("ee-data-af").value,
     prev_entrega:document.getElementById("ee-prev").value,
     dt_entrega:document.getElementById("ee-dt-entrega").value,
     nf:document.getElementById("ee-nf").value.trim()
   };
-  await enviarViaGet(dados);
-  // Atualizar local
-  const r=window._execRowsFiltered?.[_editExecIdx];
-  if(r){Object.assign(r,{empenho:dados.empenho,data_af:dados.data_af,prev_entrega:dados.prev_entrega,dt_entrega:dados.dt_entrega,nf:dados.nf})}
+  const {data,error}=await sb.from("atas_execucao").update(dados).eq("id",exec.id).select("id");
+  btn.disabled=false;btn.textContent="Salvar";
+  if(error){showMsg("ee","Erro: "+error.message,"err");return;}
+  if(!data?.length){showMsg("ee","A execução não foi atualizada. Verifique sua permissão.","err");return;}
+  Object.assign(exec,dados);
   filtrarAtas();
   showMsg("ee","✓ Salvo!","ok");
-  btn.disabled=false;btn.textContent="Salvar";
-  setTimeout(()=>document.getElementById("modal-edit-exec").classList.remove("active"),1500);
+  setTimeout(()=>document.getElementById("modal-edit-exec").classList.remove("active"),900);
 }
 
 // ═══ USUÁRIOS ═══
@@ -5279,11 +5342,11 @@ function _sancaoCheckboxTitulo(r){
 function _itensSancaoSelecionados(){
   return allRows.filter(r=>sancaoSelecionados.has(String(r.id)));
 }
-async function _resolverContratoSancao(cpl){
-  if(!cpl) return null;
-  const {data,error}=await sb.from("contratos")
-    .select("id,cpl,objeto,prestador,cnpj,numero_contrato")
-    .eq("cpl",cpl).limit(1);
+async function _resolverContratoSancao(cpl,contratoId=null){
+  if(!cpl&&!contratoId) return null;
+  let query=sb.from("contratos").select("id,cpl,objeto,prestador,cnpj,numero_contrato,fornecedor_id").limit(1);
+  query=contratoId?query.eq("id",contratoId):query.eq("cpl",cpl);
+  const {data,error}=await query;
   if(error){ console.error("Contrato da sanção:",error.message); return null; }
   return data?.[0]||null;
 }
@@ -5701,34 +5764,6 @@ function calcTotal(){
   const q=parseFloat(document.getElementById("ni-qtde").value)||0;
   const u=parseFloat(document.getElementById("ni-vl-unit").value)||0;
   if(q&&u) document.getElementById("ni-vl-total").value=(q*u).toFixed(2);
-}
-
-// ═══ ENVIO ═══
-function enviarViaGet(dados){
-  return new Promise((resolve)=>{
-    const params=encodeURIComponent(JSON.stringify(dados));
-    const url=SCRIPT_URL+"?dados="+params;
-    // Tenta cors (funciona com --disable-web-security)
-    fetch(url, {method:"GET", mode:"cors"})
-      .then(r=>{ console.log("Enviado cors OK"); resolve(); })
-      .catch(err=>{
-        console.log("cors falhou, tentando no-cors:", err.message);
-        fetch(url, {method:"GET", mode:"no-cors"})
-          .then(()=>{ console.log("Enviado no-cors"); resolve(); })
-          .catch(()=>resolve());
-      });
-    setTimeout(resolve, 8000);
-  });
-}
-
-async function enviar(dados,prefix,btn){
-  const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
-  try{
-    await enviarViaGet(dados);
-    showMsg(prefix,"✓ Salvo! Atualizando em 5s...","ok");
-    setTimeout(()=>loadData(),5000);
-  }catch(e){showMsg(prefix,"✗ Erro: "+e.message,"err")}
-  btn.disabled=false;btn.textContent=label;
 }
 
 function showMsg(p,txt,tipo){const el=document.getElementById(p+"-msg");if(!el)return;el.textContent=txt;el.className="fmsg "+tipo;if(tipo==="ok")setTimeout(()=>el.className="fmsg",6000)}
@@ -6498,6 +6533,7 @@ async function salvarSancao(){
 // ═══ CONTRATOS (SUPABASE) ═══
 // ── Filtros estilo Google Sheets para Contratos ──
 const CONTRATO_FILTER_COLS = {
+  tipo_instrumento:{get:r=>r.tipo_instrumento||'CONTRATO',disp:v=>v||'CONTRATO'},
   cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
   prestador:{get:r=>r.prestador||'',disp:v=>v||'(vazio)'},
   objeto:{get:r=>r.objeto||'',disp:v=>v||'(vazio)'},
@@ -6577,10 +6613,16 @@ let contratosSelecionados = new Set();
 async function loadContratos(){
   document.getElementById("contratos-loading").style.display="block";
   document.getElementById("contratos-main").style.display="none";
-  const {data,error}=await sb.from("contratos").select("*");
-  if(error){document.getElementById("contratos-loading").innerHTML=`<div style="color:var(--red)">Erro ao carregar contratos: ${error.message}</div>`;return;}
-  const hoje=new Date();
-  contratosRows=(data||[]).sort((a,b)=>{
+  const [ctRes,forRes]=await Promise.all([
+    sb.from("contratos").select("*"),
+    sb.from("fornecedores").select("id,razao_social,cnpj_normalizado")
+  ]);
+  if(ctRes.error||forRes.error){document.getElementById("contratos-loading").innerHTML=`<div style="color:var(--red)">Erro ao carregar contratos: ${(ctRes.error||forRes.error).message}</div>`;return;}
+  const fornecedores=new Map((forRes.data||[]).map(f=>[String(f.id),f]));
+  contratosRows=(ctRes.data||[]).map(c=>{
+    const f=fornecedores.get(String(c.fornecedor_id));
+    return {...c,tipo_instrumento:c.tipo_instrumento||"CONTRATO",prestador:f?.razao_social||c.prestador||"",cnpj_fornecedor:f?.cnpj_normalizado||c.cnpj||""};
+  }).sort((a,b)=>{
     const ord={VIGENTE:0,SUSPENSO:1,ENCERRADO:2};
     const oa=ord[a.status]??3, ob=ord[b.status]??3;
     if(oa!==ob) return oa-ob;
@@ -6652,6 +6694,8 @@ function abrirModalNovoContrato(){
   if(!podeEditar('contratos')){alert("Sem permissão para cadastrar contratos.");return;}
   ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("nc-status").value="VIGENTE";
+  document.getElementById("nc-tipo").value="CONTRATO";
+  ncTipoInstrumentoChange();
   document.getElementById("nc-prestador").style.display="none";
   const _ncc=document.getElementById("nc-cnpj"); if(_ncc) _ncc.readOnly=false;
   preencherSelectFornecedores();
@@ -6659,7 +6703,22 @@ function abrirModalNovoContrato(){
   document.getElementById("modal-novo-contrato").classList.add("active");
 }
 
+function ncTipoInstrumentoChange(){
+  const ata=document.getElementById("nc-tipo")?.value==="ATA";
+  const wrap=document.getElementById("nc-valor-mensal-wrap");
+  if(wrap) wrap.style.display=ata?"none":"";
+  if(ata) document.getElementById("nc-valor-mensal").value="";
+}
+
+function ecTipoInstrumentoChange(){
+  const ata=document.getElementById("ec-tipo")?.value==="ATA";
+  const wrap=document.getElementById("ec-valor-mensal-wrap");
+  if(wrap) wrap.style.display=ata?"none":"";
+  if(ata) document.getElementById("ec-valor-mensal").value="";
+}
+
 async function salvarNovoContrato(){
+  const tipoInstrumento=document.getElementById("nc-tipo").value||"CONTRATO";
   const cpl=document.getElementById("nc-cpl").value.trim();
   const sel=document.getElementById("nc-fornecedor");
   const novaEmpresa=sel.value==="__nova__";
@@ -6677,7 +6736,7 @@ async function salvarNovoContrato(){
     fornecedor_id=novaEmpresa?await obterOuCriarFornecedor(prestador,document.getElementById("nc-cnpj").value):(Number(sel.value)||null);
   }catch(e){btn.disabled=false;btn.textContent=label;showMsg("nc","Erro ao salvar empresa: "+(e.message||e),"err");return;}
   const dados={
-    cpl, prestador, objeto, fornecedor_id,
+    cpl, prestador, objeto, fornecedor_id,tipo_instrumento:tipoInstrumento,
     numero_contrato:_mn("nc-numero"),
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
@@ -6688,19 +6747,26 @@ async function salvarNovoContrato(){
     vigencia_atual:_mn("nc-vigencia"),
     vencimento:_mn("nc-vencimento"),
     valor_inicial:_mn("nc-valor-inicial"),
-    valor_mensal:document.getElementById("nc-valor-mensal").value.trim()?parseFloat(document.getElementById("nc-valor-mensal").value.replace(/\./g,'').replace(',','.')):null,
+    valor_mensal:tipoInstrumento==="ATA"?null:(document.getElementById("nc-valor-mensal").value.trim()?parseFloat(document.getElementById("nc-valor-mensal").value.replace(/\./g,'').replace(',','.')):null),
     fonte:_mn("nc-fonte"),
     fiscalizacao:_mn("nc-fiscalizacao"),
     contato:_mn("nc-contato"),
     obs:_mn("nc-obs"),
     data_atualizacao:hoje,
   };
-  const {error}=await sb.from("contratos").insert(dados);
+  const {data:novoContrato,error}=await sb.from("contratos").insert(dados).select("id").single();
   btn.disabled=false;btn.textContent=label;
   if(error){showMsg("nc","Erro: "+error.message,"err");return;}
-  showMsg("nc","✓ Contrato cadastrado! Atualizando...","ok");
+  showMsg("nc",tipoInstrumento==="ATA"?"✓ ATA cadastrada! Agora inclua os itens.":"✓ Contrato cadastrado!","ok");
   contratosCarregado=false;
-  setTimeout(()=>{loadContratos();document.getElementById("modal-novo-contrato").classList.remove("active");},1200);
+  atasContratos=[];
+  await loadContratos();
+  if(tipoInstrumento==="ATA"&&novoContrato?.id){
+    document.getElementById("modal-novo-contrato").classList.remove("active");
+    await abrirModalNovaAta(novoContrato.id);
+  }else{
+    setTimeout(()=>document.getElementById("modal-novo-contrato").classList.remove("active"),900);
+  }
 }
 
 function clearAllContratos(){
@@ -6807,7 +6873,7 @@ function renderTabelaContratos(){
   const selectAll=document.getElementById('ct-select-all');
   if(selectAll){selectAll.disabled=!podeManter;selectAll.checked=false;}
   atualizarBotaoManterStatus();
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="16" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="17" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
 
   let rows=[...contratosFiltrados];
   if(ctSortCol){
@@ -6842,6 +6908,7 @@ function renderTabelaContratos(){
     return `<tr>
       <td style="text-align:center"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} ${podeManter?'':'disabled'} onchange="selecionarContrato('${r.id}',this.checked)" style="accent-color:var(--blue)"></td>
       <td><div style="display:flex;gap:4px;align-items:center;white-space:nowrap"><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button>${btnEmailCt}</div></td>
+      <td><span class="badge" style="background:${r.tipo_instrumento==='ATA'?'var(--blue-bg)':'var(--surface2)'};color:${r.tipo_instrumento==='ATA'?'var(--blue-text)':'var(--text2)'}">${r.tipo_instrumento||'CONTRATO'}</span></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
       <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
@@ -6897,7 +6964,7 @@ async function manterStatusContratos(){
 
 let _ctEdicaoId=null;
 const CT_EDIT_FIELDS={
-  'ec-cpl':'cpl','ec-numero':'numero_contrato','ec-prestador':'prestador','ec-objeto':'objeto','ec-cnpj':'cnpj','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
+  'ec-tipo':'tipo_instrumento','ec-cpl':'cpl','ec-numero':'numero_contrato','ec-prestador':'prestador','ec-objeto':'objeto','ec-cnpj':'cnpj','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
 };
 function abrirEditarContrato(id){
   if(!_isAdmin()){alert('A edição completa de contratos é exclusiva para administradores.');return;}
@@ -6905,6 +6972,7 @@ function abrirEditarContrato(id){
   if(!contrato) return;
   _ctEdicaoId=contrato.id;
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
+  ecTipoInstrumentoChange();
   document.getElementById('ec-msg').className='fmsg';
   document.getElementById('modal-editar-contrato').classList.add('active');
 }
@@ -6919,6 +6987,7 @@ async function salvarEdicaoContrato(){
     else valor=String(valor).trim()||null;
     dados[coluna]=valor;
   });
+  if(dados.tipo_instrumento==="ATA") dados.valor_mensal=null;
   dados.prefixo_chamado=prefixo||null;
   const btn=document.getElementById('ec-salvar');btn.disabled=true;btn.textContent='Salvando...';
   const {error}=await sb.from('contratos').update(dados).eq('id',_ctEdicaoId);
@@ -6974,24 +7043,46 @@ async function abrirDetalheContrato(id){
   document.getElementById("mcd-acoes").style.display=editor?"block":"none";
   const mcdValores=document.getElementById("mcd-valores");
   if(mcdValores){
-    mcdValores.style.display=editor?"block":"none";
+    mcdValores.style.display=editor&&_ctAtual.tipo_instrumento!=="ATA"?"block":"none";
     document.getElementById("mcd-novo-mensal").value="";
     document.getElementById("mcd-novo-total").value="";
     const msgV=document.getElementById("mcd-valores-msg");
     if(msgV){msgV.className="fmsg";msgV.textContent="";}
   }
 
-  const [vigRes,histRes,fiscRes]=await Promise.all([
+  const [vigRes,histRes,fiscRes,itemRes]=await Promise.all([
     sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
     sb.from("contratos_historico").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
-    sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false})
+    sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
+    sb.from("atas_itens").select("*").eq("contrato_id",id).order("item")
   ]);
 
   const c=_ctAtual;
   const cor=corVencimento(c.vencimento);
+  const campos=[
+    ["Tipo",c.tipo_instrumento||"CONTRATO"],["CPL",c.cpl],["Nº do contrato",c.numero_contrato],["Prestador",c.prestador],
+    ["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],
+    ["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],
+    ["Status",badgeStatusContrato(c.status)],["Valor total",(c.valor_atual??c.valor_inicial)!=null?`R$ ${Number(c.valor_atual??c.valor_inicial).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],
+    ["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]
+  ];
+  if(c.tipo_instrumento!=="ATA") campos.splice(12,0,["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"]);
   let html=`<div class="ficha-grid" style="margin-bottom:1.25rem">
-    ${[["CPL",c.cpl],["Prestador",c.prestador],["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],["Status",badgeStatusContrato(c.status)],["Valor total",(c.valor_atual??c.valor_inicial)!=null?`R$ ${Number(c.valor_atual??c.valor_inicial).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]].map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
+    ${campos.map(([l,v])=>`<div class="ficha-field"><div class="ficha-field-label">${l}</div><div class="ficha-field-value">${v||`<span class="empty">—</span>`}</div></div>`).join("")}
   </div>`;
+
+  if(c.tipo_instrumento==="ATA"){
+    const itens=itemRes.data||[];
+    let execucoes=[];
+    if(itens.length){
+      const execRes=await sb.from("atas_execucao").select("ata_item_id,qtde").in("ata_item_id",itens.map(i=>i.id));
+      if(!execRes.error) execucoes=execRes.data||[];
+    }
+    html+=`<div style="margin-bottom:1.25rem"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.5rem"><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Itens e saldo da ATA</div>${podeEditar('atas')?`<button class="btn-primary" onclick="abrirModalNovaAta('${c.id}')" style="font-size:12px;padding:5px 10px">+ Adicionar item</button>`:""}</div>`;
+    if(!itens.length){html+=`<div style="font-size:13px;color:var(--text3)">Nenhum item cadastrado nesta ATA.</div>`;}
+    else html+=`<div class="table-wrap"><table style="font-size:12px"><thead><tr><th>Item</th><th>Marca/Modelo</th><th style="text-align:right">Contratada</th><th style="text-align:right">Executada</th><th style="text-align:right">Saldo</th><th style="text-align:right">Valor unit.</th></tr></thead><tbody>${itens.map(i=>{const executada=execucoes.filter(e=>String(e.ata_item_id)===String(i.id)).reduce((s,e)=>s+Number(e.qtde||0),0);const saldo=Number(i.qtde_contratada||0)-executada;return `<tr><td>${_sanEsc(i.item||"")}</td><td>${_sanEsc(i.marca_modelo||"—")}</td><td style="text-align:right">${Number(i.qtde_contratada||0)}</td><td style="text-align:right">${executada}</td><td style="text-align:right;font-weight:600;color:${saldo<=0?'var(--red)':'var(--green)'}">${saldo}</td><td style="text-align:right">${i.valor_unit?fmtFull(Number(i.valor_unit)):"—"}</td></tr>`;}).join("")}</tbody></table></div>`;
+    html+=`</div>`;
+  }
 
   const vigs=vigRes.data||[];
   html+=`<div style="margin-bottom:1.25rem"><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Vigências</div>`;
@@ -7021,6 +7112,12 @@ function abrirModalContratoOp(op){
   const info=_ctAtual?`${_ctAtual.cpl||""} — ${_ctAtual.prestador||""}`:"";
   const infoEl=document.getElementById(infoMap[op]);
   if(infoEl) infoEl.textContent=info;
+  if(op==="renovar"){
+    const mensalWrap=document.getElementById("ctr-valor-mensal-wrap");
+    const ata=_ctAtual?.tipo_instrumento==="ATA";
+    if(mensalWrap) mensalWrap.style.display=ata?"none":"";
+    if(ata) document.getElementById("ctr-valor-mensal").value="";
+  }
   if(op==="fiscal"){
     const wrap=document.getElementById("ctfi-fiscais-atuais");
     if(wrap&&_ctAtual){
@@ -7055,7 +7152,7 @@ async function salvarOperacaoContrato(op){
       const fim=document.getElementById("ctr-fim").value;
       if(!inicio||!fim){setMsg("Vigência início e fim são obrigatórios","err");return;}
       const valor=document.getElementById("ctr-valor").value;
-      const valorMensal=document.getElementById("ctr-valor-mensal").value;
+      const valorMensal=_ctAtual.tipo_instrumento==="ATA"?"":document.getElementById("ctr-valor-mensal").value;
       const obs=document.getElementById("ctr-obs").value.trim();
       // Formatar vigencia_atual e vencimento para a tabela contratos
       const fmtBR=d=>{if(!d)return"";const[a,m,dd]=d.split("-");return`${dd}/${m}/${a}`;};

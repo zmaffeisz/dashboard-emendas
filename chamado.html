@@ -371,7 +371,7 @@ async function enviarChamado(){
     return;
   }
 
-  // Disparar e-mail em segundo plano (não bloqueia o formulário)
+  // O chamado fica salvo no Supabase e o Apps Script envia apenas o alerta por e-mail.
   const dadosEmail = {
     protocolo, carimbo,
     unidade, endereco, telefone, responsavel, email_retorno,
