@@ -1552,7 +1552,10 @@
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
       <div class="form-group"><div class="form-label">CPL *</div><input type="text" id="nc-cpl" placeholder="ex: CPL 086/2025"></div>
       <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" placeholder="ex: 123/2025"></div>
-      <div class="form-group full"><div class="form-label">Prestador *</div><input type="text" id="nc-prestador" placeholder="Razão social da empresa"></div>
+      <div class="form-group full"><div class="form-label">Prestador *</div>
+        <select id="nc-fornecedor" onchange="ncFornecedorChange()"><option value="">Selecione a empresa...</option></select>
+        <input type="text" id="nc-prestador" placeholder="Razão social da nova empresa" style="display:none;margin-top:6px">
+      </div>
       <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="nc-objeto" placeholder="Objeto do contrato"></div>
       <div class="form-group"><div class="form-label">CNPJ</div><input type="text" id="nc-cnpj" placeholder="00.000.000/0000-00"></div>
       <div class="form-group"><div class="form-label">E-mail da empresa</div><input type="email" id="nc-email" placeholder="contato@empresa.com"></div>
@@ -6594,25 +6597,87 @@ async function loadContratos(){
 
 function popularFiltrosContratos(){ _ctUpdateHdrBtns(); }
 
+// ── Fornecedores: seletor no cadastro de contrato ──
+let _fornecedoresCache=null;
+async function carregarFornecedores(force){
+  if(_fornecedoresCache && !force) return _fornecedoresCache;
+  const {data}=await sb.from("fornecedores").select("id,cnpj_normalizado,razao_social").order("razao_social");
+  _fornecedoresCache=data||[];
+  return _fornecedoresCache;
+}
+function formatCNPJ(d){
+  d=(d||"").replace(/\D/g,"");
+  if(d.length===14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5");
+  if(d.length===11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,"$1.$2.$3-$4");
+  return d;
+}
+async function preencherSelectFornecedores(){
+  const sel=document.getElementById("nc-fornecedor");
+  if(!sel) return;
+  const lista=await carregarFornecedores();
+  sel.innerHTML='<option value="">Selecione a empresa...</option>'
+    + lista.map(f=>`<option value="${f.id}" data-cnpj="${_sanEsc(f.cnpj_normalizado||'')}">${_sanEsc(f.razao_social||'(sem nome)')}</option>`).join("")
+    + '<option value="__nova__">➕ Cadastrar nova empresa</option>';
+}
+function ncFornecedorChange(){
+  const sel=document.getElementById("nc-fornecedor");
+  const inpNome=document.getElementById("nc-prestador");
+  const inpCnpj=document.getElementById("nc-cnpj");
+  if(sel.value==="__nova__"){
+    inpNome.style.display=""; inpNome.value=""; inpNome.focus();
+    inpCnpj.readOnly=false; inpCnpj.value="";
+  } else if(sel.value){
+    inpNome.style.display="none";
+    inpNome.value=sel.options[sel.selectedIndex].text;
+    inpCnpj.value=formatCNPJ(sel.options[sel.selectedIndex].getAttribute("data-cnpj")||"");
+    inpCnpj.readOnly=true;
+  } else {
+    inpNome.style.display="none"; inpNome.value="";
+    inpCnpj.readOnly=false; inpCnpj.value="";
+  }
+}
+async function obterOuCriarFornecedor(nome, cnpjRaw){
+  const norm=(cnpjRaw||"").replace(/\D/g,"");
+  if(norm){
+    const {data:ex}=await sb.from("fornecedores").select("id").eq("cnpj_normalizado",norm).limit(1);
+    if(ex&&ex.length) return ex[0].id;
+  }
+  const {data:novo,error}=await sb.from("fornecedores").insert({cnpj_normalizado:norm||null,razao_social:nome||null}).select("id").single();
+  if(error) throw error;
+  _fornecedoresCache=null;
+  return novo.id;
+}
+
 function abrirModalNovoContrato(){
   if(!podeEditar('contratos')){alert("Sem permissão para cadastrar contratos.");return;}
   ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("nc-status").value="VIGENTE";
+  document.getElementById("nc-prestador").style.display="none";
+  const _ncc=document.getElementById("nc-cnpj"); if(_ncc) _ncc.readOnly=false;
+  preencherSelectFornecedores();
   document.getElementById("nc-msg").className="fmsg";
   document.getElementById("modal-novo-contrato").classList.add("active");
 }
 
 async function salvarNovoContrato(){
   const cpl=document.getElementById("nc-cpl").value.trim();
-  const prestador=document.getElementById("nc-prestador").value.trim();
+  const sel=document.getElementById("nc-fornecedor");
+  const novaEmpresa=sel.value==="__nova__";
+  const prestador=novaEmpresa?document.getElementById("nc-prestador").value.trim():(sel.value?sel.options[sel.selectedIndex].text:"");
   const objeto=document.getElementById("nc-objeto").value.trim();
-  if(!cpl||!prestador||!objeto){showMsg("nc","Preencha CPL, Prestador e Objeto (*)","err");return;}
+  if(!cpl||!objeto){showMsg("nc","Preencha CPL e Objeto (*)","err");return;}
+  if(!sel.value){showMsg("nc","Selecione a empresa (ou cadastre uma nova).","err");return;}
+  if(novaEmpresa&&!prestador){showMsg("nc","Informe a razão social da nova empresa.","err");return;}
   const btn=document.querySelector("#modal-novo-contrato .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
   const _mn=id=>{const v=document.getElementById(id).value.trim();return v||null;};
   const hoje=new Date().toLocaleDateString("pt-BR");
+  let fornecedor_id=null;
+  try{
+    fornecedor_id=novaEmpresa?await obterOuCriarFornecedor(prestador,document.getElementById("nc-cnpj").value):(Number(sel.value)||null);
+  }catch(e){btn.disabled=false;btn.textContent=label;showMsg("nc","Erro ao salvar empresa: "+(e.message||e),"err");return;}
   const dados={
-    cpl, prestador, objeto,
+    cpl, prestador, objeto, fornecedor_id,
     numero_contrato:_mn("nc-numero"),
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
