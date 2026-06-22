@@ -262,24 +262,29 @@ async function gerarProximoProtocolo(){
   const agora = new Date();
   const mm = String(agora.getMonth()+1).padStart(2,'0');
   const aaaa = agora.getFullYear();
-  const prefixo = `SES-`;
   const sufixo = `/${mm}${aaaa}`;
 
-  // Buscar o maior número do mês atual
+  // Buscar o maior número global (sem filtrar por mês) para nunca retroagir
   const {data} = await sb.from('chamados')
     .select('protocolo')
-    .like('protocolo', `%${sufixo}`)
+    .like('protocolo', 'SES-%')
     .order('protocolo', {ascending:false})
-    .limit(1);
+    .limit(20);
 
   let proximo = 1;
   if(data && data.length > 0){
-    const ultimo = data[0].protocolo;
-    const num = parseInt(ultimo.replace(prefixo,'').replace(sufixo,''));
-    if(!isNaN(num)) proximo = num + 1;
+    let maiorNum = 0;
+    for(const row of data){
+      const match = row.protocolo && row.protocolo.match(/^SES-(\d+)\//);
+      if(match){
+        const n = parseInt(match[1]);
+        if(n > maiorNum) maiorNum = n;
+      }
+    }
+    if(maiorNum > 0) proximo = maiorNum + 1;
   }
 
-  return `${prefixo}${String(proximo).padStart(4,'0')}${sufixo}`;
+  return `SES-${String(proximo).padStart(4,'0')}${sufixo}`;
 }
 
 async function enviarChamado(){
