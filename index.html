@@ -46,7 +46,7 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Equipamentos</div>
-      <div class="sidebar-item" id="sidebar-inventario-ac" style="display:none" onclick="showTab('inventario-ac')"><span class="sidebar-icon">🗂️</span><span class="sidebar-label">Inventário</span></div>
+      <div class="sidebar-item" id="sidebar-inventario-ac" onclick="showTab('inventario-ac')"><span class="sidebar-icon">🗂️</span><span class="sidebar-label">Inventário AC</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Contratos</div>
@@ -940,11 +940,31 @@
             <tr>
               <th>Nº</th><th>Situação</th><th>Estabelecimento</th><th>Sala</th>
               <th>Patrimônio</th><th>Ano</th><th>Marca</th><th>Modelo</th>
-              <th>BTU</th><th>Tipo</th><th>Contrato</th><th>Chamados</th>
+              <th>BTU</th><th>Tipo</th><th>Contrato</th><th>Emenda vinculada</th><th>Chamados</th>
             </tr>
           </thead>
           <tbody id="ac-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Modal Vincular Emenda -->
+    <div class="modal-overlay" id="modal-vincular-emenda-ac">
+      <div class="modal-box" style="width:600px;max-height:90vh;overflow-y:auto">
+        <div class="modal-title">🔗 Vincular emenda ao equipamento</div>
+        <div id="vea-equip-info" style="font-size:12px;color:var(--text2);margin-bottom:.75rem;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
+        <div class="form-group">
+          <div class="form-label">Buscar item de emenda</div>
+          <input type="search" id="vea-busca" placeholder="Digite o nº da emenda ou descrição do item..." autocomplete="off" oninput="filtrarVincEmendaAC()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px">
+          <div id="vea-options" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:6px;background:var(--surface)"></div>
+        </div>
+        <div id="vea-selecionado" style="display:none;padding:8px 12px;background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);border-radius:var(--radius-sm);font-size:13px;margin-top:8px"></div>
+        <div class="form-actions" style="margin-top:1rem">
+          <button class="btn-primary" id="vea-salvar" onclick="salvarVinculoEmendaAC()">🔗 Vincular</button>
+          <button onclick="limparVinculoEmendaAC()" style="font-size:13px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);color:var(--red-text,#991b1b);background:var(--red-bg,#fee2e2);cursor:pointer">🗑 Remover vínculo</button>
+          <button class="btn-secondary" onclick="fecharModalVincularEmendaAC()">Cancelar</button>
+          <span id="vea-msg" class="fmsg"></span>
+        </div>
       </div>
     </div>
 
@@ -1014,7 +1034,14 @@
           <div class="form-group"><div class="form-label">BTU</div><input type="text" id="nl-btu" placeholder="ex: 24000"></div>
           <div class="form-group"><div class="form-label">Q/F</div><input type="text" id="nl-qf" placeholder="ex: FRIO"></div>
           <div class="form-group"><div class="form-label">Tipo</div><input type="text" id="nl-tipo" placeholder="ex: SPLIT HI WALL"></div>
-          <div class="form-group"><div class="form-label">Contrato</div><input type="text" id="nl-contrato" placeholder="ex: CPL 455/2023"></div>
+          <div class="form-group"><div class="form-label">Contrato</div><input type="text" id="nl-contrato" placeholder="ex: AB, ESP, VISA..."></div>
+          <div class="form-group full">
+            <div class="form-label">Emenda vinculada (opcional)</div>
+            <input type="search" id="nl-emenda-busca" placeholder="Digite o nº da emenda ou item..." autocomplete="off" oninput="filtrarNlEmendaAC()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px">
+            <div id="nl-emenda-options" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;background:var(--surface);display:none"></div>
+            <div id="nl-emenda-sel" style="display:none;margin-top:4px;padding:5px 8px;background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);border-radius:var(--radius-sm);font-size:12px"></div>
+            <input type="hidden" id="nl-emenda-item-id">
+          </div>
         </div>
         <div class="form-actions">
           <button class="btn-primary" onclick="salvarNovaLinhaAC()">Salvar</button>
@@ -2494,9 +2521,12 @@ async function loadAC(){
   document.getElementById("ac-main").style.display="none";
   try{
     // Ler do Supabase em vez do CSV
-    const {data,error}=await sb.from("inventario_ac").select("*").order("num");
+    const {data,error}=await sb.from("inventario_ac")
+      .select("*, emenda_it:emenda_item_id(id, emenda, item, emenda_ref:emenda_id(emenda, ano))")
+      .order("num");
     if(error) throw new Error(error.message);
     acRows=data.map(r=>({
+      id:r.id,
       num:r.num||"",
       situacao:(r.situacao||"").trim(),
       estabelecimento:(r.estabelecimento||"").trim(),
@@ -2511,6 +2541,10 @@ async function loadAC(){
       qf:(r.quente_frio||"").trim(),
       tipo:(r.tipo||"").trim(),
       contrato:(r.contrato||"").trim(),
+      emenda_item_id:r.emenda_item_id||null,
+      emenda_label:r.emenda_it
+        ?`Em. ${r.emenda_it.emenda}/${r.emenda_it.emenda_ref?.ano||'?'} — ${r.emenda_it.item}`
+        :null,
     }));
     popularFiltrosAC();
     filtrarAC();
@@ -2999,12 +3033,80 @@ function filtrarAC(){
       <td style="font-size:11px;text-align:right">${r.btu||"—"}</td>
       <td style="font-size:11px">${r.tipo||"—"}</td>
       <td style="font-size:11px">${r.contrato||"—"}</td>
+      <td style="font-size:11px;max-width:180px">
+        ${r.emenda_label
+          ?`<span title="${_sanEsc(r.emenda_label)}" style="color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:150px;vertical-align:middle">${_sanEsc(r.emenda_label)}</span>`
+          :`<span style="color:var(--text3)">—</span>`}
+        ${_isAdmin()?`<button onclick="vincularEmendaAC('${r.id}')" title="Vincular emenda" style="margin-left:4px;font-size:10px;padding:2px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface);cursor:pointer;vertical-align:middle">🔗</button>`:''}
+      </td>
       <td style="font-size:11px">
         ${chamadosEq.length===0?'<span style="color:var(--text3)">—</span>':
           `<span style="color:${temAberto?'var(--red)':'var(--green)'};font-weight:500;cursor:pointer" onclick="verChamadosEquip('${r.patrimonio}')">${chamadosEq.length} chamado${chamadosEq.length>1?'s':''}${temAberto?' ⚠️':' ✓'}</span>`}
       </td>
     </tr>`;
   }).join("");
+}
+
+// ═══ VINCULAR EMENDA AO INVENTÁRIO AC ═══
+let _veaAcId=null, _veaItemSelecionado=null, _emendaItensVeaCache=null;
+async function carregarEmendaItensVeaCache(){
+  if(_emendaItensVeaCache) return;
+  const {data}=await sb.from('emenda_itens').select('id, emenda, item, emenda_ref:emenda_id(emenda,ano)').order('emenda');
+  _emendaItensVeaCache=data||[];
+}
+async function vincularEmendaAC(acId){
+  if(!_isAdmin()){toast('Apenas administradores podem vincular emendas.','error');return;}
+  _veaAcId=acId; _veaItemSelecionado=null;
+  const row=acRows.find(r=>r.id===acId);
+  const info=document.getElementById('vea-equip-info');
+  if(info) info.textContent=`Equipamento: ${row?.estabelecimento||''} — Sala: ${row?.sala||''} — Pat: ${row?.patrimonio||''}`;
+  const sel=document.getElementById('vea-selecionado');
+  if(row?.emenda_label){sel.textContent='Vínculo atual: '+row.emenda_label;sel.style.display='block';}
+  else{sel.style.display='none';}
+  document.getElementById('vea-busca').value='';
+  document.getElementById('vea-msg').className='fmsg';
+  await carregarEmendaItensVeaCache();
+  filtrarVincEmendaAC();
+  document.getElementById('modal-vincular-emenda-ac').classList.add('active');
+}
+function filtrarVincEmendaAC(){
+  const termo=normalizar(document.getElementById('vea-busca')?.value||'');
+  const lista=(_emendaItensVeaCache||[]).filter(ei=>!termo||normalizar(`${ei.emenda} ${ei.item} ${ei.emenda_ref?.ano||''}`).includes(termo)).slice(0,60);
+  const opts=document.getElementById('vea-options');
+  opts.innerHTML=lista.length
+    ?lista.map(ei=>`<div style="padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''" onclick="selecionarItemEmendaAC('${ei.id}','${_sanEsc(ei.emenda)}',${ei.emenda_ref?.ano||0},'${_sanEsc(ei.item.replace(/'/g,"\\'"))}')"><span style="font-weight:600;color:var(--blue)">Em. ${_sanEsc(ei.emenda)}/${ei.emenda_ref?.ano||'?'}</span><span style="color:var(--text2);margin-left:8px;font-size:12px">${_sanEsc(ei.item)}</span></div>`).join('')
+    :'<div style="padding:10px;color:var(--text3);font-size:13px">Nenhum item encontrado</div>';
+}
+function selecionarItemEmendaAC(id,emenda,ano,item){
+  _veaItemSelecionado={id,emenda,ano,item};
+  const div=document.getElementById('vea-selecionado');
+  div.textContent=`✓ Selecionado: Emenda ${emenda}/${ano} — ${item}`;
+  div.style.display='block';
+}
+function fecharModalVincularEmendaAC(){
+  document.getElementById('modal-vincular-emenda-ac').classList.remove('active');
+  _veaAcId=null; _veaItemSelecionado=null;
+}
+async function salvarVinculoEmendaAC(){
+  if(!_veaAcId||!_veaItemSelecionado){showMsg('vea','Selecione um item de emenda primeiro.','err');return;}
+  const btn=document.getElementById('vea-salvar'); btn.disabled=true; btn.textContent='Salvando...';
+  const {error}=await sb.from('inventario_ac').update({emenda_item_id:_veaItemSelecionado.id}).eq('id',_veaAcId);
+  btn.disabled=false; btn.textContent='🔗 Vincular';
+  if(error){showMsg('vea','Erro: '+error.message,'err');return;}
+  const idx=acRows.findIndex(r=>r.id===_veaAcId);
+  if(idx>=0){acRows[idx].emenda_item_id=_veaItemSelecionado.id; acRows[idx].emenda_label=`Em. ${_veaItemSelecionado.emenda}/${_veaItemSelecionado.ano} — ${_veaItemSelecionado.item}`;}
+  toast('Emenda vinculada com sucesso!','success');
+  fecharModalVincularEmendaAC(); filtrarAC();
+}
+async function limparVinculoEmendaAC(){
+  if(!_veaAcId) return;
+  if(!await uiConfirm('Remover o vínculo de emenda deste equipamento?')) return;
+  const {error}=await sb.from('inventario_ac').update({emenda_item_id:null}).eq('id',_veaAcId);
+  if(error){toast('Erro: '+error.message,'error');return;}
+  const idx=acRows.findIndex(r=>r.id===_veaAcId);
+  if(idx>=0){acRows[idx].emenda_item_id=null; acRows[idx].emenda_label=null;}
+  toast('Vínculo removido.','success');
+  fecharModalVincularEmendaAC(); filtrarAC();
 }
 
 function verChamadosEquip(patrimonio){
@@ -4533,9 +4635,29 @@ async function excluirLinhaAC(id){
   filtrarPlanilhaAC();
 }
 
+function filtrarNlEmendaAC(){
+  const termo=normalizar(document.getElementById('nl-emenda-busca')?.value||'');
+  const opts=document.getElementById('nl-emenda-options');
+  if(!termo){opts.style.display='none';return;}
+  carregarEmendaItensVeaCache().then(()=>{
+    const lista=(_emendaItensVeaCache||[]).filter(ei=>normalizar(`${ei.emenda} ${ei.item} ${ei.emenda_ref?.ano||''}`).includes(termo)).slice(0,40);
+    opts.innerHTML=lista.length
+      ?lista.map(ei=>`<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''" onclick="selecionarNlEmendaAC('${ei.id}','${_sanEsc(ei.emenda)}',${ei.emenda_ref?.ano||0},'${_sanEsc(ei.item.replace(/'/g,"\\'"))}')"><b>Em. ${_sanEsc(ei.emenda)}/${ei.emenda_ref?.ano||'?'}</b> <span style="color:var(--text2)">${_sanEsc(ei.item)}</span></div>`).join('')
+      :'<div style="padding:8px 10px;color:var(--text3);font-size:12px">Nenhum item encontrado</div>';
+    opts.style.display='block';
+  });
+}
+function selecionarNlEmendaAC(id,emenda,ano,item){
+  document.getElementById('nl-emenda-item-id').value=id;
+  document.getElementById('nl-emenda-busca').value=`Em. ${emenda}/${ano} — ${item}`;
+  const sel=document.getElementById('nl-emenda-sel'); sel.textContent=`✓ Em. ${emenda}/${ano} — ${item}`; sel.style.display='block';
+  document.getElementById('nl-emenda-options').style.display='none';
+}
 function adicionarLinhaAC(){
-  ["nl-num","nl-situacao","nl-estab","nl-end","nl-sala","nl-pat","nl-ano","nl-marca","nl-modelo","nl-serie","nl-btu","nl-qf","nl-tipo","nl-contrato"]
+  ["nl-num","nl-situacao","nl-estab","nl-end","nl-sala","nl-pat","nl-ano","nl-marca","nl-modelo","nl-serie","nl-btu","nl-qf","nl-tipo","nl-contrato","nl-emenda-busca","nl-emenda-item-id"]
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  const sel=document.getElementById('nl-emenda-sel'); if(sel)sel.style.display='none';
+  const opts=document.getElementById('nl-emenda-options'); if(opts)opts.style.display='none';
   document.getElementById("nl-msg").className="fmsg";
   document.getElementById("modal-nova-linha-ac").classList.add("active");
 }
@@ -4544,6 +4666,7 @@ async function salvarNovaLinhaAC(){
   if(bloquearSeVisualiz()) return;
   const btn=document.querySelector("#modal-nova-linha-ac .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
+  const emendaItemId=document.getElementById("nl-emenda-item-id").value.trim()||null;
   const item={
     num:document.getElementById("nl-num").value.trim(),
     situacao:document.getElementById("nl-situacao").value.trim(),
@@ -4559,11 +4682,13 @@ async function salvarNovaLinhaAC(){
     quente_frio:document.getElementById("nl-qf").value.trim(),
     tipo:document.getElementById("nl-tipo").value.trim(),
     contrato:document.getElementById("nl-contrato").value.trim(),
+    emenda_item_id:emendaItemId,
   };
   const {data,error}=await sb.from("inventario_ac").insert(item).select().single();
   if(error){showMsg("nl","Erro: "+error.message,"err");btn.disabled=false;btn.textContent="Salvar";return;}
   _plAcData.push(data);
-  acRows.push({...item,id:data.id,qf:item.quente_frio});
+  const emendaLabel=document.getElementById('nl-emenda-sel').textContent.replace('✓ ','');
+  acRows.push({...item,id:data.id,qf:item.quente_frio,emenda_item_id:emendaItemId,emenda_label:emendaItemId?emendaLabel:null});
   filtrarPlanilhaAC();
   showMsg("nl","✓ Equipamento adicionado!","ok");
   btn.disabled=false;btn.textContent="Salvar";
