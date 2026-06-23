@@ -1556,7 +1556,7 @@
       <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01"></div>
       <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
-      <div class="form-group"><div class="form-label">Fiscalização</div><input id="ec-fiscalizacao" type="text"></div>
+      <div class="form-group"><div class="form-label">Fiscalização</div><select id="ec-fiscalizacao"><option value="">Selecione...</option></select></div>
       <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
       <div class="form-group full"><div class="form-label">Observações</div><textarea id="ec-obs" rows="3" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px"></textarea></div>
     </div>
@@ -1615,7 +1615,10 @@
       <div class="form-group"><div class="form-label">Valor inicial (R$)</div><input type="text" id="nc-valor-inicial" placeholder="ex: 120000,00"></div>
       <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
-      <div class="form-group"><div class="form-label">Fiscalização *</div><input type="text" id="nc-fiscalizacao" placeholder="Nome do fiscal" required></div>
+      <div class="form-group"><div class="form-label">Fiscalização *</div>
+        <select id="nc-fiscalizacao" onchange="selNovoToggle('nc-fiscalizacao')"><option value="">Selecione...</option></select>
+        <input type="text" id="nc-fiscalizacao-novo" placeholder="Nome do novo fiscal" style="display:none;margin-top:6px">
+      </div>
       <div class="form-group"><div class="form-label">Contato</div><input type="text" id="nc-contato" placeholder="Telefone / contato"></div>
       <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="nc-obs" placeholder="Observações gerais"></div>
     </div>
@@ -1761,7 +1764,10 @@
     <div id="ctfi-fiscais-atuais" style="margin-bottom:1rem"></div>
     <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Adicionar novo fiscal</div>
     <div class="form-grid">
-      <div class="form-group"><div class="form-label">Nome *</div><input type="text" id="ctfi-nome" placeholder="Nome do fiscal"></div>
+      <div class="form-group"><div class="form-label">Nome *</div>
+        <select id="ctfi-nome" onchange="selNovoToggle('ctfi-nome')"><option value="">Selecione...</option></select>
+        <input type="text" id="ctfi-nome-novo" placeholder="Nome do novo fiscal" style="display:none;margin-top:6px">
+      </div>
       <div class="form-group"><div class="form-label">Data início *</div><input type="date" id="ctfi-inicio"></div>
       <div class="form-group full"><div class="form-label">Cargo / Matrícula</div><input type="text" id="ctfi-cargo" placeholder="ex: Fiscal de Contrato, mat. 12345"></div>
     </div>
@@ -6958,6 +6964,33 @@ function ncSecaoChange(){
   else { inp.style.display='none'; inp.value=''; }
 }
 async function obterOuCriarSecao(sigla){ if(!sigla) return; await sb.from('secoes').upsert({sigla},{onConflict:'sigla',ignoreDuplicates:true}); }
+function selNovoToggle(selId){
+  const sel=document.getElementById(selId), inp=document.getElementById(selId+'-novo');
+  if(!inp) return;
+  const novo = sel.value==='__novo__';
+  inp.style.display=novo?'':'none'; inp.value=''; if(novo) inp.focus();
+}
+function selValorTexto(selId){
+  const sel=document.getElementById(selId); if(!sel) return '';
+  if(sel.value==='__novo__'){ const inp=document.getElementById(selId+'-novo'); return inp?inp.value.trim():''; }
+  return sel.value||'';
+}
+async function preencherSelectPessoas(selId, comNovo, valorAtual){
+  const sel=document.getElementById(selId); if(!sel) return;
+  const {data}=await sb.from('pessoas').select('nome').eq('ativo',true).order('nome');
+  const lista=data||[];
+  let opts='<option value="">Selecione...</option>'+lista.map(p=>`<option value="${_sanEsc(p.nome)}">${_sanEsc(p.nome)}</option>`).join('');
+  if(valorAtual && !lista.some(p=>p.nome===valorAtual)) opts+=`<option value="${_sanEsc(valorAtual)}">${_sanEsc(valorAtual)}</option>`;
+  if(comNovo) opts+='<option value="__novo__">➕ Cadastrar nova pessoa</option>';
+  sel.innerHTML=opts;
+  const inp=document.getElementById(selId+'-novo'); if(inp){ inp.style.display='none'; inp.value=''; }
+}
+async function obterOuCriarPessoa(nome){
+  if(!nome) return;
+  const {data:ex}=await sb.from('pessoas').select('id').ilike('nome',nome).limit(1);
+  if(ex&&ex.length) return;
+  await sb.from('pessoas').insert({nome});
+}
 
 async function obterOuCriarFornecedor(nome, cnpjRaw){
   const norm=(cnpjRaw||"").replace(/\D/g,"");
@@ -6987,6 +7020,7 @@ function abrirModalNovoContrato(){
   const _ncc=document.getElementById("nc-cnpj"); if(_ncc) _ncc.readOnly=false;
   preencherSelectFornecedores();
   preencherSelectSecoes('nc-secao', true);
+  preencherSelectPessoas('nc-fiscalizacao', true);
   preencherSelectSecoesContrato();
   document.getElementById("nc-msg").className="fmsg";
   document.getElementById("modal-novo-contrato").classList.add("active");
@@ -7013,7 +7047,7 @@ async function salvarNovoContrato(){
   const novaEmpresa=sel.value==="__nova__";
   const prestador=novaEmpresa?document.getElementById("nc-prestador").value.trim():(sel.value?sel.options[sel.selectedIndex].text:"");
   const objeto=document.getElementById("nc-objeto").value.trim();
-  const fiscalizacao=document.getElementById("nc-fiscalizacao").value.trim();
+  const fiscalizacao=selValorTexto('nc-fiscalizacao');
   if(!cpl||!objeto){showMsg("nc","Preencha CPL e Objeto (*)","err");return;}
   if(!sel.value){showMsg("nc","Selecione a empresa (ou cadastre uma nova).","err");return;}
   if(novaEmpresa&&!prestador){showMsg("nc","Informe a razão social da nova empresa.","err");return;}
@@ -7030,6 +7064,7 @@ async function salvarNovoContrato(){
   const secaoNova=_secSel && _secSel.value==='__nova__';
   const secaoVal=(secaoNova?document.getElementById("nc-secao-novo").value.trim():(_secSel?_secSel.value:''))||null;
   if(secaoNova && secaoVal){ try{ await obterOuCriarSecao(secaoVal); }catch(_){} }
+  if(document.getElementById("nc-fiscalizacao").value==='__novo__' && fiscalizacao){ try{ await obterOuCriarPessoa(fiscalizacao); }catch(_){} }
   const dados={
     cpl, prestador, objeto, fornecedor_id,tipo_instrumento:tipoInstrumento,
     numero_contrato:_mn("nc-numero"),
@@ -7268,6 +7303,7 @@ function abrirEditarContrato(id){
   _ctEdicaoId=contrato.id;
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
   preencherSelectSecoes('ec-secao', false, contrato.secao).then(()=>{ const s=document.getElementById('ec-secao'); if(s) s.value=contrato.secao||''; });
+  preencherSelectPessoas('ec-fiscalizacao', false, contrato.fiscalizacao).then(()=>{ const s=document.getElementById('ec-fiscalizacao'); if(s) s.value=contrato.fiscalizacao||''; });
   ecTipoInstrumentoChange();
   document.getElementById('ec-msg').className='fmsg';
   document.getElementById('modal-editar-contrato').classList.add('active');
@@ -7457,6 +7493,7 @@ function abrirModalContratoOp(op){
     if(ata) document.getElementById("ctr-valor-mensal").value="";
   }
   if(op==="fiscal"){
+    preencherSelectPessoas('ctfi-nome', true);
     const wrap=document.getElementById("ctfi-fiscais-atuais");
     if(wrap&&_ctAtual){
       sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",_ctAtual.id).is("data_fim",null).order("data_inicio",{ascending:false}).then(({data})=>{
@@ -7547,9 +7584,10 @@ async function salvarOperacaoContrato(op){
       setMsg("✓ Supressão registrada!","ok");
 
     } else if(op==="fiscal"){
-      const nome=document.getElementById("ctfi-nome").value.trim();
+      const nome=selValorTexto('ctfi-nome');
       const inicio=document.getElementById("ctfi-inicio").value;
       if(!nome||!inicio){setMsg("Nome e data início são obrigatórios","err");return;}
+      if(document.getElementById("ctfi-nome").value==='__novo__' && nome){ try{ await obterOuCriarPessoa(nome); }catch(_){} }
       const cargo=document.getElementById("ctfi-cargo").value.trim();
       const {error}=await sb.from("contratos_fiscalizadores").insert({contrato_id:id,nome,data_inicio:inicio,cargo:cargo||null});
       if(error) throw error;
