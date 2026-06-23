@@ -330,7 +330,10 @@
       <div class="form-group"><div class="form-label">Tipo *</div><select id="ne-tipo"><option value="">Selecione...</option><option>ESTADUAL</option><option>FEDERAL</option><option>MUNICIPAL</option></select></div>
       <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="ne-emenda" placeholder="ex: 202300546528"></div>
       <div class="form-group"><div class="form-label">Ano</div><input type="number" id="ne-ano" placeholder="ex: 2026"></div>
-      <div class="form-group"><div class="form-label">Parlamentar</div><input type="text" id="ne-parlamentar" placeholder="Nome do parlamentar"></div>
+      <div class="form-group"><div class="form-label">Parlamentar</div>
+        <select id="ne-parlamentar-sel" onchange="neParlamentarChange()"><option value="">Selecione...</option></select>
+        <input type="text" id="ne-parlamentar" placeholder="Nome do novo parlamentar" style="display:none;margin-top:6px">
+      </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000"></div>
       <div class="form-group"><div class="form-label">Unidade beneficiada *</div><input type="text" id="ne-unidade" placeholder="ex: UBS CAJURU"></div>
@@ -2198,6 +2201,7 @@ function statusBadge(cat){const i=STATUS_MAP[cat]||{color:"#888",label:cat};retu
 function abrirModalEdicao(name){
   if(bloquearSeVisualiz()) return;
   popularSelectsEdicao();
+  if(name==='nova-emenda') preencherSelectParlamentares();
   if(name==='atualizar-status'){ resetModalFilters(); limparStatus(); }
   document.getElementById("panel-"+name).classList.add("active");
 }
@@ -5899,16 +5903,38 @@ function limparStatus(){
   showMsg("as","","ok");
 }
 
+async function preencherSelectParlamentares(){
+  const sel=document.getElementById("ne-parlamentar-sel"); if(!sel) return;
+  const {data}=await sb.from('parlamentares').select('nome').eq('ativo',true).order('nome');
+  sel.innerHTML='<option value="">Selecione...</option>'
+    + (data||[]).map(p=>`<option value="${_sanEsc(p.nome)}">${_sanEsc(p.nome)}</option>`).join('')
+    + '<option value="__novo__">➕ Cadastrar novo parlamentar</option>';
+  const inp=document.getElementById("ne-parlamentar"); if(inp){ inp.style.display='none'; inp.value=''; }
+}
+function neParlamentarChange(){
+  const sel=document.getElementById("ne-parlamentar-sel");
+  const inp=document.getElementById("ne-parlamentar");
+  if(sel.value==='__novo__'){ inp.style.display=''; inp.value=''; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+async function obterOuCriarParlamentar(nome){
+  if(!nome) return;
+  await sb.from('parlamentares').upsert({nome},{onConflict:'nome',ignoreDuplicates:true});
+}
+
 async function salvarNovaEmenda(){
   const tipo=document.getElementById("ne-tipo").value,emenda=document.getElementById("ne-emenda").value.trim();
   const valor=document.getElementById("ne-valor").value,unidade=document.getElementById("ne-unidade").value.trim();
   if(!tipo||!emenda||!valor||!unidade){showMsg("ne","Preencha os campos obrigatórios (*)","err");return}
   const anoStr=document.getElementById("ne-ano").value.trim();
+  const _pSel=document.getElementById("ne-parlamentar-sel");
+  const parlamentarNome=((_pSel && _pSel.value==='__novo__') ? document.getElementById("ne-parlamentar").value.trim() : (_pSel?_pSel.value:''))||null;
   const btn=document.querySelector("#panel-nova-emenda .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
+  if(_pSel && _pSel.value==='__novo__' && parlamentarNome){ try{ await obterOuCriarParlamentar(parlamentarNome); }catch(_){} }
   const {error}=await sb.from("emendas").insert({
     tipo, emenda,
-    parlamentar:document.getElementById("ne-parlamentar").value.trim()||null,
+    parlamentar:parlamentarNome,
     sei_emenda:document.getElementById("ne-sei").value.trim()||null,
     valor_cedido:parseFloat(valor),
     unidade,
