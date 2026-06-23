@@ -1543,7 +1543,7 @@
       <div class="form-group"><div class="form-label">CNPJ</div><input id="ec-cnpj" type="text"></div>
       <div class="form-group"><div class="form-label">E-mail</div><input id="ec-email" type="email"></div>
       <div class="form-group"><div class="form-label">Prefixo de chamado</div><input id="ec-prefixo" type="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"></div>
-      <div class="form-group"><div class="form-label">Seção</div><input id="ec-secao" type="text"></div>
+      <div class="form-group"><div class="form-label">Seção</div><select id="ec-secao"><option value="">Selecione...</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><select id="ec-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="ENCERRADO">ENCERRADO</option></select></div>
       <div class="form-group"><div class="form-label">Data de início</div><input id="ec-inicio" type="date"></div>
       <div class="form-group"><div class="form-label">Data de assinatura</div><input id="ec-assinatura" type="date"></div>
@@ -1598,7 +1598,10 @@
       <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="nc-objeto" placeholder="Objeto do contrato"></div>
       <div class="form-group"><div class="form-label">CNPJ</div><input type="text" id="nc-cnpj" placeholder="00.000.000/0000-00"></div>
       <div class="form-group"><div class="form-label">E-mail da empresa</div><input type="email" id="nc-email" placeholder="contato@empresa.com"></div>
-      <div class="form-group"><div class="form-label">Seção</div><select id="nc-secao"><option value="">Selecione a seção...</option></select></div>
+      <div class="form-group"><div class="form-label">Seção</div>
+        <select id="nc-secao" onchange="ncSecaoChange()"><option value="">Selecione a seção...</option></select>
+        <input type="text" id="nc-secao-novo" placeholder="Sigla da nova seção" style="display:none;margin-top:6px">
+      </div>
       <div class="form-group"><div class="form-label">Status</div>
         <select id="nc-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="ENCERRADO">ENCERRADO</option></select>
       </div>
@@ -6906,6 +6909,25 @@ function ncFornecedorChange(){
     inpCnpj.readOnly=false; inpCnpj.value="";
   }
 }
+async function preencherSelectSecoes(selId, comNovo, valorAtual){
+  const sel=document.getElementById(selId); if(!sel) return;
+  const {data}=await sb.from('secoes').select('sigla,nome').eq('ativo',true).order('sigla');
+  const lista=data||[];
+  let opts='<option value="">Selecione a seção...</option>'
+    + lista.map(s=>`<option value="${_sanEsc(s.sigla)}">${_sanEsc(s.sigla)}${s.nome?(' — '+_sanEsc(s.nome)):''}</option>`).join('');
+  if(valorAtual && !lista.some(s=>s.sigla===valorAtual)) opts+=`<option value="${_sanEsc(valorAtual)}">${_sanEsc(valorAtual)}</option>`;
+  if(comNovo) opts+='<option value="__nova__">➕ Cadastrar nova seção</option>';
+  sel.innerHTML=opts;
+  const inp=document.getElementById('nc-secao-novo'); if(inp && selId==='nc-secao'){ inp.style.display='none'; inp.value=''; }
+}
+function ncSecaoChange(){
+  const sel=document.getElementById("nc-secao"), inp=document.getElementById("nc-secao-novo");
+  if(!inp) return;
+  if(sel.value==='__nova__'){ inp.style.display=''; inp.value=''; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+async function obterOuCriarSecao(sigla){ if(!sigla) return; await sb.from('secoes').upsert({sigla},{onConflict:'sigla',ignoreDuplicates:true}); }
+
 async function obterOuCriarFornecedor(nome, cnpjRaw){
   const norm=(cnpjRaw||"").replace(/\D/g,"");
   if(norm){
@@ -6933,6 +6955,7 @@ function abrirModalNovoContrato(){
   fecharFornecedorCombo();
   const _ncc=document.getElementById("nc-cnpj"); if(_ncc) _ncc.readOnly=false;
   preencherSelectFornecedores();
+  preencherSelectSecoes('nc-secao', true);
   preencherSelectSecoesContrato();
   document.getElementById("nc-msg").className="fmsg";
   document.getElementById("modal-novo-contrato").classList.add("active");
@@ -6972,12 +6995,16 @@ async function salvarNovoContrato(){
   try{
     fornecedor_id=novaEmpresa?await obterOuCriarFornecedor(prestador,document.getElementById("nc-cnpj").value):(Number(sel.value)||null);
   }catch(e){btn.disabled=false;btn.textContent=label;showMsg("nc","Erro ao salvar empresa: "+(e.message||e),"err");return;}
+  const _secSel=document.getElementById("nc-secao");
+  const secaoNova=_secSel && _secSel.value==='__nova__';
+  const secaoVal=(secaoNova?document.getElementById("nc-secao-novo").value.trim():(_secSel?_secSel.value:''))||null;
+  if(secaoNova && secaoVal){ try{ await obterOuCriarSecao(secaoVal); }catch(_){} }
   const dados={
     cpl, prestador, objeto, fornecedor_id,tipo_instrumento:tipoInstrumento,
     numero_contrato:_mn("nc-numero"),
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
-    secao:_mn("nc-secao"),
+    secao:secaoVal,
     status:document.getElementById("nc-status").value,
     data_inicio:document.getElementById("nc-inicio").value||null,
     data_assinatura:document.getElementById("nc-assinatura").value||null,
@@ -7209,6 +7236,7 @@ function abrirEditarContrato(id){
   if(!contrato) return;
   _ctEdicaoId=contrato.id;
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
+  preencherSelectSecoes('ec-secao', false, contrato.secao).then(()=>{ const s=document.getElementById('ec-secao'); if(s) s.value=contrato.secao||''; });
   ecTipoInstrumentoChange();
   document.getElementById('ec-msg').className='fmsg';
   document.getElementById('modal-editar-contrato').classList.add('active');
