@@ -56,6 +56,7 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Configurações</div>
+      <div class="sidebar-item" id="sidebar-cadastros" style="display:none" onclick="showTab('cadastros')"><span class="sidebar-icon">🗂️</span><span class="sidebar-label">Cadastros</span></div>
       <div class="sidebar-item" id="sidebar-usuarios" style="display:none" onclick="showTab('usuarios')"><span class="sidebar-icon">⚙️</span><span class="sidebar-label">Usuários</span></div>
       <div class="sidebar-item" id="sidebar-planilhas" style="display:none" onclick="showTab('planilhas')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Planilhas</span></div>
     </div>
@@ -1044,6 +1045,16 @@
   </div>
 </div>
 
+<!-- ══════════════════════ CADASTROS ══════════════════════ -->
+<div id="panel-cadastros" class="panel">
+  <div class="form-card">
+    <div class="form-title">🗂️ Cadastros</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:1.25rem">Dados centrais reutilizados em todo o sistema (empresas, unidades, pessoas, etc.). Só admin edita; as outras telas escolhem destas listas.</div>
+    <div id="cad-hub" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px"></div>
+    <div id="cad-lista" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ══════════════════════ ATAS ══════════════════════ -->
 <div id="panel-atas" class="panel">
   <div id="atas-loading" class="loading"><span class="spinner"></span>Carregando ATAs...</div>
@@ -1924,9 +1935,9 @@ let currentProfile = null;
 window._userPapel = null;
 window._tabPerms = [];
 window._activeTab = 'dashboard';
-const ADMIN_ONLY_TABS = ['usuarios']; // só admin gerencia usuários
+const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','sancoes','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','sancoes','cadastros','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -2221,6 +2232,7 @@ function showTab(name){
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
   if(name==="sancoes") loadSancoes();
+  if(name==="cadastros") carregarCadastros();
   if(name==="saldo-emendas"&&!saldoEmendaCarregado) loadSaldoEmendas();
   setTimeout(_setTableOffset,50);
 }
@@ -4100,6 +4112,66 @@ async function carregarUsuarios(){
     </tr>`).join("");
   document.getElementById("usuarios-loading").style.display="none";
   document.getElementById("usuarios-table").style.display="block";
+}
+
+// ═══ ABA CADASTROS (hub de dados mestre) ═══
+const CADASTRO_DEFS = {
+  pessoas:       {tabela:'pessoas',       titulo:'👤 Pessoas',       temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'cargo',l:'Cargo'},{c:'orgao',l:'Órgão/Seção'},{c:'email',l:'E-mail'},{c:'telefone',l:'Telefone'}]},
+  parlamentares: {tabela:'parlamentares', titulo:'🏛️ Parlamentares', temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true}]},
+  secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'}]},
+  unidades:      {tabela:'unidades',      titulo:'🏥 Unidades',      temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'endereco',l:'Endereço'},{c:'telefone',l:'Telefone'}]},
+  fornecedores:  {tabela:'fornecedores',  titulo:'🏭 Empresas',      temAtivo:false, ordem:'razao_social', campos:[{c:'razao_social',l:'Razão social',req:true},{c:'cnpj_normalizado',l:'CNPJ (só dígitos)'},{c:'nome_fantasia',l:'Nome fantasia'}]},
+};
+let _cadAtual=null;
+async function carregarCadastros(){
+  _cadAtual=null;
+  document.getElementById('cad-lista').style.display='none';
+  const hub=document.getElementById('cad-hub'); hub.style.display='grid';
+  const ents=Object.keys(CADASTRO_DEFS);
+  const counts={};
+  await Promise.all(ents.map(async e=>{ try{ const {count}=await sb.from(CADASTRO_DEFS[e].tabela).select('id',{count:'exact',head:true}); counts[e]=count??'—'; }catch(_){ counts[e]='—'; } }));
+  hub.innerHTML=ents.map(e=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+    <div style="font-size:14px;font-weight:600;margin-bottom:.25rem">${CADASTRO_DEFS[e].titulo}</div>
+    <div style="font-size:24px;font-weight:700;color:var(--blue);margin-bottom:.5rem">${counts[e]}</div>
+    <button onclick="abrirCadastroLista('${e}')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue-text);cursor:pointer">Gerenciar</button>
+  </div>`).join('');
+}
+async function abrirCadastroLista(ent){
+  const def=CADASTRO_DEFS[ent]; _cadAtual=ent;
+  document.getElementById('cad-hub').style.display='none';
+  const wrap=document.getElementById('cad-lista'); wrap.style.display='block';
+  const th=def.campos.map(f=>`<th style="text-align:left;padding:6px 8px;font-size:11px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)">${f.l}${f.req?' *':''}</th>`).join('');
+  wrap.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+      <button onclick="carregarCadastros()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">← Voltar</button>
+      <div class="form-title" style="margin:0;padding:0;border:none">${def.titulo}</div>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>${th}<th style="padding:6px 8px;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border)">${def.temAtivo?'Ativo':''}</th><th style="border-bottom:1px solid var(--border)"></th></tr></thead><tbody id="cad-tbody"><tr><td colspan="9" style="padding:10px;color:var(--text3)">Carregando...</td></tr></tbody></table></div>`;
+  const {data,error}=await sb.from(def.tabela).select('*').order(def.ordem,{nullsFirst:false});
+  const tb=document.getElementById('cad-tbody');
+  if(error){ tb.innerHTML=`<tr><td colspan="9" style="padding:10px;color:var(--red)">Erro: ${_sanEsc(error.message)}</td></tr>`; return; }
+  const inp=(f,v)=>`<td style="padding:4px 6px"><input data-field="${f.c}" value="${_sanEsc(v??'')}" placeholder="${f.l}" style="width:100%;min-width:90px;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>`;
+  const cellAtivo=(checked)=>def.temAtivo?`<td style="text-align:center"><input type="checkbox" data-field="ativo" ${checked?'checked':''}></td>`:'<td></td>';
+  const novo=`<tr data-novo="1" style="background:var(--surface2)">${def.campos.map(f=>inp(f,'')).join('')}${cellAtivo(true)}<td style="padding:4px 6px"><button onclick="cadastroSalvar('${ent}',this)" style="font-size:12px;padding:5px 10px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">+ Adicionar</button></td></tr>`;
+  const linhas=(data||[]).map(r=>`<tr data-id="${r.id}" style="border-bottom:1px solid var(--border)">${def.campos.map(f=>inp(f,r[f.c])).join('')}${cellAtivo(r.ativo!==false)}<td style="padding:4px 6px"><button onclick="cadastroSalvar('${ent}',this)" style="font-size:12px;padding:5px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">Salvar</button></td></tr>`).join('');
+  tb.innerHTML=novo+linhas;
+}
+async function cadastroSalvar(ent, btn){
+  const def=CADASTRO_DEFS[ent];
+  const tr=btn.closest('tr');
+  const dados={};
+  for(const f of def.campos){
+    const v=tr.querySelector(`[data-field="${f.c}"]`).value.trim();
+    if(f.req && !v){ toast('Preencha: '+f.l,'error'); return; }
+    dados[f.c]=v||null;
+  }
+  const atv=tr.querySelector('[data-field="ativo"]'); if(atv) dados.ativo=atv.checked;
+  btn.disabled=true;
+  const id=tr.dataset.id;
+  const res=id ? await sb.from(def.tabela).update(dados).eq('id',id) : await sb.from(def.tabela).insert(dados);
+  btn.disabled=false;
+  if(res.error){ toast('Erro: '+res.error.message,'error'); return; }
+  toast(id?'Atualizado!':'Adicionado!','success');
+  abrirCadastroLista(ent);
 }
 
 async function alterarPapel(userId, email){
