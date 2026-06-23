@@ -336,7 +336,10 @@
       </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000"></div>
-      <div class="form-group"><div class="form-label">Unidade beneficiada *</div><input type="text" id="ne-unidade" placeholder="ex: UBS CAJURU"></div>
+      <div class="form-group"><div class="form-label">Unidade beneficiada *</div>
+        <select id="ne-unidade-sel" onchange="neUnidadeChange()"><option value="">Selecione...</option></select>
+        <input type="text" id="ne-unidade-novo" placeholder="Nome da nova unidade" style="display:none;margin-top:6px">
+      </div>
     </div>
     <div class="form-actions" style="margin-top:1.25rem">
       <button class="btn-primary" onclick="salvarNovaEmenda()">Salvar emenda</button>
@@ -2204,7 +2207,7 @@ function statusBadge(cat){const i=STATUS_MAP[cat]||{color:"#888",label:cat};retu
 function abrirModalEdicao(name){
   if(bloquearSeVisualiz()) return;
   popularSelectsEdicao();
-  if(name==='nova-emenda') preencherSelectParlamentares();
+  if(name==='nova-emenda'){ preencherSelectParlamentares(); preencherSelectUnidades('ne-unidade-sel', true); }
   if(name==='atualizar-status'){ resetModalFilters(); limparStatus(); }
   document.getElementById("panel-"+name).classList.add("active");
 }
@@ -5925,9 +5928,35 @@ async function obterOuCriarParlamentar(nome){
   await sb.from('parlamentares').upsert({nome},{onConflict:'nome',ignoreDuplicates:true});
 }
 
+async function preencherSelectUnidades(selId, comNovo){
+  const sel=document.getElementById(selId); if(!sel) return;
+  const {data}=await sb.from('unidades').select('id,nome').eq('ativo',true).order('nome');
+  sel.innerHTML='<option value="">Selecione...</option>'
+    + (data||[]).map(u=>`<option value="${u.id}">${_sanEsc(u.nome)}</option>`).join('')
+    + (comNovo?'<option value="__nova__">➕ Cadastrar nova unidade</option>':'');
+  const inp=document.getElementById('ne-unidade-novo'); if(inp && selId==='ne-unidade-sel'){ inp.style.display='none'; inp.value=''; }
+}
+function neUnidadeChange(){
+  const sel=document.getElementById("ne-unidade-sel"), inp=document.getElementById("ne-unidade-novo");
+  if(!inp) return;
+  if(sel.value==='__nova__'){ inp.style.display=''; inp.value=''; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+async function obterOuCriarUnidade(nome){
+  if(!nome) return null;
+  const {data:ex}=await sb.from('unidades').select('id').ilike('nome',nome).limit(1);
+  if(ex&&ex.length) return ex[0].id;
+  const {data:novo,error}=await sb.from('unidades').insert({nome}).select('id').single();
+  if(error) throw error;
+  return novo.id;
+}
+
 async function salvarNovaEmenda(){
   const tipo=document.getElementById("ne-tipo").value,emenda=document.getElementById("ne-emenda").value.trim();
-  const valor=document.getElementById("ne-valor").value,unidade=document.getElementById("ne-unidade").value.trim();
+  const valor=document.getElementById("ne-valor").value;
+  const _uSel=document.getElementById("ne-unidade-sel");
+  const unidadeNova=_uSel && _uSel.value==='__nova__';
+  const unidade=(unidadeNova?document.getElementById("ne-unidade-novo").value.trim():(_uSel&&_uSel.value?_uSel.options[_uSel.selectedIndex].text.trim():''));
   if(!tipo||!emenda||!valor||!unidade){showMsg("ne","Preencha os campos obrigatórios (*)","err");return}
   const anoStr=document.getElementById("ne-ano").value.trim();
   const _pSel=document.getElementById("ne-parlamentar-sel");
@@ -5935,12 +5964,14 @@ async function salvarNovaEmenda(){
   const btn=document.querySelector("#panel-nova-emenda .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
   if(_pSel && _pSel.value==='__novo__' && parlamentarNome){ try{ await obterOuCriarParlamentar(parlamentarNome); }catch(_){} }
+  let unidade_id=null;
+  try{ unidade_id = unidadeNova ? await obterOuCriarUnidade(unidade) : (_uSel&&_uSel.value?(Number(_uSel.value)||null):null); }catch(_){ unidade_id=null; }
   const {error}=await sb.from("emendas").insert({
     tipo, emenda,
     parlamentar:parlamentarNome,
     sei_emenda:document.getElementById("ne-sei").value.trim()||null,
     valor_cedido:parseFloat(valor),
-    unidade,
+    unidade, unidade_id,
     ano: anoStr?parseInt(anoStr):null
   });
   btn.disabled=false;btn.textContent=label;
