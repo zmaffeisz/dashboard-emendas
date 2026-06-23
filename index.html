@@ -52,6 +52,7 @@
       <div class="sidebar-section-label">Contratos</div>
       <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
       <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
+      <div class="sidebar-item" id="sidebar-licitacoes" style="display:none" onclick="showTab('licitacoes')"><span class="sidebar-icon">📑</span><span class="sidebar-label">Licitações</span></div>
       <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções</span></div>
     </div>
     <div class="sidebar-section">
@@ -1061,6 +1062,65 @@
   </div>
 </div>
 
+<!-- ══════════════════════ LICITAÇÕES ══════════════════════ -->
+<div id="panel-licitacoes" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">📑 Licitações / Processos</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="lic-count" style="font-size:12px;color:var(--text3)">—</span>
+        <button class="btn-primary" onclick="abrirNovoProcesso()" style="font-size:13px;padding:7px 14px">➕ Novo processo</button>
+        <button onclick="loadLicitacoes()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻</button>
+      </div>
+    </div>
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="lic-busca" placeholder="identificador, objeto..." oninput="filtrarLicitacoes()"></div>
+      <div class="fg"><div class="fg-label">Tipo</div><select id="lic-f-tipo" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
+      <div class="fg"><div class="fg-label">Status</div><select id="lic-f-status" onchange="filtrarLicitacoes()"><option value="">Todos os status</option></select></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="text-align:left;padding:7px 8px;font-size:11px;text-transform:uppercase;color:var(--text2)">Identificador</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;text-transform:uppercase;color:var(--text2)">Tipo</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;text-transform:uppercase;color:var(--text2)">Objeto</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;text-transform:uppercase;color:var(--text2)">Status</th>
+          <th style="text-align:center;padding:7px 8px;font-size:11px;text-transform:uppercase;color:var(--text2)">Contr.</th>
+          <th style="text-align:center;padding:7px 8px;font-size:11px;text-transform:uppercase;color:var(--text2)">Itens</th>
+          <th style="padding:7px 8px"></th>
+        </tr></thead>
+        <tbody id="lic-tbody"></tbody>
+      </table>
+    </div>
+    <div id="lic-conteudo" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Modal: criar/editar processo -->
+<div class="modal-overlay" id="modal-processo" onclick="if(event.target===this)this.classList.remove('active')" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:640px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span id="proc-titulo" style="font-size:15px;font-weight:700">➕ Novo processo</span>
+      <button onclick="document.getElementById('modal-processo').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group full"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
+      <div class="form-group"><div class="form-label">Tipo</div><select id="proc-tipo"><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
+      <div class="form-group"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
+      <div class="form-group full"><div class="form-label">Objeto</div><input type="text" id="proc-objeto" placeholder="Objeto do processo"></div>
+      <div class="form-group"><div class="form-label">Modalidade</div><input type="text" id="proc-modalidade" placeholder="ex: Pregão"></div>
+      <div class="form-group"><div class="form-label">Seção</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><div class="form-label">Valor estimado (R$)</div><input type="number" id="proc-valor" step="0.01" placeholder="ex: 50000"></div>
+      <div class="form-group full"><div class="form-label">Observação / andamento</div><input type="text" id="proc-obs" placeholder="anotações livres"></div>
+    </div>
+    <div class="form-actions" style="margin-top:1.25rem">
+      <button class="btn-primary" onclick="salvarProcesso()">Salvar processo</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-processo').classList.remove('active')">Cancelar</button>
+      <span id="proc-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ ATAS ══════════════════════ -->
 <div id="panel-atas" class="panel">
   <div id="atas-loading" class="loading"><span class="spinner"></span>Carregando ATAs...</div>
@@ -1952,7 +2012,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','sancoes','cadastros','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
 function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
 function userCanView(tabKey){
   if(_isAdmin()) return true;
@@ -2249,6 +2309,7 @@ function showTab(name){
   if(name==="planilhas") carregarPlanilhaAC();
   if(name==="sancoes") loadSancoes();
   if(name==="cadastros") carregarCadastros();
+  if(name==="licitacoes") loadLicitacoes();
   if(name==="saldo-emendas"&&!saldoEmendaCarregado) loadSaldoEmendas();
   setTimeout(_setTableOffset,50);
 }
@@ -4031,6 +4092,7 @@ const PERM_TABS = [
   {key:'inventario-ac', label:'Inventário'},
   {key:'atas', label:'ATAs / Contratos'},
   {key:'contratos', label:'Contratos'},
+  {key:'licitacoes', label:'Licitações'},
   {key:'sancoes', label:'Sanções'},
   {key:'planilhas', label:'Planilhas'},
 ];
@@ -4128,6 +4190,106 @@ async function carregarUsuarios(){
     </tr>`).join("");
   document.getElementById("usuarios-loading").style.display="none";
   document.getElementById("usuarios-table").style.display="block";
+}
+
+// ═══ ABA LICITAÇÕES (processos) ═══
+let _licitacoesCache=[];
+let _procEditId=null;
+async function loadLicitacoes(){
+  const tb=document.getElementById('lic-tbody');
+  tb.innerHTML='<tr><td colspan="7" style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</td></tr>';
+  const {data,error}=await sb.from('vw_processos_resumo').select('*').order('identificador');
+  if(error){ tb.innerHTML='<tr><td colspan="7" style="padding:1rem;color:var(--red)">Erro: '+_sanEsc(error.message)+'</td></tr>'; return; }
+  _licitacoesCache=data||[];
+  const fst=document.getElementById('lic-f-status');
+  if(fst){ const cur=fst.value; const sts=[...new Set(_licitacoesCache.map(p=>p.status).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); fst.innerHTML='<option value="">Todos os status</option>'+sts.map(s=>`<option${s===cur?' selected':''}>${_sanEsc(s)}</option>`).join(''); }
+  renderLicitacoes();
+}
+function filtrarLicitacoes(){ renderLicitacoes(); }
+function renderLicitacoes(){
+  const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
+  const fTipo=document.getElementById('lic-f-tipo')?.value||'';
+  const fStatus=document.getElementById('lic-f-status')?.value||'';
+  const rows=_licitacoesCache.filter(p=>{
+    if(fTipo && (p.tipo||'')!==fTipo) return false;
+    if(fStatus && (p.status||'')!==fStatus) return false;
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.status,p.secao,p.modalidade].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    return true;
+  });
+  document.getElementById('lic-count').textContent=rows.length+' processo'+(rows.length!==1?'s':'');
+  const tb=document.getElementById('lic-tbody');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="7" style="padding:1rem;text-align:center;color:var(--text3)">Nenhum processo encontrado</td></tr>'; return; }
+  tb.innerHTML=rows.map(p=>`<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${_sanEsc(p.identificador)}</td>
+    <td style="padding:6px 8px"><span class="badge" style="background:var(--surface2);color:var(--text2)">${_sanEsc(p.tipo||'—')}</span></td>
+    <td style="padding:6px 8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(p.objeto||'')}">${_sanEsc(p.objeto||'—')}</td>
+    <td style="padding:6px 8px;font-size:12px">${_sanEsc(p.status||'—')}</td>
+    <td style="padding:6px 8px;text-align:center">${p.n_contratos||0}</td>
+    <td style="padding:6px 8px;text-align:center">${p.n_itens||0}</td>
+    <td style="padding:6px 8px;white-space:nowrap">
+      <button onclick="abrirEditarProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️ Editar</button>
+      ${podeEditar('contratos')?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
+    </td></tr>`).join('');
+}
+async function preencherSelectStatusProcesso(){
+  const sel=document.getElementById('proc-status'); if(!sel) return;
+  const {data}=await sb.from('status_opcoes').select('nome').eq('contexto','processo').eq('ativo',true).order('ordem');
+  sel.innerHTML='<option value="">—</option>'+(data||[]).map(s=>`<option>${_sanEsc(s.nome)}</option>`).join('');
+}
+async function abrirNovoProcesso(){
+  if(!podeEditar('contratos')&&!_isAdmin()){alert('Sem permissão.');return;}
+  _procEditId=null;
+  document.getElementById('proc-titulo').textContent='➕ Novo processo';
+  ['proc-identificador','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('proc-tipo').value='CPL';
+  await preencherSelectStatusProcesso();
+  await preencherSelectSecoes('proc-secao', false);
+  document.getElementById('proc-msg').className='fmsg';
+  document.getElementById('modal-processo').classList.add('active');
+}
+function abrirEditarProcesso(id){
+  const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
+  _procEditId=p.id;
+  document.getElementById('proc-titulo').textContent='✏️ Editar processo';
+  document.getElementById('proc-identificador').value=p.identificador||'';
+  document.getElementById('proc-tipo').value=p.tipo||'CPL';
+  document.getElementById('proc-objeto').value=p.objeto||'';
+  document.getElementById('proc-modalidade').value=p.modalidade||'';
+  document.getElementById('proc-valor').value=p.valor_estimado??'';
+  document.getElementById('proc-obs').value=p.observacao||'';
+  preencherSelectStatusProcesso().then(()=>{document.getElementById('proc-status').value=p.status||'';});
+  preencherSelectSecoes('proc-secao', false, p.secao).then(()=>{document.getElementById('proc-secao').value=p.secao||'';});
+  document.getElementById('proc-msg').className='fmsg';
+  document.getElementById('modal-processo').classList.add('active');
+}
+async function salvarProcesso(){
+  const ident=document.getElementById('proc-identificador').value.trim();
+  if(!ident){showMsg('proc','Informe o identificador (CPL/SEI).','err');return;}
+  const dados={
+    identificador:ident,
+    tipo:document.getElementById('proc-tipo').value||null,
+    objeto:document.getElementById('proc-objeto').value.trim()||null,
+    modalidade:document.getElementById('proc-modalidade').value.trim()||null,
+    status:document.getElementById('proc-status').value||null,
+    secao:document.getElementById('proc-secao').value||null,
+    valor_estimado:document.getElementById('proc-valor').value?Number(document.getElementById('proc-valor').value):null,
+    observacao:document.getElementById('proc-obs').value.trim()||null,
+  };
+  const btn=document.querySelector('#modal-processo .btn-primary'); btn.disabled=true;
+  const res=_procEditId? await sb.from('processos').update(dados).eq('id',_procEditId) : await sb.from('processos').insert(dados);
+  btn.disabled=false;
+  if(res.error){showMsg('proc','Erro: '+res.error.message,'err');return;}
+  showMsg('proc','✓ Salvo!','ok');
+  await loadLicitacoes();
+  setTimeout(()=>document.getElementById('modal-processo').classList.remove('active'),700);
+}
+function gerarContratoDoProcesso(id){
+  const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
+  abrirModalNovoContrato();
+  window._gerarContratoProcesso=p;
+  const cplEl=document.getElementById('nc-cpl'); if(cplEl) cplEl.value=p.identificador||'';
+  const objEl=document.getElementById('nc-objeto'); if(objEl && p.objeto) objEl.value=p.objeto;
+  if(window.toast) toast('Contrato será ligado ao processo '+(p.identificador||''),'info');
 }
 
 // ═══ ABA CADASTROS (hub de dados mestre) ═══
@@ -7007,6 +7169,7 @@ async function obterOuCriarFornecedor(nome, cnpjRaw){
 
 function abrirModalNovoContrato(){
   if(!podeEditar('contratos')){alert("Sem permissão para cadastrar contratos.");return;}
+  window._gerarContratoProcesso=null;
   ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("nc-status").value="VIGENTE";
   document.getElementById("nc-tipo").value="CONTRATO";
@@ -7085,6 +7248,7 @@ async function salvarNovoContrato(){
     obs:_mn("nc-obs"),
     data_atualizacao:hoje,
   };
+  dados.processo_id = window._gerarContratoProcesso ? window._gerarContratoProcesso.id : null;
   const {data:novoContrato,error}=await sb.from("contratos").insert(dados).select("id").single();
   btn.disabled=false;btn.textContent=label;
   if(error){showMsg("nc","Erro: "+error.message,"err");return;}
