@@ -1601,9 +1601,24 @@
       <div class="form-group"><div class="form-label">Tipo de instrumento</div><select id="ec-tipo" onchange="ecTipoInstrumentoChange()"><option value="CONTRATO">CONTRATO</option><option value="ATA">ATA</option></select></div>
       <div class="form-group"><div class="form-label">CPL</div><input id="ec-cpl" type="text"></div>
       <div class="form-group"><div class="form-label">Nº do contrato</div><input id="ec-numero" type="text"></div>
-      <div class="form-group full"><div class="form-label">Prestador</div><input id="ec-prestador" type="text"></div>
+      <div class="form-group full"><div class="form-label">Prestador</div>
+        <div class="company-picker-row">
+          <div class="company-combobox" id="ec-fornecedor-combobox">
+            <button type="button" class="company-combobox-trigger" id="ec-fornecedor-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="ec-fornecedor-dropdown" onclick="abrirFecharFornecedorComboEc(event)" onkeydown="teclaFornecedorComboEc(event)">
+              <span id="ec-fornecedor-label" class="company-combobox-placeholder">Selecione ou pesquise a empresa...</span><span class="company-combobox-arrow">▾</span>
+            </button>
+            <div class="company-combobox-dropdown" id="ec-fornecedor-dropdown" onclick="event.stopPropagation()">
+              <input type="search" id="ec-fornecedor-busca" placeholder="Pesquisar por nome ou CNPJ..." autocomplete="off" oninput="filtrarFornecedoresContratoEc()" onkeydown="teclaBuscaFornecedorEc(event)">
+              <div class="company-combobox-options" id="ec-fornecedor-options" role="listbox"></div>
+            </div>
+          </div>
+          <button type="button" class="company-register-btn" onclick="selecionarNovaEmpresaContratoEc()">+ Cadastrar empresa</button>
+        </div>
+        <select id="ec-fornecedor" onchange="ecFornecedorChange()" tabindex="-1" aria-hidden="true" style="display:none"><option value="">Selecione a empresa...</option></select>
+        <input type="text" id="ec-prestador" placeholder="Razão social da nova empresa" style="display:none;margin-top:6px">
+      </div>
       <div class="form-group full"><div class="form-label">Objeto</div><input id="ec-objeto" type="text"></div>
-      <div class="form-group"><div class="form-label">CNPJ</div><input id="ec-cnpj" type="text"></div>
+      <div class="form-group"><div class="form-label">CNPJ</div><input id="ec-cnpj" type="text" readonly></div>
       <div class="form-group"><div class="form-label">E-mail</div><input id="ec-email" type="email"></div>
       <div class="form-group"><div class="form-label">Prefixo de chamado</div><input id="ec-prefixo" type="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"></div>
       <div class="form-group"><div class="form-label">Seção</div><select id="ec-secao"><option value="">Selecione...</option></select></div>
@@ -4287,7 +4302,7 @@ function gerarContratoDoProcesso(id){
   const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
   abrirModalNovoContrato();
   window._gerarContratoProcesso=p;
-  const cplEl=document.getElementById('nc-cpl'); if(cplEl) cplEl.value=p.identificador||'';
+  const cplEl=document.getElementById('nc-cpl'); if(cplEl){cplEl.value=p.identificador||'';cplEl.setAttribute('readonly',true);cplEl.style.background='var(--surface2,#f0f0f0)';}
   const objEl=document.getElementById('nc-objeto'); if(objEl && p.objeto) objEl.value=p.objeto;
   if(window.toast) toast('Contrato será ligado ao processo '+(p.identificador||''),'info');
 }
@@ -7011,87 +7026,77 @@ function formatCNPJ(d){
   if(d.length===11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,"$1.$2.$3-$4");
   return d;
 }
-async function preencherSelectFornecedores(){
-  const options=document.getElementById("nc-fornecedor-options");
+// --- Combobox de fornecedor genérico (nc = novo contrato, ec = editar contrato) ---
+async function _fornComboCarregar(pfx){
+  const options=document.getElementById(pfx+"-fornecedor-options");
   if(options) options.innerHTML='<div class="company-combobox-empty">Carregando empresas...</div>';
   const lista=await carregarFornecedores();
-  const sel=document.getElementById("nc-fornecedor");
+  const sel=document.getElementById(pfx+"-fornecedor");
   if(sel) sel.innerHTML='<option value="">Selecione a empresa...</option>'+lista.map(f=>`<option value="${f.id}" data-cnpj="${_sanEsc(f.cnpj_normalizado||'')}">${_sanEsc(f.razao_social||'(sem nome)')}</option>`).join('');
-  filtrarFornecedoresContrato();
+  _fornComboFiltrar(pfx);
 }
-function filtrarFornecedoresContrato(){
-  const termo=normalizar(document.getElementById("nc-fornecedor-busca")?.value||"");
+function _fornComboFiltrar(pfx){
+  const termo=normalizar(document.getElementById(pfx+"-fornecedor-busca")?.value||"");
   const lista=(_fornecedoresCache||[]).filter(f=>!termo||normalizar(`${f.razao_social||''} ${f.cnpj_normalizado||''} ${formatCNPJ(f.cnpj_normalizado||'')}`).includes(termo));
-  const atual=document.getElementById("nc-fornecedor")?.value||"";
-  const options=document.getElementById("nc-fornecedor-options");
+  const atual=document.getElementById(pfx+"-fornecedor")?.value||"";
+  const options=document.getElementById(pfx+"-fornecedor-options");
   if(!options) return;
-  options.innerHTML=lista.length?lista.map(f=>`<button type="button" class="company-combobox-option${String(f.id)===atual?' selected':''}" role="option" aria-selected="${String(f.id)===atual}" data-fornecedor-id="${_sanEsc(String(f.id))}" onclick="selecionarFornecedorContrato(this.dataset.fornecedorId)"><span class="company-combobox-option-name">${_sanEsc(f.razao_social||'(sem nome)')}</span><span class="company-combobox-option-cnpj">${_sanEsc(formatCNPJ(f.cnpj_normalizado||'')||'CNPJ não informado')}</span></button>`).join('')
+  options.innerHTML=lista.length?lista.map(f=>`<button type="button" class="company-combobox-option${String(f.id)===atual?' selected':''}" role="option" aria-selected="${String(f.id)===atual}" data-fornecedor-id="${_sanEsc(String(f.id))}" onclick="_fornComboSelecionar('${pfx}',this.dataset.fornecedorId)"><span class="company-combobox-option-name">${_sanEsc(f.razao_social||'(sem nome)')}</span><span class="company-combobox-option-cnpj">${_sanEsc(formatCNPJ(f.cnpj_normalizado||'')||'CNPJ não informado')}</span></button>`).join('')
     :'<div class="company-combobox-empty">Nenhuma empresa encontrada</div>';
 }
-function abrirFecharFornecedorCombo(event){
+function _fornComboFechar(pfx){
+  const combo=document.getElementById(pfx+"-fornecedor-combobox");
+  if(combo) combo.classList.remove("open");
+  const trigger=document.getElementById(pfx+"-fornecedor-trigger");
+  if(trigger) trigger.setAttribute("aria-expanded","false");
+}
+function _fornComboAbrirFechar(pfx,event){
   event?.stopPropagation();
-  const combo=document.getElementById("nc-fornecedor-combobox");
+  const combo=document.getElementById(pfx+"-fornecedor-combobox");
   if(!combo) return;
   const abrir=!combo.classList.contains("open");
-  fecharFornecedorCombo();
+  _fornComboFechar(pfx);
   if(abrir){
     combo.classList.add("open");
-    document.getElementById("nc-fornecedor-trigger").setAttribute("aria-expanded","true");
-    const busca=document.getElementById("nc-fornecedor-busca");
-    busca.value="";
-    filtrarFornecedoresContrato();
+    document.getElementById(pfx+"-fornecedor-trigger").setAttribute("aria-expanded","true");
+    const busca=document.getElementById(pfx+"-fornecedor-busca");
+    busca.value=""; _fornComboFiltrar(pfx);
     setTimeout(()=>busca.focus(),0);
   }
 }
-function fecharFornecedorCombo(){
-  const combo=document.getElementById("nc-fornecedor-combobox");
-  if(combo) combo.classList.remove("open");
-  const trigger=document.getElementById("nc-fornecedor-trigger");
-  if(trigger) trigger.setAttribute("aria-expanded","false");
-}
-function selecionarFornecedorContrato(id){
-  const sel=document.getElementById("nc-fornecedor");
+function _fornComboSelecionar(pfx,id){
+  const sel=document.getElementById(pfx+"-fornecedor");
   const fornecedor=(_fornecedoresCache||[]).find(f=>String(f.id)===String(id));
   if(!sel||!fornecedor) return;
   sel.value=String(fornecedor.id);
-  const label=document.getElementById("nc-fornecedor-label");
+  const label=document.getElementById(pfx+"-fornecedor-label");
   label.textContent=fornecedor.razao_social||'(sem nome)';
   label.classList.remove("company-combobox-placeholder");
-  ncFornecedorChange();
-  fecharFornecedorCombo();
-  document.getElementById("nc-fornecedor-trigger").focus();
+  if(pfx==='nc') ncFornecedorChange(); else ecFornecedorChange();
+  _fornComboFechar(pfx);
+  document.getElementById(pfx+"-fornecedor-trigger").focus();
 }
-function teclaFornecedorCombo(event){
-  if(["Enter"," ","ArrowDown"].includes(event.key)){event.preventDefault();abrirFecharFornecedorCombo(event);}
-}
-function teclaBuscaFornecedor(event){
-  if(event.key==="Escape"){event.preventDefault();fecharFornecedorCombo();document.getElementById("nc-fornecedor-trigger").focus();return;}
-  if(event.key==="ArrowDown"){
-    const primeira=document.querySelector("#nc-fornecedor-options .company-combobox-option");
-    if(primeira){event.preventDefault();primeira.focus();}
-  }
-}
-function selecionarNovaEmpresaContrato(){
-  const sel=document.getElementById("nc-fornecedor");
-  if(!sel) return;
-  if(![...sel.options].some(o=>o.value==="__nova__")) sel.add(new Option("Cadastrar nova empresa","__nova__"));
-  sel.value="__nova__";
-  const label=document.getElementById("nc-fornecedor-label");
-  label.textContent="Nova empresa";
-  label.classList.remove("company-combobox-placeholder");
-  fecharFornecedorCombo();
-  ncFornecedorChange();
-}
-document.addEventListener("click",event=>{if(!event.target.closest?.("#nc-fornecedor-combobox")) fecharFornecedorCombo();});
-function preencherSelectSecoesContrato(){
-  const sel=document.getElementById("nc-secao");
-  if(!sel) return;
-  const atual=sel.value;
-  const secoes=[...new Set(contratosRows.map(r=>String(r.secao||'').trim()).filter(Boolean).map(s=>/^SUEQ\s*-\s*PREDIAL$/i.test(s)?"SMCP":s))]
-    .sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  sel.innerHTML='<option value="">Selecione a seção...</option>'+secoes.map(s=>`<option value="${_sanEsc(s)}">${_sanEsc(s)}</option>`).join('');
-  if(secoes.includes(atual)) sel.value=atual;
-}
+// Wrappers NC (preservam assinaturas existentes chamadas no HTML)
+async function preencherSelectFornecedores(){ await _fornComboCarregar('nc'); }
+function filtrarFornecedoresContrato(){ _fornComboFiltrar('nc'); }
+function abrirFecharFornecedorCombo(event){ _fornComboAbrirFechar('nc',event); }
+function fecharFornecedorCombo(){ _fornComboFechar('nc'); }
+function selecionarFornecedorContrato(id){ _fornComboSelecionar('nc',id); }
+function teclaFornecedorCombo(event){ if(["Enter"," ","ArrowDown"].includes(event.key)){event.preventDefault();abrirFecharFornecedorCombo(event);} }
+function teclaBuscaFornecedor(event){ if(event.key==="Escape"){event.preventDefault();fecharFornecedorCombo();document.getElementById("nc-fornecedor-trigger").focus();return;} if(event.key==="ArrowDown"){const p=document.querySelector("#nc-fornecedor-options .company-combobox-option");if(p){event.preventDefault();p.focus();}} }
+function selecionarNovaEmpresaContrato(){ const sel=document.getElementById("nc-fornecedor");if(!sel)return;if(![...sel.options].some(o=>o.value==="__nova__"))sel.add(new Option("Cadastrar nova empresa","__nova__"));sel.value="__nova__";const label=document.getElementById("nc-fornecedor-label");label.textContent="Nova empresa";label.classList.remove("company-combobox-placeholder");fecharFornecedorCombo();ncFornecedorChange(); }
+// Wrappers EC (editar contrato)
+async function preencherSelectFornecedoresEc(){ await _fornComboCarregar('ec'); }
+function filtrarFornecedoresContratoEc(){ _fornComboFiltrar('ec'); }
+function abrirFecharFornecedorComboEc(event){ _fornComboAbrirFechar('ec',event); }
+function fecharFornecedorComboEc(){ _fornComboFechar('ec'); }
+function teclaFornecedorComboEc(event){ if(["Enter"," ","ArrowDown"].includes(event.key)){event.preventDefault();abrirFecharFornecedorComboEc(event);} }
+function teclaBuscaFornecedorEc(event){ if(event.key==="Escape"){event.preventDefault();fecharFornecedorComboEc();document.getElementById("ec-fornecedor-trigger").focus();return;} if(event.key==="ArrowDown"){const p=document.querySelector("#ec-fornecedor-options .company-combobox-option");if(p){event.preventDefault();p.focus();}} }
+function selecionarNovaEmpresaContratoEc(){ const sel=document.getElementById("ec-fornecedor");if(!sel)return;if(![...sel.options].some(o=>o.value==="__nova__"))sel.add(new Option("Cadastrar nova empresa","__nova__"));sel.value="__nova__";const label=document.getElementById("ec-fornecedor-label");label.textContent="Nova empresa";label.classList.remove("company-combobox-placeholder");fecharFornecedorComboEc();ecFornecedorChange(); }
+document.addEventListener("click",event=>{
+  if(!event.target.closest?.("#nc-fornecedor-combobox")) fecharFornecedorCombo();
+  if(!event.target.closest?.("#ec-fornecedor-combobox")) fecharFornecedorComboEc();
+});
 function ncFornecedorChange(){
   const sel=document.getElementById("nc-fornecedor");
   const inpNome=document.getElementById("nc-prestador");
@@ -7107,6 +7112,21 @@ function ncFornecedorChange(){
   } else {
     inpNome.style.display="none"; inpNome.value="";
     inpCnpj.readOnly=false; inpCnpj.value="";
+  }
+}
+function ecFornecedorChange(){
+  const sel=document.getElementById("ec-fornecedor");
+  const inpNome=document.getElementById("ec-prestador");
+  const inpCnpj=document.getElementById("ec-cnpj");
+  if(sel.value==="__nova__"){
+    inpNome.style.display=""; inpNome.value=""; inpNome.focus();
+    if(inpCnpj){inpCnpj.readOnly=false; inpCnpj.value="";}
+  } else if(sel.value){
+    inpNome.style.display="none";
+    if(inpCnpj){inpCnpj.value=formatCNPJ(sel.options[sel.selectedIndex].getAttribute("data-cnpj")||"");inpCnpj.readOnly=true;}
+  } else {
+    inpNome.style.display="none"; inpNome.value="";
+    if(inpCnpj){inpCnpj.readOnly=false; inpCnpj.value="";}
   }
 }
 async function preencherSelectSecoes(selId, comNovo, valorAtual){
@@ -7171,6 +7191,7 @@ function abrirModalNovoContrato(){
   if(!podeEditar('contratos')){alert("Sem permissão para cadastrar contratos.");return;}
   window._gerarContratoProcesso=null;
   ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  const ncCpl=document.getElementById('nc-cpl'); if(ncCpl){ncCpl.removeAttribute('readonly');ncCpl.style.background='';}
   document.getElementById("nc-status").value="VIGENTE";
   document.getElementById("nc-tipo").value="CONTRATO";
   ncTipoInstrumentoChange();
@@ -7185,7 +7206,6 @@ function abrirModalNovoContrato(){
   preencherSelectFornecedores();
   preencherSelectSecoes('nc-secao', true);
   preencherSelectPessoas('nc-fiscalizacao', true);
-  preencherSelectSecoesContrato();
   document.getElementById("nc-msg").className="fmsg";
   document.getElementById("modal-novo-contrato").classList.add("active");
 }
@@ -7459,7 +7479,7 @@ async function manterStatusContratos(){
 
 let _ctEdicaoId=null;
 const CT_EDIT_FIELDS={
-  'ec-tipo':'tipo_instrumento','ec-cpl':'cpl','ec-numero':'numero_contrato','ec-prestador':'prestador','ec-objeto':'objeto','ec-cnpj':'cnpj','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
+  'ec-tipo':'tipo_instrumento','ec-cpl':'cpl','ec-numero':'numero_contrato','ec-objeto':'objeto','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
 };
 function abrirEditarContrato(id){
   if(!_isAdmin()){alert('A edição completa de contratos é exclusiva para administradores.');return;}
@@ -7469,6 +7489,22 @@ function abrirEditarContrato(id){
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
   preencherSelectSecoes('ec-secao', false, contrato.secao).then(()=>{ const s=document.getElementById('ec-secao'); if(s) s.value=contrato.secao||''; });
   preencherSelectPessoas('ec-fiscalizacao', false, contrato.fiscalizacao).then(()=>{ const s=document.getElementById('ec-fiscalizacao'); if(s) s.value=contrato.fiscalizacao||''; });
+  // combobox de fornecedor
+  const _ecLabel=document.getElementById('ec-fornecedor-label');
+  if(_ecLabel){_ecLabel.textContent='Selecione ou pesquise a empresa...';_ecLabel.classList.add('company-combobox-placeholder');}
+  document.getElementById('ec-prestador').style.display='none';
+  const _ecCnpj=document.getElementById('ec-cnpj'); if(_ecCnpj){_ecCnpj.value=contrato.cnpj||'';_ecCnpj.readOnly=!!contrato.fornecedor_id;}
+  preencherSelectFornecedoresEc().then(()=>{
+    const _ecSel=document.getElementById('ec-fornecedor'); if(!_ecSel) return;
+    if(contrato.fornecedor_id){
+      _ecSel.value=String(contrato.fornecedor_id);
+      const _opt=_ecSel.options[_ecSel.selectedIndex];
+      if(_opt&&_opt.value&&_ecLabel){_ecLabel.textContent=_opt.text;_ecLabel.classList.remove('company-combobox-placeholder');}
+    } else if(contrato.prestador&&_ecLabel){
+      _ecLabel.textContent=contrato.prestador+' ⚠ (não vinculado ao cadastro)';
+      _ecLabel.classList.remove('company-combobox-placeholder');
+    }
+  });
   ecTipoInstrumentoChange();
   document.getElementById('ec-msg').className='fmsg';
   document.getElementById('modal-editar-contrato').classList.add('active');
@@ -7486,6 +7522,19 @@ async function salvarEdicaoContrato(){
   });
   if(dados.tipo_instrumento==="ATA") dados.valor_mensal=null;
   dados.prefixo_chamado=prefixo||null;
+  // fornecedor via combobox
+  const _ecSel=document.getElementById('ec-fornecedor');
+  if(_ecSel&&_ecSel.value==="__nova__"){
+    const _ecNome=document.getElementById('ec-prestador').value.trim();
+    const _ecCnpj=document.getElementById('ec-cnpj').value.trim();
+    if(!_ecNome){showMsg('ec','Informe a razão social da nova empresa.','err');return;}
+    try{ dados.fornecedor_id=await obterOuCriarFornecedor(_ecNome,_ecCnpj); dados.prestador=_ecNome; dados.cnpj=_ecCnpj||null; }
+    catch(e){showMsg('ec','Erro ao salvar empresa: '+(e.message||e),'err');return;}
+  } else if(_ecSel&&_ecSel.value){
+    dados.fornecedor_id=Number(_ecSel.value)||null;
+    dados.prestador=_ecSel.options[_ecSel.selectedIndex]?.text||null;
+    dados.cnpj=document.getElementById('ec-cnpj').value.trim()||null;
+  }
   const btn=document.getElementById('ec-salvar');btn.disabled=true;btn.textContent='Salvando...';
   const {error}=await sb.from('contratos').update(dados).eq('id',_ctEdicaoId);
   btn.disabled=false;btn.textContent='Salvar alterações';
