@@ -4137,6 +4137,7 @@ const CADASTRO_DEFS = {
   secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'}]},
   unidades:      {tabela:'unidades',      titulo:'🏥 Unidades',      temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'endereco',l:'Endereço'},{c:'telefone',l:'Telefone'}]},
   fornecedores:  {tabela:'fornecedores',  titulo:'🏭 Empresas',      temAtivo:false, ordem:'razao_social', campos:[{c:'razao_social',l:'Razão social',req:true},{c:'cnpj_normalizado',l:'CNPJ (só dígitos)'},{c:'nome_fantasia',l:'Nome fantasia'}]},
+  status_opcoes: {tabela:'status_opcoes', titulo:'🏷️ Status',        temAtivo:true,  ordem:'ordem',        campos:[{c:'contexto',l:'Contexto (processo/item)',req:true},{c:'nome',l:'Nome',req:true},{c:'ordem',l:'Ordem',tipo:'int'}]},
 };
 let _cadAtual=null;
 async function carregarCadastros(){
@@ -4178,7 +4179,7 @@ async function cadastroSalvar(ent, btn){
   for(const f of def.campos){
     const v=tr.querySelector(`[data-field="${f.c}"]`).value.trim();
     if(f.req && !v){ toast('Preencha: '+f.l,'error'); return; }
-    dados[f.c]=v||null;
+    dados[f.c]= v==='' ? null : (f.tipo==='int' ? (Number(v)||null) : v);
   }
   const atv=tr.querySelector('[data-field="ativo"]'); if(atv) dados.ativo=atv.checked;
   btn.disabled=true;
