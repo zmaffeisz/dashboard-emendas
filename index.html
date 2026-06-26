@@ -1091,6 +1091,7 @@
   <div class="form-card">
     <div class="form-title">🗂️ Cadastros</div>
     <div style="font-size:13px;color:var(--text3);margin-bottom:1.25rem">Dados centrais reutilizados em todo o sistema (empresas, unidades, pessoas, etc.). Só admin edita; as outras telas escolhem destas listas.</div>
+    <div id="cad-revisao" style="margin-bottom:1.25rem"></div>
     <div id="cad-hub" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px"></div>
     <div id="cad-lista" style="display:none"></div>
   </div>
@@ -6450,6 +6451,7 @@ async function carregarCadastros(){
     <div style="font-size:24px;font-weight:700;color:var(--blue);margin-bottom:.5rem">${counts[e]}</div>
     <button onclick="abrirCadastroLista('${e}')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue-text);cursor:pointer">Gerenciar</button>
   </div>`).join('');
+  try{ await carregarRevisao(); }catch(e){ console.warn('revisão cadastros:',e); }
 }
 async function abrirCadastroLista(ent){
   const def=CADASTRO_DEFS[ent]; _cadAtual=ent;
@@ -6480,6 +6482,8 @@ async function cadastroSalvar(ent, btn){
     dados[f.c]= v==='' ? null : (f.tipo==='int' ? (Number(v)||null) : v);
   }
   const atv=tr.querySelector('[data-field="ativo"]'); if(atv) dados.ativo=atv.checked;
+  // hub é o admin: o que ele cadastra/edita aqui já nasce validado (não cai na fila de revisão)
+  if(REV_DEFS[ent]) dados.revisado=true;
   btn.disabled=true;
   const id=tr.dataset.id;
   const res=id ? await sb.from(def.tabela).update(dados).eq('id',id) : await sb.from(def.tabela).insert(dados);
@@ -6487,6 +6491,135 @@ async function cadastroSalvar(ent, btn){
   if(res.error){ toast('Erro: '+res.error.message,'error'); return; }
   toast(id?'Atualizado!':'Adicionado!','success');
   abrirCadastroLista(ent);
+}
+
+// ═══ Revisão de cadastros (fila de moderação de dados-mestre criados inline) ═══
+// tipo 'fk'  → referências apontam por id (ex.: contratos.fornecedor_id)
+// tipo 'txt' → referências guardam o texto do nome (ex.: emendas.parlamentar)
+const REV_DEFS = {
+  parlamentares: {titulo:'🏛️ Parlamentares', keyCol:'nome', label:r=>r.nome, tipo:'txt',
+    refs:[['emendas','parlamentar']]},
+  pessoas:       {titulo:'👤 Pessoas / Fiscais', keyCol:'nome', label:r=>r.nome, tipo:'txt',
+    refs:[['contratos_fiscalizadores','nome'],['chamados','fiscalizado_por'],['chamados_controle','fiscalizado_por'],['termos_ateste','fiscalizado_por']]},
+  secoes:        {titulo:'🏢 Seções', keyCol:'sigla', label:r=>(r.sigla+(r.nome?(' — '+r.nome):'')), tipo:'txt',
+    refs:[['contratos','secao'],['processos','secao']]},
+  fornecedores:  {titulo:'🏭 Empresas', keyCol:'razao_social', label:r=>(r.razao_social||r.nome_fantasia||('#'+r.id)), tipo:'fk',
+    refs:[['contratos','fornecedor_id'],['itens','fornecedor_id'],['empenhos','fornecedor_id'],['notas_fiscais','fornecedor_id'],['fornecedor_contatos','fornecedor_id']]},
+  unidades:      {titulo:'🏥 Unidades', keyCol:'nome', label:r=>r.nome, tipo:'fk',
+    refs:[['emendas','unidade_id'],['emenda_itens','unidade_beneficiada_id'],['emenda_itens','unidade_entrega_id'],['chamados','unidade_id'],['inventario_ac','unidade_id'],['itens','unidade_destino_id']]},
+};
+let _revAprovados={}; // ent -> [registros revisados] (para sugestão de duplicado e o "mesclar em")
+function _revNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim(); }
+function _revLeven(a,b){ a=_revNorm(a); b=_revNorm(b); const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]); for(let j=0;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){ const c=a[i-1]===b[j-1]?0:1; d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+c); }
+  return d[m][n]; }
+function _revSugestoes(ent, pend){
+  const alvo=REV_DEFS[ent].label(pend); const na=_revNorm(alvo);
+  return (_revAprovados[ent]||[]).map(r=>{ const lab=REV_DEFS[ent].label(r); const nb=_revNorm(lab);
+      let score=_revLeven(na,nb); if(nb&&na&&(nb.includes(na)||na.includes(nb))) score=Math.min(score,1);
+      return {r,lab,score}; })
+    .filter(x=>x.score<=Math.max(2,Math.ceil(_revNorm(alvo).length*0.34)))
+    .sort((a,b)=>a.score-b.score).slice(0,4);
+}
+async function carregarRevisao(){
+  const box=document.getElementById('cad-revisao'); if(!box) return;
+  const ents=Object.keys(REV_DEFS);
+  const pend={}, aprov={};
+  await Promise.all(ents.map(async e=>{
+    const [{data:p},{data:a}]=await Promise.all([
+      sb.from(e).select('*').eq('revisado',false).order('created_at',{ascending:false}),
+      sb.from(e).select('*').eq('revisado',true).order(REV_DEFS[e].keyCol)
+    ]);
+    pend[e]=p||[]; aprov[e]=a||[];
+  }));
+  _revAprovados=aprov;
+  const total=ents.reduce((s,e)=>s+pend[e].length,0);
+  if(!total){ box.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:var(--text3)">🔎 <b>Revisão de cadastros</b> — nenhum cadastro novo aguardando revisão. Tudo em dia. ✅</div>`; return; }
+  const podeEd=podeEditar('cadastros')|| _isAdmin();
+  let html=`<div style="background:var(--amber-bg,#EF9F2715);border:1px solid var(--amber,#EF9F27);border-radius:var(--radius);padding:1rem">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.25rem">🔎 Revisão de cadastros — ${total} aguardando</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">Cadastros novos criados nas telas (gerar contrato, fiscal, emenda…). Confira se já existe: <b>Aprovar</b> (é novo) · <b>Mesclar no correto</b> (some o duplicado e tudo passa a apontar para o certo) · <b>Excluir</b>.</div>`;
+  for(const e of ents){
+    if(!pend[e].length) continue;
+    const def=REV_DEFS[e];
+    html+=`<div style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.35rem">${def.titulo} <span style="color:var(--text3);font-weight:400">(${pend[e].length})</span></div>`;
+    for(const r of pend[e]){
+      const sug=_revSugestoes(e,r);
+      const opts=(_revAprovados[e]||[]).map(a=>`<option value="${a.id}"${sug[0]&&String(sug[0].r.id)===String(a.id)?' selected':''}>${_sanEsc(def.label(a))}</option>`).join('');
+      const sugBtns=sug.length?('<div style="font-size:11px;color:var(--text3);margin:3px 0">parece: '+sug.map(s=>`<button onclick="document.getElementById('rev-keep-${e}-${r.id}').value='${s.r.id}'" style="font-size:11px;padding:2px 7px;margin:2px 3px 0 0;border-radius:10px;border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue-text);cursor:pointer">${_sanEsc(s.lab)}</button>`).join('')+'</div>'):'<div style="font-size:11px;color:var(--text3);margin:3px 0">nenhum parecido — provavelmente é novo.</div>';
+      html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline">
+          <div style="font-size:13px;font-weight:600">${_sanEsc(def.label(r))}</div>
+          <div style="font-size:11px;color:var(--text3)">criado ${r.created_at?fmtDate(String(r.created_at).slice(0,10)):'—'}</div>
+        </div>
+        ${sugBtns}
+        ${podeEd?`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px">
+          <button onclick="revAprovar('${e}','${r.id}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer">✓ Aprovar (é novo)</button>
+          <span style="font-size:11px;color:var(--text3)">ou mesclar em:</span>
+          <select id="rev-keep-${e}-${r.id}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);max-width:240px">${opts}</select>
+          <button onclick="revMesclar('${e}','${r.id}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Mesclar</button>
+          <button onclick="revExcluir('${e}','${r.id}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>
+        </div>`:'<div style="font-size:11px;color:var(--text3);margin-top:4px">Apenas admin pode revisar.</div>'}
+      </div>`;
+    }
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  box.innerHTML=html;
+}
+async function revAprovar(ent, id){
+  if(bloquearSeVisualiz('cadastros')) return;
+  const {error}=await sb.from(ent).update({revisado:true}).eq('id',id);
+  if(error){ toast('Erro: '+error.message,'error'); return; }
+  toast('Cadastro aprovado.','success'); carregarRevisao();
+}
+async function _revContarRefs(def, fromVal){
+  let total=0; const detalhe=[];
+  for(const [ct,cc] of def.refs){
+    const {count,error}=await sb.from(ct).select('id',{count:'exact',head:true}).eq(cc,fromVal);
+    if(!error && count){ total+=count; detalhe.push(`${ct}: ${count}`); }
+  }
+  return {total,detalhe};
+}
+async function revMesclar(ent, dupId){
+  if(bloquearSeVisualiz('cadastros')) return;
+  const def=REV_DEFS[ent];
+  const keepId=document.getElementById(`rev-keep-${ent}-${dupId}`)?.value;
+  if(!keepId){ toast('Escolha o cadastro correto.','error'); return; }
+  if(String(keepId)===String(dupId)){ toast('Escolha um cadastro diferente do duplicado.','error'); return; }
+  const dup=(_revAprovados[ent]||[]).find(r=>String(r.id)===String(dupId)) || (await sb.from(ent).select('*').eq('id',dupId).single()).data;
+  const keep=(_revAprovados[ent]||[]).find(r=>String(r.id)===String(keepId));
+  if(!dup||!keep){ toast('Registro não encontrado.','error'); return; }
+  const fromVal=def.tipo==='fk'?dupId:dup[def.keyCol];
+  const toVal=def.tipo==='fk'?keepId:keep[def.keyCol];
+  const {total,detalhe}=await _revContarRefs(def,fromVal);
+  const msg=`Mesclar "${def.label(dup)}" → "${def.label(keep)}".\n\n`+
+    (total?`Vou reapontar ${total} referência(s) para o cadastro correto:\n• ${detalhe.join('\n• ')}\n\n`:'Nenhuma referência usa o duplicado.\n\n')+
+    `Depois apago o duplicado. Continuar?`;
+  if(!await uiConfirm(msg)) return;
+  // 1) reaponta referências
+  for(const [ct,cc] of def.refs){
+    const {error}=await sb.from(ct).update({[cc]:toVal}).eq(cc,fromVal);
+    if(error){ toast(`Erro ao reapontar ${ct}: ${error.message}`,'error'); return; }
+  }
+  // 2) apaga o duplicado
+  const {error:eDel}=await sb.from(ent).delete().eq('id',dupId);
+  if(eDel){ toast('Referências reapontadas, mas erro ao apagar o duplicado: '+eDel.message,'error'); carregarRevisao(); return; }
+  toast(`Mesclado! ${total} referência(s) reapontada(s).`,'success');
+  carregarRevisao();
+}
+async function revExcluir(ent, id){
+  if(bloquearSeVisualiz('cadastros')) return;
+  const def=REV_DEFS[ent];
+  const dup=(await sb.from(ent).select('*').eq('id',id).single()).data;
+  const fromVal=def.tipo==='fk'?id:(dup?dup[def.keyCol]:null);
+  const {total,detalhe}= fromVal!=null ? await _revContarRefs(def,fromVal) : {total:0,detalhe:[]};
+  if(total){ if(!await uiConfirm(`Atenção: ${total} referência(s) ainda usam este cadastro (${detalhe.join(', ')}). Excluir vai deixá-las órfãs/sem vínculo. Prefira "Mesclar". Excluir mesmo assim?`)) return; }
+  else if(!await uiConfirm('Excluir este cadastro?')) return;
+  const {error}=await sb.from(ent).delete().eq('id',id);
+  if(error){ toast('Erro ao excluir: '+error.message+(def.tipo==='fk'?' (há vínculos — use Mesclar).':''),'error'); return; }
+  toast('Cadastro excluído.','success'); carregarRevisao();
 }
 
 async function alterarPapel(userId, email){
