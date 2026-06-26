@@ -1213,7 +1213,18 @@
       <div class="form-group"><div class="form-label">Valor do empenho (R$) *</div><input type="number" id="emp-valor" min="0" step="any" oninput="_empRecalcSaldo()" placeholder="ex: 120000"></div>
       <div class="form-group"><div class="form-label">Data de emissão</div><input type="date" id="emp-data"></div>
       <div class="form-group"><div class="form-label">Emenda (opcional)</div><select id="emp-emenda"></select></div>
-      <div class="form-group"><div class="form-label">Contrato</div><select id="emp-contrato" onchange="_empContratoChange()"></select></div>
+      <div class="form-group s2-outer">
+        <div class="form-label">Contrato *</div>
+        <input type="hidden" id="emp-contrato">
+        <div id="emp-contrato-wrap" class="s2-wrap" onclick="_s2Toggle('emp-contrato')">
+          <span id="emp-contrato-display" class="s2-display placeholder">— selecione um contrato —</span>
+          <span class="s2-arrow">▼</span>
+        </div>
+        <div id="emp-contrato-dropdown" class="s2-dropdown" style="display:none">
+          <input type="text" id="emp-contrato-search" class="s2-search" placeholder="Pesquisar..." oninput="_s2Filter('emp-contrato')" onclick="event.stopPropagation()">
+          <div id="emp-contrato-list" class="s2-list"></div>
+        </div>
+      </div>
     </div>
     <div class="form-group" style="margin-top:.25rem">
       <div class="form-label">Itens do contrato — quantidade e valor vinculados a este empenho</div>
@@ -2043,9 +2054,10 @@
       <button onclick="document.getElementById('modal-novo-contrato').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
     </div>
     <div class="form-grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
-      <div class="form-group full"><div class="form-label">Tipo de instrumento</div>
-        <select id="nc-tipo" onchange="ncTipoInstrumentoChange()" disabled title="Herdado automaticamente da natureza do processo selecionado"><option value="CONTRATO">CONTRATO</option><option value="ATA">ATA</option></select>
-        <div id="nc-tipo-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Herdado da natureza do processo: <b>ATA DE RP → ATA</b>, <b>Aquisição → CONTRATO</b>.</div>
+      <div class="form-group full">
+        <div class="form-label">Natureza</div>
+        <input type="hidden" id="nc-tipo" value="CONTRATO">
+        <input type="text" id="nc-natureza-display" readonly placeholder="Selecione o processo para preencher automaticamente" style="background:var(--surface2);color:var(--text2);cursor:default">
       </div>
       <div class="form-group full"><div class="form-label">Processo / CPL *</div>
         <select id="nc-processo" onchange="ncProcessoChange()"><option value="">Selecione o processo (licitação)...</option></select>
@@ -2091,9 +2103,34 @@
         <select id="nc-fiscalizacao" multiple size="4" style="min-height:88px"></select>
         <input type="text" id="nc-fiscalizacao-novo" placeholder="adicionar fiscal não listado (separe vários por vírgula)" style="margin-top:6px">
       </div>
-      <div class="form-group full" id="nc-empenho-wrap" style="display:none"><div class="form-label">Empenhos * <span style="font-weight:400;color:var(--text3)">(pré-cadastrados — segure Ctrl/Cmd para vários)</span></div>
+      <div class="form-group full" id="nc-empenho-wrap" style="display:none">
+        <div class="form-label">Empenhos <span style="font-weight:400;color:var(--text3)">(segure Ctrl/Cmd para selecionar vários)</span></div>
         <select id="nc-empenho" multiple size="3" style="min-height:70px"></select>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Sem empenho na lista? Cadastre em <b>Itens → Empenhos</b>. O vínculo detalhado por item é feito depois.</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <button type="button" onclick="_ncToggleMiniEmpenho()" style="font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:transparent;color:var(--blue);cursor:pointer">+ Criar novo empenho</button>
+          <span style="font-size:11px;color:var(--text3)">O empenho criado aqui será automaticamente vinculado ao contrato.</span>
+        </div>
+        <!-- mini-form empenho inline -->
+        <div id="nc-mini-emp" style="display:none;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">Novo empenho</div>
+          <div class="form-grid" style="grid-template-columns:1fr 90px 1fr">
+            <div class="form-group"><div class="form-label">Número *</div><input type="text" id="nce-numero" placeholder="ex: 10296/2026"></div>
+            <div class="form-group"><div class="form-label">Ano</div><input type="number" id="nce-ano" min="2000" step="1"></div>
+            <div class="form-group"><div class="form-label">Número da despesa</div><input type="text" id="nce-despesa" placeholder="ex: 3.3.90.30"></div>
+          </div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr">
+            <div class="form-group"><div class="form-label">Valor empenhado (R$) *</div><input type="number" id="nce-valor" min="0" step="any" placeholder="ex: 120000"></div>
+            <div class="form-group"><div class="form-label">Data de emissão</div><input type="date" id="nce-data"></div>
+            <div class="form-group"><div class="form-label">Fonte</div><select id="nce-fonte"></select></div>
+            <div class="form-group"><div class="form-label">Detalhe da fonte</div><input type="text" id="nce-fonte-desc" placeholder="opcional"></div>
+          </div>
+          <div class="form-group" style="margin-top:4px"><div class="form-label">Observações</div><input type="text" id="nce-obs" placeholder="opcional"></div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+            <button type="button" onclick="_ncSalvarMiniEmpenho()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar empenho</button>
+            <button type="button" onclick="_ncToggleMiniEmpenho(false)" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Cancelar</button>
+            <span id="nce-msg" style="font-size:11px;color:var(--red)"></span>
+          </div>
+        </div>
       </div>
       <div class="form-group"><div class="form-label">Contato</div><input type="text" id="nc-contato" placeholder="Telefone / contato"></div>
       <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="nc-obs" placeholder="Observações gerais"></div>
@@ -5258,12 +5295,91 @@ function renderEmpenhos(){
       <td style="padding:6px 8px;white-space:nowrap">${podeEd?`<button onclick="abrirModalEmpenho('${e.id}')" style="font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">Editar</button> <button onclick="excluirEmpenho('${e.id}')" style="font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>`:''}</td>
     </tr>`;}).join('')}</tbody></table>`;
 }
+/* ── select pesquisável genérico ── */
+const _s2Data={};
+function _s2Init(key,opts){
+  _s2Data[key]=opts;
+  _s2Render(key,'');
+}
+function _s2Toggle(key){
+  const dd=document.getElementById(key+'-dropdown');
+  if(!dd) return;
+  if(dd.style.display==='none'||!dd.style.display){
+    dd.style.display='block';
+    const srch=document.getElementById(key+'-search');
+    if(srch){srch.value='';srch.focus();}
+    _s2Render(key,'');
+    document.getElementById(key+'-wrap').classList.add('open');
+    setTimeout(()=>document.addEventListener('click',_s2OutsideHandler,{capture:true,once:true}),0);
+  } else {
+    _s2Close(key);
+  }
+}
+function _s2OutsideHandler(e){
+  document.querySelectorAll('.s2-dropdown').forEach(dd=>{
+    if(dd.style.display!=='none' && !dd.contains(e.target)){
+      const key=dd.id.replace('-dropdown','');
+      const wrap=document.getElementById(key+'-wrap');
+      dd.style.display='none';
+      if(wrap) wrap.classList.remove('open');
+    }
+  });
+}
+function _s2Close(key){
+  const dd=document.getElementById(key+'-dropdown');
+  if(dd) dd.style.display='none';
+  const wrap=document.getElementById(key+'-wrap');
+  if(wrap) wrap.classList.remove('open');
+}
+function _s2Filter(key){
+  const q=(document.getElementById(key+'-search')?.value||'').toLowerCase();
+  _s2Render(key,q);
+}
+function _s2Render(key,q){
+  const list=document.getElementById(key+'-list');
+  if(!list) return;
+  const data=_s2Data[key]||[];
+  const cur=String(document.getElementById(key)?.value||'');
+  const filtered=q?data.filter(o=>o.label.toLowerCase().includes(q)):data;
+  list.innerHTML='';
+  filtered.forEach(o=>{
+    const div=document.createElement('div');
+    div.className='s2-opt'+(o.value===''?' placeholder-opt':'')+(String(o.value)===cur?' selected':'');
+    div.textContent=o.label;
+    div.addEventListener('mousedown',ev=>{ev.preventDefault();ev.stopPropagation();_s2Select(key,o.value,o.label,o.cb);});
+    list.appendChild(div);
+  });
+}
+function _s2Select(key,value,label,cb){
+  const hidden=document.getElementById(key);
+  if(hidden) hidden.value=value;
+  const disp=document.getElementById(key+'-display');
+  if(disp){ disp.textContent=label; disp.classList.toggle('placeholder',value===''); }
+  _s2Close(key);
+  if(cb) cb(value);
+}
+function _s2SetValue(key,value){
+  const data=_s2Data[key]||[];
+  const opt=data.find(o=>String(o.value)===String(value));
+  const hidden=document.getElementById(key);
+  if(hidden) hidden.value=value??'';
+  const disp=document.getElementById(key+'-display');
+  if(disp){
+    disp.textContent=opt?opt.label:(value?'(#'+value+')':'— selecione um contrato —');
+    disp.classList.toggle('placeholder',!value);
+  }
+  _s2Close(key);
+}
+/* ── fim select pesquisável ── */
 async function _empPopularSelects(){
   document.getElementById('emp-fonte-tipo').innerHTML='<option value="">—</option>'+PROC_FONTES.map(([v,l])=>`<option value="${v}">${_sanEsc(l)}</option>`).join('');
   if(!_empEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar').order('ano',{ascending:false}); _empEmendasCache=data||[]; }
   if(!_empContratosCache.length){ const {data}=await sb.from('contratos').select('id,cpl,numero_contrato,prestador,fornecedor_id').order('id',{ascending:false}); _empContratosCache=data||[]; }
   document.getElementById('emp-emenda').innerHTML='<option value="">— sem emenda —</option>'+_empEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join('');
-  document.getElementById('emp-contrato').innerHTML='<option value="">— sem contrato —</option>'+_empContratosCache.map(c=>`<option value="${c.id}">${[c.cpl,c.numero_contrato,c.prestador].filter(Boolean).map(_sanEsc).join(' · ')||('Contrato '+c.id)}</option>`).join('');
+  _s2Init('emp-contrato',[
+    {value:'',label:'— selecione um contrato —'},
+    ..._empContratosCache.map(c=>({value:String(c.id),label:[c.cpl,c.numero_contrato,c.prestador].filter(Boolean).join(' · ')||'Contrato '+c.id, cb:()=>_empContratoChange()}))
+  ]);
 }
 async function abrirModalEmpenho(id){
   if(bloquearSeVisualiz('itens')) return;
@@ -5280,7 +5396,7 @@ async function abrirModalEmpenho(id){
   document.getElementById('emp-valor').value=e?.valor_empenhado??'';
   document.getElementById('emp-data').value=e?.data_emissao||'';
   document.getElementById('emp-emenda').value=e?.emenda_id||'';
-  document.getElementById('emp-contrato').value=e?.contrato_id||'';
+  _s2SetValue('emp-contrato',e?.contrato_id||'');
   document.getElementById('emp-obs').value=e?.observacoes||'';
   const prev=e?(e.empenho_itens||[]).reduce((m,ei)=>{m[ei.item_id]={q:ei.quantidade_vinculada,v:ei.valor_vinculado};return m;},{}):{};
   await _empContratoChange(prev);
@@ -5322,6 +5438,8 @@ async function salvarEmpenho(){
   const valor=_empNum('emp-valor');
   if(!numero){ msg.textContent='Informe o número do empenho.'; msg.classList.add('err'); return; }
   if(valor==null){ msg.textContent='Informe o valor do empenho.'; msg.classList.add('err'); return; }
+  const _cidVal=document.getElementById('emp-contrato').value;
+  if(!_cidVal){ msg.textContent='Selecione um contrato.'; msg.classList.add('err'); return; }
   const vincs=[];
   document.querySelectorAll('#emp-itens-wrap tr[data-item]').forEach(tr=>{
     const q=Number(String(tr.querySelector('.empi-q').value).replace(',','.'))||null;
@@ -6338,8 +6456,12 @@ function ncProcessoChange(){
   const objEl=document.getElementById('nc-objeto'); if(objEl) objEl.value=p.objeto||'';
   if(gm) gm.checked=!!p.gera_mais_contratos;
   // Fase 10: tipo de instrumento herdado da natureza do processo
-  const tipoSel=document.getElementById('nc-tipo');
-  if(tipoSel){ tipoSel.value=(String(p.natureza||'').toUpperCase().includes('ATA'))?'ATA':'CONTRATO'; ncTipoInstrumentoChange(); }
+  const tipoHid=document.getElementById('nc-tipo');
+  const natDisp=document.getElementById('nc-natureza-display');
+  const tipoVal=(String(p.natureza||'').toUpperCase().includes('ATA'))?'ATA':'CONTRATO';
+  if(tipoHid) tipoHid.value=tipoVal;
+  if(natDisp){ natDisp.value=p.natureza||''; natDisp.placeholder=''; }
+  ncTipoInstrumentoChange();
   _ncAplicarModo(p.natureza);
   _ncCarregarItensProcesso(p.id);
 }
@@ -9593,10 +9715,55 @@ function _ncColetarFiscais(){
   if(novoTxt) novoTxt.split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>{ if(!nomes.includes(n)) nomes.push(n); });
   return nomes;
 }
-async function _ncPreencherEmpenhos(){
+async function _ncPreencherEmpenhos(selecionarId){
   const sel=document.getElementById('nc-empenho'); if(!sel) return;
   const {data}=await sb.from('empenhos').select('id,numero,ano,valor_empenhado,contrato_id').order('created_at',{ascending:false}).limit(300);
   sel.innerHTML=(data||[]).map(e=>`<option value="${e.id}">${_sanEsc(e.numero)}${e.ano?('/'+e.ano):''}${e.valor_empenhado?(' · '+fmtFull(e.valor_empenhado)):''}${e.contrato_id?' (já vinculado)':''}</option>`).join('');
+  if(selecionarId){ const opt=[...sel.options].find(o=>o.value===String(selecionarId)); if(opt) opt.selected=true; }
+}
+function _ncToggleMiniEmpenho(forcar){
+  const mini=document.getElementById('nc-mini-emp'); if(!mini) return;
+  const abrir = forcar===undefined ? mini.style.display==='none' : !!forcar;
+  mini.style.display=abrir?'block':'none';
+  if(abrir){
+    document.getElementById('nce-numero').value='';
+    document.getElementById('nce-ano').value=new Date().getFullYear();
+    document.getElementById('nce-despesa').value='';
+    document.getElementById('nce-valor').value='';
+    document.getElementById('nce-data').value='';
+    document.getElementById('nce-fonte-desc').value='';
+    document.getElementById('nce-obs').value='';
+    document.getElementById('nce-msg').textContent='';
+    const fs=document.getElementById('nce-fonte');
+    if(fs) fs.innerHTML='<option value="">—</option>'+PROC_FONTES.map(([v,l])=>`<option value="${v}">${_sanEsc(l)}</option>`).join('');
+    document.getElementById('nce-numero').focus();
+  }
+}
+async function _ncSalvarMiniEmpenho(){
+  const msg=document.getElementById('nce-msg'); msg.textContent='';
+  const numero=(document.getElementById('nce-numero').value||'').trim();
+  const valor=parseFloat((document.getElementById('nce-valor').value||'').replace(',','.'));
+  if(!numero){ msg.textContent='Informe o número do empenho.'; return; }
+  if(!valor||isNaN(valor)){ msg.textContent='Informe o valor.'; return; }
+  const btn=document.querySelector('#nc-mini-emp button');
+  const oldTxt=btn.textContent; btn.disabled=true; btn.textContent='Salvando...';
+  const reg={
+    numero, numero_normalizado:(typeof normalizarNumeroDocumento==='function'?normalizarNumeroDocumento(numero):numero),
+    ano:parseInt(document.getElementById('nce-ano').value)||null,
+    numero_despesa:document.getElementById('nce-despesa').value.trim()||null,
+    valor_empenhado:valor, saldo_empenho:valor,
+    data_emissao:document.getElementById('nce-data').value||null,
+    fonte_tipo:document.getElementById('nce-fonte').value||null,
+    fonte_descricao:document.getElementById('nce-fonte-desc').value.trim()||null,
+    observacoes:document.getElementById('nce-obs').value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  const {data,error}=await sb.from('empenhos').insert(reg).select('id').single();
+  btn.disabled=false; btn.textContent=oldTxt;
+  if(error){ msg.textContent='Erro: '+error.message; return; }
+  _ncToggleMiniEmpenho(false);
+  await _ncPreencherEmpenhos(data.id);
+  if(window.toast) toast('Empenho criado e selecionado!','success');
 }
 
 async function obterOuCriarFornecedor(nome, cnpjRaw){
@@ -9620,6 +9787,7 @@ async function abrirModalNovoContrato(){
   ncProcessoChange();
   document.getElementById("nc-status").value="VIGENTE";
   document.getElementById("nc-tipo").value="CONTRATO";
+  const _nd=document.getElementById("nc-natureza-display"); if(_nd){_nd.value="";_nd.placeholder="Selecione o processo para preencher automaticamente";}
   ncTipoInstrumentoChange();
   document.getElementById("nc-prestador").style.display="none";
   document.getElementById("nc-fornecedor-busca").value="";

@@ -119,6 +119,23 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 
+/* ── SELECT PESQUISÁVEL (s2) ── */
+.s2-outer{position:relative}
+.s2-wrap{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;min-height:34px;user-select:none}
+.s2-wrap:hover{border-color:var(--blue)}
+.s2-wrap.open{border-color:var(--blue)}
+.s2-display{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.s2-display.placeholder{color:var(--text3)}
+.s2-arrow{font-size:10px;color:var(--text3);margin-left:6px;transition:transform .15s}
+.s2-wrap.open .s2-arrow{transform:rotate(180deg)}
+.s2-dropdown{position:absolute;left:0;right:0;z-index:9999;background:var(--surface);border:1px solid var(--blue);border-radius:var(--radius-sm);box-shadow:0 6px 20px rgba(0,0,0,.35);margin-top:2px}
+.s2-search{width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-bottom:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none}
+.s2-list{max-height:200px;overflow-y:auto}
+.s2-opt{padding:7px 10px;cursor:pointer;font-size:13px;color:var(--text)}
+.s2-opt:hover{background:var(--blue);color:#fff}
+.s2-opt.selected{background:var(--blue);color:#fff;font-weight:600}
+.s2-opt.placeholder-opt{color:var(--text3)}
+
 /* ── FEEDBACK (fmsg) ── */
 .fmsg{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);display:none}
 .fmsg.ok{background:var(--green-bg);color:var(--green-text);display:inline-block}
