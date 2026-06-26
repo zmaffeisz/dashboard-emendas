@@ -1076,6 +1076,7 @@
             <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Nome</th>
             <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">E-mail</th>
             <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Papel atual</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Status</th>
             <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Alterar para</th>
             <th style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2)"></th>
           </tr>
@@ -2397,7 +2398,9 @@
       <button onclick="fecharDetalheUsuario()" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
     </div>
     <div style="margin-bottom:1rem">
-      <div style="font-size:15px;font-weight:600" id="ud-nome">—</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Nome de exibicao</div>
+      <div id="ud-nome" style="display:none"></div>
+      <input id="ud-nome-input" type="text" maxlength="120" style="width:100%;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);margin-bottom:6px">
       <div style="font-size:12px;color:var(--text3)" id="ud-email">—</div>
     </div>
     <div class="form-group" style="margin-bottom:1rem">
@@ -2409,6 +2412,10 @@
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Usuário: o acesso de ver/editar é definido pelas caixinhas abaixo. Administrador: acesso total.</div>
     </div>
     <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:.5rem">Permissões por aba</div>
+    <label style="display:flex;align-items:center;gap:8px;margin:-.25rem 0 1rem;font-size:13px;color:var(--text2)">
+      <input type="checkbox" id="ud-aprovado" style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
+      Acesso aprovado
+    </label>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem">
       <thead><tr>
         <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Aba</th>
@@ -2418,9 +2425,12 @@
       <tbody id="ud-perms-body"></tbody>
     </table>
     <div id="ud-msg" class="fmsg" style="margin-bottom:.5rem"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn-secondary" onclick="fecharDetalheUsuario()">Cancelar</button>
-      <button class="btn-primary" id="ud-salvar" onclick="salvarPermissoesUsuario()">Salvar permissões</button>
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <button class="btn-secondary" id="ud-excluir" onclick="excluirUsuario(_udUserId)" style="border-color:var(--red);color:var(--red)">Excluir conta</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-secondary" onclick="fecharDetalheUsuario()">Cancelar</button>
+        <button class="btn-primary" id="ud-salvar" onclick="salvarPermissoesUsuario()">Salvar usuario</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2442,6 +2452,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 let currentProfile = null;
+window._pendingApproval = false;
 
 // ═══ PERMISSÕES GRANULARES POR ABA ═══
 // Modelo de dois papéis: 'admin' (acesso total) e qualquer outro = usuário comum,
@@ -2452,8 +2463,11 @@ window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
 const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
-function _isAdmin(){ return window._userPapel==='admin' || currentProfile?.papel==='admin'; }
+function _isApprovedProfile(){ return currentProfile?.aprovado !== false; }
+function _isAdmin(){ return (window._userPapel==='admin' || currentProfile?.papel==='admin') && _isApprovedProfile(); }
 function userCanView(tabKey){
+  if(tabKey==='dashboard') return true;
+  if(!_isApprovedProfile()) return false;
   if(_isAdmin()) return true;
   if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
   const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
@@ -2461,6 +2475,7 @@ function userCanView(tabKey){
   return tabKey==='dashboard'; // conta nova vê apenas Emendas; admin libera o resto nas caixinhas
 }
 function userCanEdit(tabKey){
+  if(!_isApprovedProfile()) return false;
   if(_isAdmin()) return true;
   if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
   const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
@@ -2520,6 +2535,11 @@ async function checkAuth(){
   const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
   currentProfile = profile;
   window._userPapel = profile?.papel || 'visualizador';
+  window._pendingApproval = false;
+  if(profile && profile.aprovado === false && profile.papel !== 'admin'){
+    entrarModoPendente();
+    return false;
+  }
   try{
     const {data:tabPerms} = await sb.from('user_tab_permissions').select('*').eq('user_id', currentUser.id);
     window._tabPerms = tabPerms || [];
@@ -2588,6 +2608,7 @@ async function checkAuth(){
 }
 
 function entrarModoConvidado(){
+  window._pendingApproval = false;
   window._userPapel = null;
   window._tabPerms = [];
   // Esconder todas as abas exceto Emendas
@@ -2596,8 +2617,44 @@ function entrarModoConvidado(){
   });
   updateSidebarSections();
   // Mostrar banner e botão de login
-  document.getElementById("guest-banner").style.display="flex";
+  const banner=document.getElementById("guest-banner");
+  if(banner){
+    banner.style.display="flex";
+    const title=banner.querySelector("div div:first-child");
+    const sub=banner.querySelector("div div:nth-child(2)");
+    const btn=banner.querySelector("button");
+    if(title) title.textContent="Modo de visualização pública";
+    if(sub) sub.textContent="Você está vendo as emendas em modo público. Faça login para acessar todas as seções e funcionalidades.";
+    if(btn){ btn.textContent="Fazer Login"; btn.onclick=abrirModalLogin; }
+  }
   document.getElementById("btn-login-header").style.display="inline-block";
+  showTab("dashboard");
+}
+
+function entrarModoPendente(){
+  window._pendingApproval = true;
+  window._tabPerms = [];
+  document.querySelectorAll('.sidebar-item').forEach(el=>{
+    el.style.display = el.id==='sidebar-dashboard' ? 'flex' : 'none';
+  });
+  updateSidebarSections();
+  const banner=document.getElementById("guest-banner");
+  if(banner){
+    banner.style.display="flex";
+    const title=banner.querySelector("div div:first-child");
+    const sub=banner.querySelector("div div:nth-child(2)");
+    const btn=banner.querySelector("button");
+    if(title) title.textContent="Acesso aguardando aprovação";
+    if(sub) sub.textContent="Sua conta foi criada, mas um administrador precisa aprovar seu acesso interno. Enquanto isso, você pode consultar as emendas públicas.";
+    if(btn){ btn.textContent="Sair"; btn.onclick=async()=>{ await sb.auth.signOut(); window.location.reload(); }; }
+  }
+  document.getElementById("btn-login-header").style.display="none";
+  const greetEl=document.getElementById("user-greeting");
+  if(greetEl){
+    greetEl.textContent="Aguardando aprovação";
+    greetEl.style.display="inline";
+  }
+  document.getElementById("loading").style.display="none";
   showTab("dashboard");
 }
 
@@ -4676,9 +4733,17 @@ async function abrirDetalheUsuario(userId){
   const p=_usuariosCache.find(u=>u.id===userId);
   if(!p) return;
   _udUserId=userId;
+  document.getElementById('ud-nome-input').value=p.nome||'';
   document.getElementById('ud-nome').textContent=p.nome||'—';
   document.getElementById('ud-email').textContent=p.email||'';
   document.getElementById('ud-papel').value=(p.papel==='admin')?'admin':'visualizador';
+  const aprovadoEl=document.getElementById('ud-aprovado');
+  if(aprovadoEl) aprovadoEl.checked = p.aprovado !== false;
+  const excluirEl=document.getElementById('ud-excluir');
+  if(excluirEl){
+    excluirEl.style.display = p.id===currentUser?.id ? 'none' : 'inline-flex';
+    excluirEl.disabled = p.id===currentUser?.id;
+  }
   const msg=document.getElementById('ud-msg'); msg.className='fmsg'; msg.textContent='';
   const body=document.getElementById('ud-perms-body');
   body.innerHTML='<tr><td colspan="3" style="padding:10px;color:var(--text3);font-size:12px">Carregando...</td></tr>';
@@ -4708,8 +4773,10 @@ async function salvarPermissoesUsuario(){
   const btn=document.getElementById('ud-salvar');
   const msg=document.getElementById('ud-msg');
   btn.disabled=true; btn.textContent='Salvando...';
+  const novoNome=(document.getElementById('ud-nome-input')?.value||'').trim();
   const novoPapel=document.getElementById('ud-papel').value;
-  const {data:upd,error:errPapel}=await sb.from('profiles').update({papel:novoPapel}).eq('id',_udUserId).select();
+  const aprovado=!!document.getElementById('ud-aprovado')?.checked;
+  const {data:upd,error:errPapel}=await sb.from('profiles').update({nome:novoNome||null,papel:novoPapel,aprovado}).eq('id',_udUserId).select();
   if(errPapel){ msg.textContent='Erro ao salvar papel: '+errPapel.message; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
   if(!upd || upd.length===0){ msg.textContent='⚠️ Sem permissão para alterar este usuário (verifique a política RLS de profiles).'; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
   const rows=PERM_TABS.map(t=>({
@@ -4725,6 +4792,34 @@ async function salvarPermissoesUsuario(){
   setTimeout(()=>fecharDetalheUsuario(),900);
 }
 
+async function excluirUsuario(userId, email){
+  if(bloquearSeVisualiz('usuarios')) return;
+  if(!userId) return;
+  const p=_usuariosCache.find(u=>u.id===userId);
+  const alvoEmail=email || p?.email || 'este usuario';
+  if(userId===currentUser?.id){
+    alert('Por seguranca, voce nao pode excluir a propria conta por aqui.');
+    return;
+  }
+  const pergunta='Excluir a conta de '+alvoEmail+'?\n\nIsso remove o login no Supabase Auth e o perfil do usuario. Esta acao nao pode ser desfeita pela tela.';
+  const ok=window.uiConfirm ? await uiConfirm(pergunta) : confirm(pergunta);
+  if(!ok) return;
+  const msg=document.getElementById('ud-msg');
+  const btn=document.getElementById('ud-excluir');
+  if(btn){ btn.disabled=true; btn.textContent='Excluindo...'; }
+  const {error}=await sb.rpc('admin_delete_user',{p_user_id:userId});
+  if(error){
+    if(msg){ msg.textContent='Erro ao excluir conta: '+error.message; msg.className='fmsg err'; }
+    else alert('Erro ao excluir conta: '+error.message);
+    if(btn){ btn.disabled=false; btn.textContent='Excluir conta'; }
+    return;
+  }
+  if(btn){ btn.disabled=false; btn.textContent='Excluir conta'; }
+  if(window.toast) toast('Conta excluida.','ok');
+  if(_udUserId===userId) fecharDetalheUsuario();
+  carregarUsuarios();
+}
+
 async function carregarUsuarios(){
   document.getElementById("usuarios-loading").style.display="block";
   document.getElementById("usuarios-table").style.display="none";
@@ -4737,12 +4832,18 @@ async function carregarUsuarios(){
   const papelLabel=p=>p==='admin'?'Administrador':'Usuário';
   const papelCor=p=>p==='admin'?"var(--red-text)":"var(--text2)";
   const papelBg=p=>p==='admin'?"var(--red-bg)":"var(--surface2)";
+  const statusLabel=p=>p.aprovado===false?'Pendente':'Aprovado';
+  const statusCor=p=>p.aprovado===false?'var(--amber)':'var(--green)';
+  const statusBg=p=>p.aprovado===false?'var(--amber-bg)':'var(--green-bg)';
   document.getElementById("usuarios-body").innerHTML=profiles.map(p=>`
     <tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:10px 12px;font-weight:500">${p.nome||"—"}</td>
-      <td style="padding:10px 12px;color:var(--text2);font-size:12px">${p.email}</td>
+      <td style="padding:10px 12px;font-weight:500">${_sanEsc(p.nome||"")||"&#8212;"}</td>
+      <td style="padding:10px 12px;color:var(--text2);font-size:12px">${_sanEsc(p.email||"")}</td>
       <td style="padding:10px 12px">
         <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:${papelBg(p.papel)};color:${papelCor(p.papel)}">${papelLabel(p.papel)}</span>
+      </td>
+      <td style="padding:10px 12px">
+        <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${statusBg(p)};color:${statusCor(p)}">${statusLabel(p)}</span>
       </td>
       <td style="padding:10px 12px">
         <select id="papel-${p.id}" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
@@ -4753,6 +4854,8 @@ async function carregarUsuarios(){
       <td style="padding:10px 12px;white-space:nowrap">
         <div style="display:flex;gap:6px;align-items:center">
           ${p.id===currentUser?.id?'<span style="font-size:11px;color:var(--text3)">(você)</span>':`<button onclick="alterarPapel('${p.id}','${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar papel</button>`}
+          ${p.aprovado===false?`<button onclick="aprovarUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">Aprovar</button>`:''}
+          ${p.id===currentUser?.id?'':`<button onclick="excluirUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>`}
           <button onclick="abrirDetalheUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">⚙️ Permissões</button>
         </div>
       </td>
@@ -6620,6 +6723,14 @@ async function revExcluir(ent, id){
   const {error}=await sb.from(ent).delete().eq('id',id);
   if(error){ toast('Erro ao excluir: '+error.message+(def.tipo==='fk'?' (há vínculos — use Mesclar).':''),'error'); return; }
   toast('Cadastro excluído.','success'); carregarRevisao();
+}
+
+async function aprovarUsuario(userId){
+  if(bloquearSeVisualiz('usuarios')) return;
+  const {data,error}=await sb.from("profiles").update({aprovado:true}).eq("id",userId).select();
+  if(error){alert("Erro ao aprovar: "+error.message);return;}
+  if(!data || data.length===0){alert("Sem permissão para aprovar este usuário.");return;}
+  carregarUsuarios();
 }
 
 async function alterarPapel(userId, email){
