@@ -46,7 +46,7 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Equipamentos</div>
-      <div class="sidebar-item" id="sidebar-inventario-ac" onclick="showTab('inventario-ac')"><span class="sidebar-icon">🗂️</span><span class="sidebar-label">Inventário AC</span></div>
+      <div class="sidebar-item" id="sidebar-inventario-ac" onclick="showTab('inventario-ac')"><span class="sidebar-icon">📦</span><span class="sidebar-label">Inventário</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Itens</div>
@@ -896,81 +896,64 @@
   </div>
 </div>
 
-<!-- ══════════════════════ INVENTÁRIO AC ══════════════════════ -->
+<!-- ══════════════════════ INVENTÁRIO ══════════════════════ -->
 <div id="panel-inventario-ac" class="panel">
-  <div id="ac-loading" class="loading"><span class="spinner"></span>Carregando inventário...</div>
-  <div id="ac-main" style="display:none">
+  <div id="inv-loading" class="loading"><span class="spinner"></span>Carregando inventário...</div>
+  <div id="inv-main" style="display:none">
 
     <div class="filters" style="margin-bottom:1rem">
       <div class="fg">
-        <div class="fg-label">Estabelecimento <button onclick="clearF('fa-estab')">✕</button></div>
-        <select id="fa-estab" onchange="filtrarAC()"><option value="">Todos</option></select>
+        <div class="fg-label">Tipo <button onclick="clearF('finv-tipo')">✕</button></div>
+        <select id="finv-tipo" onchange="filtrarInventario()">
+          <option value="">Todos</option>
+          <option value="Aquisição">Aquisição</option>
+          <option value="ATA">ATA</option>
+        </select>
       </div>
       <div class="fg">
-        <div class="fg-label">Situação <button onclick="clearF('fa-situacao')">✕</button></div>
-        <select id="fa-situacao" onchange="filtrarAC()"><option value="">Todas</option></select>
+        <div class="fg-label">Unidade <button onclick="clearF('finv-unidade')">✕</button></div>
+        <select id="finv-unidade" onchange="filtrarInventario()"><option value="">Todas</option></select>
       </div>
       <div class="fg">
-        <div class="fg-label">Status <button onclick="clearF('fa-status')">✕</button></div>
-        <select id="fa-status" onchange="filtrarAC()"><option value="">Todos</option><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option><option value="Baixado">Baixado</option></select>
+        <div class="fg-label">Buscar <button onclick="clearF('finv-busca')">✕</button></div>
+        <input type="text" id="finv-busca" placeholder="item, empresa, patrimônio, empenho..." oninput="filtrarInventario()">
       </div>
-      <div class="fg">
-        <div class="fg-label">Marca <button onclick="clearF('fa-marca')">✕</button></div>
-        <select id="fa-marca" onchange="filtrarAC()"><option value="">Todas</option></select>
-      </div>
-      <div class="fg">
-        <div class="fg-label">Contrato <button onclick="clearF('fa-contrato')">✕</button></div>
-        <select id="fa-contrato" onchange="filtrarAC()"><option value="">Todos</option></select>
-      </div>
-      <div class="fg">
-        <div class="fg-label">Buscar <button onclick="clearF('fa-busca')">✕</button></div>
-        <input type="text" id="fa-busca" placeholder="patrimônio, sala, modelo..." oninput="filtrarAC()">
-      </div>
-      <button class="clear-btn" onclick="clearAllAC()">✕ Limpar</button>
+      <button class="clear-btn" onclick="clearAllInv()">✕ Limpar</button>
     </div>
 
     <div class="metrics" style="margin-bottom:1rem">
-      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="ac-total">—</div><div class="metric-sub">equipamentos</div></div>
-      <div class="metric"><div class="metric-label">Com contrato</div><div class="metric-value" id="ac-contrato" style="color:var(--green)">—</div><div class="metric-sub">vigente</div></div>
-      <div class="metric"><div class="metric-label">Com chamado aberto</div><div class="metric-value" id="ac-chamado-aberto" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
-      <div class="metric"><div class="metric-label">Estabelecimentos</div><div class="metric-value" id="ac-estabs">—</div><div class="metric-sub">unidades</div></div>
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="inv-total">—</div><div class="metric-sub">itens no inventário</div></div>
+      <div class="metric"><div class="metric-label">Aquisições</div><div class="metric-value" id="inv-aq" style="color:var(--blue,#378ADD)">—</div><div class="metric-sub">itens</div></div>
+      <div class="metric"><div class="metric-label">ATAs</div><div class="metric-value" id="inv-ata" style="color:#A371F7">—</div><div class="metric-sub">itens</div></div>
+      <div class="metric"><div class="metric-label">Unidades atendidas</div><div class="metric-value" id="inv-unids">—</div><div class="metric-sub">unidades</div></div>
     </div>
 
     <div class="table-card">
       <div class="table-hdr">
-        <span class="table-hdr-title">Inventário de Ar Condicionado</span>
-        <span class="table-hdr-count" id="ac-count">—</span>
+        <span class="table-hdr-title">Inventário Geral</span>
+        <span class="table-hdr-count" id="inv-count">—</span>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Nº</th><th>Situação</th><th>Estabelecimento</th><th>Sala</th>
-              <th>Patrimônio</th><th>Ano</th><th>Marca</th><th>Modelo</th>
-              <th>BTU</th><th>Tipo</th><th>Contrato</th><th>Emenda vinculada</th><th>Chamados</th>
+              <th>Tipo</th><th>Item</th><th>Unidade</th><th>Empresa</th>
+              <th>Patrimônio</th><th>Entrega na Unidade</th>
+              <th>Empenho</th><th>Emenda</th><th>Contrato/ATA</th><th>Ações</th>
             </tr>
           </thead>
-          <tbody id="ac-body"></tbody>
+          <tbody id="inv-body"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Modal Vincular Emenda -->
-    <div class="modal-overlay" id="modal-vincular-emenda-ac">
-      <div class="modal-box" style="width:600px;max-height:90vh;overflow-y:auto">
-        <div class="modal-title">🔗 Vincular emenda ao equipamento</div>
-        <div id="vea-equip-info" style="font-size:12px;color:var(--text2);margin-bottom:.75rem;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
-        <div class="form-group">
-          <div class="form-label">Buscar item de emenda</div>
-          <input type="search" id="vea-busca" placeholder="Digite o nº da emenda ou descrição do item..." autocomplete="off" oninput="filtrarVincEmendaAC()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px">
-          <div id="vea-options" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:6px;background:var(--surface)"></div>
-        </div>
-        <div id="vea-selecionado" style="display:none;padding:8px 12px;background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);border-radius:var(--radius-sm);font-size:13px;margin-top:8px"></div>
+    <!-- Modal Detalhes do Item -->
+    <div class="modal-overlay" id="modal-inv-detalhe">
+      <div class="modal-box" style="width:700px;max-height:90vh;overflow-y:auto">
+        <div class="modal-title">📋 Detalhes do Item</div>
+        <div id="inv-detalhe-content"></div>
         <div class="form-actions" style="margin-top:1rem">
-          <button class="btn-primary" id="vea-salvar" onclick="salvarVinculoEmendaAC()">🔗 Vincular</button>
-          <button onclick="limparVinculoEmendaAC()" style="font-size:13px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);color:var(--red-text,#991b1b);background:var(--red-bg,#fee2e2);cursor:pointer">🗑 Remover vínculo</button>
-          <button class="btn-secondary" onclick="fecharModalVincularEmendaAC()">Cancelar</button>
-          <span id="vea-msg" class="fmsg"></span>
+          <button class="btn-secondary" onclick="document.getElementById('modal-inv-detalhe').classList.remove('active')">Fechar</button>
         </div>
       </div>
     </div>
@@ -2812,7 +2795,7 @@ function showTab(name){
   if(name==="chamados"&&!chamadosRows.length) loadChamados();
   if(name==="chamados-novos"&&!chamadosNovosCarregado) loadChamadosNovos();
   if(name==="fiscalizacao"&&!fiscalizacaoCarregado) loadFiscalizacao();
-  if(name==="inventario-ac"&&!acRows.length){loadAC();if(!chamadosRows.length)loadChamados();}
+  if(name==="inventario-ac"&&!inventarioCarregado) loadInventario();
   if(name==="atas"&&!atasItens.length) loadAtas();
   if(name==="itens"&&!itensCarregado) loadItens();
   if(name==="contratos"&&!contratosCarregado) loadContratos();
@@ -2985,42 +2968,98 @@ async function loadChamados(){
   }
 }
 
-async function loadAC(){
-  document.getElementById("ac-loading").style.display="block";
-  document.getElementById("ac-main").style.display="none";
+let inventarioRows=[], inventarioCarregado=false, _invFiltered=[];
+async function loadInventario(){
+  document.getElementById('inv-loading').style.display='block';
+  document.getElementById('inv-main').style.display='none';
   try{
-    // Ler do Supabase em vez do CSV
-    const {data,error}=await sb.from("inventario_ac")
-      .select("*, emenda_it:emenda_item_id(id, emenda, item, emenda_ref:emenda_id(emenda, ano))")
-      .order("num");
-    if(error) throw new Error(error.message);
-    acRows=data.map(r=>({
-      id:r.id,
-      num:r.num||"",
-      situacao:(r.situacao||"").trim(),
-      estabelecimento:(r.estabelecimento||"").trim(),
-      endereco:(r.endereco||"").trim(),
-      sala:(r.sala||"").trim(),
-      patrimonio:String(r.patrimonio||"").trim(),
-      ano_fab:(r.ano_fab||"").trim(),
-      marca:(r.marca||"").trim(),
-      modelo:(r.modelo||"").trim(),
-      serie:(r.serie||"").trim(),
-      btu:(r.btu||"").trim(),
-      qf:(r.quente_frio||"").trim(),
-      tipo:(r.tipo||"").trim(),
-      contrato:(r.contrato||"").trim(),
-      emenda_item_id:r.emenda_item_id||null,
-      emenda_label:r.emenda_it
-        ?`Em. ${r.emenda_it.emenda}/${r.emenda_it.emenda_ref?.ano||'?'} — ${r.emenda_it.item}`
-        :null,
-    }));
-    popularFiltrosAC();
-    filtrarAC();
-    document.getElementById("ac-loading").style.display="none";
-    document.getElementById("ac-main").style.display="block";
+    const [{data:aq,error:e1},{data:at,error:e2}]=await Promise.all([
+      sb.from('itens_entregas')
+        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,emenda_item_id, processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
+        .not('data_entrega_unidade','is',null)
+        .order('data_entrega_unidade',{ascending:false}),
+      sb.from('atas_execucao')
+        .select('*')
+        .not('data_entrega_unidade','is',null)
+        .order('data_entrega_unidade',{ascending:false})
+    ]);
+    if(e1) throw e1;
+    if(e2) throw e2;
+    const rows=[];
+    (aq||[]).forEach(r=>{
+      const it=r.itens||{};
+      const ei=it.emenda_it||{};
+      const em=ei.emendas||{};
+      rows.push({
+        tipo:'Aquisição', id:r.id,
+        item:it.descricao||'',
+        unidade:it.unidades?.nome||'',
+        empresa:it.fornecedores?.razao_social||'',
+        cnpj:it.fornecedores?.cnpj_normalizado||'',
+        processo:it.processos?.identificador||'',
+        contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
+        cpl:it.contratos?.cpl||'',
+        numero_contrato:it.contratos?.numero_contrato||'',
+        qtde:Number(r.qtde_recebida)||0,
+        patrimonio:r.patrimonio||'',
+        numero_serie:r.numero_serie||'',
+        empenho:r.empenhos?.numero||r.empenho||'',
+        valor_empenhado:r.empenhos?.valor_empenhado||null,
+        empenho_data:_toISODate(r.empenhos?.data_emissao),
+        nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
+        nf_data:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data),
+        nf_valor:r.notas_fiscais?.valor_total||null,
+        data_recebimento:_toISODate(r.data_recebimento),
+        data_entrega_unidade:_toISODate(r.data_entrega_unidade),
+        recebido_por:r.recebido_por||'',
+        recebimento_tipo:r.recebimento_tipo||'',
+        termo_responsavel:r.termo_responsavel||'',
+        termo_cargo:r.termo_cargo||'',
+        termo_arquivo:r.termo_arquivo||'',
+        confirmacao_obs:r.confirmacao_obs||'',
+        af_numero:r.af_numero||'',
+        af_data:_toISODate(r.af_data),
+        emenda:ei.emenda||'',
+        emenda_ano:em.ano||'',
+        parlamentar:em.parlamentar||'',
+        emenda_item_desc:ei.item||''
+      });
+    });
+    (at||[]).forEach(r=>{
+      rows.push({
+        tipo:'ATA', id:r.id,
+        item:r.item||'',
+        unidade:r.unidade||'',
+        empresa:'', cnpj:'',
+        processo:r.cpl||'',
+        contrato:r.sim||'',
+        cpl:r.cpl||'', numero_contrato:r.sim||'',
+        qtde:Number(r.qtde)||0,
+        patrimonio:r.patrimonio||'',
+        numero_serie:r.numero_serie||'',
+        empenho:r.empenho||'',
+        valor_empenhado:null, empenho_data:null,
+        nota_fiscal:r.nf||'',
+        nf_data:null, nf_valor:null,
+        data_recebimento:_toISODate(r.dt_entrega||r.data_af),
+        data_entrega_unidade:_toISODate(r.data_entrega_unidade),
+        recebido_por:'', recebimento_tipo:'',
+        termo_responsavel:r.termo_responsavel||'',
+        termo_cargo:r.termo_cargo||'',
+        termo_arquivo:r.termo_arquivo||'',
+        confirmacao_obs:r.confirmacao_obs||'',
+        af_numero:'', af_data:null,
+        emenda:'', emenda_ano:'', parlamentar:'', emenda_item_desc:''
+      });
+    });
+    inventarioRows=rows;
+    inventarioCarregado=true;
+    _popularFiltrosInv();
+    filtrarInventario();
+    document.getElementById('inv-loading').style.display='none';
+    document.getElementById('inv-main').style.display='block';
   }catch(e){
-    document.getElementById("ac-loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro ao carregar inventário: ${e.message}</div>`;
+    document.getElementById('inv-loading').innerHTML=`<div style="color:var(--red)">⚠️ Erro ao carregar inventário: ${_sanEsc(e.message)}</div>`;
   }
 }
 
@@ -3437,161 +3476,117 @@ async function salvarControleChamado(){
   setTimeout(()=>fecharModalChamado(),1500);
 }
 
-// ═══ INVENTÁRIO AC ═══
-function popularFiltrosAC(){
-  const sel=(id,vals)=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;el.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v}</option>`).join("")};
-  sel("fa-estab",[...new Set(acRows.map(r=>r.estabelecimento).filter(Boolean))].sort());
-  sel("fa-situacao",[...new Set(acRows.map(r=>r.situacao).filter(Boolean))].sort());
-  sel("fa-marca",[...new Set(acRows.map(r=>r.marca).filter(Boolean))].sort());
-  sel("fa-contrato",[...new Set(acRows.map(r=>r.contrato).filter(Boolean))].sort());
+// ═══ INVENTÁRIO GERAL ═══
+function _popularFiltrosInv(){
+  const unidades=[...new Set(inventarioRows.map(r=>r.unidade).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const sel=document.getElementById('finv-unidade');
+  if(sel) sel.innerHTML='<option value="">Todas</option>'+unidades.map(u=>`<option value="${_sanEsc(u)}">${_sanEsc(u)}</option>`).join('');
 }
 
-function clearAllAC(){
-  ["fa-estab","fa-situacao","fa-marca","fa-contrato","fa-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
-  filtrarAC();
+function clearAllInv(){
+  ['finv-tipo','finv-unidade'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const b=document.getElementById('finv-busca');if(b)b.value='';
+  filtrarInventario();
 }
 
-function _acStatusDerivado(sit){
-  const s=String(sit||'').toUpperCase();
-  if(s.includes('BAIX')) return 'Baixado';
-  if(s.includes('INATIV')||s.includes('DESATIV')) return 'Inativo';
-  return 'Ativo';
-}
-function filtrarAC(){
-  const estab=document.getElementById("fa-estab")?.value||"";
-  const sit=document.getElementById("fa-situacao")?.value||"";
-  const status=document.getElementById("fa-status")?.value||"";
-  const marca=document.getElementById("fa-marca")?.value||"";
-  const cont=document.getElementById("fa-contrato")?.value||"";
-  const busca=document.getElementById("fa-busca")?.value||"";
-
-  let rows=acRows.filter(r=>{
-    if(estab&&r.estabelecimento!==estab) return false;
-    if(sit&&r.situacao!==sit) return false;
-    if(status&&_acStatusDerivado(r.situacao)!==status) return false;
-    if(marca&&r.marca!==marca) return false;
-    if(cont&&r.contrato!==cont) return false;
-    if(busca&&!matchBusca([r.patrimonio,r.sala,r.modelo,r.estabelecimento,r.serie].join(" "),busca)) return false;
+function filtrarInventario(){
+  const tipo=document.getElementById('finv-tipo')?.value||'';
+  const unidade=document.getElementById('finv-unidade')?.value||'';
+  const q=(document.getElementById('finv-busca')?.value||'').toLowerCase();
+  _invFiltered=inventarioRows.filter(r=>{
+    if(tipo&&r.tipo!==tipo) return false;
+    if(unidade&&r.unidade!==unidade) return false;
+    if(q){const hay=[r.item,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.processo,r.numero_serie].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
+  const total=_invFiltered.length;
+  const aq=_invFiltered.filter(r=>r.tipo==='Aquisição').length;
+  const ata=_invFiltered.filter(r=>r.tipo==='ATA').length;
+  const unids=new Set(_invFiltered.map(r=>r.unidade).filter(Boolean)).size;
+  document.getElementById('inv-total').textContent=total;
+  document.getElementById('inv-aq').textContent=aq;
+  document.getElementById('inv-ata').textContent=ata;
+  document.getElementById('inv-unids').textContent=unids;
+  document.getElementById('inv-count').textContent=total+' item(s)';
+  renderInventario();
+}
 
-  const total=rows.length;
-  const comContrato=rows.filter(r=>r.situacao?.toUpperCase().includes("CONTRATO VIGENTE")).length;
-  const estabs=new Set(rows.map(r=>r.estabelecimento).filter(Boolean)).size;
-
-  // Cruzar com chamados abertos
-  const chamadosAbertosAC=rows.filter(r=>{
-    if(!r.patrimonio||r.patrimonio==="IMÓVEL LOCADO"||r.patrimonio==="SEM NUMERO") return false;
-    return chamadosRows.some(c=>{
-      const ctrl=getControle(c.protocolo);
-      return c.patrimonio===r.patrimonio && ctrl.status!=="Concluído";
-    });
-  }).length;
-
-  document.getElementById("ac-total").textContent=total;
-  document.getElementById("ac-contrato").textContent=comContrato;
-  document.getElementById("ac-chamado-aberto").textContent=chamadosAbertosAC;
-  document.getElementById("ac-estabs").textContent=estabs;
-  document.getElementById("ac-count").textContent=`${total} equipamentos`;
-
-  document.getElementById("ac-body").innerHTML=rows.map(r=>{
-    const chamadosEq=chamadosRows.filter(c=>c.patrimonio&&c.patrimonio===r.patrimonio);
-    const temAberto=chamadosEq.some(c=>getControle(c.protocolo).status!=="Concluído");
-    const sitColor=r.situacao?.toUpperCase().includes("CONTRATO VIGENTE")?"var(--green)":r.situacao?.toUpperCase().includes("BAIXA")?"var(--text3)":"var(--amber)";
-    return`<tr>
-      <td style="color:var(--text3);font-size:11px">${r.num}</td>
-      <td><span class="badge" style="background:${sitColor}22;color:${sitColor};font-size:10px">${r.situacao||"—"}</span></td>
-      <td style="white-space:nowrap;font-size:12px">${r.estabelecimento||"—"}</td>
-      <td style="font-size:12px">${r.sala||"—"}</td>
-      <td style="font-size:11px;font-weight:500">${r.patrimonio||"—"}</td>
-      <td style="font-size:11px">${r.ano_fab||"—"}</td>
-      <td style="font-size:12px">${r.marca||"—"}</td>
-      <td style="font-size:11px">${r.modelo||"—"}</td>
-      <td style="font-size:11px;text-align:right">${r.btu||"—"}</td>
-      <td style="font-size:11px">${r.tipo||"—"}</td>
-      <td style="font-size:11px">${r.contrato||"—"}</td>
-      <td style="font-size:11px;max-width:180px">
-        ${r.emenda_label
-          ?`<span title="${_sanEsc(r.emenda_label)}" style="color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:150px;vertical-align:middle">${_sanEsc(r.emenda_label)}</span>`
-          :`<span style="color:var(--text3)">—</span>`}
-        ${_isAdmin()?`<button onclick="vincularEmendaAC('${r.id}')" title="Vincular emenda" style="margin-left:4px;font-size:10px;padding:2px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface);cursor:pointer;vertical-align:middle">🔗</button>`:''}
-      </td>
-      <td style="font-size:11px">
-        ${chamadosEq.length===0?'<span style="color:var(--text3)">—</span>':
-          `<span style="color:${temAberto?'var(--red)':'var(--green)'};font-weight:500;cursor:pointer" onclick="verChamadosEquip('${r.patrimonio}')">${chamadosEq.length} chamado${chamadosEq.length>1?'s':''}${temAberto?' ⚠️':' ✓'}</span>`}
+function renderInventario(){
+  const tbody=document.getElementById('inv-body');
+  if(!_invFiltered.length){
+    tbody.innerHTML='<tr><td colspan="10" style="padding:1.5rem;text-align:center;color:var(--text3)">Nenhum item no inventário ainda. Confirme a entrega na unidade para que os itens apareçam aqui.</td></tr>';
+    return;
+  }
+  tbody.innerHTML=_invFiltered.map((r,i)=>{
+    const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
+    const emendaLabel=r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):'—';
+    return`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 8px;white-space:nowrap"><span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span></td>
+      <td style="padding:6px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(r.item)}">${_sanEsc(r.item||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap;font-size:12px">${_sanEsc(r.unidade||'—')}</td>
+      <td style="padding:6px 8px;font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(r.empresa)}">${_sanEsc(r.empresa||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap;font-weight:500">${_sanEsc(r.patrimonio||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap">${r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):'—'}</td>
+      <td style="padding:6px 8px;white-space:nowrap;font-size:11px;color:var(--text2)">${_sanEsc(r.empenho||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap;font-size:11px;color:var(--text2)">${_sanEsc(emendaLabel)}</td>
+      <td style="padding:6px 8px;white-space:nowrap;font-size:11px">${_sanEsc(r.contrato||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap">
+        <button onclick="abrirDetalheInv(${i})" style="font-size:11px;padding:3px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Ver tudo</button>
+        ${r.termo_arquivo?`<button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;margin-left:4px">📄 Termo</button>`:''}
       </td>
     </tr>`;
-  }).join("");
+  }).join('');
 }
 
-// ═══ VINCULAR EMENDA AO INVENTÁRIO AC ═══
-let _veaAcId=null, _veaItemSelecionado=null, _emendaItensVeaCache=null;
-async function carregarEmendaItensVeaCache(){
-  if(_emendaItensVeaCache) return;
-  const {data}=await sb.from('emenda_itens').select('id, emenda, item, emenda_ref:emenda_id(emenda,ano)').order('emenda');
-  _emendaItensVeaCache=data||[];
+function _invField(label,val){
+  if(!val||val==='—') return '';
+  return`<div style="display:flex;gap:.5rem;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2);min-width:180px;flex-shrink:0">${label}</span><span style="color:var(--text);font-weight:500">${val}</span></div>`;
 }
-async function vincularEmendaAC(acId){
-  if(!_isAdmin()){toast('Apenas administradores podem vincular emendas.','error');return;}
-  _veaAcId=acId; _veaItemSelecionado=null;
-  const row=acRows.find(r=>r.id===acId);
-  const info=document.getElementById('vea-equip-info');
-  if(info) info.textContent=`Equipamento: ${row?.estabelecimento||''} — Sala: ${row?.sala||''} — Pat: ${row?.patrimonio||''}`;
-  const sel=document.getElementById('vea-selecionado');
-  if(row?.emenda_label){sel.textContent='Vínculo atual: '+row.emenda_label;sel.style.display='block';}
-  else{sel.style.display='none';}
-  document.getElementById('vea-busca').value='';
-  document.getElementById('vea-msg').className='fmsg';
-  await carregarEmendaItensVeaCache();
-  filtrarVincEmendaAC();
-  document.getElementById('modal-vincular-emenda-ac').classList.add('active');
-}
-function filtrarVincEmendaAC(){
-  const termo=normalizar(document.getElementById('vea-busca')?.value||'');
-  const lista=(_emendaItensVeaCache||[]).filter(ei=>!termo||normalizar(`${ei.emenda} ${ei.item} ${ei.emenda_ref?.ano||''}`).includes(termo)).slice(0,60);
-  const opts=document.getElementById('vea-options');
-  opts.innerHTML=lista.length
-    ?lista.map(ei=>`<div style="padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''" onclick="selecionarItemEmendaAC('${ei.id}','${_sanEsc(ei.emenda)}',${ei.emenda_ref?.ano||0},'${_sanEsc(ei.item.replace(/'/g,"\\'"))}')"><span style="font-weight:600;color:var(--blue)">Em. ${_sanEsc(ei.emenda)}/${ei.emenda_ref?.ano||'?'}</span><span style="color:var(--text2);margin-left:8px;font-size:12px">${_sanEsc(ei.item)}</span></div>`).join('')
-    :'<div style="padding:10px;color:var(--text3);font-size:13px">Nenhum item encontrado</div>';
-}
-function selecionarItemEmendaAC(id,emenda,ano,item){
-  _veaItemSelecionado={id,emenda,ano,item};
-  const div=document.getElementById('vea-selecionado');
-  div.textContent=`✓ Selecionado: Emenda ${emenda}/${ano} — ${item}`;
-  div.style.display='block';
-}
-function fecharModalVincularEmendaAC(){
-  document.getElementById('modal-vincular-emenda-ac').classList.remove('active');
-  _veaAcId=null; _veaItemSelecionado=null;
-}
-async function salvarVinculoEmendaAC(){
-  if(!_veaAcId||!_veaItemSelecionado){showMsg('vea','Selecione um item de emenda primeiro.','err');return;}
-  const btn=document.getElementById('vea-salvar'); btn.disabled=true; btn.textContent='Salvando...';
-  const {error}=await sb.from('inventario_ac').update({emenda_item_id:_veaItemSelecionado.id}).eq('id',_veaAcId);
-  btn.disabled=false; btn.textContent='🔗 Vincular';
-  if(error){showMsg('vea','Erro: '+error.message,'err');return;}
-  const idx=acRows.findIndex(r=>r.id===_veaAcId);
-  if(idx>=0){acRows[idx].emenda_item_id=_veaItemSelecionado.id; acRows[idx].emenda_label=`Em. ${_veaItemSelecionado.emenda}/${_veaItemSelecionado.ano} — ${_veaItemSelecionado.item}`;}
-  toast('Emenda vinculada com sucesso!','success');
-  fecharModalVincularEmendaAC(); filtrarAC();
-}
-async function limparVinculoEmendaAC(){
-  if(!_veaAcId) return;
-  if(!await uiConfirm('Remover o vínculo de emenda deste equipamento?')) return;
-  const {error}=await sb.from('inventario_ac').update({emenda_item_id:null}).eq('id',_veaAcId);
-  if(error){toast('Erro: '+error.message,'error');return;}
-  const idx=acRows.findIndex(r=>r.id===_veaAcId);
-  if(idx>=0){acRows[idx].emenda_item_id=null; acRows[idx].emenda_label=null;}
-  toast('Vínculo removido.','success');
-  fecharModalVincularEmendaAC(); filtrarAC();
-}
+function _fmtBRL(v){if(!v&&v!==0)return null;return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
-function verChamadosEquip(patrimonio){
-  // Vai para aba chamados e filtra pelo patrimônio
-  showTab('chamados');
-  document.getElementById("fc-busca").value=patrimonio;
-  filtrarChamados();
+function abrirDetalheInv(idx){
+  const r=_invFiltered[idx];if(!r)return;
+  const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
+  const campos=[
+    ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
+    ['Item / Descrição',_sanEsc(r.item)],
+    ['Unidade de destino',_sanEsc(r.unidade)],
+    ['Empresa / Fornecedor',_sanEsc(r.empresa)+(r.cnpj?` <span style="color:var(--text3);font-size:11px">(CNPJ: ${_sanEsc(r.cnpj)})</span>`:'')],
+    ['Quantidade recebida',r.qtde||null],
+    ['Patrimônio',_sanEsc(r.patrimonio)],
+    ['Número de série',_sanEsc(r.numero_serie)],
+    ['Data entrega na unidade',r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):null],
+    ['Data do recebimento (depósito)',r.data_recebimento?fmtDate(r.data_recebimento):null],
+    ['Recebido por',_sanEsc(r.recebido_por)],
+    ['Tipo de recebimento',_sanEsc(r.recebimento_tipo)],
+    ['Empenho',_sanEsc(r.empenho)],
+    ['Valor empenhado',_fmtBRL(r.valor_empenhado)],
+    ['Data emissão empenho',r.empenho_data?fmtDate(r.empenho_data):null],
+    ['Nota Fiscal',_sanEsc(r.nota_fiscal)],
+    ['Data da NF',r.nf_data?fmtDate(r.nf_data):null],
+    ['Valor da NF',_fmtBRL(r.nf_valor)],
+    ['Emenda',r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):null],
+    ['Parlamentar',_sanEsc(r.parlamentar)],
+    ['Item da emenda',_sanEsc(r.emenda_item_desc)],
+    ['Processo / Licitação',_sanEsc(r.processo)],
+    ['Contrato / ATA',_sanEsc(r.contrato)],
+    ['AF Nº',_sanEsc(r.af_numero)],
+    ['Data da AF',r.af_data?fmtDate(r.af_data):null],
+    ['Responsável na unidade',_sanEsc(r.termo_responsavel)],
+    ['Cargo do responsável',_sanEsc(r.termo_cargo)],
+    ['Observações',_sanEsc(r.confirmacao_obs)]
+  ].filter(([,v])=>v&&String(v).trim()&&v!=='—');
+  document.getElementById('inv-detalhe-content').innerHTML=`
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(r.item||'Item')}</div>
+    <div>${campos.map(([l,v])=>_invField(l,v)).join('')}</div>
+    ${r.termo_arquivo?`<div style="margin-top:12px"><button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:12px;padding:5px 14px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);cursor:pointer">📄 Abrir Termo de Entrega</button></div>`:''}
+  `;
+  document.getElementById('modal-inv-detalhe').classList.add('active');
 }
+window.loadInventario=loadInventario;
+window.filtrarInventario=filtrarInventario;
+window.clearAllInv=clearAllInv;
+window.abrirDetalheInv=abrirDetalheInv;
 
 // ═══ ATAS ═══
 async function loadAtas(){
@@ -6365,6 +6360,8 @@ async function salvarConfirmacaoUnidade(){
     if(window.toast) toast('Entrega na unidade confirmada','success');
     confirmacoesCarregado=false;
     await loadConfirmacoes();
+    inventarioCarregado=false;
+    if(window._activeTab==='inventario-ac') loadInventario();
     itensEntregasCarregado=false;
     if(document.getElementById('itens-sub-entregas')?.style.display!=='none') await loadItensEntregas();
     if(tipo==='ATA'&&typeof loadAtas==='function') loadAtas();
