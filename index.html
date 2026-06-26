@@ -287,7 +287,8 @@
       <div class="form-group"><div class="form-label">Valor unitário executado *</div><input type="number" id="ei-vl-unit" min="0" step="0.01" oninput="recalcularEditarItem()" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Valor total executado</div><input type="number" id="ei-vl-total" step="0.01" readonly style="background:var(--surface2);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">CPL / Processo</div><input type="text" id="ei-cpl" style="background:var(--surface);color:var(--text)"></div>
-      <div class="form-group"><div class="form-label">Status da contratação</div><input type="text" id="ei-status" list="ei-status-opcoes" style="background:var(--surface);color:var(--text)"><datalist id="ei-status-opcoes"><option value="Não iniciada"><option value="Em andamento"><option value="Aguardando entrega"><option value="Entregue"><option value="Concluído"></datalist></div>
+      <div class="form-group"><div class="form-label">Status (categoria)</div><select id="ei-status-id" style="background:var(--surface);color:var(--text)"><option value="">— selecione —</option></select></div>
+      <div class="form-group"><div class="form-label">Status — detalhe / observação</div><input type="text" id="ei-status" list="ei-status-opcoes" style="background:var(--surface);color:var(--text)"><datalist id="ei-status-opcoes"><option value="Não iniciada"><option value="Em andamento"><option value="Aguardando entrega"><option value="Entregue"><option value="Concluído"></datalist></div>
       <div class="form-group"><div class="form-label">Nota fiscal</div><input type="text" id="ei-nf" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="ei-empenho" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Patrimônio</div><input type="text" id="ei-patrimonio" style="background:var(--surface);color:var(--text)"></div>
@@ -1024,7 +1025,6 @@
           <div class="form-group"><div class="form-label">BTU</div><input type="text" id="nl-btu" placeholder="ex: 24000"></div>
           <div class="form-group"><div class="form-label">Q/F</div><input type="text" id="nl-qf" placeholder="ex: FRIO"></div>
           <div class="form-group"><div class="form-label">Tipo</div><input type="text" id="nl-tipo" placeholder="ex: SPLIT HI WALL"></div>
-          <div class="form-group"><div class="form-label">Contrato</div><input type="text" id="nl-contrato" placeholder="ex: AB, ESP, VISA..."></div>
           <div class="form-group full">
             <div class="form-label">Emenda vinculada (opcional)</div>
             <input type="search" id="nl-emenda-busca" placeholder="Digite o nº da emenda ou item..." autocomplete="off" oninput="filtrarNlEmendaAC()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px">
@@ -6915,7 +6915,6 @@ const AC_COLUNAS = [
   {key:"btu",label:"BTU",width:"70px"},
   {key:"quente_frio",label:"Q/F",width:"60px"},
   {key:"tipo",label:"Tipo",width:"120px"},
-  {key:"contrato",label:"Contrato",width:"130px"},
 ];
 
 let _plAcData=[];
@@ -7051,7 +7050,7 @@ function selecionarNlEmendaAC(id,emenda,ano,item){
   document.getElementById('nl-emenda-options').style.display='none';
 }
 function adicionarLinhaAC(){
-  ["nl-num","nl-situacao","nl-estab","nl-end","nl-sala","nl-pat","nl-ano","nl-marca","nl-modelo","nl-serie","nl-btu","nl-qf","nl-tipo","nl-contrato","nl-emenda-busca","nl-emenda-item-id"]
+  ["nl-num","nl-situacao","nl-estab","nl-end","nl-sala","nl-pat","nl-ano","nl-marca","nl-modelo","nl-serie","nl-btu","nl-qf","nl-tipo","nl-emenda-busca","nl-emenda-item-id"]
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const sel=document.getElementById('nl-emenda-sel'); if(sel)sel.style.display='none';
   const opts=document.getElementById('nl-emenda-options'); if(opts)opts.style.display='none';
@@ -7078,7 +7077,6 @@ async function salvarNovaLinhaAC(){
     btu:document.getElementById("nl-btu").value.trim(),
     quente_frio:document.getElementById("nl-qf").value.trim(),
     tipo:document.getElementById("nl-tipo").value.trim(),
-    contrato:document.getElementById("nl-contrato").value.trim(),
     emenda_item_id:emendaItemId,
   };
   const {data,error}=await sb.from("inventario_ac").insert(item).select().single();
@@ -7500,6 +7498,10 @@ async function loadData(){
   try{
     // ── Leitura via SUPABASE (emenda_itens + emendas) ──
     // Paginação: o Supabase limita a 1000 linhas por requisição.
+    if(!window._catEmendaItem){
+      const {data:_so}=await sb.from("status_opcoes").select("id,nome,ordem").eq("contexto","emenda_item").order("ordem");
+      window._catEmendaItem=_so||[]; window._catById={}; (_so||[]).forEach(o=>{window._catById[o.id]=o.nome;});
+    }
     let raw=[], desde=0; const PAG=1000;
     while(true){
       const {data,error}=await sb
@@ -7537,6 +7539,7 @@ async function loadData(){
         vl_total_cadastrado:num(i.vl_total_cadastrado),
         cpl:(i.cpl||"").toString().trim(),
         status_raw:(i.status||"").toString().trim(),
+        status_id:(i.status_id!=null?i.status_id:null),
         nota_fiscal:(i.nota_fiscal||"").toString().trim(),
         empenho:(i.empenho||"").toString().trim(),
         patrimonio:(i.patrimonio||"").toString().trim(),
@@ -7545,7 +7548,7 @@ async function loadData(){
         ordem_pagamento:(i.ordem_pagamento||"").toString().trim(),
         data_atualizacao:(i.data_atualizacao||"").toString().trim(),
       };
-    }).map(r=>({...r,status_cat:catStatus(r.status_raw)}));
+    }).map(r=>({...r,status_cat:(r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
     const [{data:eData},{data:uData},{data:pData}]=await Promise.all([
       sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido").order("emenda",{ascending:true}),
       sb.from("unidades").select("id,nome").eq("ativo",true).order("nome"),
@@ -8079,6 +8082,12 @@ function abrirEditarItem(id){
   document.getElementById('ei-planejado').innerHTML=`<strong>Item planejado:</strong> ${_sanEsc(r.item_cadastrado||'—')}<br><strong>Qtde planejada:</strong> ${_sanEsc(r.qtde_cadastrada||'—')} &nbsp;·&nbsp; <strong>Vl. unit. planejado:</strong> ${fmtFull(Number(r.vl_unitario_cadastrado)||0)} &nbsp;·&nbsp; <strong>Vl. total planejado:</strong> ${fmtFull(Number(r.vl_total_cadastrado)||0)}`;
   const valores={'ei-item':r.item,'ei-qtde':r.qtde,'ei-vl-unit':r.vl_unitario,'ei-cpl':r.cpl,'ei-status':r.status_raw,'ei-nf':r.nota_fiscal,'ei-empenho':r.empenho,'ei-patrimonio':r.patrimonio,'ei-unidade-entrega':r.unidade_entrega,'ei-data-entrega':r.data_entrega};
   Object.entries(valores).forEach(([campo,valor])=>document.getElementById(campo).value=valor??'');
+  (function(){
+    const sel=document.getElementById('ei-status-id'); if(!sel) return;
+    const opts=window._catEmendaItem||[];
+    sel.innerHTML='<option value="">— selecione —</option>'+opts.map(o=>`<option value="${o.id}">${_sanEsc(o.nome)}</option>`).join('');
+    sel.value=r.status_id!=null?String(r.status_id):'';
+  })();
   recalcularEditarItem();
   document.getElementById('msg-ei').className='fmsg';
   document.getElementById('modal-editar-item').classList.add('active');
@@ -8097,6 +8106,7 @@ async function salvarEditarItem(){
   const payload={
     item,qtde,vl_unitario:vlUnit,vl_total:Number((qtde*vlUnit).toFixed(2)),
     cpl:document.getElementById('ei-cpl').value.trim(),status:document.getElementById('ei-status').value.trim(),
+    status_id:(function(v){return v?Number(v):null;})(document.getElementById('ei-status-id').value),
     nota_fiscal:document.getElementById('ei-nf').value.trim(),empenho:document.getElementById('ei-empenho').value.trim(),
     patrimonio:document.getElementById('ei-patrimonio').value.trim(),unidade_entrega:document.getElementById('ei-unidade-entrega').value.trim(),
     data_entrega:document.getElementById('ei-data-entrega').value||null
@@ -8105,7 +8115,7 @@ async function salvarEditarItem(){
   const {error}=await sb.from('emenda_itens').update(payload).eq('id',_editItemId);
   if(error){showMsg('ei','Erro: '+error.message,'err');btn.disabled=false;btn.textContent='Salvar';return;}
   const r=allRows.find(item=>String(item.id)===String(_editItemId));
-  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_cat:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade_entrega:payload.unidade_entrega,data_entrega:payload.data_entrega||''});
+  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_id:payload.status_id,status_cat:(payload.status_id!=null&&window._catById&&window._catById[payload.status_id])?window._catById[payload.status_id]:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade_entrega:payload.unidade_entrega,data_entrega:payload.data_entrega||''});
   saldoEmendaCarregado=false;
   applyFilters();
   renderTable();
@@ -8766,7 +8776,7 @@ async function salvarStatus(){
     const emp=(document.getElementById("emp-"+idx)||{value:""}).value.trim();
     const pat=(document.getElementById("pat-"+idx)||{value:""}).value.trim();
     const patch={cpl:cpl||null,nota_fiscal:nf||null,empenho:emp||null,patrimonio:pat||null,data_atualizacao:hoje};
-    if(status) patch.status=status;
+    if(status){ patch.status=status; const _o=(window._catEmendaItem||[]).find(o=>o.nome===catStatus(status)); patch.status_id=_o?_o.id:null; }
     const {error}=await sb.from("emenda_itens").update(patch).eq("id",id);
     if(error){erros++;console.error("Erro item",id,error.message);}else{done++;}
     btn.textContent=`Salvando ${done+erros}/${checks.length}...`;
