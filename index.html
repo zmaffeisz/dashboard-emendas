@@ -5660,7 +5660,7 @@ async function abrirVincularEmpenho(itemId){
   _veEmpenhos=(emps||[]).filter(e=>!e.contrato_id || String(e.contrato_id)===String(it?.contrato_id));
   const {data:ja}=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('item_id',itemId);
   const prev=Object.fromEntries((ja||[]).map(x=>[String(x.empenho_id),x]));
-  if(!_veEmpenhos.length){ lista.innerHTML='<div style="color:var(--text3)">Nenhum empenho compatível. Cadastre em <b>Itens → Empenhos</b> (vinculando ao contrato deste item).</div>'; return; }
+  if(!_veEmpenhos.length){ lista.innerHTML='<div style="color:var(--text3)">Nenhum empenho compatível. Cadastre em <b>Itens → Empenhos</b> (vinculando ao contrato deste item).</div>'; document.getElementById('modal-vincular-empenho').classList.add('active'); return; }
   const inp='font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
   lista.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text2);text-align:left;font-size:11px">
     <th style="padding:4px 6px"></th><th style="padding:4px 6px">Empenho</th><th style="padding:4px 6px;text-align:right">Saldo</th><th style="padding:4px 6px;width:90px">Qtde</th><th style="padding:4px 6px;width:120px">Valor</th></tr></thead><tbody>${
