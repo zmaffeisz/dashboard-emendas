@@ -2377,7 +2377,15 @@
     <button class="btn-primary" onclick="fazerLogin()" id="btn-fazer-login" style="width:100%;padding:10px;font-size:14px;justify-content:center">Entrar</button>
     <button class="btn-secondary" onclick="document.getElementById('modal-login').classList.remove('active')" style="width:100%;margin-top:8px;text-align:center;padding:9px">Cancelar</button>
     <div style="text-align:center;margin-top:.875rem;border-top:1px solid var(--border);padding-top:.875rem">
-      <a href="cadastro.html" style="font-size:13px;color:var(--blue);text-decoration:none">Não tem conta? Criar acesso</a>
+      <a href="cadastro.html" style="font-size:13px;color:var(--blue);text-decoration:none">Não tem conta? Criar acesso</a><br>
+      <button type="button" onclick="toggleEsqueceuSenha()" style="margin-top:8px;font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+    </div>
+    <div id="forgot-section" style="display:none;margin-top:.75rem;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">Redefinir senha</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Informe o e-mail da conta. Você receberá um link para criar uma nova senha.</div>
+      <input type="email" id="forgot-email" placeholder="seu@email.com" style="width:100%;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);margin-bottom:8px" onkeydown="if(event.key==='Enter')enviarLinkRecuperacao()">
+      <button onclick="enviarLinkRecuperacao()" id="btn-enviar-link" style="width:100%;font-size:13px;padding:8px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">Enviar link por e-mail</button>
+      <div id="forgot-msg" style="margin-top:6px;font-size:12px"></div>
     </div>
   </div>
 </div>
@@ -2428,6 +2436,28 @@
 </div>
 
 </div><!-- /container -->
+
+<!-- Modal Alterar / Redefinir Senha -->
+<div class="modal-overlay" id="modal-alterar-senha">
+  <div class="modal-box" style="width:400px">
+    <div class="modal-title" id="alterar-senha-title">🔑 Alterar senha</div>
+    <div id="alterar-senha-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
+    <div class="form-group" style="margin-bottom:.875rem">
+      <div class="form-label">Nova senha <span style="color:var(--text3);font-weight:400">(mínimo 6 caracteres)</span></div>
+      <input type="password" id="nova-senha" placeholder="••••••••" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;background:var(--surface);color:var(--text)" autocomplete="new-password">
+    </div>
+    <div class="form-group" style="margin-bottom:1.125rem">
+      <div class="form-label">Confirmar nova senha</div>
+      <input type="password" id="confirmar-senha" placeholder="••••••••" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;background:var(--surface);color:var(--text)" autocomplete="new-password" onkeydown="if(event.key==='Enter')salvarNovaSenha()">
+    </div>
+    <div id="alterar-senha-msg" class="fmsg" style="margin-bottom:.75rem"></div>
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-salvar-senha" onclick="salvarNovaSenha()">Salvar nova senha</button>
+      <button class="btn-secondary" id="btn-cancelar-senha" onclick="fecharAlterarSenha()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div style="text-align:center;padding:1.5rem;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem;background:var(--surface)">
   Desenvolvido por <strong style="color:var(--text2)">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
 </div>
@@ -2561,12 +2591,18 @@ async function checkAuth(){
     logoutBtn.className="refresh-btn";
     logoutBtn.id="btn-logout";
     logoutBtn.textContent="Sair";
-    logoutBtn.onclick=async()=>{
-      await sb.auth.signOut();
-      window.location.reload();
-    };
+    logoutBtn.onclick=async()=>{ await sb.auth.signOut(); window.location.reload(); };
+    const senhaBtn=document.createElement("button");
+    senhaBtn.className="refresh-btn";
+    senhaBtn.id="btn-alterar-senha-header";
+    senhaBtn.textContent="🔑 Senha";
+    senhaBtn.title="Alterar minha senha";
+    senhaBtn.onclick=()=>abrirAlterarSenha(false);
     const chamadosLink=document.querySelector("a[href*='chamado.html']");
-    if(chamadosLink) chamadosLink.parentNode.insertBefore(logoutBtn,chamadosLink.nextSibling);
+    if(chamadosLink){
+      chamadosLink.parentNode.insertBefore(logoutBtn,chamadosLink.nextSibling);
+      chamadosLink.parentNode.insertBefore(senhaBtn,logoutBtn);
+    }
   }
 
   // (visibilidade das abas Usuários/Planilhas já é tratada por aplicarVisibilidadeAbas)
@@ -4860,6 +4896,7 @@ async function carregarUsuarios(){
           ${p.id===currentUser?.id?'<span style="font-size:11px;color:var(--text3)">(você)</span>':`<button onclick="alterarPapel('${p.id}','${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar papel</button>`}
           ${p.aprovado===false?`<button onclick="aprovarUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">Aprovar</button>`:''}
           ${p.id===currentUser?.id?'':`<button onclick="excluirUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>`}
+          <button onclick="enviarResetSenha('${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer" title="Enviar e-mail de redefinição de senha">📧 Reset senha</button>
           <button onclick="abrirDetalheUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">⚙️ Permissões</button>
         </div>
       </td>
@@ -10698,6 +10735,121 @@ function _initModalCloseButtons(){
     titleEl.appendChild(btn);
   });
 }
+
+// ═══ GESTÃO DE SENHA ═══
+let _isRecoveryMode = false;
+
+function _setSenhaMsg(txt, tipo){
+  const el = document.getElementById('alterar-senha-msg');
+  if(!el) return;
+  el.textContent = txt || '';
+  el.className = 'fmsg ' + (tipo || '');
+}
+
+function abrirAlterarSenha(recoveryMode){
+  _isRecoveryMode = !!recoveryMode;
+  const title = document.getElementById('alterar-senha-title');
+  const info  = document.getElementById('alterar-senha-info');
+  const cancelBtn = document.getElementById('btn-cancelar-senha');
+  if(title) title.textContent = recoveryMode ? '🔑 Definir nova senha' : '🔑 Alterar senha';
+  if(info)  info.textContent  = recoveryMode
+    ? 'Você acessou via link de redefinição. Defina sua nova senha abaixo.'
+    : 'Informe a nova senha desejada para sua conta.';
+  if(cancelBtn) cancelBtn.style.display = recoveryMode ? 'none' : '';
+  document.getElementById('nova-senha').value = '';
+  document.getElementById('confirmar-senha').value = '';
+  _setSenhaMsg('');
+  document.getElementById('modal-alterar-senha').classList.add('active');
+  setTimeout(() => document.getElementById('nova-senha').focus(), 100);
+}
+
+function fecharAlterarSenha(){
+  if(_isRecoveryMode) return;
+  document.getElementById('modal-alterar-senha').classList.remove('active');
+}
+
+async function salvarNovaSenha(){
+  const nova = document.getElementById('nova-senha').value;
+  const conf = document.getElementById('confirmar-senha').value;
+  if(!nova || nova.length < 6){ _setSenhaMsg('A senha deve ter pelo menos 6 caracteres.', 'err'); return; }
+  if(nova !== conf){ _setSenhaMsg('As senhas não coincidem.', 'err'); return; }
+  const btn = document.getElementById('btn-salvar-senha');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  _setSenhaMsg('Salvando...');
+  try{
+    const {error} = await sb.auth.updateUser({ password: nova });
+    if(error) throw error;
+    _setSenhaMsg('Senha alterada com sucesso!', 'ok');
+    setTimeout(() => {
+      document.getElementById('modal-alterar-senha').classList.remove('active');
+      _isRecoveryMode = false;
+      if(window.toast) toast('Senha alterada com sucesso!', 'success');
+    }, 1500);
+  }catch(e){
+    _setSenhaMsg('Erro: ' + e.message, 'err');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+  }
+}
+
+function toggleEsqueceuSenha(){
+  const s = document.getElementById('forgot-section');
+  if(!s) return;
+  const visible = s.style.display === 'none' || !s.style.display;
+  s.style.display = visible ? 'block' : 'none';
+  if(visible){
+    const emailInput = document.getElementById('forgot-email');
+    const loginEmail = document.getElementById('login-email')?.value || '';
+    if(emailInput){ emailInput.value = loginEmail; emailInput.focus(); }
+    document.getElementById('forgot-msg').textContent = '';
+  }
+}
+
+async function enviarLinkRecuperacao(){
+  const email = (document.getElementById('forgot-email')?.value || '').trim();
+  const msgEl = document.getElementById('forgot-msg');
+  if(!email){ msgEl.textContent = 'Informe o e-mail.'; msgEl.style.color = 'var(--red)'; return; }
+  const btn = document.getElementById('btn-enviar-link');
+  if(btn){ btn.disabled = true; btn.textContent = 'Enviando...'; }
+  try{
+    const {error} = await sb.auth.resetPasswordForEmail(email);
+    if(error) throw error;
+    msgEl.textContent = '✅ Link enviado! Verifique a caixa de entrada.';
+    msgEl.style.color = 'var(--green)';
+  }catch(e){
+    msgEl.textContent = 'Erro: ' + e.message;
+    msgEl.style.color = 'var(--red)';
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = 'Enviar link por e-mail'; }
+  }
+}
+
+async function enviarResetSenha(email){
+  if(!email){ if(window.toast) toast('E-mail não encontrado.', 'error'); return; }
+  if(!await uiConfirm(`Enviar e-mail de redefinição de senha para:\n${email}?`)) return;
+  try{
+    const {error} = await sb.auth.resetPasswordForEmail(email);
+    if(error) throw error;
+    if(window.toast) toast('Link enviado para ' + email, 'success');
+  }catch(e){
+    if(window.toast) toast('Erro: ' + e.message, 'error');
+  }
+}
+
+window.abrirAlterarSenha    = abrirAlterarSenha;
+window.fecharAlterarSenha   = fecharAlterarSenha;
+window.salvarNovaSenha      = salvarNovaSenha;
+window.toggleEsqueceuSenha  = toggleEsqueceuSenha;
+window.enviarLinkRecuperacao = enviarLinkRecuperacao;
+window.enviarResetSenha     = enviarResetSenha;
+
+// Detecta retorno do link de redefinição de senha enviado por e-mail
+sb.auth.onAuthStateChange((event) => {
+  if(event === 'PASSWORD_RECOVERY'){
+    document.getElementById('modal-login')?.classList.remove('active');
+    setTimeout(() => abrirAlterarSenha(true), 400);
+  }
+});
 
 checkAuth().then(() => {
   // Pequeno delay garante que o DOM está pronto antes de carregar
