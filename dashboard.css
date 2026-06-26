@@ -164,6 +164,7 @@ tr:hover td{background:var(--row-hover)}
 .company-combobox-trigger:hover{border-color:var(--text3)}
 .company-combobox.open .company-combobox-trigger,.company-combobox-trigger:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg);outline:none}
 .company-combobox-placeholder{color:var(--text3)}
+.company-combobox-trigger span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .company-combobox-arrow{font-size:11px;color:var(--text3);transition:transform .15s}
 .company-combobox.open .company-combobox-arrow{transform:rotate(180deg)}
 .company-combobox-dropdown{display:none;position:absolute;z-index:10020;top:calc(100% + 4px);left:0;right:0;padding:7px;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.18)}
