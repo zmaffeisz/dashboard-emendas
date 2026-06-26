@@ -2103,35 +2103,7 @@
         <select id="nc-fiscalizacao" multiple size="4" style="min-height:88px"></select>
         <input type="text" id="nc-fiscalizacao-novo" placeholder="adicionar fiscal não listado (separe vários por vírgula)" style="margin-top:6px">
       </div>
-      <div class="form-group full" id="nc-empenho-wrap" style="display:none">
-        <div class="form-label">Empenhos <span style="font-weight:400;color:var(--text3)">(segure Ctrl/Cmd para selecionar vários)</span></div>
-        <select id="nc-empenho" multiple size="3" style="min-height:70px"></select>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
-          <button type="button" onclick="_ncToggleMiniEmpenho()" style="font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:transparent;color:var(--blue);cursor:pointer">+ Criar novo empenho</button>
-          <span style="font-size:11px;color:var(--text3)">O empenho criado aqui será automaticamente vinculado ao contrato.</span>
-        </div>
-        <!-- mini-form empenho inline -->
-        <div id="nc-mini-emp" style="display:none;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
-          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">Novo empenho</div>
-          <div class="form-grid" style="grid-template-columns:1fr 90px 1fr">
-            <div class="form-group"><div class="form-label">Número *</div><input type="text" id="nce-numero" placeholder="ex: 10296/2026"></div>
-            <div class="form-group"><div class="form-label">Ano</div><input type="number" id="nce-ano" min="2000" step="1"></div>
-            <div class="form-group"><div class="form-label">Número da despesa</div><input type="text" id="nce-despesa" placeholder="ex: 3.3.90.30"></div>
-          </div>
-          <div class="form-grid" style="grid-template-columns:1fr 1fr">
-            <div class="form-group"><div class="form-label">Valor empenhado (R$) *</div><input type="number" id="nce-valor" min="0" step="any" placeholder="ex: 120000"></div>
-            <div class="form-group"><div class="form-label">Data de emissão</div><input type="date" id="nce-data"></div>
-            <div class="form-group"><div class="form-label">Fonte</div><select id="nce-fonte"></select></div>
-            <div class="form-group"><div class="form-label">Detalhe da fonte</div><input type="text" id="nce-fonte-desc" placeholder="opcional"></div>
-          </div>
-          <div class="form-group" style="margin-top:4px"><div class="form-label">Observações</div><input type="text" id="nce-obs" placeholder="opcional"></div>
-          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-            <button type="button" onclick="_ncSalvarMiniEmpenho()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar empenho</button>
-            <button type="button" onclick="_ncToggleMiniEmpenho(false)" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Cancelar</button>
-            <span id="nce-msg" style="font-size:11px;color:var(--red)"></span>
-          </div>
-        </div>
-      </div>
+      <!-- empenhos por item: gerenciados inline em cada item da seção abaixo -->
       <div class="form-group"><div class="form-label">Contato</div><input type="text" id="nc-contato" placeholder="Telefone / contato"></div>
       <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="nc-obs" placeholder="Observações gerais"></div>
     </div>
@@ -6452,6 +6424,8 @@ function ncProcessoChange(){
   const p=(window._ncProcessosCache||[]).find(x=>String(x.id)===String(id));
   if(!p) return;
   window._gerarContratoProcesso=p;
+  // reset per-item empenho state on process change
+  window._ncEmpItens={};window._ncEmpBuffer={};window._ncEmpFree=null;
   if(cplH) cplH.value=p.identificador||'';
   const objEl=document.getElementById('nc-objeto'); if(objEl) objEl.value=p.objeto||'';
   if(gm) gm.checked=!!p.gera_mais_contratos;
@@ -6479,8 +6453,8 @@ function _ncAplicarModo(natureza){
   _ncShow('nc-inicio-wrap', ata||modo==='outro');
   _ncShow('nc-vigencia-wrap', ata||modo==='outro');
   _ncShow('nc-vencimento-wrap', ata||modo==='outro');
-  // empenho obrigatório só na aquisição
-  _ncShow('nc-empenho-wrap', aq);
+  // rastreia modo atual para uso no template de itens
+  window._ncModoAtual=modo;
   // valor global é calculado (read-only) nas duas naturezas com itens
   const valInp=document.getElementById('nc-valor-inicial');
   if(valInp){ valInp.readOnly=(ata||aq); valInp.placeholder=(ata||aq)?'soma dos itens (automático)':'ex: 120000,00'; }
@@ -6556,7 +6530,7 @@ async function _ncCarregarItensProcesso(processoId){
     ].filter(Boolean).join(' · ');
     const inp='font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
     return `<div class="nc-item-row" data-id="${it.id}" data-jacont="${jaCont?1:0}" data-qtde="${it.qtde??''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border)${jaCont?';opacity:.6':''}">
-      <input type="checkbox" class="nci-chk" ${jaCont?'disabled title="Item já vinculado a um contrato"':''} onchange="_ncRecalcValorGlobal()" style="margin-top:3px">
+      <input type="checkbox" class="nci-chk" ${jaCont?'disabled title="Item já vinculado a um contrato"':''} onchange="_ncItemChkChange(this)" style="margin-top:3px">
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600">${_sanEsc(it.descricao||'(sem descrição)')}${jaCont?' <span style="color:var(--text3);font-weight:400">— já contratado</span>':''}</div>
         <div style="font-size:11px;color:var(--text3)">${meta}</div>
@@ -6565,6 +6539,7 @@ async function _ncCarregarItensProcesso(processoId){
           <input type="text" class="nci-marca" placeholder="marca" style="width:110px;${inp}">
           <input type="text" class="nci-modelo" placeholder="modelo" style="width:110px;${inp}">
         </div>`}
+        ${(window._ncModoAtual||'')==='aquisicao'&&!jaCont?_ncEmpItemHtml(String(it.id)):''}
       </div>
       <input type="text" class="nci-valor" value="${jaCont?'':_sanEsc(defVal)}" ${jaCont?'disabled':''} oninput="_ncRecalcValorGlobal()" placeholder="vl. contratado" title="Valor contratado por item (default = estimado)" style="width:110px;${inp}">
     </div>`;
@@ -6576,6 +6551,7 @@ async function _ncVincularItens(contratoId, fornecedorId){
   const lista=document.getElementById('nc-itens-lista'); if(!lista) return;
   const rows=[...lista.querySelectorAll('.nc-item-row')];
   const cache=window._ncItensCache||{};
+  window._ncVincularItensMap={};
   for(const r of rows){
     const chk=r.querySelector('.nci-chk');
     if(!chk||!chk.checked||r.dataset.jacont==='1') continue;
@@ -6600,14 +6576,16 @@ async function _ncVincularItens(contratoId, fornecedorId){
         qtde:qc, contrato_id:contratoId, fornecedor_id:fornecedorId||null, valor_contratado:valor,
         marca, modelo, status:'contratado', item_origem_id:id
       };
-      const {error:eIns}=await sb.from('itens').insert(clone);
+      const {data:cloneData,error:eIns}=await sb.from('itens').insert(clone).select('id').single();
       if(eIns) throw eIns;
+      window._ncVincularItensMap[String(id)]=String(cloneData.id);
       const {error:eUpd}=await sb.from('itens').update({qtde:full-qc}).eq('id',id).is('contrato_id',null);
       if(eUpd) throw eUpd;
     }else{
       const upd={ contrato_id:contratoId, fornecedor_id:fornecedorId||null, valor_contratado:valor, marca, modelo, status:'contratado' };
       const {error}=await sb.from('itens').update(upd).eq('id',id).is('contrato_id',null);
       if(error) throw error;
+      window._ncVincularItensMap[String(id)]=String(id);
     }
   }
 }
@@ -9715,56 +9693,183 @@ function _ncColetarFiscais(){
   if(novoTxt) novoTxt.split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>{ if(!nomes.includes(n)) nomes.push(n); });
   return nomes;
 }
-async function _ncPreencherEmpenhos(selecionarId){
-  const sel=document.getElementById('nc-empenho'); if(!sel) return;
-  const {data}=await sb.from('empenhos').select('id,numero,ano,valor_empenhado,contrato_id').order('created_at',{ascending:false}).limit(300);
-  sel.innerHTML=(data||[]).map(e=>`<option value="${e.id}">${_sanEsc(e.numero)}${e.ano?('/'+e.ano):''}${e.valor_empenhado?(' · '+fmtFull(e.valor_empenhado)):''}${e.contrato_id?' (já vinculado)':''}</option>`).join('');
-  if(selecionarId){ const opt=[...sel.options].find(o=>o.value===String(selecionarId)); if(opt) opt.selected=true; }
+// ── Empenhos por item (AQUISIÇÃO) ─────────────────────────────────────────────
+function _ncEmpItemHtml(sid){
+  const inp='font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
+  return `<div class="nci-emp-section" id="nci-emp-sec-${sid}" style="display:none;margin-top:6px;padding:6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2)">
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Empenhos <span style="font-weight:400;color:var(--red)">*obrigatório</span></div>
+    <div id="nci-emp-lista-${sid}" style="margin-bottom:4px"><span style="font-size:11px;color:var(--text3)">Nenhum empenho vinculado</span></div>
+    <button type="button" onclick="_ncAbrirPickerEmp('${sid}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue);background:transparent;color:var(--blue);cursor:pointer">+ Vincular empenho</button>
+    <div id="nci-emp-picker-${sid}" style="display:none;margin-top:6px;padding:8px;border:1px solid var(--blue);border-radius:4px;background:var(--surface)">
+      <select id="nci-emp-sel-${sid}" onchange="_ncEmpSelChange('${sid}')" style="width:100%;margin-bottom:6px;${inp}"><option value="">Selecione...</option></select>
+      <div id="nci-emp-form-novo-${sid}" style="display:none;margin-bottom:6px;padding:6px;border:1px dashed var(--border);border-radius:4px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:4px">Novo empenho</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <input type="text" id="nci-emp-nro-${sid}" placeholder="Número *" style="flex:1;min-width:100px;${inp}">
+          <input type="number" id="nci-emp-ano-${sid}" placeholder="Ano" style="width:65px;${inp}">
+          <input type="number" id="nci-emp-vlnovo-${sid}" placeholder="Valor R$ *" step="any" style="width:110px;${inp}">
+          <input type="text" id="nci-emp-desp-${sid}" placeholder="Nº Despesa" style="width:100px;${inp}">
+          <input type="date" id="nci-emp-dat-${sid}" style="width:130px;${inp}">
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+        <input type="number" id="nci-emp-qtde-${sid}" placeholder="Qtde deste item" step="any" style="flex:1;min-width:90px;${inp}">
+        <input type="number" id="nci-emp-vlitem-${sid}" placeholder="Valor deste item R$" step="any" style="flex:1;min-width:110px;${inp}">
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button type="button" onclick="_ncVinculEmp('${sid}')" style="font-size:11px;padding:4px 12px;border-radius:4px;border:none;background:var(--blue);color:#fff;cursor:pointer">Vincular</button>
+        <button type="button" onclick="_ncFecharPickerEmp('${sid}')" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Cancelar</button>
+        <span id="nci-emp-msg-${sid}" style="font-size:11px;color:var(--red)"></span>
+      </div>
+    </div>
+  </div>`;
 }
-function _ncToggleMiniEmpenho(forcar){
-  const mini=document.getElementById('nc-mini-emp'); if(!mini) return;
-  const abrir = forcar===undefined ? mini.style.display==='none' : !!forcar;
-  mini.style.display=abrir?'block':'none';
-  if(abrir){
-    document.getElementById('nce-numero').value='';
-    document.getElementById('nce-ano').value=new Date().getFullYear();
-    document.getElementById('nce-despesa').value='';
-    document.getElementById('nce-valor').value='';
-    document.getElementById('nce-data').value='';
-    document.getElementById('nce-fonte-desc').value='';
-    document.getElementById('nce-obs').value='';
-    document.getElementById('nce-msg').textContent='';
-    const fs=document.getElementById('nce-fonte');
-    if(fs) fs.innerHTML='<option value="">—</option>'+PROC_FONTES.map(([v,l])=>`<option value="${v}">${_sanEsc(l)}</option>`).join('');
-    document.getElementById('nce-numero').focus();
+
+function _ncItemChkChange(chk){
+  _ncRecalcValorGlobal();
+  if((window._ncModoAtual||'')!=='aquisicao') return;
+  const row=chk.closest('.nc-item-row');
+  const id=row?.dataset?.id; if(!id) return;
+  const sec=document.getElementById('nci-emp-sec-'+id);
+  if(sec) sec.style.display=chk.checked?'':'none';
+}
+
+async function _ncAbrirPickerEmp(sid){
+  const picker=document.getElementById('nci-emp-picker-'+sid); if(!picker) return;
+  picker.style.display='';
+  if(!window._ncEmpFree){
+    const {data}=await sb.from('empenhos').select('id,numero,ano,valor_empenhado').is('contrato_id',null).order('created_at',{ascending:false}).limit(300);
+    window._ncEmpFree=data||[];
+  }
+  const sel=document.getElementById('nci-emp-sel-'+sid); if(!sel) return;
+  const buf=Object.entries(window._ncEmpBuffer||{});
+  sel.innerHTML='<option value="">Selecione o empenho...</option>'+
+    '<option value="__novo__">✦ Criar novo empenho...</option>'+
+    buf.map(([tid,e])=>`<option value="__tmp__${tid}">🆕 ${_sanEsc(e.numero||'')}${e.ano?'/'+e.ano:''} · R$ ${fmtFull(e.valor_empenhado||0)}</option>`).join('')+
+    (window._ncEmpFree||[]).map(e=>`<option value="${e.id}">${_sanEsc(e.numero||'')}${e.ano?'/'+e.ano:''} · R$ ${fmtFull(e.valor_empenhado||0)}</option>`).join('');
+  const qtdeEl=document.getElementById('nci-emp-qtde-'+sid); if(qtdeEl) qtdeEl.value='';
+  const vlEl=document.getElementById('nci-emp-vlitem-'+sid); if(vlEl) vlEl.value='';
+  const msgEl=document.getElementById('nci-emp-msg-'+sid); if(msgEl) msgEl.textContent='';
+  const formNovo=document.getElementById('nci-emp-form-novo-'+sid); if(formNovo) formNovo.style.display='none';
+}
+
+function _ncEmpSelChange(sid){
+  const sel=document.getElementById('nci-emp-sel-'+sid); if(!sel) return;
+  const form=document.getElementById('nci-emp-form-novo-'+sid);
+  if(form) form.style.display=(sel.value==='__novo__')?'':'none';
+  if(sel.value==='__novo__'){
+    const anoEl=document.getElementById('nci-emp-ano-'+sid); if(anoEl&&!anoEl.value) anoEl.value=new Date().getFullYear();
   }
 }
-async function _ncSalvarMiniEmpenho(){
-  const msg=document.getElementById('nce-msg'); msg.textContent='';
-  const numero=(document.getElementById('nce-numero').value||'').trim();
-  const valor=parseFloat((document.getElementById('nce-valor').value||'').replace(',','.'));
-  if(!numero){ msg.textContent='Informe o número do empenho.'; return; }
-  if(!valor||isNaN(valor)){ msg.textContent='Informe o valor.'; return; }
-  const btn=document.querySelector('#nc-mini-emp button');
-  const oldTxt=btn.textContent; btn.disabled=true; btn.textContent='Salvando...';
-  const reg={
-    numero, numero_normalizado:(typeof normalizarNumeroDocumento==='function'?normalizarNumeroDocumento(numero):numero),
-    ano:parseInt(document.getElementById('nce-ano').value)||null,
-    numero_despesa:document.getElementById('nce-despesa').value.trim()||null,
-    valor_empenhado:valor, saldo_empenho:valor,
-    data_emissao:document.getElementById('nce-data').value||null,
-    fonte_tipo:document.getElementById('nce-fonte').value||null,
-    fonte_descricao:document.getElementById('nce-fonte-desc').value.trim()||null,
-    observacoes:document.getElementById('nce-obs').value.trim()||null,
-    updated_at:new Date().toISOString()
-  };
-  const {data,error}=await sb.from('empenhos').insert(reg).select('id').single();
-  btn.disabled=false; btn.textContent=oldTxt;
-  if(error){ msg.textContent='Erro: '+error.message; return; }
-  _ncToggleMiniEmpenho(false);
-  await _ncPreencherEmpenhos(data.id);
-  if(window.toast) toast('Empenho criado e selecionado!','success');
+
+function _ncFecharPickerEmp(sid){
+  const picker=document.getElementById('nci-emp-picker-'+sid); if(picker) picker.style.display='none';
 }
+
+async function _ncVinculEmp(sid){
+  const msgEl=document.getElementById('nci-emp-msg-'+sid); if(msgEl) msgEl.textContent='';
+  const sel=document.getElementById('nci-emp-sel-'+sid); if(!sel) return;
+  const val=sel.value;
+  if(!val){ if(msgEl) msgEl.textContent='Selecione o empenho.'; return; }
+  const qtdeRaw=(document.getElementById('nci-emp-qtde-'+sid)?.value||'').replace(',','.');
+  const vlRaw=(document.getElementById('nci-emp-vlitem-'+sid)?.value||'').replace(',','.');
+  const qtdeVinc=qtdeRaw?parseFloat(qtdeRaw):null;
+  const valVinc=vlRaw?parseFloat(vlRaw):null;
+  // validate against item totals
+  const row=document.querySelector(`.nc-item-row[data-id="${sid}"]`);
+  const qtdeTotal=row?parseFloat(row.dataset.qtde||0)||null:null;
+  const nciValEl=row?row.querySelector('.nci-valor'):null;
+  const valContr=nciValEl?parseFloat((nciValEl.value||'').replace(/\./g,'').replace(',','.'))||null:null;
+  const existing=window._ncEmpItens?.[sid]||[];
+  const sumQtde=existing.reduce((a,x)=>a+(x.qtde_vinculada||0),0);
+  const sumVal=existing.reduce((a,x)=>a+(x.val_vinculado||0),0);
+  if(qtdeTotal!=null&&qtdeVinc!=null&&(sumQtde+qtdeVinc)>qtdeTotal+0.0001){
+    if(msgEl) msgEl.textContent=`Qtde total vinculada (${sumQtde+qtdeVinc}) excede a qtde do item (${qtdeTotal}).`; return;
+  }
+  if(valContr!=null&&valVinc!=null&&(sumVal+valVinc)>valContr+0.01){
+    if(msgEl) msgEl.textContent='Valor total vinculado excede o valor contratado do item.'; return;
+  }
+  let link;
+  if(val==='__novo__'){
+    const numero=(document.getElementById('nci-emp-nro-'+sid)?.value||'').trim();
+    const valor=parseFloat((document.getElementById('nci-emp-vlnovo-'+sid)?.value||'').replace(',','.'));
+    if(!numero){ if(msgEl) msgEl.textContent='Informe o número do empenho.'; return; }
+    if(!valor||isNaN(valor)){ if(msgEl) msgEl.textContent='Informe o valor.'; return; }
+    const tmpId='tmp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const emp={
+      numero, numero_normalizado:(typeof normalizarNumeroDocumento==='function'?normalizarNumeroDocumento(numero):numero),
+      ano:parseInt(document.getElementById('nci-emp-ano-'+sid)?.value)||null,
+      valor_empenhado:valor, saldo_empenho:valor,
+      numero_despesa:(document.getElementById('nci-emp-desp-'+sid)?.value||'').trim()||null,
+      data_emissao:(document.getElementById('nci-emp-dat-'+sid)?.value||null),
+      updated_at:new Date().toISOString()
+    };
+    window._ncEmpBuffer=window._ncEmpBuffer||{};
+    window._ncEmpBuffer[tmpId]=emp;
+    link={tmpId,isNew:true,numero,ano:emp.ano,qtde_vinculada:qtdeVinc,val_vinculado:valVinc};
+  } else if(val.startsWith('__tmp__')){
+    const tmpId=val.slice(7);
+    const emp=(window._ncEmpBuffer||{})[tmpId]; if(!emp){ if(msgEl) msgEl.textContent='Empenho não encontrado.'; return; }
+    link={tmpId,isNew:true,numero:emp.numero,ano:emp.ano,qtde_vinculada:qtdeVinc,val_vinculado:valVinc};
+  } else {
+    const empData=(window._ncEmpFree||[]).find(e=>String(e.id)===String(val));
+    link={empId:val,isNew:false,numero:empData?.numero||val,ano:empData?.ano,qtde_vinculada:qtdeVinc,val_vinculado:valVinc};
+  }
+  window._ncEmpItens=window._ncEmpItens||{};
+  if(!window._ncEmpItens[sid]) window._ncEmpItens[sid]=[];
+  window._ncEmpItens[sid].push(link);
+  _ncRenderEmpLista(sid);
+  _ncFecharPickerEmp(sid);
+}
+
+function _ncRenderEmpLista(sid){
+  const lista=document.getElementById('nci-emp-lista-'+sid); if(!lista) return;
+  const links=(window._ncEmpItens||{})[sid]||[];
+  if(!links.length){ lista.innerHTML='<span style="font-size:11px;color:var(--text3)">Nenhum empenho vinculado</span>'; return; }
+  lista.innerHTML=links.map((lk,idx)=>`<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:2px;flex-wrap:wrap">
+    <span style="font-weight:600">${_sanEsc(lk.numero||'')}${lk.ano?'/'+lk.ano:''}${lk.isNew?' <span style="color:var(--blue);font-size:10px">(novo)</span>':''}</span>
+    ${lk.qtde_vinculada!=null?`<span style="color:var(--text2)">qtde: ${lk.qtde_vinculada}</span>`:''}
+    ${lk.val_vinculado!=null?`<span style="color:var(--text2)">R$ ${fmtFull(lk.val_vinculado)}</span>`:''}
+    <button type="button" onclick="_ncRemoverEmpItem('${sid}',${idx})" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer">✕</button>
+  </div>`).join('');
+}
+
+function _ncRemoverEmpItem(sid,idx){
+  if(!window._ncEmpItens?.[sid]) return;
+  window._ncEmpItens[sid].splice(idx,1);
+  _ncRenderEmpLista(sid);
+}
+
+async function _ncSalvarEmpItens(contratoId){
+  const idMap=window._ncVincularItensMap||{};
+  const buf=window._ncEmpBuffer||{};
+  const empItensMap=window._ncEmpItens||{};
+  const tmpToReal={};
+  for(const [tmpId,emp] of Object.entries(buf)){
+    const reg={...emp,contrato_id:contratoId};
+    const {data,error}=await sb.from('empenhos').insert(reg).select('id').single();
+    if(error) throw error;
+    tmpToReal[tmpId]=String(data.id);
+  }
+  const existingIds=[];
+  for(const links of Object.values(empItensMap)){
+    for(const lk of links){
+      if(!lk.isNew&&lk.empId&&!existingIds.includes(String(lk.empId))) existingIds.push(String(lk.empId));
+    }
+  }
+  if(existingIds.length) await sb.from('empenhos').update({contrato_id:contratoId}).in('id',existingIds);
+  const toInsert=[];
+  for(const [origId,links] of Object.entries(empItensMap)){
+    const contractItemId=idMap[String(origId)]||String(origId);
+    for(const lk of links){
+      const empId=lk.isNew?tmpToReal[lk.tmpId]:String(lk.empId||'');
+      if(!empId) continue;
+      toInsert.push({empenho_id:empId,item_id:contractItemId,quantidade_vinculada:lk.qtde_vinculada||null,valor_vinculado:lk.val_vinculado||null});
+    }
+  }
+  if(toInsert.length){ const {error}=await sb.from('empenho_itens').insert(toInsert); if(error) throw error; }
+}
+// ── fim empenhos por item ──────────────────────────────────────────────────────
 
 async function obterOuCriarFornecedor(nome, cnpjRaw){
   const norm=(cnpjRaw||"").replace(/\D/g,"");
@@ -9800,7 +9905,7 @@ async function abrirModalNovoContrato(){
   preencherSelectFornecedores();
   preencherSelectSecoes('nc-secao', true);
   await _ncPreencherFiscalMulti();
-  await _ncPreencherEmpenhos();
+  window._ncEmpItens={};window._ncEmpBuffer={};window._ncEmpFree=null;window._ncModoAtual='';window._ncVincularItensMap={};
   const _fn=document.getElementById("nc-fiscalizacao-novo"); if(_fn) _fn.value="";
   _ncAplicarModo('');
   document.getElementById("nc-msg").className="fmsg";
@@ -9841,11 +9946,19 @@ async function salvarNovoContrato(){
   if(novaEmpresa&&!prestador){showMsg("nc","Informe a razão social da nova empresa.","err");return;}
   if(!email){showMsg("nc","Informe o e-mail da empresa (*).","err");return;}
   if(!fiscais.length){showMsg("nc","Selecione ao menos um fiscal (*).","err");return;}
-  let _empIds=[];
   if(modoNC==='aquisicao'){
-    const empSel=document.getElementById("nc-empenho");
-    _empIds=empSel?[...empSel.selectedOptions].map(o=>o.value):[];
-    if(!_empIds.length && !await uiConfirm("Nenhum empenho vinculado a este contrato de aquisição. Você poderá vincular depois em Itens → Empenhos. Continuar mesmo assim?")) return;
+    const _lista=document.getElementById('nc-itens-lista');
+    const _rows=_lista?[...(_lista.querySelectorAll('.nc-item-row'))]:[];
+    const _semEmp=_rows.filter(r=>{
+      const chk=r.querySelector('.nci-chk');
+      if(!chk||!chk.checked||r.dataset.jacont==='1') return false;
+      const rid=r.dataset.id;
+      return !rid||!((window._ncEmpItens||{})[rid]||[]).length;
+    });
+    if(_semEmp.length){
+      const _nomes=_semEmp.map(r=>{const d=r.querySelector('div[style*="font-weight:600"]');return d?d.textContent.trim():r.dataset.id;}).slice(0,3);
+      if(!await uiConfirm(`${_semEmp.length} item(ns) marcado(s) sem empenho vinculado:\n• ${_nomes.join('\n• ')}\n\nVocê poderá vincular depois em Itens → Empenhos. Continuar mesmo assim?`)) return;
+    }
   }
   const btn=document.querySelector("#modal-novo-contrato .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
@@ -9900,8 +10013,8 @@ async function salvarNovoContrato(){
     const ini=document.getElementById("nc-inicio").value||new Date().toISOString().slice(0,10);
     try{ await sb.from("contratos_fiscalizadores").insert(fiscais.map(nome=>({contrato_id:novoContrato.id,cpl,nome,data_inicio:ini}))); }catch(_){}
   }
-  if(novoContrato?.id && _empIds.length){
-    try{ await sb.from("empenhos").update({contrato_id:novoContrato.id}).in("id",_empIds); }catch(_){}
+  if(modoNC==='aquisicao' && novoContrato?.id){
+    try{ await _ncSalvarEmpItens(novoContrato.id); }catch(e){ showMsg("nc","Contrato salvo, mas falha ao vincular empenhos: "+(e.message||e),"err"); }
   }
   btn.disabled=false;btn.textContent=label;
   showMsg("nc",tipoInstrumento==="ATA"?(_ataEspelhados>0?`✓ ATA cadastrada! ${_ataEspelhados} item(ns) espelhado(s) automaticamente para a ATA.`:"✓ ATA cadastrada! Agora inclua os itens."):"✓ Contrato cadastrado!","ok");
