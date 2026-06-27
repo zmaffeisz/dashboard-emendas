@@ -57,6 +57,7 @@
       <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
       <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
       <div class="sidebar-item" id="sidebar-licitacoes" style="display:none" onclick="showTab('licitacoes')"><span class="sidebar-icon">📑</span><span class="sidebar-label">Licitações</span></div>
+      <div class="sidebar-item" id="sidebar-controle-processos" style="display:none" onclick="showTab('controle-processos')"><span class="sidebar-icon">🧭</span><span class="sidebar-label">Controle de processos</span></div>
       <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções</span></div>
     </div>
     <div class="sidebar-section">
@@ -1428,6 +1429,7 @@
       <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="lic-busca" placeholder="identificador, objeto..." oninput="filtrarLicitacoes()"></div>
       <div class="fg"><div class="fg-label">Tipo</div><select id="lic-f-tipo" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
       <div class="fg"><div class="fg-label">Status</div><select id="lic-f-status" onchange="filtrarLicitacoes()"><option value="">Todos os status</option></select></div>
+      <div class="fg"><div class="fg-label">&nbsp;</div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="lic-f-contratados" onchange="filtrarLicitacoes()" style="cursor:pointer">incluir já contratados</label></div>
     </div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -1444,6 +1446,30 @@
       </table>
     </div>
     <div id="lic-conteudo" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CONTROLE DE PROCESSOS (status) ══════════════════════ -->
+<div id="panel-controle-processos" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">🧭 Controle de processos</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="cp-count" style="font-size:12px;color:var(--text3)">—</span>
+        <button onclick="loadControleProcessos()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻</button>
+      </div>
+    </div>
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="cp-busca" placeholder="identificador, objeto, item..." oninput="renderControleProcessos()"></div>
+      <div class="fg"><div class="fg-label">Órgão (bola)</div><select id="cp-f-orgao" onchange="renderControleProcessos()"><option value="">Todos</option><option>SES</option><option>SEAD</option><option>CONTROLADORIA</option></select></div>
+      <div class="fg"><div class="fg-label">&nbsp;</div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="cp-f-pendentes" onchange="renderControleProcessos()" style="cursor:pointer">só com status indefinido</label></div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span> automático (o sistema controla)</span>
+      &nbsp;&nbsp;
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber,#d8a730);display:inline-block"></span> manual (você define)</span>
+    </div>
+    <div id="cp-lista"></div>
   </div>
 </div>
 
@@ -2475,7 +2501,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','atas','contratos','licitacoes','controle-processos','sancoes','cadastros','usuarios','planilhas'];
 function _isApprovedProfile(){ return currentProfile?.aprovado !== false; }
 function _isAdmin(){ return (window._userPapel==='admin' || currentProfile?.papel==='admin') && _isApprovedProfile(); }
 function userCanView(tabKey){
@@ -2831,6 +2857,7 @@ function showTab(name){
   if(name==="sancoes") loadSancoes();
   if(name==="cadastros") carregarCadastros();
   if(name==="licitacoes") loadLicitacoes();
+  if(name==="controle-processos") loadControleProcessos();
   if(name==="saldo-emendas"&&!saldoEmendaCarregado) loadSaldoEmendas();
   setTimeout(_setTableOffset,50);
 }
@@ -4749,6 +4776,7 @@ const PERM_TABS = [
   {key:'atas', label:'ATAs / Contratos'},
   {key:'contratos', label:'Contratos'},
   {key:'licitacoes', label:'Licitações'},
+  {key:'controle-processos', label:'Controle de processos'},
   {key:'itens', label:'Itens'},
   {key:'sancoes', label:'Sanções'},
   {key:'planilhas', label:'Planilhas'},
@@ -4914,13 +4942,16 @@ function renderLicitacoes(){
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
   const fTipo=document.getElementById('lic-f-tipo')?.value||'';
   const fStatus=document.getElementById('lic-f-status')?.value||'';
+  const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
   const rows=_licitacoesCache.filter(p=>{
+    if(!incluirContratados && Number(p.n_contratos||0)>0 && !p.gera_mais_contratos) return false;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fStatus && (p.status||'')!==fStatus) return false;
     if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.status,p.secao,p.modalidade].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
-  document.getElementById('lic-count').textContent=rows.length+' processo'+(rows.length!==1?'s':'');
+  const _ocultos=incluirContratados?0:_licitacoesCache.filter(p=>Number(p.n_contratos||0)>0 && !p.gera_mais_contratos).length;
+  document.getElementById('lic-count').textContent=rows.length+' processo'+(rows.length!==1?'s':'')+(_ocultos?` · ${_ocultos} já contratado${_ocultos!==1?'s':''} oculto${_ocultos!==1?'s':''}`:'');
   const tb=document.getElementById('lic-tbody');
   if(!rows.length){ tb.innerHTML='<tr><td colspan="7" style="padding:1rem;text-align:center;color:var(--text3)">Nenhum processo encontrado</td></tr>'; return; }
   tb.innerHTML=rows.map(p=>`<tr style="border-bottom:1px solid var(--border)">
@@ -4935,6 +4966,141 @@ function renderLicitacoes(){
       ${podeEditar('contratos')?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
     </td></tr>`).join('');
 }
+
+// ═══ CONTROLE DE PROCESSOS (gestão de status por item) ═══
+let _cpProcessos=[], _cpItens=[], _cpStatusOpts=[], _cpStatusById={}, _cpExpanded={};
+function _cpOrgaoCor(o){ return o==='SEAD'?'#d8a730':(o==='CONTROLADORIA'?'#7c5cd6':'var(--blue)'); }
+async function _cpFetchAllItens(){
+  let all=[], from=0; const size=1000;
+  while(true){
+    const {data,error}=await sb.from('itens')
+      .select('id,processo_id,descricao,qtde,status,status_lic_id,status_lic_desde')
+      .not('processo_id','is',null).order('processo_id').range(from,from+size-1);
+    if(error) throw error;
+    all=all.concat(data||[]);
+    if(!data||data.length<size) break;
+    from+=size;
+  }
+  return all;
+}
+async function loadControleProcessos(){
+  const box=document.getElementById('cp-lista');
+  if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
+  try{
+    const [so,proc,itens]=await Promise.all([
+      sb.from('status_opcoes').select('id,nome,ordem,orgao,automatico').eq('contexto','licitacao').eq('ativo',true).order('ordem'),
+      sb.from('vw_processos_resumo').select('*').gt('n_itens',0).order('identificador'),
+      _cpFetchAllItens()
+    ]);
+    _cpStatusOpts=so.data||[]; _cpStatusById={}; _cpStatusOpts.forEach(s=>_cpStatusById[s.id]=s);
+    _cpProcessos=proc.data||[]; _cpItens=itens||[];
+  }catch(e){ if(box) box.innerHTML='<div style="padding:1rem;color:var(--red)">Erro: '+_sanEsc(e.message||e)+'</div>'; return; }
+  renderControleProcessos();
+}
+function _cpRollup(items){
+  const ids=[...new Set(items.map(i=>i.status_lic_id))];
+  if(ids.length===1){ const s=_cpStatusById[ids[0]]; return s?{nome:s.nome,orgao:s.orgao,auto:s.automatico}:{nome:'Indefinido',orgao:null,auto:false}; }
+  return {nome:'Vários', orgao:null, auto:false};
+}
+function _cpStatusBadge(r){
+  const cor = r.nome==='Indefinido' ? 'var(--text3)' : (r.nome==='Vários' ? 'var(--text2)' : _cpOrgaoCor(r.orgao));
+  const dot = r.auto?'<span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block;margin-right:5px"></span>':'';
+  return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;color:${cor};background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:20px">${dot}${_sanEsc(r.nome)}</span>`;
+}
+function _cpDesde(d){ if(!d) return ''; const dias=Math.floor((Date.now()-new Date(d).getTime())/86400000); return dias<=0?'hoje':('há '+dias+'d'); }
+function renderControleProcessos(){
+  const box=document.getElementById('cp-lista'); if(!box) return;
+  const busca=(document.getElementById('cp-busca')?.value||'').toLowerCase();
+  const fOrg=document.getElementById('cp-f-orgao')?.value||'';
+  const soPend=document.getElementById('cp-f-pendentes')?.checked||false;
+  const podeEd=podeEditar('controle-processos');
+  const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
+  const manuais=_cpStatusOpts.filter(s=>!s.automatico);
+  let mostrados=0;
+  const html=_cpProcessos.filter(p=>{
+    const items=porProc[p.id]||[]; if(!items.length) return false;
+    if(soPend && !items.some(i=>!i.status_lic_id)) return false;
+    if(fOrg){ const orgs=items.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto].concat(items.map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    return true;
+  }).map(p=>{
+    const items=porProc[p.id]||[]; mostrados++;
+    const roll=_cpRollup(items); const aberto=!!_cpExpanded[p.id];
+    let bloco=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
+      <div onclick="cpToggle(${p.id})" style="display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;background:var(--surface2)">
+        <span style="font-size:13px;color:var(--text3);transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px">${_sanEsc(p.identificador||('#'+p.id))} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,70))}</span></div>
+          <div style="font-size:11px;color:var(--text3)">${items.length} ${items.length===1?'item':'itens'}</div>
+        </div>
+        ${_cpStatusBadge(roll)}
+      </div>`;
+    if(aberto){
+      const opts=manuais.map(s=>`<option value="${s.id}">${_sanEsc(s.nome)}</option>`).join('');
+      if(podeEd){
+        bloco+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;background:var(--blue-bg,rgba(55,138,221,.08));border-top:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap">Aplicar a todos:</span>
+          <select id="cp-bulk-${p.id}" style="flex:1;max-width:340px;font-size:12px;padding:5px 8px"><option value="">selecione um status manual...</option>${opts}</select>
+          <button onclick="cpBulkApply(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
+        </div>`;
+      }
+      bloco+=`<table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>`;
+      items.forEach(it=>{
+        const cur=_cpStatusById[it.status_lic_id];
+        const exc=['fracassado','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
+        let ctrl;
+        if(cur&&cur.automatico){
+          ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
+        } else if(podeEd){
+          ctrl=`<select onchange="cpSetItemStatus('${it.id}', this.value)" style="font-size:11px;padding:4px 6px;max-width:330px">
+            <option value="">— indefinido —</option>
+            ${manuais.map(s=>`<option value="${s.id}"${String(it.status_lic_id)===String(s.id)?' selected':''}>${_sanEsc(s.nome)}</option>`).join('')}
+          </select>`;
+        } else {
+          ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
+        }
+        bloco+=`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}</td>
+          <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
+          <td style="padding:8px 8px">${ctrl}</td>
+          <td style="padding:8px 13px;color:var(--text3);width:70px;text-align:right;white-space:nowrap">${_cpDesde(it.status_lic_desde)}</td>
+        </tr>`;
+      });
+      bloco+=`</tbody></table>`;
+    }
+    bloco+=`</div>`;
+    return bloco;
+  }).join('');
+  box.innerHTML=html||'<div style="padding:1rem;text-align:center;color:var(--text3)">Nenhum processo encontrado</div>';
+  const cnt=document.getElementById('cp-count'); if(cnt) cnt.textContent=mostrados+' processo'+(mostrados!==1?'s':'');
+}
+function cpToggle(pid){ _cpExpanded[pid]=!_cpExpanded[pid]; renderControleProcessos(); }
+async function _cpGravarStatus(itemId, statusId){
+  const so=statusId?_cpStatusById[statusId]:null;
+  const agora=new Date().toISOString();
+  const {error}=await sb.from('itens').update({status_lic_id:statusId||null, status_lic_desde:agora}).eq('id',itemId);
+  if(error) throw error;
+  try{ await sb.from('itens_status_historico').insert({item_id:itemId, status_id:statusId||null, status_nome:so?so.nome:null, mudado_por:currentUser?.id||null, origem:'manual'}); }catch(_){}
+  const local=_cpItens.find(i=>String(i.id)===String(itemId)); if(local){ local.status_lic_id=statusId||null; local.status_lic_desde=agora; }
+}
+async function cpSetItemStatus(itemId, val){
+  if(!podeEditar('controle-processos')){ alert('Sem permissão.'); return; }
+  const statusId=val?Number(val):null;
+  try{ await _cpGravarStatus(itemId, statusId); }catch(e){ alert('Erro ao salvar: '+(e.message||e)); }
+  renderControleProcessos();
+}
+async function cpBulkApply(pid){
+  if(!podeEditar('controle-processos')){ alert('Sem permissão.'); return; }
+  const sel=document.getElementById('cp-bulk-'+pid); const val=sel?.value;
+  if(!val){ alert('Selecione um status para aplicar.'); return; }
+  const statusId=Number(val);
+  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !(_cpStatusById[i.status_lic_id]?.automatico));
+  if(!alvos.length){ alert('Nenhum item editável neste processo (os automáticos são controlados pelo sistema).'); return; }
+  if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" a ${alvos.length} item(ns)?`)) return;
+  try{ for(const it of alvos){ await _cpGravarStatus(it.id, statusId); } }catch(e){ alert('Erro: '+(e.message||e)); }
+  renderControleProcessos();
+}
+
 async function preencherSelectStatusProcesso(){
   const sel=document.getElementById('proc-status'); if(!sel) return;
   const FALLBACK=['Em elaboração','Aguardando abertura','Em andamento','Aguardando homologação','Homologado','Contratado','Suspenso','Cancelado','Concluído'];
