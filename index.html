@@ -82,35 +82,12 @@
   </div>
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Google Sheets...</div>
   <div id="main" style="display:none">
-    <div style="display:flex;gap:1.125rem;align-items:flex-start">
-      <div class="dash-filters-col" style="width:220px;position:sticky;top:0">
-
-    <div class="filters">
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Buscar por texto</div>
-      <div class="fg">
-        <div class="fg-label">CPL / Processo <button onclick="clearF('f-cpl')">✕</button></div>
-        <input type="text" id="f-cpl" placeholder="ex: CPL 086/2025" oninput="applyFilters()">
+    <div>
+      <div style="margin-bottom:1rem;display:flex;gap:8px;align-items:center">
+        <input type="text" id="f-busca" placeholder="🔎 Buscar por qualquer coisa: item, CPL, empenho, NF, patrimônio, unidade, parlamentar..." oninput="applyFilters()" style="flex:1;min-width:0;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+        <button class="clear-btn" onclick="clearAllFilters()" style="white-space:nowrap">✕ Limpar</button>
       </div>
-      <div class="fg">
-        <div class="fg-label">Nº empenho <button onclick="clearF('f-empenho')">✕</button></div>
-        <input type="text" id="f-empenho" placeholder="ex: 23230/2025" oninput="applyFilters()">
-      </div>
-      <div class="fg">
-        <div class="fg-label">Nº patrimônio <button onclick="clearF('f-patrimonio')">✕</button></div>
-        <input type="text" id="f-patrimonio" placeholder="ex: 12345" oninput="applyFilters()">
-      </div>
-      <div class="fg">
-        <div class="fg-label">Nota fiscal <button onclick="clearF('f-nf')">✕</button></div>
-        <input type="text" id="f-nf" placeholder="ex: NF 84253" oninput="applyFilters()">
-      </div>
-      <div class="fg">
-        <div class="fg-label">Buscar item <button onclick="clearF('f-busca')">✕</button></div>
-        <input type="text" id="f-busca" placeholder="ex: ar condicionado..." oninput="applyFilters()">
-      </div>
-      <button class="clear-btn" onclick="clearAllFilters()">✕ Limpar tudo</button>
-    </div>
-      </div>
-      <div style="flex:1;min-width:0">
+      <div style="min-width:0">
 
     <div class="metrics">
       <div class="metric"><div class="metric-label">Emendas</div><div class="metric-value" id="m-emendas">—</div><div class="metric-sub">únicas</div></div>
@@ -135,11 +112,13 @@
           <button onclick="exportarExcel()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:5px">⬇ Exportar Excel</button>
         </div>
       </div>
-      <div class="table-wrap">
+      <div id="em-modo-bar" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center"></div>
+      <div id="em-view-por-emenda" style="display:none"></div>
+      <div class="table-wrap" id="em-view-planilha">
         <table>
           <thead>
             <tr>
-              <th style="white-space:nowrap">Editar</th>
+              <th style="white-space:nowrap">Ações</th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
@@ -1089,9 +1068,9 @@
       <button onclick="loadItens()" title="Recarregar" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
-      <button class="itens-subtab-btn" data-sub="aquisicoes" onclick="itensShowSub('aquisicoes')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Itens de Aquisições</button>
-      <button class="itens-subtab-btn" data-sub="atas" onclick="itensShowSub('atas')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Itens de Atas</button>
-      <button class="itens-subtab-btn" data-sub="entregas" onclick="itensShowSub('entregas')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Controle de Entregas / Prazos</button>
+      <button class="itens-subtab-btn" data-sub="aquisicoes" onclick="itensShowSub('aquisicoes')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Itens de Aquisições</button>
+      <button class="itens-subtab-btn" data-sub="atas" onclick="itensShowSub('atas')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Itens de Atas</button>
+      <button class="itens-subtab-btn" data-sub="entregas" onclick="itensShowSub('entregas')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Controle de Entregas / Prazos</button>
       <button class="itens-subtab-btn" data-sub="confirmacao" onclick="itensShowSub('confirmacao')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Confirmação de Entrega na Unidade</button>
       <button class="itens-subtab-btn" data-sub="empenhos" onclick="itensShowSub('empenhos')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Empenhos</button>
     </div>
@@ -2814,7 +2793,7 @@ function showTab(name){
   if(name==="fiscalizacao"&&!fiscalizacaoCarregado) loadFiscalizacao();
   if(name==="inventario-ac"&&!inventarioCarregado) loadInventario();
   if(name==="atas") loadAtas(); // sempre recarrega: ATAS é view derivada de contratos (reflete encerrar/prorrogar/editar feitos na aba Contratos)
-  if(name==="itens"&&!itensCarregado) loadItens();
+  if(name==="itens"){ if(!itensCarregado) loadItens(); itensShowSub('entregas'); }
   if(name==="contratos"&&!contratosCarregado) loadContratos();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
@@ -3039,7 +3018,8 @@ async function loadInventario(){
         emenda:ei.emenda||'',
         emenda_ano:em.ano||'',
         parlamentar:em.parlamentar||'',
-        emenda_item_desc:ei.item||''
+        emenda_item_desc:ei.item||'',
+        emenda_item_id:it.emenda_item_id||null
       });
     });
     (at||[]).forEach(r=>{
@@ -3066,7 +3046,8 @@ async function loadInventario(){
         termo_arquivo:r.termo_arquivo||'',
         confirmacao_obs:r.confirmacao_obs||'',
         af_numero:'', af_data:null,
-        emenda:'', emenda_ano:'', parlamentar:'', emenda_item_desc:''
+        emenda:'', emenda_ano:'', parlamentar:'', emenda_item_desc:'',
+        emenda_item_id:r.emenda_item_id||null
       });
     });
     inventarioRows=rows;
@@ -3563,6 +3544,62 @@ function _fmtBRL(v){if(!v&&v!==0)return null;return Number(v).toLocaleString('pt
 
 function abrirDetalheInv(idx){
   const r=_invFiltered[idx];if(!r)return;
+  abrirDetalheInvRow(r);
+}
+async function verInvDeEmendaItem(emendaItemId){
+  if(!emendaItemId) return;
+  if(!inventarioCarregado){ try{ await loadInventario(); }catch(_){} }
+  const r=(inventarioRows||[]).find(x=>String(x.emenda_item_id||'')===String(emendaItemId));
+  if(!r){ alert('Este item ainda não foi confirmado no inventário (entrega na unidade).'); return; }
+  abrirDetalheInvRow(r);
+}
+function verTudoEmendaItem(id){
+  const r=(allRows||[]).find(x=>String(x.id)===String(id));
+  if(!r){ alert('Item não encontrado.'); return; }
+  const inv=(inventarioRows||[]).find(x=>String(x.emenda_item_id||'')===String(id));
+  const campos=[
+    ['Item', r.item],
+    ['Emenda', (r.emenda||'')+(r.tipo?(' · '+r.tipo):'')],
+    ['Parlamentar', r.parlamentar],
+    ['Unidade beneficiada', r.unidade],
+    ['Quantidade', r.qtde],
+    ['Valor unitário', r.vl_unitario?_fmtBRL(r.vl_unitario):null],
+    ['Valor total', r.vl_total?_fmtBRL(r.vl_total):null],
+    ['Status', r.status_raw],
+    ['Categoria', r.status_cat],
+    ['CPL / Processo', r.cpl],
+    ['Empenho', r.empenho],
+    ['Nota fiscal', r.nota_fiscal],
+    ['Patrimônio', r.patrimonio],
+    ['Unidade de entrega', r.unidade_entrega],
+    ['Data de entrega', r.data_entrega?fmtDate(r.data_entrega):null],
+    ['Ordem de pagamento', r.ordem_pagamento],
+    ['Comprovante de pagamento', r.comprovante_pagamento]
+  ];
+  if(inv){
+    campos.push(
+      ['AF Nº', inv.af_numero],
+      ['Data da AF', inv.af_data?fmtDate(inv.af_data):null],
+      ['Recebido por', inv.recebido_por],
+      ['Tipo de recebimento', inv.recebimento_tipo],
+      ['Data recebimento (depósito)', inv.data_recebimento?fmtDate(inv.data_recebimento):null],
+      ['Data entrega na unidade', inv.data_entrega_unidade?fmtDate(inv.data_entrega_unidade):null],
+      ['Nº de série', inv.numero_serie],
+      ['Responsável na unidade', inv.termo_responsavel],
+      ['Cargo do responsável', inv.termo_cargo]
+    );
+  }
+  const filt=campos.filter(([,v])=>v!=null&&String(v).trim()&&String(v)!=='—');
+  const modal=document.getElementById('modal-inv-detalhe');
+  document.body.appendChild(modal); // tira de dentro do painel do Inventário (escondido em outras abas)
+  document.getElementById('inv-detalhe-content').innerHTML=`
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(r.item||'Item')}</div>
+    ${inv?'':'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Item ainda não confirmado na unidade — mostrando tudo que já há registrado.</div>'}
+    <div>${filt.map(([l,v])=>_invField(l,v)).join('')}</div>`;
+  modal.classList.add('active');
+}
+function abrirDetalheInvRow(r){
+  if(!r)return;
   const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
   const campos=[
     ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
@@ -3989,9 +4026,7 @@ function filtrarAtas(){
     })()}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-    <button onclick="abrirModalEditExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
-    ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:''}
-    <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+    <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação (também sai do Controle de Entregas)">🗑️ Excluir</button>
   </td>
   </tr>`).join("");
   window._execRowsFiltered=execRows;
@@ -4079,9 +4114,7 @@ function filtrarExecs(){
     ${prazoCel}
     <td style="font-size:11px">${r.nf||"—"}</td>
     <td style="white-space:nowrap">
-      <button onclick="abrirModalEditExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar empenho/NF/datas">✏️ Editar</button>
-      ${!r.dt_entrega?`<button onclick="abrirModalProrrogarPrazo('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;margin-left:3px" title="Prorrogar prazo de entrega">📅 Prazo</button>`:""}
-      <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Excluir esta solicitação">🗑️</button>
+      <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação (também sai do Controle de Entregas)">🗑️ Excluir</button>
     </td>
   </tr>`;
   }).join("");
@@ -4130,8 +4163,8 @@ function _sancaoExecTitulo(r){
   return "Selecionar esta solicitação pendente";
 }
 function _renderSancaoExecCheckbox(r){
-  const disabled=_sancaoExecDisabled(r), key=encodeURIComponent(_sancaoExecKey(r));
-  return `<td style="text-align:center"><input type="checkbox" class="sancao-exec-check" ${sancaoSelecionados.has(_sancaoExecKey(r))?'checked':''} ${disabled?'disabled':''} onchange="alternarItemSancaoExec(decodeURIComponent('${key}'),this)" title="${_sanEsc(_sancaoExecTitulo(r))}" style="accent-color:var(--amber);cursor:${disabled?'not-allowed':'pointer'}"></td>`;
+  // Advertência foi movida para a aba "Controle de Entregas" (seleção multi-item). Aqui a planilha de Atas só permite excluir.
+  return `<td></td>`;
 }
 function _execsSancaoSelecionadas(){
   return atasExec.filter(r=>sancaoSelecionados.has(_sancaoExecKey(r)));
@@ -4162,7 +4195,7 @@ function _diasAtrasoExecs(itens){
 }
 async function abrirModalSolicitacaoSancaoAta(){
   if(!sancaoSelecionados.size||bloquearSeVisualiz('atas')) return;
-  _sancaoAquisicaoRow=null; _sancaoAquisicaoContrato=null; // garante que o dispatcher use o gerador de ATA
+  _sancaoAquisicaoRow=null; _sancaoAquisicaoContrato=null; _ceAdvAtivo=false; // garante que o dispatcher use o gerador de ATA
   const itens=_execsSancaoSelecionadas(); if(!itens.length) return;
   sancaoContrato=await _resolverContratoSancao(sancaoCplTravado,itens[0]?.contrato_id);
   const c=sancaoContrato||{}, primeiro=itens[0], numero=c.numero_contrato||primeiro.sim||"—";
@@ -4905,6 +4938,8 @@ async function loadLicitacoes(){
   renderLicitacoes();
 }
 function filtrarLicitacoes(){ renderLicitacoes(); }
+function _licItemExecutado(i){ const s=_cpStatusById[i.status_lic_id]; return !!(s&&s.automatico); }
+function _licItemContratado(i){ return !!i.contrato_id; }
 function renderLicitacoes(){
   const box=document.getElementById('lic-lista'); if(!box) return;
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
@@ -4915,18 +4950,26 @@ function renderLicitacoes(){
   const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
   const manuais=_cpStatusOpts.filter(s=>!s.automatico);
   let mostrados=0;
-  const base=_licitacoesCache.filter(p=>{
-    if(!incluirContratados && Number(p.n_contratos||0)>0 && !p.gera_mais_contratos) return false;
+  // por processo: itens que ainda estão na licitação = NÃO executados (entregue/execução/executado saem da aba)
+  const info=_licitacoesCache.map(p=>{
+    const naLic=(porProc[p.id]||[]).filter(i=>!_licItemExecutado(i));   // pendentes + já contratados
+    const pendentes=naLic.filter(i=>!_licItemContratado(i));            // ainda nem viraram contrato
+    return {p, naLic, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:naLic.length===0};
+  });
+  const ocultos=info.filter(x=>x.fullyContratado).length;
+  const base=info.filter(x=>{
+    if(x.gone) return false;                                  // todos os itens já saíram (executados)
+    if(x.fullyContratado && !incluirContratados) return false; // 100% virou contrato → some por padrão
+    const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
-    const items=porProc[p.id]||[];
-    if(fOrg){ const orgs=items.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo].concat(items.map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(fOrg){ const orgs=x.naLic.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo].concat(x.naLic.map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
-  const _ocultos=incluirContratados?0:_licitacoesCache.filter(p=>Number(p.n_contratos||0)>0 && !p.gera_mais_contratos).length;
-  const html=base.map(p=>{
-    mostrados++;
-    const items=porProc[p.id]||[];
+  const _ocultos=incluirContratados?0:ocultos;
+  const html=base.map(x=>{
+    const p=x.p; mostrados++;
+    const items=x.naLic;
     const roll=items.length?_cpRollup(items):{nome:'sem itens',orgao:null,auto:false};
     const aberto=!!_cpExpanded[p.id];
     let bloco=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
@@ -4954,7 +4997,9 @@ function renderLicitacoes(){
         const cur=_cpStatusById[it.status_lic_id];
         const exc=['fracassado','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
         let ctrl;
-        if(cur&&cur.automatico){
+        if(_licItemContratado(it)){
+          ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)">✔ virou contrato</span> <span title="já gerou contrato — agora é gerido em Contratos em execução" style="color:var(--text3);cursor:help">🔒</span>`;
+        } else if(cur&&cur.automatico){
           ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
         } else if(podeEd){
           ctrl=`<select onchange="cpSetItemStatus('${it.id}', this.value)" style="font-size:11px;padding:4px 6px;max-width:330px">
@@ -4988,7 +5033,7 @@ async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
   while(true){
     const {data,error}=await sb.from('itens')
-      .select('id,processo_id,descricao,qtde,status,status_lic_id,status_lic_desde')
+      .select('id,processo_id,descricao,qtde,status,status_lic_id,status_lic_desde,contrato_id')
       .not('processo_id','is',null).order('processo_id').range(from,from+size-1);
     if(error) throw error;
     all=all.concat(data||[]);
@@ -5028,8 +5073,8 @@ async function cpBulkApply(pid){
   const sel=document.getElementById('cp-bulk-'+pid); const val=sel?.value;
   if(!val){ alert('Selecione um status para aplicar.'); return; }
   const statusId=Number(val);
-  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !(_cpStatusById[i.status_lic_id]?.automatico));
-  if(!alvos.length){ alert('Nenhum item editável neste processo (os automáticos são controlados pelo sistema).'); return; }
+  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i));
+  if(!alvos.length){ alert('Nenhum item editável neste processo (os já contratados/executados são controlados em outras abas).'); return; }
   if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" a ${alvos.length} item(ns)?`)) return;
   try{ for(const it of alvos){ await _cpGravarStatus(it.id, statusId); } }catch(e){ alert('Erro: '+(e.message||e)); }
   renderLicitacoes();
@@ -5289,7 +5334,7 @@ async function _persistProcItens(processoId, natureza){
     if(!ehAta && fonte_tipo==='emenda'){ emenda_id=g('pi-emenda').value||null; if(!emenda_id) throw new Error('Selecione a emenda dos itens com fonte = Emenda.'); emenda_item_id=c.dataset.emendaItemId||null; }
     else if(!ehAta){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     current.push({id:c.dataset.itemId||null, row:{
-      processo_id:processoId, origem, fonte_tipo:ehAta?null:fonte_tipo, emenda_id, emenda_item_id, fonte_descricao,
+      processo_id:processoId, origem, fonte_tipo:ehAta?'ata':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
       prazo_entrega_dias:parseInt(g('pi-prazo').value)||null,
@@ -5841,9 +5886,10 @@ async function salvarVincularEmpenho(){
 
 // ═══ Fase 11: advertência/sanção para itens de aquisição (migrada da aba ATAs) ═══
 let _sancaoAquisicaoRow=null, _sancaoAquisicaoContrato=null;
-function gerarSancaoDoc(){ return _sancaoAquisicaoRow ? gerarAdvertenciaAquisicao() : gerarSolicitacaoSancaoAta(); }
+function gerarSancaoDoc(){ return _ceAdvAtivo ? gerarAdvertenciaCE() : (_sancaoAquisicaoRow ? gerarAdvertenciaAquisicao() : gerarSolicitacaoSancaoAta()); }
 async function abrirAdvertenciaAquisicao(entregaId){
   if(bloquearSeVisualiz('itens')) return;
+  _ceAdvAtivo=false;
   const row=entregasRows.find(r=>String(r.entrega_id)===String(entregaId)); if(!row){ if(window.toast)toast('Registro não encontrado','error'); return; }
   let c={}; if(row.contrato_id){ const {data}=await sb.from('contratos').select('id,numero_contrato,cnpj,objeto').eq('id',row.contrato_id).single(); c=data||{}; }
   _sancaoAquisicaoRow=row; _sancaoAquisicaoContrato=c;
@@ -5985,7 +6031,7 @@ async function loadItensEntregas(){
     const recebido=!!(r.dt_entrega && String(r.dt_entrega).trim());
     const limiteISO=_toISODate(r.prev_entrega);
     out.push({
-      tipo:'ATA', processo:r.cpl||'', contrato:r.sim||'', empresa:'',
+      tipo:'ATA', exec_id:r.id, processo:r.cpl||'', contrato:r.sim||'', empresa:'',
       item:r.item||'', unidade:r.unidade||'', af_numero:'',
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega),
@@ -6037,6 +6083,9 @@ function renderItensEntregas(){
   const fT=document.getElementById('entregas-f-tipo')?.value||'';
   const fP=document.getElementById('entregas-f-prazo')?.value||'';
   const rows=entregasRows.filter(r=>{
+    // já entregues saem desta sub-aba (vão para "Confirmação de Entrega na Unidade"); ainda acessíveis pelo filtro de prazo = "recebido"
+    const entregue = r.recebido && (r.tipo==='ATA' ? true : (Number(r.saldo_af)||0)<=0);
+    if(entregue && fP!=='recebido') return false;
     if(fT && r.tipo!==fT) return false;
     if(fP && r.status!==fP) return false;
     if(q){ const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
@@ -6047,10 +6096,10 @@ function renderItensEntregas(){
     return (_diasRestantes(a.limiteISO)??99999)-(_diasRestantes(b.limiteISO)??99999);
   });
   const cEl=document.getElementById('entregas-count'); if(cEl) cEl.textContent=`${rows.length} registro(s)`;
-  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum registro de entrega/prazo. As aquisições aparecem ao <b>emitir AF</b> na subaba Itens de Aquisições; as atas vêm da aba <b>ATAs</b>.</div>'; return; }
-  wrap.innerHTML=`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
+  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item aguardando entrega. Aquisições aparecem aqui ao <b>gerar contrato</b> (aguardando AF); atas vêm ao <b>solicitar/executar</b> na aba <b>Atas Rp Vigentes</b>. Itens já entregues vão para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
+  wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
+      <th style="padding:7px 8px;width:28px" title="Selecionar para advertência">⚖️</th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
       const dias=_diasRestantes(r.limiteISO);
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
@@ -6072,7 +6121,9 @@ function renderItensEntregas(){
         const recBtn=podeRec?`<button onclick="abrirRecebimento('${r.entrega_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">Receber item</button>`:'';
         const verBtn=totalmenteRecebido?`<button onclick="verRecebimento('${r.entrega_id}')" title="Item totalmente recebido — visualizar dados do recebimento" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;white-space:nowrap">✓ Ver recebimento</button>`:'';
         const advBtn=(r.tipo==='Aquisição'&&pode)?`<button onclick="abrirAdvertenciaAquisicao('${r.entrega_id}')" title="Gerar advertência / multa à empresa" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--orange,#EF9F27);background:var(--surface);color:var(--orange,#EF9F27);cursor:pointer;white-space:nowrap">⚖️ Advertência</button>`:'';
-        acoes=(recBtn||verBtn||advBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${advBtn}</div>`:'—';
+        const ataPrazoBtn=(r.tipo==='ATA'&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
+        const ataRecBtn=(r.tipo==='ATA'&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Registrar/editar entrega (empenho, NF, datas)" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver/editar':'📥 Receber'}</button>`:'';
+        acoes=(recBtn||verBtn||advBtn||ataPrazoBtn||ataRecBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataRecBtn}${advBtn}${ataPrazoBtn}</div>`:'—';
         docs=r.tipo==='Aquisição'
           ?`<div>Emp: ${_sanEsc(r.empenho||'—')}</div><div>NF: ${_sanEsc(r.nota_fiscal||'—')}${r.nf_dataISO?(' · '+fmtDate(r.nf_dataISO)):''}</div>${r.patrimonio?('<div>Pat: '+_sanEsc(r.patrimonio)+'</div>'):''}${r.numero_serie?('<div>Série: '+_sanEsc(r.numero_serie)+'</div>'):''}${marcaMod?('<div>'+_sanEsc(marcaMod)+'</div>'):''}`
           :'—';
@@ -6081,6 +6132,7 @@ function renderItensEntregas(){
           :(r.recebido?'sim':'—');
       }
       return `<tr style="border-bottom:1px solid var(--border)${rowBg}">
+      <td style="padding:6px 8px;text-align:center">${_ceAdvCheckbox(r)}</td>
       <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
       <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.processo||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.contrato||'—')}</td>
@@ -6096,6 +6148,91 @@ function renderItensEntregas(){
       <td style="padding:6px 8px">${_prazoBadge(r.status,dias)}</td>
       <td style="padding:6px 8px">${acoes}</td>
     </tr>`;}).join('')}</tbody></table>`;
+}
+
+// ── Advertência multi-item no Controle de Entregas (mesmo contrato) ──
+let _ceAdvSel=new Set(), _ceAdvLock='', _ceAdvAtivo=false, _ceAdvRows=[], _ceAdvContrato=null;
+function _ceRowKey(r){ return r.entrega_id?('a'+r.entrega_id):(r.exec_id?('t'+r.exec_id):('i'+(r.item_id||r.item||''))); }
+function _ceAdvLockKey(r){ return String(r.contrato||r.processo||''); }
+function _ceAdvElegivel(r){ return !r.recebido && !r.cancelado && !!(r.contrato||r.processo); }
+function _ceAdvCheckbox(r){
+  if(!_ceAdvElegivel(r)||!podeEditar('itens')) return '';
+  const key=_ceRowKey(r), checked=_ceAdvSel.has(key);
+  const disabled=_ceAdvLock && _ceAdvLockKey(r)!==_ceAdvLock && !checked;
+  return `<input type="checkbox" class="ce-adv-chk" ${checked?'checked':''} ${disabled?'disabled':''} onchange="_ceAdvToggle('${key}',this)" title="${disabled?('Seleção limitada ao contrato '+_sanEsc(_ceAdvLock)):'Selecionar para advertência'}" style="accent-color:#EF9F27;cursor:${disabled?'not-allowed':'pointer'}">`;
+}
+function _ceAdvToggle(key,cb){
+  const r=entregasRows.find(x=>_ceRowKey(x)===key); if(!r){cb.checked=false;return;}
+  if(cb.checked){ if(!_ceAdvLock) _ceAdvLock=_ceAdvLockKey(r); _ceAdvSel.add(key); }
+  else { _ceAdvSel.delete(key); if(!_ceAdvSel.size) _ceAdvLock=''; }
+  renderItensEntregas();
+}
+function _ceAdvLimpar(){ _ceAdvSel.clear(); _ceAdvLock=''; renderItensEntregas(); }
+function _ceAdvBar(){
+  const n=_ceAdvSel.size; if(!n) return '';
+  return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-bg,#fff7e6);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:10px">
+    <span style="font-size:12px;color:var(--text2)">${n} item(ns) · contrato <b>${_sanEsc(_ceAdvLock||'—')}</b></span>
+    <button onclick="abrirAdvertenciaCE()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar advertência</button>
+    <button onclick="_ceAdvLimpar()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Limpar seleção</button>
+  </div>`;
+}
+async function abrirAdvertenciaCE(){
+  if(bloquearSeVisualiz('itens')) return;
+  const rows=entregasRows.filter(r=>_ceAdvSel.has(_ceRowKey(r))); if(!rows.length) return;
+  _ceAdvRows=rows; _ceAdvAtivo=true; _sancaoAquisicaoRow=null;
+  let c={}; const cid=rows.find(r=>r.contrato_id)?.contrato_id;
+  if(cid){ const {data}=await sb.from('contratos').select('id,numero_contrato,cnpj,objeto,prestador').eq('id',cid).single(); c=data||{}; }
+  _ceAdvContrato=c;
+  const empresa=c.prestador||rows.find(r=>r.empresa)?.empresa||'';
+  const numero=c.numero_contrato||rows[0].contrato||'—';
+  const modal=document.getElementById('modal-solicitar-sancao'); document.body.appendChild(modal);
+  document.getElementById('sancao-contrato-info').innerHTML=`<strong>Processo/CPL:</strong> ${_sanEsc(rows[0].processo||'—')} &nbsp;·&nbsp; <strong>Contrato:</strong> ${_sanEsc(numero)}<br><strong>Empresa:</strong> ${_sanEsc(empresa||'—')} &nbsp;·&nbsp; <strong>CNPJ:</strong> ${_sanEsc(c.cnpj||'—')}`;
+  document.querySelectorAll('input[name="sancao-tipo"]').forEach(el=>el.checked=false);
+  const mot=document.querySelector('input[name="sancao-motivo"][value="Atraso na entrega"]'); if(mot) mot.checked=true;
+  ['sancao-motivo-livre','sancao-clausula','sancao-artigo','sancao-percentual'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  const atrasos=rows.map(r=>_diasRestantes(r.limiteISO)).filter(d=>d!=null&&d<0).map(d=>Math.abs(d));
+  document.getElementById('sancao-dias').value=atrasos.length?Math.max(...atrasos):'';
+  document.getElementById('sancao-itens-modal').innerHTML=rows.map(r=>`<div style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px"><strong>${_sanEsc(r.item)}</strong> · ${_sanEsc(r.unidade||'—')} <span style="color:var(--text3)">· Qtde ${r.qtde||'—'} · ${r.limiteISO?('limite '+fmtDate(r.limiteISO)):'sem prazo'}</span></div>`).join('');
+  const msg=document.getElementById('sancao-doc-msg'); msg.className='fmsg'; msg.textContent='';
+  atualizarCamposSancao();
+  modal.classList.add('active');
+}
+async function gerarAdvertenciaCE(){
+  if(bloquearSeVisualiz('itens')) return;
+  const rows=_ceAdvRows, c=_ceAdvContrato||{};
+  const tipo=document.querySelector('input[name="sancao-tipo"]:checked')?.value||'';
+  const motivo=document.querySelector('input[name="sancao-motivo"]:checked')?.value||'';
+  const motivoLivre=document.getElementById('sancao-motivo-livre').value.trim();
+  const clausula=document.getElementById('sancao-clausula').value.trim();
+  const artigo=document.getElementById('sancao-artigo').value.trim();
+  const percentualRaw=document.getElementById('sancao-percentual').value;
+  const diasRaw=document.getElementById('sancao-dias').value;
+  const msg=document.getElementById('sancao-doc-msg');
+  if(!rows||!rows.length){ msg.textContent='Nenhum item selecionado.'; msg.className='fmsg err'; return; }
+  if(!tipo||!motivo){ msg.textContent='Escolha o tipo e o motivo da sanção.'; msg.className='fmsg err'; return; }
+  if(motivo==='Outro motivo'&&!motivoLivre){ msg.textContent='Descreva o outro motivo.'; msg.className='fmsg err'; return; }
+  const empresa=c.prestador||rows.find(r=>r.empresa)?.empresa||'—';
+  const numero=c.numero_contrato||rows[0].contrato||'—';
+  const janela=window.open('','_blank'); if(!janela){ msg.textContent='Permita pop-ups e tente novamente.'; msg.className='fmsg err'; return; }
+  janela.document.write('<!doctype html><meta charset="utf-8"><p style="font-family:Arial;padding:24px">Registrando solicitação...</p>');
+  const btn=document.getElementById('btn-confirmar-sancao'); btn.disabled=true; btn.textContent='Registrando...';
+  const itensSnap=rows.map(r=>({id:_ceRowKey(r),cpl:r.processo,sim:numero,item:r.item,unidade:r.unidade,qtde:r.qtde,vl_unitario:null,vl_total:r.valor_item||null,empenho:r.empenho,data_af:r.af_dataISO,prev_entrega:r.limiteISO,dt_entrega:r.data_recebimentoISO}));
+  const snapshot={artigo_adicional:artigo||null,itens:itensSnap};
+  const registro={cpl_contrato:rows[0].processo,contrato_id:c.id||rows.find(r=>r.contrato_id)?.contrato_id||null,empresa,tipo_sancao:tipo,motivo,motivo_livre:motivo==='Outro motivo'?motivoLivre:null,clausula_contratual:clausula||null,percentual_multa:tipo==='Multa'&&percentualRaw!==''?Number(percentualRaw):null,dias_atraso:diasRaw!==''?Number(diasRaw):null,itens_ids:JSON.stringify(itensSnap.map(i=>i.id)),itens_json:JSON.stringify(snapshot),solicitado_por:currentProfile?.nome||currentProfile?.email||'Usuário do sistema',gerado_em:new Date().toISOString().slice(0,10)};
+  const {data:_san,error}=await sb.from('sancoes_solicitadas').insert(registro).select().single();
+  btn.disabled=false; btn.textContent='Gerar documento';
+  if(error){ janela.close(); msg.textContent='Erro ao registrar: '+error.message; msg.className='fmsg err'; return; }
+  if(_san) await sb.from('sancao_itens').insert(itensSnap.map(it=>({sancao_id:_san.id,ref_origem:String(it.id),descricao:it.item,cpl:it.cpl,sim:it.sim,unidade:it.unidade,qtde:it.qtde,vl_unitario:it.vl_unitario,vl_total:it.vl_total,empenho:it.empenho,data_af:it.data_af,prev_entrega:it.prev_entrega,dt_entrega:it.dt_entrega})));
+  const incisos={'Advertência':'I','Multa':'II','Impedimento de licitar e contratar':'III','Declaração de inidoneidade':'IV'};
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  const fundamento=motivo==='Atraso na entrega'?'ao ensejar o retardamento da entrega do objeto contratual sem motivo justificado':_sanEsc(motivoLivre);
+  const linhas=rows.map((r,idx)=>{ const dias=_diasRestantes(r.limiteISO); return `<tr><td>${idx+1}</td><td><strong>${_sanEsc(r.processo||'—')}</strong><br>${_sanEsc(empresa)}</td><td>${_sanEsc(r.item||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td>${r.qtde||'—'}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${(dias!=null&&dias<0)?Math.abs(dias)+' dias de atraso':'Aguardando entrega'}</td></tr>`; }).join('');
+  janela.document.open();
+  janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Solicitação de Sanção - ${_sanEsc(rows[0].processo||'')}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:11pt;line-height:1.45;margin:0}header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:18px}header h1{font-size:15pt;margin:12px 0 4px}.ident{border:1px solid #555;padding:12px;margin:14px 0;background:#f5f5f5}.ident div{margin:3px 0}h2{font-size:11pt;text-transform:uppercase;margin:18px 0 7px}table{width:100%;border-collapse:collapse;font-size:8pt}th,td{border:1px solid #777;padding:5px;vertical-align:top}th{background:#eee}.assinatura{margin:70px auto 0;text-align:center;width:320px;border-top:1px solid #111;padding-top:6px}.corpo{text-align:justify}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><header><strong>SECRETARIA MUNICIPAL DA SAÚDE · SOROCABA</strong><p>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</p><h1>SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO ADMINISTRATIVA</h1><p>Gerado em ${hoje}</p></header><div class="ident"><div>Processo/CPL: <strong>${_sanEsc(rows[0].processo||'—')}</strong></div><div>Contrato nº: <strong>${_sanEsc(numero)}</strong></div><div>Empresa contratada: <strong>${_sanEsc(empresa)}</strong></div><div>CNPJ: ${_sanEsc(c.cnpj||'—')}</div><div>Objeto: ${_sanEsc(c.objeto||'—')}</div></div><h2>Fundamentação legal</h2><p class="corpo">A contratada incorreu na infração prevista no art. 155, inciso VII, da Lei nº 14.133/2021, ${fundamento}, sujeitando-se às sanções previstas no art. 156, inciso ${incisos[tipo]||''} da mesma Lei. ${clausula?`Ademais, a conduta viola a ${_sanEsc(clausula)} do instrumento contratual.`:''} ${artigo?_sanEsc(artigo)+'.':''}</p><h2>Itens relacionados</h2><table><thead><tr><th>#</th><th>Processo / Empresa</th><th>Item</th><th>Unidade</th><th>Qtde</th><th>Empenho</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table><h2>Solicitação</h2><p class="corpo">Diante do exposto, solicita-se a instauração de processo administrativo sancionador e aplicação de <strong>${_sanEsc(tipo.toUpperCase())}</strong> à empresa <strong>${_sanEsc(empresa)}</strong>, garantidos o contraditório e a ampla defesa, nos termos do art. 157 da Lei nº 14.133/2021.</p>${tipo==='Multa'&&percentualRaw!==''?`<p class="corpo">A multa sugerida é de <strong>${_sanEsc(percentualRaw)}% ao dia de atraso</strong> sobre o valor dos itens em atraso.</p>`:''}<div class="assinatura"><strong>${_sanEsc(registro.solicitado_por)}</strong><br>Secretaria da Saúde - Seção de Aquisição de Equipamentos e Mobiliários da Saúde<br>${hoje}</div><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script><\/body><\/html>`);
+  janela.document.close();
+  document.getElementById('modal-solicitar-sancao').classList.remove('active');
+  _ceAdvAtivo=false; _ceAdvSel.clear(); _ceAdvLock=''; _ceAdvRows=[];
+  renderItensEntregas();
 }
 
 let _recEmpenhosRows=[], _recNFsRows=[];
@@ -8060,11 +8197,179 @@ function applyFilters(){
     if(empenho&&!r.empenho.toLowerCase().includes(empenho)) return false;
     if(patrimonio&&!r.patrimonio.toLowerCase().includes(patrimonio)) return false;
     if(nf&&!r.nota_fiscal.toLowerCase().includes(nf)) return false;
-    if(busca&&!matchBusca(r.item+' '+r.status_raw+' '+r.unidade+' '+r.cpl,busca)) return false;
+    if(busca&&!matchBusca([r.item,r.status_raw,r.unidade,r.cpl,r.empenho,r.nota_fiscal,r.patrimonio,r.emenda,r.parlamentar,r.unidade_entrega,r.ordem_pagamento].filter(Boolean).join(' '),busca)) return false;
     if(semCplFilter&&r.cpl) return false;
     return true;
   });
   renderMetrics();renderStatusList();renderParlBars();renderTable();
+  emRenderAtivo();
+}
+
+// ═══ MODOS DE VISUALIZAÇÃO DAS EMENDAS ═══
+const EM_MODOS=[
+  ['planilha','📋 Planilha'],
+  ['por-emenda','📂 Por emenda'],
+  ['cards','🪪 Visão parlamentar'],
+  ['status','🗂️ Por status'],
+  ['parlamentar','👤 Por parlamentar']
+];
+function _emLoadConfig(){
+  try{ const c=JSON.parse(localStorage.getItem('em_config')||'null'); if(c&&Array.isArray(c.disponiveis)&&c.disponiveis.length&&c.principal) return c; }catch(_){}
+  return {disponiveis:EM_MODOS.map(m=>m[0]), principal:'planilha'};
+}
+let _emConfig=_emLoadConfig();
+let _emModo=_emConfig.principal;
+let _emExpand={};
+function _emSalvarConfigLS(){ try{localStorage.setItem('em_config',JSON.stringify(_emConfig));}catch(_){} }
+function renderEmModoBar(){
+  const bar=document.getElementById('em-modo-bar'); if(!bar) return;
+  const disp=EM_MODOS.filter(([k])=>_emConfig.disponiveis.includes(k));
+  if(!disp.some(([k])=>k===_emModo)) _emModo=disp[0]?.[0]||'planilha';
+  bar.innerHTML='<span style="font-size:11px;color:var(--text3);margin-right:4px">Visualizar:</span>'+
+    disp.map(([k,l])=>`<button onclick="emSetModo('${k}')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:${_emModo===k?'var(--blue)':'var(--surface)'};color:${_emModo===k?'#fff':'var(--text2)'}">${l}${k===_emConfig.principal?' ★':''}</button>`).join('')+
+    (_isAdmin()?`<button onclick="emAbrirConfig()" title="Configurar modos (admin)" style="font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--text2);margin-left:6px">⚙️</button>`:'');
+}
+function emSetModo(m){ _emModo=m; emRenderAtivo(); }
+function emRenderAtivo(){
+  renderEmModoBar();
+  const pl=document.getElementById('em-view-planilha');
+  const dyn=document.getElementById('em-view-por-emenda');
+  if(!pl||!dyn) return;
+  if(_emModo==='planilha'){ dyn.style.display='none'; pl.style.display=''; return; }
+  pl.style.display='none'; dyn.style.display='';
+  if(_emModo==='por-emenda') renderEmPorEmenda();
+  else if(_emModo==='cards') renderEmCards();
+  else if(_emModo==='status') renderEmPorStatus();
+  else if(_emModo==='parlamentar') renderEmPorParlamentar();
+  else renderEmPorEmenda();
+}
+function emAbrirConfig(){
+  if(!_isAdmin()) return;
+  const ov=document.createElement('div');
+  ov.className='em-cfg-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:12px;padding:20px;width:400px;max-width:94vw">
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px">⚙️ Modos de visualização das Emendas</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Marque quais modos ficam disponíveis e escolha o principal (★ = abre primeiro).</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">${EM_MODOS.map(([k,l])=>`
+      <label style="display:flex;align-items:center;gap:10px;font-size:13px">
+        <input type="checkbox" class="emcfg-disp" value="${k}" ${_emConfig.disponiveis.includes(k)?'checked':''} style="accent-color:var(--blue)">
+        <span style="flex:1">${l}</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);cursor:pointer"><input type="radio" name="emcfg-princ" value="${k}" ${_emConfig.principal===k?'checked':''} style="accent-color:var(--amber)"> principal</label>
+      </label>`).join('')}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="this.closest('.em-cfg-ov').remove()" style="font-size:12px;padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Cancelar</button>
+      <button onclick="emSalvarConfig(this)" style="font-size:12px;padding:8px 14px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function emSalvarConfig(btn){
+  const ov=btn.closest('.em-cfg-ov');
+  const disp=[...ov.querySelectorAll('.emcfg-disp:checked')].map(c=>c.value);
+  if(!disp.length){ alert('Selecione ao menos um modo.'); return; }
+  let princ=ov.querySelector('input[name=emcfg-princ]:checked')?.value||disp[0];
+  if(!disp.includes(princ)) princ=disp[0];
+  _emConfig={disponiveis:disp, principal:princ}; _emSalvarConfigLS();
+  _emModo=princ; ov.remove(); emRenderAtivo();
+}
+function _emGrupos(keyFn){ const g={}; (filtered||[]).forEach(r=>{ const k=keyFn(r)||'—'; (g[k]=g[k]||[]).push(r); }); return g; }
+function _emProg(items){ const t=items.length, e=items.filter(i=>/ENTREGUE/i.test(i.status_cat||'')).length; return {t,e,pct:t?Math.round(e/t*100):0}; }
+function emSetModoEmenda(emEnc){ const em=decodeURIComponent(emEnc); _emExpand={}; _emExpand[em]=true; _emModo='por-emenda'; emRenderAtivo(); }
+function renderEmCards(){
+  const box=document.getElementById('em-view-por-emenda'); if(!box) return;
+  const g=_emGrupos(r=>r.emenda); const chaves=Object.keys(g).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(!chaves.length){ box.innerHTML='<div style="padding:1rem;color:var(--text3);text-align:center">Nenhuma emenda.</div>'; return; }
+  box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">'+chaves.map(em=>{
+    const items=g[em]; const p=_emProg(items); const r0=items[0]||{};
+    const cor=p.pct>=100?'var(--green)':(p.pct>0?'var(--amber)':'var(--text3)');
+    return `<div onclick="emSetModoEmenda('${encodeURIComponent(em)}')" title="Ver itens desta emenda" style="border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface);cursor:pointer">
+      <div style="font-weight:700;font-size:14px;margin-bottom:2px">${_sanEsc(em)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${_sanEsc(r0.parlamentar||'—')}</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="position:relative;width:58px;height:58px;border-radius:50%;background:conic-gradient(${cor} ${p.pct*3.6}deg, var(--border) 0)">
+          <div style="position:absolute;inset:6px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${cor}">${p.pct}%</div>
+        </div>
+        <div style="font-size:12px;color:var(--text2)"><b style="font-size:15px">${p.e}</b>/${p.t}<br><span style="color:var(--text3)">itens entregues</span></div>
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+function renderEmPorStatus(){
+  const box=document.getElementById('em-view-por-emenda'); if(!box) return;
+  const g=_emGrupos(r=>r.status_cat||'Sem status');
+  const ordem=['EM LICITAÇÃO','EM ANDAMENTO','AGUARDANDO RESERVA','EM CARONA','SEGOV','CONTROLE INTERNO','AF EMITIDA','ENTREGUE','TRANSFERIDO TI','FRACASSADO','CANCELADO','SUSPENSO'];
+  const chaves=Object.keys(g).sort((a,b)=>{ const ia=ordem.indexOf(a),ib=ordem.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b); });
+  if(!chaves.length){ box.innerHTML='<div style="padding:1rem;color:var(--text3);text-align:center">Nenhum item.</div>'; return; }
+  box.innerHTML='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">'+chaves.map(st=>{
+    const items=g[st];
+    return `<div style="min-width:230px;flex:0 0 230px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">${_sanEsc(st)} <span style="color:var(--text3);font-weight:400">(${items.length})</span></div>
+      ${items.slice(0,60).map(i=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 9px;margin-bottom:6px;font-size:12px"><div style="font-weight:500">${_sanEsc(i.item||'—')}</div><div style="font-size:10px;color:var(--text3)">${_sanEsc(i.emenda||'')}${i.cpl?(' · '+_sanEsc(i.cpl)):''}</div></div>`).join('')}
+      ${items.length>60?`<div style="font-size:11px;color:var(--text3);text-align:center">+${items.length-60} mais</div>`:''}
+    </div>`;
+  }).join('')+'</div>';
+}
+function renderEmPorParlamentar(){
+  const box=document.getElementById('em-view-por-emenda'); if(!box) return;
+  const g=_emGrupos(r=>r.parlamentar); const chaves=Object.keys(g).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(!chaves.length){ box.innerHTML='<div style="padding:1rem;color:var(--text3);text-align:center">Nenhum parlamentar.</div>'; return; }
+  box.innerHTML=chaves.map(par=>{
+    const items=g[par]; const p=_emProg(items); const emendas=new Set(items.map(i=>i.emenda)).size;
+    return `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;padding:12px 14px;background:var(--surface);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px"><div style="font-weight:700;font-size:14px">${_sanEsc(par)}</div><div style="font-size:11px;color:var(--text3)">${emendas} emenda(s) · ${p.t} itens · ${p.e} entregues</div></div>
+      <div style="width:180px"><div style="height:9px;background:var(--border);border-radius:6px;overflow:hidden"><div style="height:100%;width:${p.pct}%;background:var(--green)"></div></div><div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${p.pct}% entregue</div></div>
+    </div>`;
+  }).join('');
+}
+function _emStatusChip(i){
+  const c=i.status_cat||'';
+  const cor=/ENTREGUE/i.test(c)?'var(--green)':(/(FRACASS|CANCEL|SUSPEN)/i.test(c)?'var(--red)':'var(--text2)');
+  return `<span style="font-size:11px;font-weight:600;color:${cor}">${_sanEsc(c||'—')}</span>`;
+}
+function emTogglePorEmenda(em){ _emExpand[em]=!_emExpand[em]; renderEmPorEmenda(); }
+function renderEmPorEmenda(){
+  const box=document.getElementById('em-view-por-emenda'); if(!box) return;
+  const grupos={};
+  (filtered||[]).forEach(r=>{ const k=r.emenda||'—'; (grupos[k]=grupos[k]||[]).push(r); });
+  const chaves=Object.keys(grupos).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(!chaves.length){ box.innerHTML='<div style="padding:1rem;color:var(--text3);text-align:center">Nenhuma emenda encontrada.</div>'; return; }
+  box.innerHTML=chaves.map(em=>{
+    const items=grupos[em];
+    const total=items.length;
+    const entregues=items.filter(i=>/ENTREGUE/i.test(i.status_cat||'')).length;
+    const pct=total?Math.round(entregues/total*100):0;
+    const r0=items[0]||{};
+    const aberto=!!_emExpand[em];
+    const emEnc=encodeURIComponent(em);
+    let h=`<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
+      <div onclick="emTogglePorEmenda(decodeURIComponent('${emEnc}'))" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;background:var(--surface2)">
+        <span style="font-size:13px;color:var(--text3);transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px">${_sanEsc(em)} <span style="font-weight:400;color:var(--text3)">· ${_sanEsc(r0.parlamentar||'')}</span></div>
+          <div style="font-size:11px;color:var(--text3)">${total} ${total===1?'item':'itens'} · ${entregues} entregue${entregues!==1?'s':''}</div>
+        </div>
+        <div style="width:170px;flex-shrink:0">
+          <div style="height:9px;background:var(--border);border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--green)"></div></div>
+          <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% entregue</div>
+        </div>
+      </div>`;
+    if(aberto){
+      h+=`<table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>`;
+      items.forEach(i=>{
+        h+=`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px 14px">${_sanEsc(i.item||'—')}</td>
+          <td style="padding:8px 8px;color:var(--text3);width:55px;text-align:center">${i.qtde??''}</td>
+          <td style="padding:8px 8px;width:150px">${_emStatusChip(i)}</td>
+          <td style="padding:8px 8px;color:var(--text3);font-size:11px">${_sanEsc(i.cpl||'')}</td>
+          <td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i.id))}'))" style="font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">🔎 Ver tudo</button></td>
+        </tr>`;
+      });
+      h+=`</tbody></table>`;
+    }
+    h+=`</div>`;
+    return h;
+  }).join('');
 }
 
 // ═══ RENDER ═══
@@ -8394,7 +8699,7 @@ function renderTable(){
   if(thSaldo) thSaldo.style.display=podeVerSaldo?'':'none';
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>`<tr>
-    <td>${podeEditar('dashboard')?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">✏️ Editar</button>`:'—'}</td>
+    <td style="white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" title="Ver tudo sobre este item" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">🔎 Ver tudo</button>${_isAdmin()?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" style="background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">✏️ Editar</button>`:''}</td>
     <td>${tipoBadge(r.tipo)}</td>
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
@@ -8497,6 +8802,7 @@ function _diasAtrasoAutomatico(itens){
 }
 async function abrirModalSolicitacaoSancao(){
   if(!sancaoSelecionados.size||bloquearSeVisualiz('dashboard')) return;
+  _sancaoAquisicaoRow=null; _ceAdvAtivo=false;
   if(!sancaoContrato) sancaoContrato=await _resolverContratoSancao(sancaoCplTravado);
   const itens=_itensSancaoSelecionados();
   const c=sancaoContrato||{};
