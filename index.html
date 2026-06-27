@@ -50,12 +50,12 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Itens</div>
-      <div class="sidebar-item" id="sidebar-itens" style="display:none" onclick="showTab('itens')"><span class="sidebar-icon">📦</span><span class="sidebar-label">Itens</span></div>
+      <div class="sidebar-item" id="sidebar-itens" style="display:none" onclick="showTab('itens')"><span class="sidebar-icon">📦</span><span class="sidebar-label">Controle de Entregas</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Contratos</div>
-      <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">ATAs / Contratos</span></div>
-      <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos</span></div>
+      <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">Atas Rp Vigentes</span></div>
+      <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos em execução</span></div>
       <div class="sidebar-item" id="sidebar-licitacoes" style="display:none" onclick="showTab('licitacoes')"><span class="sidebar-icon">🧭</span><span class="sidebar-label">Licitações em andamento</span></div>
       <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções</span></div>
     </div>
@@ -1085,7 +1085,7 @@
 <div id="panel-itens" class="panel">
   <div class="form-card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
-      <div class="form-title" style="margin:0;padding:0;border:none">📦 Itens — acompanhamento</div>
+      <div class="form-title" style="margin:0;padding:0;border:none">📦 Controle de Entregas</div>
       <button onclick="loadItens()" title="Recarregar" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
@@ -1521,7 +1521,7 @@
       <div class="table-hdr">
         <div style="display:flex;align-items:center;gap:8px">
           <button class="sheet-toggle-btn" id="btn-toggle-atas-itens" onclick="toggleTabelaAtas('itens')">Mostrar</button>
-          <span class="table-hdr-title">Itens das ATAs / Contratos</span>
+          <span class="table-hdr-title">Itens das Atas Rp Vigentes</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="table-hdr-count" id="atas-count">—</span>
@@ -1893,7 +1893,7 @@
 
     <div class="table-card">
       <div class="table-hdr">
-        <span class="table-hdr-title">Contratos</span>
+        <span class="table-hdr-title">Contratos em execução</span>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="table-hdr-count" id="ct-count">—</span>
           <button id="ct-manter-status" onclick="manterStatusContratos()" disabled style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Manter Status</button>
@@ -4105,7 +4105,7 @@ function calcDiasPrazo(r){
   return Math.round((dAF-new Date())/(1000*60*60*24));
 }
 
-// Sanções são geradas exclusivamente a partir de ATAs / Contratos > Execuções / Solicitações.
+// Sanções são geradas exclusivamente a partir de Atas Rp Vigentes > Execuções / Solicitações.
 let sancaoEmpresaTravada = "";
 
 function _sancaoAtaDoExec(r){
@@ -4122,7 +4122,7 @@ function _sancaoExecDisabled(r){
   return !!sancaoCplTravado&&(r.cpl!==sancaoCplTravado||empresa!==sancaoEmpresaTravada)&&!sancaoSelecionados.has(_sancaoExecKey(r));
 }
 function _sancaoExecTitulo(r){
-  if(!podeEditar('atas')) return "Sem permissão para editar ATAs / Contratos";
+  if(!podeEditar('atas')) return "Sem permissão para editar Atas Rp Vigentes";
   if(r?.dt_entrega) return "Item já entregue";
   const empresa=_sancaoAtaDoExec(r)?.empresa||"";
   if(!empresa) return "Empresa não informada no item da ATA";
@@ -4736,10 +4736,10 @@ const PERM_TABS = [
   {key:'chamados-novos', label:'Chamados novos'},
   {key:'fiscalizacao', label:'Fiscalização de Contratos'},
   {key:'inventario-ac', label:'Inventário'},
-  {key:'atas', label:'ATAs / Contratos'},
-  {key:'contratos', label:'Contratos'},
+  {key:'atas', label:'Atas Rp Vigentes'},
+  {key:'contratos', label:'Contratos em execução'},
   {key:'licitacoes', label:'Licitações em andamento'},
-  {key:'itens', label:'Itens'},
+  {key:'itens', label:'Controle de Entregas'},
   {key:'sancoes', label:'Sanções'},
   {key:'planilhas', label:'Planilhas'},
 ];
