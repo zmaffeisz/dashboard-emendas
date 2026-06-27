@@ -188,4 +188,20 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .login-success{font-size:13px;color:#085041;background:#E1F5EE;border-radius:6px;padding:8px 12px;margin-top:.75rem;display:none}
 .login-footer{text-align:center;font-size:12px;color:var(--text3);margin-top:1.5rem}
 .login-info{font-size:12px;color:var(--text3);background:var(--info-bg);border-radius:6px;padding:8px 12px;margin-bottom:1rem;text-align:center}
+
+/* ── Select pesquisável estilo Select2 (multi) — componente próprio vanilla ── */
+.ss-box{position:relative;width:100%}
+.ss-control{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:38px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm,6px);background:var(--input-bg,var(--surface));cursor:text}
+.ss-control.ss-open{border-color:var(--accent,var(--blue))}
+.ss-chip{display:inline-flex;align-items:center;gap:5px;background:var(--blue);color:#fff;font-size:12px;line-height:1;padding:4px 6px 4px 8px;border-radius:12px;max-width:100%}
+.ss-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-chip button{background:none;border:none;color:#fff;cursor:pointer;font-size:13px;line-height:1;padding:0;opacity:.85}
+.ss-chip button:hover{opacity:1}
+.ss-input{flex:1;min-width:80px;border:none;outline:none;background:transparent;color:var(--text);font-size:13px;padding:3px 2px}
+.ss-dropdown{position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:50;max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm,6px);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.ss-opt{padding:7px 10px;font-size:13px;color:var(--text);cursor:pointer}
+.ss-opt:hover,.ss-opt.ss-active{background:var(--surface2)}
+.ss-opt.ss-sel{color:var(--blue);font-weight:600}
+.ss-opt.ss-sel::before{content:"✓ "}
+.ss-empty{padding:9px 10px;font-size:12px;color:var(--text3)}
 .login-label{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;display:block}
