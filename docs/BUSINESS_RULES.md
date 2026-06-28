@@ -98,17 +98,21 @@
 
 - AF de **aquisição** gera `itens_entregas` (autorizada vs. recebida).
 - Na subaba **Controle de Entregas / Prazos**, aquisições com saldo de AF pendente ficam
-  como "aguardando AF". Quando a AF cobre a quantidade do item, o item sai dessa subaba e
-  entra em **Confirmação de Entrega na Unidade**.
-- A subaba **Confirmação de Entrega na Unidade** lista aquisições com `af_numero`, mesmo
-  antes de NF/recebimento físico. O empenho exibido pode vir da entrega ou ser herdado de
-  `empenho_itens`/`empenhos` pelo item/contrato.
+  como "aguardando AF". Após emitir AF, o item **permanece** nesta subaba com os botões
+  **Receber** e **Prazo**. O item só sai da subaba e entra em **Confirmação de Entrega na
+  Unidade** após o recebimento interno ser confirmado (saldo da AF <= 0).
+- A subaba **Confirmação de Entrega na Unidade** lista apenas aquisições que já passaram
+  pelo recebimento interno (`qtde_recebida > 0` ou `data_recebimento` preenchida). O
+  empenho exibido pode vir da entrega ou ser herdado de `empenho_itens`/`empenhos` pelo
+  item/contrato.
 - Confirmar a entrega na unidade grava `data_entrega_unidade`, responsável/cargo e termo em
   `itens_entregas`; a aba **Emendas** deve refletir esse item como entregue/confirmado na
   unidade e preencher a data de entrega derivada.
-- AF de **ATA**: o botão "Emitir AF" no Controle de Entregas abre modal dedicado que grava
-  `af_numero`, `data_af` e `prev_entrega` em `atas_execucao` (gera o nº da AF, espelhando o
-  fluxo da aquisição). Após emitir, o item sai de "aguardando AF" e libera o "Receber".
+- AF de **ATA**: o botão "Emitir AF" no Controle de Entregas grava `af_numero`, `data_af`
+  e `prev_entrega` em `atas_execucao`. O prazo de entrega não é digitado livremente na AF:
+  ele é herdado de `atas_itens.prazo_entrega` (ou do item de origem vinculado) e a data
+  limite é calculada por `data_af + prazo`. Após emitir, o item sai de "aguardando AF",
+  libera o "Receber" e a aba **Emendas** reflete o estágio "AF emitida".
 - Recebimento por unidade física: `itens_entregas_unidades` (patrimônio/série individuais
   por unidade; `unidade_seq` 1..N).
 - Trigger `_sync_entrega_agregado` mantém `itens_entregas.patrimonio/numero_serie` como

@@ -1,3 +1,23 @@
+## Banco de dados / Supabase
+
+Este projeto usa Supabase Cloud como ambiente principal.
+
+Não assumir que o projeto está usando Supabase local, Docker local ou `supabase start`, salvo se o usuário pedir explicitamente.
+
+A pasta `.supabase`, quando existente, deve ser tratada como artefato legado/local do Supabase CLI ou como repositório de scripts SQL antigos. Ela não representa o ambiente principal de execução.
+
+Fonte da verdade:
+- Banco real: Supabase Cloud
+- Frontend: arquivos HTML/CSS/JS deste repositório
+- Scripts SQL devem ser analisados apenas como referência ou quando o usuário pedir alteração no schema
+
+Ao gerar código, prompts ou relatórios:
+- Não sugerir comandos de Supabase local por padrão.
+- Não usar URL localhost do Supabase.
+- Não assumir banco local.
+- Considerar que alterações precisam ser compatíveis com o schema em produção/cloud.
+
+
 # dashboard-emendas
 
 Sistema de gestão de **emendas parlamentares, licitações, contratos, atas de registro de

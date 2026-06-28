@@ -22,6 +22,27 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   com cálculo do valor por unidade = unitário × qtde e resumo de comprometido/saldo
   (`neInitItens`, `neAddItem`, `neAddUnidade`, `neRecalc`).
 
+### Corrigido
+- **AF de ATA com prazo herdado**: o modal de emissão agora busca o vínculo `ata_item_id`,
+  herda o prazo da ATA/licitação, calcula `prev_entrega` automaticamente e bloqueia a
+  emissão quando a origem não possui prazo cadastrado. Ao salvar, o avanço também é refletido
+  na aba **Emendas** via `atas_execucao`/`emenda_itens`.
+- **Fluxo de AF no Controle de Entregas/Prazos**: o botão **Emitir AF** não remove mais
+  o item da subaba; o item permanece com os botões **Receber** e **Prazo** até que o
+  recebimento interno seja confirmado. O item só aparece em **Confirmação de Entrega na
+  Unidade** após o recebimento (`qtde_recebida > 0` ou `data_recebimento` preenchida).
+- **Nomenclatura padronizada**: todos os botões, mensagens e textos da interface agora
+  usam **Emitir AF** (antes havia mistura com "Emitir Ordem de Entrega").
+- **Filtro de visibilidade robusto**: o filtro de itens em Controle de Entregas/Prazos
+  agora verifica explicitamente `recebido === true` antes de ocultar o item, evitando
+  que itens recém-emitidos desapareçam por inconsistência no `saldo_af`.
+- **Confirmação pós-recebimento**: `salvarRecebimento` agora recarrega a subaba de
+  Confirmação de Entrega automaticamente após o recebimento interno.
+- **Salvaguarda anti-desaparecimento**: adicionado quarto caminho em `loadItensEntregas`
+  que captura registros de `itens_entregas` com AF emitida que não foram incluídos por
+  nenhum dos três caminhos principais (ex.: falha de join no select aninhado do
+  Supabase). Item com `af_numero` preenchido nunca mais fica invisível.
+
 ### Alterado
 - **Aba Emendas como painel consolidado do ciclo do item**: agora o dashboard deriva status,
   AF, empenho, NF, patrimônio e data de entrega a partir de `itens`, `itens_entregas`,

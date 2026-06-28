@@ -76,8 +76,10 @@ Ciclo de vida do item após a contratação:
 - **Empenhos**: cadastro e vínculo de empenhos; a confirmação/Emendas pode herdar o empenho
   de `empenho_itens` ou do contrato.
 - **AF (Autorização de Fornecimento)** — aquisição: `abrirModalAF`, `abrirAFLote` →
-  `itens_entregas`. ATA: `abrirModalAtaAF`/`salvarAtaAF` → grava `af_numero`/`data_af`/
-  `prev_entrega` em `atas_execucao` (modal dedicado `#modal-ata-af`).
+  `itens_entregas`. ATA: `abrirModalAF` grava `af_numero`/`data_af`/`prev_entrega` em
+  `atas_execucao`, herdando o prazo de `atas_itens.prazo_entrega` (ou do item de origem)
+  para calcular a data limite. Se a origem não tiver prazo, a emissão da AF da ATA deve ser
+  bloqueada até o cadastro ser corrigido.
 - **Empenho**: vínculo via `empenhos`/`empenho_itens` (`abrirVincularEmpenho`).
 - **Recebimento**: `abrirRecebimento` → quantidade recebida, NF, patrimônio/série.
   Recebimento **por unidade física** em `itens_entregas_unidades` (cada unidade com

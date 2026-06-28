@@ -1243,9 +1243,10 @@
     </div>
     <div id="af-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
     <input type="hidden" id="af-item-id">
+    <input type="hidden" id="af-exec-id">
     <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
       <div class="form-group">
-        <div class="form-label">Qtde contratada</div>
+        <div class="form-label">Qtde contratada/solicitada</div>
         <input type="text" id="af-qtde-contratada" disabled>
       </div>
       <div class="form-group">
@@ -3696,38 +3697,85 @@ function verTudoEmendaItem(id){
 function abrirDetalheInvRow(r){
   if(!r)return;
   const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
-  const campos=[
-    ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
-    ['Item / Descrição',_sanEsc(r.item)],
-    ['Unidade de destino',_sanEsc(r.unidade)],
-    ['Empresa / Fornecedor',_sanEsc(r.empresa)+(r.cnpj?` <span style="color:var(--text3);font-size:11px">(CNPJ: ${_sanEsc(r.cnpj)})</span>`:'')],
-    ['Quantidade recebida',r.qtde||null],
-    ['Patrimônio',_sanEsc(r.patrimonio)],
-    ['Número de série',_sanEsc(r.numero_serie)],
-    ['Data entrega na unidade',r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):null],
-    ['Data do recebimento (depósito)',r.data_recebimento?fmtDate(r.data_recebimento):null],
-    ['Recebido por',_sanEsc(r.recebido_por)],
-    ['Tipo de recebimento',_sanEsc(r.recebimento_tipo)],
-    ['Empenho',_sanEsc(r.empenho)],
-    ['Valor empenhado',_fmtBRL(r.valor_empenhado)],
-    ['Data emissão empenho',r.empenho_data?fmtDate(r.empenho_data):null],
-    ['Nota Fiscal',_sanEsc(r.nota_fiscal)],
-    ['Data da NF',r.nf_data?fmtDate(r.nf_data):null],
-    ['Valor da NF',_fmtBRL(r.nf_valor)],
-    ['Emenda',r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):null],
-    ['Parlamentar',_sanEsc(r.parlamentar)],
-    ['Item da emenda',_sanEsc(r.emenda_item_desc)],
-    ['Processo / Licitação',_sanEsc(r.processo)],
-    ['Contrato / ATA',_sanEsc(r.contrato)],
-    ['AF Nº',_sanEsc(r.af_numero)],
-    ['Data da AF',r.af_data?fmtDate(r.af_data):null],
-    ['Responsável na unidade',_sanEsc(r.termo_responsavel)],
-    ['Cargo do responsável',_sanEsc(r.termo_cargo)],
-    ['Observações',_sanEsc(r.confirmacao_obs)]
-  ].filter(([,v])=>v&&String(v).trim()&&v!=='—');
+  const campos=[];
+  // ── Tenta cruzar com allRows (aba Emendas) pelo emenda_item_id para exibir dados completos ──
+  const em=(r.emenda_item_id&&typeof allRows!=='undefined')?(allRows||[]).find(x=>String(x.id)===String(r.emenda_item_id)):null;
+  if(em){
+    // Campos da aba Emendas (mesma estrutura do verTudoEmendaItem)
+    campos.push(
+      ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
+      ['Item', _sanEsc(em.item||r.item)],
+      ['Emenda', (em.emenda||r.emenda||'')+(em.tipo?' · '+em.tipo:'')],
+      ['Parlamentar', _sanEsc(em.parlamentar||r.parlamentar)],
+      ['Unidade beneficiada', _sanEsc(em.unidade||'')],
+      ['Quantidade', em.qtde||r.qtde||null],
+      ['Valor unitário planejado', em.vl_unitario_cadastrado?_fmtBRL(em.vl_unitario_cadastrado):null],
+      ['Valor total planejado', em.vl_total_cadastrado?_fmtBRL(em.vl_total_cadastrado):null],
+      ['Valor unitário executado', em.vl_unitario?_fmtBRL(em.vl_unitario):null],
+      ['Valor total executado', em.vl_total?_fmtBRL(em.vl_total):null],
+      ['Status', _sanEsc(em.status_raw)],
+      ['Categoria', _sanEsc(em.status_cat)],
+      ['CPL / Processo', _sanEsc(em.cpl||r.processo)],
+      ['Empenho', _sanEsc(em.empenho||r.empenho)],
+      ['Valor empenhado', _fmtBRL(r.valor_empenhado)],
+      ['Data emissão empenho', r.empenho_data?fmtDate(r.empenho_data):null],
+      ['Nota fiscal', _sanEsc(em.nota_fiscal||r.nota_fiscal)],
+      ['Data da NF', r.nf_data?fmtDate(r.nf_data):null],
+      ['Valor da NF', _fmtBRL(r.nf_valor)],
+      ['Patrimônio', _sanEsc(em.patrimonio||r.patrimonio)],
+      ['Número de série', _sanEsc(r.numero_serie)],
+      ['Unidade de entrega', _sanEsc(em.unidade_entrega||r.unidade)],
+      ['Data de entrega', em.data_entrega?fmtDate(em.data_entrega):(r.data_recebimento?fmtDate(r.data_recebimento):null)],
+      ['Ordem de pagamento', _sanEsc(em.ordem_pagamento)],
+      ['Empresa / Fornecedor', _sanEsc(r.empresa)+(r.cnpj?` <span style="color:var(--text3);font-size:11px">(CNPJ: ${_sanEsc(r.cnpj)})</span>`:'')],
+      ['Processo / Licitação', _sanEsc(r.processo)],
+      ['Contrato / ATA', _sanEsc(r.contrato)],
+      ['AF Nº', _sanEsc(em.af_numero||r.af_numero)],
+      ['Data da AF', r.af_data?fmtDate(r.af_data):null],
+      ['Data entrega na unidade', r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):null],
+      ['Recebido por', _sanEsc(r.recebido_por)],
+      ['Tipo de recebimento', _sanEsc(r.recebimento_tipo)],
+      ['Responsável na unidade', _sanEsc(em.responsavel_unidade||r.termo_responsavel)],
+      ['Cargo do responsável', _sanEsc(em.cargo_responsavel||r.termo_cargo)],
+      ['Observações', _sanEsc(r.confirmacao_obs)]
+    );
+  } else {
+    // Fallback: exibe apenas campos do inventário (sem cruzamento com Emendas)
+    campos.push(
+      ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
+      ['Item / Descrição',_sanEsc(r.item)],
+      ['Unidade de destino',_sanEsc(r.unidade)],
+      ['Empresa / Fornecedor',_sanEsc(r.empresa)+(r.cnpj?` <span style="color:var(--text3);font-size:11px">(CNPJ: ${_sanEsc(r.cnpj)})</span>`:'')],
+      ['Quantidade recebida',r.qtde||null],
+      ['Patrimônio',_sanEsc(r.patrimonio)],
+      ['Número de série',_sanEsc(r.numero_serie)],
+      ['Data entrega na unidade',r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):null],
+      ['Data do recebimento (depósito)',r.data_recebimento?fmtDate(r.data_recebimento):null],
+      ['Recebido por',_sanEsc(r.recebido_por)],
+      ['Tipo de recebimento',_sanEsc(r.recebimento_tipo)],
+      ['Empenho',_sanEsc(r.empenho)],
+      ['Valor empenhado',_fmtBRL(r.valor_empenhado)],
+      ['Data emissão empenho',r.empenho_data?fmtDate(r.empenho_data):null],
+      ['Nota Fiscal',_sanEsc(r.nota_fiscal)],
+      ['Data da NF',r.nf_data?fmtDate(r.nf_data):null],
+      ['Valor da NF',_fmtBRL(r.nf_valor)],
+      ['Emenda',r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):null],
+      ['Parlamentar',_sanEsc(r.parlamentar)],
+      ['Item da emenda',_sanEsc(r.emenda_item_desc)],
+      ['Processo / Licitação',_sanEsc(r.processo)],
+      ['Contrato / ATA',_sanEsc(r.contrato)],
+      ['AF Nº',_sanEsc(r.af_numero)],
+      ['Data da AF',r.af_data?fmtDate(r.af_data):null],
+      ['Responsável na unidade',_sanEsc(r.termo_responsavel)],
+      ['Cargo do responsável',_sanEsc(r.termo_cargo)],
+      ['Observações',_sanEsc(r.confirmacao_obs)]
+    );
+  }
+  const filtrados=campos.filter(([,v])=>v&&String(v).trim()&&v!=='—');
   document.getElementById('inv-detalhe-content').innerHTML=`
     <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(r.item||'Item')}</div>
-    <div>${campos.map(([l,v])=>_invField(l,v)).join('')}</div>
+    ${!em&&r.emenda_item_id?'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">ℹ️ Aba Emendas ainda não carregada — mostrando dados do inventário. Acesse a aba Emendas primeiro para ver os dados completos.</div>':''}
+    <div>${filtrados.map(([l,v])=>_invField(l,v)).join('')}</div>
     ${r.termo_arquivo?`<div style="margin-top:12px"><button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:12px;padding:5px 14px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);cursor:pointer">📄 Abrir Termo de Entrega</button></div>`:''}
   `;
   document.getElementById('modal-inv-detalhe').classList.add('active');
@@ -4884,6 +4932,28 @@ async function salvarNovaExec(){
   if(error){showMsg("ne2","Erro: "+error.message,"err");return;}
   if(!data?.id){showMsg("ne2","A solicitação não foi salva. Verifique sua permissão.","err");return;}
   await loadAtas();
+  // ═══ WRITE-BACK no emenda_itens: grava CPL, valor executado e status direto
+  // no registro que a aba Emendas exibe. Feito com await antes do loadData.
+  if(emendaItemId && origem==='emenda'){
+    const vlExec=parseFloat(document.getElementById("ne2-valor").value)||0;
+    const {error:wbErr}=await sb.from("emenda_itens").update({cpl:at.cpl||'', vl_total:vlExec, qtde:qtde, status:'AGUARDANDO AF'}).eq("id",emendaItemId);
+    if(wbErr) console.error('writeback emenda_itens:',wbErr);
+    if(typeof loadData==='function'){ try{ await loadData(); }catch(e){ console.error('loadData apos writeback:',e); } }
+  }
+  // ═══ Atualização in-loco em entregasRows
+  const execId=data.id;
+  const rowATA={tipo:'ATA',exec_id:execId,ata_item_id:at.id,emenda_id:origem==='emenda'?emendaId:null,emenda_item_id:origem==='emenda'?emendaItemId:null,
+    processo:at.cpl||'',contrato:at.sim||'',
+    empresa:at.empresa||'',item:at.item||'',
+    unidade,af_numero:'',af_dataISO:_toISODate(dados.data_af),
+    qtde,limiteISO:'',recebido:false,cancelado:false,prazo_entrega_dias:at.prazo_entrega||at.prazo_entrega_dias||null,
+    _ataPendenteAF:true,status:'aguardando AF',_novaExec:true};
+  entregasRows.unshift(rowATA);
+  itensEntregasCarregado=false;
+  if(window._activeTab==='itens'){
+    try{ renderItensEntregas(); }catch(e){}
+    try{ await loadItensEntregas(); }catch(e){ console.error('bg atas->entregas:',e); }
+  }
   showMsg("ne2","✓ Solicitação salva!","ok");
   setTimeout(()=>document.getElementById("modal-nova-exec").classList.remove("active"),1000);
 }
@@ -4908,6 +4978,7 @@ async function salvarEditExec(){
   Object.assign(exec,dados);
   filtrarAtas();
   // se o modal foi aberto pela aba "Controle de Entregas", recarrega aquela lista
+  itensEntregasCarregado=false;
   if(window._activeTab==='itens' && typeof loadItensEntregas==='function') loadItensEntregas();
   showMsg("ee","✓ Salvo!","ok");
   setTimeout(()=>document.getElementById("modal-edit-exec").classList.remove("active"),900);
@@ -4952,6 +5023,12 @@ async function salvarAtaAF(){
   msg.style.color='var(--green)'; msg.textContent='✓ AF emitida!';
   if(typeof filtrarAtas==='function') filtrarAtas();
   if(window._activeTab==='itens' && typeof loadItensEntregas==='function'){ itensEntregasCarregado=false; try{ await loadItensEntregas(); }catch(e){ console.error(e); } }
+  // Atualiza a aba Emendas se o item tiver vínculo com emenda
+  const execAtual=atasExec.find(x=>String(x.id)===String(execId));
+  if(execAtual?.emenda_item_id){
+    sb.from("emenda_itens").update({cpl:execAtual.cpl||'', status:'AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO'}).eq("id",execAtual.emenda_item_id).then(r=>{if(r.error)console.error(r.error);});
+    if(typeof loadData==='function') loadData().catch(e=>console.error('bg loadData:',e));
+  }
   setTimeout(()=>document.getElementById('modal-ata-af').classList.remove('active'),800);
 }
 
@@ -5943,50 +6020,104 @@ function _afRecalcLimite(){
   const dias=document.getElementById('af-prazo-dias').value;
   if(data && dias!=='' && !isNaN(Number(dias))){
     document.getElementById('af-data-limite').value=_addDiasISO(data,dias);
+  }else{
+    document.getElementById('af-data-limite').value='';
   }
 }
-async function abrirModalAF(itemId){
+async function abrirModalAF(itemId, execId){
   if(bloquearSeVisualiz('itens')) return;
-  let r=itensRows.find(x=>String(x.id)===String(itemId));
-  if(!r){
-    // chamado a partir da aba Controle de Entregas: busca o item direto do banco
-    const {data}=await sb.from('itens').select('id,descricao,qtde,prazo_entrega_dias,contrato_id,processos(identificador),fornecedores(razao_social)').eq('id',itemId).single();
-    if(data) r={...data,_processo:data.processos?.identificador||'',_fornecedor:data.fornecedores?.razao_social||''};
+  const isAta=!!execId;
+  let r, qtde=0, saldo=0, prazoItem=null, infoExtra='';
+  if(isAta){
+    // ── ATA: carrega da ata_execucao + atasItens ──
+    const er=entregasRows.find(x=>String(x.exec_id)===String(execId)&&x.tipo==='ATA');
+    let exec=er||null;
+    if(!exec || !exec.ata_item_id || typeof exec.emenda_item_id==='undefined'){
+      const {data}=await sb.from('atas_execucao').select('*').eq('id',execId).single();
+      if(data) exec={...(exec||{}),...data};
+    }
+    if(!exec){ if(window.toast)toast('Solicitação de ATA não encontrada','error'); return; }
+    // busca prazo de entrega do item da ATA (múltiplas fontes)
+    const ataId=exec.ata_item_id||er?.ata_item_id;
+    let pa=Number(exec.prazo_entrega_dias||er?.prazo_entrega_dias)||0;
+    if(ataId){
+      // 1) cache atasItens
+      const ai=atasItens.find(x=>String(x.id)===String(ataId));
+      if(ai && !pa) pa=ai.prazo_entrega||0;
+      // 2) query direta em atas_itens
+      if(!pa){
+        const {data:ait}=await sb.from('atas_itens').select('prazo_entrega,contrato_id,item,cpl,sim').eq('id',ataId).single();
+        if(ait){ pa=ait.prazo_entrega||0; }
+      }
+      // 3) fallback: busca no itens original (origem='ata' vinculado ao ata_item_id)
+      if(!pa){
+        const {data:itf}=await sb.from('itens').select('prazo_entrega_dias').eq('ata_item_id',ataId).maybeSingle();
+        if(itf) pa=itf.prazo_entrega_dias||0;
+      }
+    }
+    prazoItem=pa;
+    qtde=Number(exec.qtde)||0; saldo=qtde; // saldo = total (simplificado para ATA)
+    const cpl=exec.cpl||er?.processo||'';
+    const sim=exec.sim||er?.contrato||'';
+    const itemNome=exec.item||er?.item||'';
+    const und=exec.unidade||er?.unidade||'';
+    infoExtra=`<b>${_sanEsc(itemNome||'—')}</b><br>CPL ${_sanEsc(cpl||'—')} · SIM ${_sanEsc(sim||'—')} · Unidade ${_sanEsc(und||'—')}`;
+    r={id:null,descricao:itemNome,qtde:qtde,prazo_entrega_dias:pa,contrato_id:'ata',_processo:cpl,_fornecedor:'',_isAta:true};
+    window._afItemCache={...r, _ataExecId:execId, _ataItemId:ataId, _ataEmendaItemId:exec.emenda_item_id||er?.emenda_item_id||null, _ataEmendaId:exec.emenda_id||er?.emenda_id||null};
+    document.getElementById('af-item-id').value='';
+    document.getElementById('af-exec-id').value=execId;
+    document.getElementById('af-qtde-contratada').value=qtde;
+    document.getElementById('af-ja-autorizado').value='0';
+  }else{
+    // ── Aquisição: comportamento original ──
+    let it=itensRows.find(x=>String(x.id)===String(itemId));
+    if(!it){
+      const {data}=await sb.from('itens').select('id,descricao,qtde,prazo_entrega_dias,contrato_id,processos(identificador),fornecedores(razao_social)').eq('id',itemId).single();
+      if(data) it={...data,_processo:data.processos?.identificador||'',_fornecedor:data.fornecedores?.razao_social||''};
+    }
+    if(!it){ if(window.toast)toast('Item não encontrado','error'); return; }
+    if(!it.contrato_id){ if(window.toast)toast('Item ainda não está contratado','error'); return; }
+    let temEmp=false;
+    const {data:vinc}=await sb.from('empenho_itens').select('id').eq('item_id',itemId).limit(1);
+    temEmp=!!(vinc&&vinc.length);
+    if(!temEmp && it.contrato_id){ const {data:ec}=await sb.from('empenhos').select('id').eq('contrato_id',it.contrato_id).limit(1); temEmp=!!(ec&&ec.length); }
+    if(!temEmp){ if(window.toast)toast('Vincule um empenho a este item (ou ao contrato) antes de emitir a AF.','error'); return; }
+    const {data:afs,error}=await sb.from('itens_entregas').select('qtde_autorizada,status').eq('item_id',itemId);
+    let aut=0; if(!error){(afs||[]).forEach(e=>{ if((e.status||'')!=='cancelada') aut+=(Number(e.qtde_autorizada)||0); });}
+    qtde=Number(it.qtde)||0; saldo=qtde-aut;
+    prazoItem=it.prazo_entrega_dias;
+    r=it;
+    window._afItemCache=r;
+    document.getElementById('af-item-id').value=itemId;
+    document.getElementById('af-exec-id').value='';
+    infoExtra=`<b>${_sanEsc(r.descricao||'—')}</b><br>Processo ${_sanEsc(r._processo||'—')} · Fornecedor ${_sanEsc(r._fornecedor||'—')}`;
+    document.getElementById('af-qtde-contratada').value=qtde;
+    document.getElementById('af-ja-autorizado').value=aut;
   }
-  if(!r){ if(window.toast)toast('Item não encontrado','error'); return; }
-  if(!r.contrato_id){ if(window.toast)toast('Item ainda não está contratado','error'); return; }
-  // Fase 11: Ordem de Entrega só com empenho vinculado (no item OU no contrato)
-  let temEmp=false;
-  const {data:vinc}=await sb.from('empenho_itens').select('id').eq('item_id',itemId).limit(1);
-  temEmp=!!(vinc&&vinc.length);
-  if(!temEmp && r.contrato_id){ const {data:ec}=await sb.from('empenhos').select('id').eq('contrato_id',r.contrato_id).limit(1); temEmp=!!(ec&&ec.length); }
-  if(!temEmp){ if(window.toast)toast('Vincule um empenho a este item (ou ao contrato) antes de emitir a Ordem de Entrega.','error'); return; }
-  window._afItemCache=r;
-  // saldo sempre recalculado do banco (evita corrida com outra aba/usuário)
-  const {data:afs,error}=await sb.from('itens_entregas').select('qtde_autorizada,status').eq('item_id',itemId);
-  let aut=0; if(!error){(afs||[]).forEach(e=>{ if((e.status||'')!=='cancelada') aut+=(Number(e.qtde_autorizada)||0); });}
-  const qtde=Number(r.qtde)||0, saldo=qtde-aut;
-  document.getElementById('af-item-id').value=itemId;
-  document.getElementById('af-info').innerHTML=`<b>${_sanEsc(r.descricao||'—')}</b><br>Processo ${_sanEsc(r._processo||'—')} · Fornecedor ${_sanEsc(r._fornecedor||'—')}`;
-  document.getElementById('af-qtde-contratada').value=qtde;
-  document.getElementById('af-ja-autorizado').value=aut;
+  document.getElementById('af-info').innerHTML=infoExtra;
   document.getElementById('af-saldo').value=saldo;
   document.getElementById('af-numero').value='';
   document.getElementById('af-data').value=new Date().toISOString().slice(0,10);
   document.getElementById('af-qtde-autorizada').value=saldo>0?saldo:'';
-  // Prazo herdado do item da licitação (somente leitura). Sem prazo => bloqueia emissão.
-  const prazoItem=r.prazo_entrega_dias;
-  const temPrazo=prazoItem!=null && prazoItem!=='' && !isNaN(Number(prazoItem));
+  const temPrazo=prazoItem!=null && prazoItem!=='' && !isNaN(Number(prazoItem)) && Number(prazoItem)>0;
+  const prazoInput=document.getElementById('af-prazo-dias');
   document.getElementById('af-prazo-dias').value=(temPrazo?Number(prazoItem):'');
   document.getElementById('af-obs').value='';
   const msgEl=document.getElementById('af-msg');
   const btnAF=document.getElementById('af-salvar');
   if(!temPrazo){
-    msgEl.textContent='⚠ Este item não tem prazo de entrega cadastrado na licitação. Corrija a origem (item do processo) antes de emitir a AF.';
-    msgEl.style.color='var(--red)';
-    if(btnAF) btnAF.disabled=true;
+    msgEl.textContent=isAta?'Prazo de entrega nao encontrado na ATA/licitacao. Cadastre o prazo na origem antes de emitir a AF.':'Prazo de entrega nao encontrado. Informe o numero de dias manualmente.';
+    msgEl.style.color='var(--amber-text)';
+    if(prazoInput){
+      prazoInput.readOnly=!!isAta;
+      prazoInput.style.background=isAta?'var(--surface2)':'';
+      prazoInput.style.opacity=isAta?'.85':'';
+      prazoInput.placeholder=isAta?'sem prazo na origem':'ex: 30';
+    }
+    if(btnAF) btnAF.disabled=!!isAta;
   }else{
     msgEl.textContent=''; msgEl.style.color='';
+    if(prazoInput){ prazoInput.readOnly=true; prazoInput.style.background='var(--surface2)'; prazoInput.style.opacity='.85'; }
     if(btnAF) btnAF.disabled=false;
   }
   _afRecalcLimite();
@@ -5995,7 +6126,9 @@ async function abrirModalAF(itemId){
 async function salvarAF(){
   if(bloquearSeVisualiz('itens')) return;
   const itemId=document.getElementById('af-item-id').value;
-  const r=itensRows.find(x=>String(x.id)===String(itemId))||window._afItemCache||null;
+  const execId=document.getElementById('af-exec-id').value;
+  const isAta=!!execId;
+  const cache=window._afItemCache||null;
   const numero=document.getElementById('af-numero').value.trim();
   const afData=document.getElementById('af-data').value;
   const qtdeAut=Number(document.getElementById('af-qtde-autorizada').value);
@@ -6006,31 +6139,78 @@ async function salvarAF(){
   if(!numero){ msg.textContent='Informe o número da AF.'; msg.style.color='var(--red)'; return; }
   if(!afData){ msg.textContent='Informe a data da AF.'; msg.style.color='var(--red)'; return; }
   if(!qtdeAut||qtdeAut<=0){ msg.textContent='Quantidade autorizada deve ser maior que zero.'; msg.style.color='var(--red)'; return; }
-  // prazo é herdado da licitação (read-only). Sem prazo => bloqueia: corrigir na origem.
-  if(prazo===''||isNaN(Number(prazo))){ msg.textContent='Item sem prazo de entrega na licitação. Cadastre o prazo no item do processo antes de emitir a AF.'; msg.style.color='var(--red)'; return; }
-  // revalida saldo no banco antes de gravar
+  if(prazo===''||isNaN(Number(prazo))){ msg.textContent='Item sem prazo de entrega. Cadastre o prazo no item antes de emitir a AF.'; msg.style.color='var(--red)'; return; }
+  if(!limite){ msg.textContent='Data limite de entrega nao calculada. Verifique a data da AF e o prazo da origem.'; msg.style.color='var(--red)'; return; }
+  msg.style.color='var(--text3)'; msg.textContent='Salvando...';
+  if(isAta){
+    // ── ATA: atualiza atas_execucao com dados da AF ──
+    const {error}=await sb.from('atas_execucao').update({af_numero:numero, data_af:afData, prev_entrega:limite}).eq('id',execId);
+    if(error){ msg.textContent='Erro: '+error.message; msg.style.color='var(--red)'; return; }
+    document.getElementById('modal-af').classList.remove('active');
+    if(window.toast) toast('AF emitida','success');
+    // Atualiza entregasRows in-loco: substituti o item ATA pendente
+    const limISO=_toISODate(limite);
+    const idx=entregasRows.findIndex(x=>x.tipo==='ATA'&&String(x.exec_id)===String(execId));
+    if(idx>=0){
+      const old=entregasRows[idx];
+      entregasRows[idx]={...old, af_numero:numero, af_dataISO:_toISODate(afData),
+        qtde:qtdeAut, saldo_af:qtdeAut, limiteISO:limISO,
+        recebido:false, status:_prazoStatus(limISO,false,false),
+        _ataPendenteAF:false, _afRecemEmitida:true};
+    }
+    renderItensEntregas();
+    itensEntregasCarregado=false;
+    // Write-back emenda_itens se houver vínculo
+    if(cache?._ataExecId){
+      let emendaItemId=cache?._ataEmendaItemId||entregasRows.find(x=>x.tipo==='ATA'&&String(x.exec_id)===String(execId))?.emenda_item_id||null;
+      if(!emendaItemId){
+        const {data:execRow}=await sb.from('atas_execucao').select('emenda_item_id').eq('id',execId).maybeSingle();
+        emendaItemId=execRow?.emenda_item_id||null;
+      }
+      if(emendaItemId){
+        const {error:wbErr}=await sb.from('emenda_itens').update({status:'AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO'}).eq('id',emendaItemId);
+        if(wbErr) console.error('writeback emenda_itens ATA AF:',wbErr);
+      }
+      if(typeof loadData==='function') loadData().catch(e=>console.error(e));
+    }
+    try{ await loadItensEntregas(); }catch(e){ console.error(e); }
+    return;
+  }
+  // ── Aquisição: comportamento existente ──
+  const r=itensRows.find(x=>String(x.id)===String(itemId))||cache||null;
   const {data:afs}=await sb.from('itens_entregas').select('qtde_autorizada,status').eq('item_id',itemId);
   let aut=0;(afs||[]).forEach(e=>{ if((e.status||'')!=='cancelada') aut+=(Number(e.qtde_autorizada)||0); });
   const saldo=(Number(r?.qtde)||0)-aut;
   if(qtdeAut>saldo){ msg.textContent=`Quantidade autorizada (${qtdeAut}) excede o saldo a autorizar (${saldo}).`; msg.style.color='var(--red)'; return; }
-  msg.style.color='var(--text3)'; msg.textContent='Salvando...';
   const reg={ item_id:itemId, af_numero:numero, af_data:afData, qtde_autorizada:qtdeAut,
     data_limite_entrega:limite, af_obs:obs, status:'af_emitida' };
-  const {error}=await sb.from('itens_entregas').insert(reg);
+  const {data:inserted,error}=await sb.from('itens_entregas').insert(reg).select('id');
   if(error){ msg.textContent='Erro: '+error.message; msg.style.color='var(--red)'; return; }
-  // grava prazo no item se foi informado e diferente
+  const entregaId=inserted?.[0]?.id;
   if(prazo!=='' && !isNaN(Number(prazo)) && Number(prazo)!==Number(r?.prazo_entrega_dias)){
     await sb.from('itens').update({prazo_entrega_dias:Number(prazo)}).eq('id',itemId);
   }
   document.getElementById('modal-af').classList.remove('active');
   if(window.toast) toast('AF emitida','success');
-  // Recarrega as duas subabas afetadas: a emissão da AF tira o item do Controle de
-  // Entregas/Prazos e o coloca em Confirmação de Entrega na Unidade.
-  itensEntregasCarregado=false;
-  confirmacoesCarregado=false;
-  try{ await loadItensEntregas(); }catch(e){ console.error('Falha ao recarregar Controle de Entregas:',e); }
-  try{ await loadConfirmacoes(); }catch(e){ console.error('Falha ao recarregar Confirmação:',e); }
-  try{ await loadItens(); }catch(e){ console.error('Falha ao recarregar Itens:',e); }
+  // Atualização in-loco em entregasRows — NÃO depende de reload do Supabase.
+  const limISO=_toISODate(limite), itC=r||{};
+  const rowAF={tipo:'Aquisição',entrega_id:entregaId,item_id:itemId,
+    processo:itC.processos?.identificador||itC._processo||'',processo_id:itC.processo_id||null,
+    contrato:'',contrato_id:itC.contrato_id||null,
+    fornecedor_id:itC.fornecedor_id||null,empresa:itC.fornecedores?.razao_social||itC._fornecedor||'',
+    item:itC.descricao||'',unidade:itC.unidades?.nome||'',
+    af_numero:numero,af_dataISO:_toISODate(afData),
+    qtde:qtdeAut,qtde_recebida:0,saldo_af:qtdeAut,
+    limiteISO:limISO,recebido:false,cancelado:false,
+    status:_prazoStatus(limISO,false,false),
+    empenho:'',nota_fiscal:'',_afRecemEmitida:true};
+  const idxP=entregasRows.findIndex(x=>x._pendente&&String(x.item_id)===String(itemId));
+  if(idxP>=0) entregasRows.splice(idxP,1,rowAF); else entregasRows.unshift(rowAF);
+  renderItensEntregas();
+  itensEntregasCarregado=false; confirmacoesCarregado=false;
+  setTimeout(()=>{ loadItensEntregas().catch(e=>console.error('bg entregas:',e)); },2000);
+  loadConfirmacoes().catch(e=>console.error('bg conf:',e));
+  loadItens().catch(e=>console.error('bg itens:',e));
 }
 
 // ═══ Fase 11: vincular empenho ao item (Controle de Entregas/Prazos) ═══
@@ -6242,28 +6422,39 @@ async function loadItensEntregas(){
       status:_prazoStatus(limiteISO,recebido,cancelado)
     });
   });
-  // Atas: atas_execucao (auto-contida: cpl, sim, item, unidade, prev_entrega, dt_entrega)
+  // Atas: atas_execucao. Enriquece com atas_itens se disponível, senão busca do banco.
   const {data:at,error:e2}=await sb.from('atas_execucao').select('*');
   if(e2){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (atas): '+_sanEsc(e2.message)+'</div>'; return; }
+  let _ataItemPorId={};
+  if(atasItens&&atasItens.length) _ataItemPorId=Object.fromEntries(atasItens.map(i=>[String(i.id),i]));
+  else if(at&&at.length){
+    const ids=[...new Set(at.map(r=>r.ata_item_id).filter(Boolean))];
+    if(ids.length){
+      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,prazo_entrega,contrato_id,contratos(cpl,numero_contrato),fornecedores(razao_social)').in('id',ids);
+      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.fornecedores?.razao_social||'',prazo_entrega:i.prazo_entrega||null}; });
+    }
+  }
   (at||[]).forEach(r=>{
     const recebido=!!(r.dt_entrega && String(r.dt_entrega).trim());
     const limiteISO=_toISODate(r.prev_entrega);
     const temAF=!!(r.data_af && String(r.data_af).trim());
-    const pendenteAF=!temAF && !recebido; // requisição de ata aguardando emissão da AF
+    const pendenteAF=!temAF && !recebido;
+    const ai=_ataItemPorId[String(r.ata_item_id)]||{};
     out.push({
-      tipo:'ATA', exec_id:r.id, processo:r.cpl||'', contrato:r.sim||'', empresa:'',
-      item:r.item||'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:r.empenho||'',
+      tipo:'ATA', exec_id:r.id, ata_item_id:r.ata_item_id||null, emenda_id:r.emenda_id||null, emenda_item_id:r.emenda_item_id||null, processo:r.cpl||ai.cpl||'', contrato:r.sim||ai.sim||'',
+      empresa:ai.empresa||'', item:r.item||ai.item||'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:r.empenho||'',
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
-      limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega),
+      limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
       _ataPendenteAF:pendenteAF,
       status:pendenteAF?'aguardando AF':_prazoStatus(limiteISO,recebido,false)
     });
   });
-  // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando Ordem de Entrega)
+  // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando AF)
   const {data:itc,error:e3}=await sb.from('itens')
     .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome)')
     .eq('origem','aquisicao').not('contrato_id','is',null);
-  if(!e3){
+  let itemPorId={};
+	  if(!e3){
     const autPorItem={};
     const itemIds=(itc||[]).map(i=>i.id);
     if(itemIds.length){
@@ -6288,7 +6479,7 @@ async function loadItensEntregas(){
       const {data:ec}=await sb.from('empenhos').select('numero,contrato_id').in('contrato_id',contratoIds);
       (ec||[]).forEach(e=>{ if(e.contrato_id){ (empPorContrato[e.contrato_id]=empPorContrato[e.contrato_id]||[]).push(e.numero||''); } });
     }
-    const itemPorId=Object.fromEntries((itc||[]).map(it=>[String(it.id),it]));
+    itemPorId=Object.fromEntries((itc||[]).map(it=>[String(it.id),it]));
     (aqCalc||[]).forEach(r=>{
       if(!r.id || aqDetalhadaIds.has(String(r.id)) || (r.status||'')==='cancelada') return;
       const it=itemPorId[String(r.item_id)]||{};
@@ -6339,6 +6530,43 @@ async function loadItensEntregas(){
       });
     });
   }
+  // Salvaguarda: garante que registros com AF emitida não sumam por falha de join
+  const _outIds=new Set(out.map(r=>r.entrega_id).filter(Boolean));
+  (aqCalc||[]).forEach(r=>{
+    if(!r.id||_outIds.has(String(r.id))||(r.status||'')==='cancelada') return;
+    if(!r.af_numero&&!r.af_data) return; // sem AF → não deveria aparecer aqui
+    const it=itemPorId[String(r.item_id)]||{};
+    const qA=Number(r.qtde_autorizada)||0, qR=Number(r.qtde_recebida)||0, rec=!!qR||!!r.data_recebimento;
+    out.push({tipo:'Aquisição',entrega_id:r.id,item_id:r.item_id,_salvaguarda:true,
+      processo:it.processos?.identificador||'',contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
+      contrato_id:it.contrato_id||null,fornecedor_id:it.fornecedor_id||null,
+      empresa:it.fornecedores?.razao_social||'',item:it.descricao||'(item '+r.item_id+')',
+      unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
+      qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
+      recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
+      empenho:r.empenho||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
+  });
+  // RESGATE FINAL: query direta sem joins. Se RLS bloqueou o SELECT com joins
+  // aninhados mas o INSERT passou, esta query resgata os registros órfãos.
+  const _outIds2=new Set(out.map(r=>r.entrega_id).filter(Boolean));
+  const {data:_resgate}=await sb.from('itens_entregas')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho,nota_fiscal,patrimonio,numero_serie')
+    .not('af_numero','is',null).neq('status','cancelada').order('af_data',{ascending:false});
+  if(_resgate) _resgate.forEach(r=>{
+    if(_outIds2.has(String(r.id))) return;
+    const it=itemPorId[String(r.item_id)]||{};
+    const qA=Number(r.qtde_autorizada)||0, qR=Number(r.qtde_recebida)||0, rec=!!qR||!!r.data_recebimento;
+    out.push({tipo:'Aquisição',entrega_id:r.id,item_id:r.item_id,_resgate:true,
+      processo:it.processos?.identificador||'',contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
+      contrato_id:it.contrato_id||null,fornecedor_id:it.fornecedor_id||null,
+      empresa:it.fornecedores?.razao_social||'',item:it.descricao||'(item '+r.item_id+')',
+      unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
+      qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
+      recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
+      empenho:r.empenho||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
+  });
   entregasRows=out;
   itensEntregasCarregado=true;
   renderItensEntregas();
@@ -6349,8 +6577,14 @@ function renderItensEntregas(){
   const fT=document.getElementById('entregas-f-tipo')?.value||'';
   const fP=document.getElementById('entregas-f-prazo')?.value||'';
   const rows=entregasRows.filter(r=>{
-    // Aquisição com AF emitida sai desta sub-aba e passa para "Confirmação de Entrega na Unidade".
-    if(r.tipo==='Aquisição' && !r._pendente) return false;
+    // Aquisição só sai desta sub-aba quando comprovadamente recebida por completo
+    // (recebido=true E saldo_af <= 0). Saldo_af undefined/null → mantém visível.
+    // Após emitir AF, o item permanece aqui com os botões Receber e Prazo.
+    if(r.tipo==='Aquisição' && !r._pendente) {
+      const saldoAF = (r.saldo_af != null) ? Number(r.saldo_af) : 1;
+      const totalmenteRecebido = r.recebido === true && saldoAF <= 0;
+      if(totalmenteRecebido && fP !== 'recebido') return false;
+    }
     // ATAs já entregues saem desta sub-aba; ainda acessíveis pelo filtro de prazo = "recebido".
     const entregue = r.recebido && (r.tipo==='ATA' ? true : (Number(r.saldo_af)||0)<=0);
     if(entregue && fP!=='recebido') return false;
@@ -6364,7 +6598,7 @@ function renderItensEntregas(){
     return (_diasRestantes(a.limiteISO)??99999)-(_diasRestantes(b.limiteISO)??99999);
   });
   const cEl=document.getElementById('entregas-count'); if(cEl) cEl.textContent=`${rows.length} registro(s)`;
-  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item aguardando AF. Depois da emissão da AF, a aquisição passa para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
+  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item encontrado. Itens aguardando AF e itens com AF emitida (aguardando recebimento) aparecem aqui. Após o recebimento total, passam para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
   wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
       <th style="padding:7px 8px;width:28px" title="Selecionar para advertência">⚖️</th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
@@ -6377,7 +6611,7 @@ function renderItensEntregas(){
       if(r._pendente){
         rowBg=';background:#EF9F2710';
         const vincBtn=pode?`<button onclick="abrirVincularEmpenho('${r.item_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">Vincular empenho</button>`:'';
-        const afBtn=pode?`<button onclick="abrirModalAF('${r.item_id}')" ${r.empenho_vinculado?'':'disabled title="Vincule um empenho antes de emitir a Ordem de Entrega"'} style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:${r.empenho_vinculado?'var(--blue)':'var(--surface2)'};color:${r.empenho_vinculado?'#fff':'var(--text3)'};cursor:${r.empenho_vinculado?'pointer':'not-allowed'};white-space:nowrap">Emitir Ordem de Entrega</button>`:'';
+        const afBtn=pode?`<button onclick="abrirModalAF('${r.item_id}')" ${r.empenho_vinculado?'':'disabled title="Vincule um empenho antes de emitir a AF"'} style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:${r.empenho_vinculado?'var(--blue)':'var(--surface2)'};color:${r.empenho_vinculado?'#fff':'var(--text3)'};cursor:${r.empenho_vinculado?'pointer':'not-allowed'};white-space:nowrap">Emitir AF</button>`:'';
         acoes=`<div style="display:flex;gap:4px;flex-wrap:wrap">${vincBtn}${afBtn}</div>`;
         docs=`<div>Emp: ${r.empenho_vinculado?_sanEsc(r.empenho||'sim'):'<span style="color:var(--red)">não vinculado</span>'}</div>${marcaMod?('<div>'+_sanEsc(marcaMod)+'</div>'):''}`;
         recInfo='<span style="color:var(--text3)">aguardando AF</span>';
@@ -6390,7 +6624,7 @@ function renderItensEntregas(){
         const verBtn=totalmenteRecebido?`<button onclick="verRecebimento('${r.entrega_id}')" title="Item totalmente recebido — visualizar dados do recebimento" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;white-space:nowrap">✓ Ver recebimento</button>`:'';
         const aqPrazoBtn=(r.tipo==='Aquisição'&&!r.recebido&&!r.cancelado&&pode)?`<button onclick="abrirModalProrrogarPrazoAquisicao('${r.entrega_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         // ATA aguardando AF: só "Emitir AF" (define data AF + prazo). Após emitir, libera Receber/Prazo.
-        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalAtaAF('${r.exec_id}')" title="Emitir AF (Autorização de Fornecimento): gere o número da AF, a data e a previsão de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap">📄 Emitir AF</button>`:'';
+        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalAF('','${r.exec_id}')" title="Emitir AF: gere o número da AF e a data — o prazo de entrega é calculado automaticamente" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap">📄 Emitir AF</button>`:'';
         const ataPrazoBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Registrar/editar entrega (empenho, NF, datas)" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver/editar':'📥 Receber'}</button>`:'';
         acoes=(recBtn||verBtn||aqPrazoBtn||ataAFBtn||ataPrazoBtn||ataRecBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}</div>`:'—';
@@ -6858,7 +7092,9 @@ async function salvarRecebimento(){
     document.getElementById('modal-recebimento').classList.remove('active');
     if(window.toast) toast('Recebimento registrado','success');
     itensEntregasCarregado=false;
+    confirmacoesCarregado=false;
     await loadItensEntregas();
+    await loadConfirmacoes();
     await loadItens();
     if(row.emenda_item_id) loadData();
   }catch(e){
@@ -6907,6 +7143,8 @@ async function loadConfirmacoes(){
   (aq||[]).forEach(r=>{
     if((r.status||'')==='cancelada') return;
     if(!r.af_numero && !r.af_data) return;
+    // Só aparece em Confirmação após recebimento interno (qtde_recebida > 0 ou data_recebimento preenchida).
+    if(!(Number(r.qtde_recebida)||0) && !r.data_recebimento) return;
     const it=r.itens||{};
     const empVinculado=(empPorItem[r.item_id]||empPorContrato[it.contrato_id]||[]).filter(Boolean).join(', ');
     rows.push({
@@ -7180,10 +7418,10 @@ function _ncAplicarModo(natureza){
   const stSel=document.getElementById('nc-status'), stAuto=document.getElementById('nc-status-auto');
   if(stSel){
     if(aq){
-      const v='Aguardando emissão da Ordem de Entrega';
+      const v='Aguardando emissão da AF';
       if(![...stSel.options].some(o=>o.value===v)) stSel.add(new Option(v,v));
       stSel.value=v; stSel.disabled=true;
-      if(stAuto){ stAuto.style.display='block'; stAuto.textContent='Definido automaticamente; muda ao emitir a Ordem de Entrega (AF).'; }
+      if(stAuto){ stAuto.style.display='block'; stAuto.textContent='Definido automaticamente; muda ao emitir a AF.'; }
     }else if(ata){
       stSel.value='VIGENTE'; stSel.disabled=true;
       if(stAuto){ stAuto.style.display='block'; stAuto.textContent='ATA vigente pelo período de 12 meses a partir da data de início.'; }
@@ -8361,15 +8599,76 @@ async function _carregarFluxoEmendaItens(eiIds){
       unidadeByItem[u.item_id]=(unidadeByItem[u.item_id]||0)+1;
     });
   }
+  // Integração ATA RP: atas_execucao → fluxo da Emenda
+  try {
+  const _ataExecByEiid={}, _ataItemPlaceholder={};
+  for(let k=0;k<eiIds.length;k+=200){
+    const slice=eiIds.slice(k,k+200);
+    const {data:aex}=await sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf,patrimonio").in("emenda_item_id",slice);
+    if(aex) aex.forEach(r=>{
+      const eid=r.emenda_item_id; if(!eid) return;
+      (_ataExecByEiid[eid]=_ataExecByEiid[eid]||[]).push(r);
+      if(r.ata_item_id) _ataItemPlaceholder[r.ata_item_id]=null;
+    });
+  }
+  const _ataItemInf={};
+  const _ataIds=Object.keys(_ataItemPlaceholder);
+  if(_ataIds.length){
+    for(let k=0;k<_ataIds.length;k+=200){
+      const slice=_ataIds.slice(k,k+200);
+      const {data:ait}=await sb.from("atas_itens").select("id,cpl,sim,item,contrato_id,contratos(cpl,numero_contrato)").in("id",slice);
+      (ait||[]).forEach(i=>{ _ataItemInf[i.id]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||''}; });
+    }
+  }
+  Object.entries(_ataExecByEiid).forEach(([eid,execs])=>{
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,temContrato:false,temProcesso:false};
+    let qAta=0, vAta=0;
+    execs.forEach(r=>{
+      const ai=_ataItemInf[r.ata_item_id]||{};
+      if(!f.cpl&&ai.cpl) f.cpl=ai.cpl;
+      if(!f.sim&&ai.sim) f.sim=ai.sim;
+      if(!f.unidade&&r.unidade) f.unidade=r.unidade;
+      if(!f.fornecedor) f.fornecedor="";
+      const q=Number(r.qtde)||0; qAta+=q;
+      const vl=Number(r.valor)||0; vAta+=vl;
+      if(r.af_numero||r.data_af){
+        f.af.aut+=q;
+        if(!f.af.afNumero&&r.af_numero) f.af.afNumero=r.af_numero;
+        f.af.afData=latestDate(f.af.afData,r.data_af);
+      }
+      if(r.dt_entrega) f.af.rec+=q;
+      if(r.data_entrega_unidade) f.af.conf+=q;
+      f.af.dataRecebimento=latestDate(f.af.dataRecebimento,r.dt_entrega);
+      f.af.dataEntregaUnidade=latestDate(f.af.dataEntregaUnidade,r.data_entrega_unidade);
+      if(r.empenho) f.empenhos.add(r.empenho);
+      if(r.nf) f.notas.add(r.nf);
+      if(r.patrimonio) f.patrimonios.add(r.patrimonio);
+    });
+    if(qAta>0) f.qtde+=qAta;
+    if(vAta>0) f.valor+=vAta;
+    f.temContrato=true;
+    f._ataSolicitada=true;
+  });
+  } catch(e){ console.error('_carregarFluxoEmendaItens ATA:', e); }
   itensFlow.forEach(it=>{
     const eid=it.emenda_item_id; if(!eid) return;
-    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,temContrato:false,temProcesso:false};
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,temContrato:false,temProcesso:false};
     if(!f.cpl) f.cpl=it.contratos?.cpl||it.processos?.identificador||"";
     if(!f.sim && it.contratos?.numero_contrato) f.sim=it.contratos.numero_contrato;
     if(!f.fornecedor && it.fornecedores?.razao_social) f.fornecedor=it.fornecedores.razao_social;
     if(!f.unidade && it.unidades?.nome) f.unidade=it.unidades.nome;
-    f.qtde += Number(it.qtde)||0;
-    f.valor += (Number(it.valor_contratado)||Number(it.valor_estimado)||0)*(Number(it.qtde)||0);
+    const itQtde=Number(it.qtde)||0;
+    const itVlUnit=Number(it.valor_contratado)||Number(it.valor_estimado)||0;
+    f.qtde += itQtde;
+    f.valor += itVlUnit * itQtde;
+    // Armazena o valor unitário do item contratado para derivar vl_unitario na aba Emendas
+    // Se houver apenas um item no fluxo, o unitário é direto; caso contrário, usamos o do maior qtde
+    if(it.valor_contratado!=null && itVlUnit>0){
+      if(f.valorUnit===null || itQtde>(f._qtdeRef||0)){
+        f.valorUnit=itVlUnit;
+        f._qtdeRef=itQtde;
+      }
+    }
     if(it.contrato_id) f.temContrato=true;
     if(it.processo_id) f.temProcesso=true;
     const a=afByItem[it.id];
@@ -8398,6 +8697,7 @@ function _flowStatusFromFlow(f){
   if(rec>0 && (!aut || rec>=aut)) return "RECEBIDO - AGUARDANDO CONFIRMACAO NA UNIDADE";
   if(rec>0) return "RECEBIDO PARCIAL - AGUARDANDO CONFIRMACAO NA UNIDADE";
   if(aut>0) return "AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO";
+  if(f._ataSolicitada) return "AGUARDANDO AF";
   if(f.temContrato) return f.empenhos&&f.empenhos.size?"AGUARDANDO AF":"CONTRATADO - AGUARDANDO EMPENHO/AF";
   if(f.temProcesso) return "EM LICITAÇÃO";
   return "";
@@ -8440,7 +8740,7 @@ async function loadData(){
       const unidEntStored=(i.unidade_entrega||"").toString().trim();
       const unidEntFinal=(f?f.unidade:"")||unidEntStored||"";
       const vlTotalStored=num(i.vl_total);
-      const vlUnitExec=num(i.vl_unitario);
+      const vlUnitExec=num(i.vl_unitario)||(f&&f.valorUnit!=null?f.valorUnit:0);
       const qtdeExec=num(i.qtde);
       const vlTotalCalc=vlUnitExec>0&&qtdeExec>0?Number((vlUnitExec*qtdeExec).toFixed(2)):0;
       const vlTotalFinal=vlTotalStored||vlTotalCalc||(f?Number(f.valor.toFixed(2)):0);
@@ -11937,7 +12237,7 @@ async function abrirDetalheContrato(id){
     const lista=itAq||[];
     html+=`<div style="margin-bottom:1.25rem"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.5rem"><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Itens do contrato (aquisição)</div>${editor&&lista.length?`<button class="btn-secondary" onclick="abrirTrocaMarcaModelo('${c.id}')" style="font-size:12px;padding:5px 10px">🔧 Trocar marca/modelo (aditivo)</button>`:""}</div>`;
     if(!lista.length){ html+=`<div style="font-size:13px;color:var(--text3)">Nenhum item de aquisição vinculado.</div>`; }
-    else html+=`<div class="table-wrap"><table style="font-size:12px"><thead><tr><th>Item</th><th>Marca/Modelo</th><th style="text-align:right">Qtde</th><th>AF / Ordem de Entrega</th></tr></thead><tbody>${lista.map(i=>{
+    else html+=`<div class="table-wrap"><table style="font-size:12px"><thead><tr><th>Item</th><th>Marca/Modelo</th><th style="text-align:right">Qtde</th><th>AF</th></tr></thead><tbody>${lista.map(i=>{
       const afs=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada' && e.af_numero);
       const semAF=afs.length===0;
       return `<tr style="${semAF?'background:#EF9F2718':''}"><td>${_sanEsc(i.descricao||'—')}</td><td>${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td><td style="text-align:right">${i.qtde??'—'}</td><td>${semAF?'<span class="badge" style="background:#EF9F2722;color:#EF9F27;white-space:nowrap">⚠ sem AF emitida</span>':_sanEsc(afs.map(a=>a.af_numero).join(', '))}</td></tr>`;
