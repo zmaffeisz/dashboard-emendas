@@ -23,6 +23,15 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   (`neInitItens`, `neAddItem`, `neAddUnidade`, `neRecalc`).
 
 ### Alterado
+- **Aba Emendas como painel consolidado do ciclo do item**: agora o dashboard deriva status,
+  AF, empenho, NF, patrimônio e data de entrega a partir de `itens`, `itens_entregas`,
+  `itens_entregas_unidades`, `empenho_itens` e `nota_fiscal_itens`, em vez de depender
+  somente dos campos manuais de `emenda_itens`.
+- **Planilha de Emendas**: adicionada a coluna **Vl. unit. exec.** e renomeada a coluna
+  total executada para **Vl. total exec.**, separando melhor planejado vs. executado.
+- **Fluxo AF de aquisição no Controle de Entregas**: item com AF emitida deixa
+  **Controle de Entregas / Prazos** e passa para **Confirmação de Entrega na Unidade**;
+  itens sem AF continuam como "aguardando AF".
 - **Status dos modais de emenda/item** agora vêm da mesma fonte da aba *Licitações em
   andamento* (`status_opcoes` com `contexto='licitacao'`, opções manuais) via
   `popularStatusLicitacao()`, em vez de lista fixa no HTML.
@@ -32,6 +41,11 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   permanecem válidas.
 
 ### Corrigido
+- **Emendas não refletia avanço real do item**: itens com AF/confirmacão na unidade podiam
+  continuar mostrando status antigo de licitação ("Em andamento") e campos vazios. O status
+  derivado do fluxo agora prevalece quando há AF, recebimento ou confirmação.
+- **Empenho vazio em confirmação/Emendas**: quando `itens_entregas.empenho` estava vazio,
+  o sistema passa a herdar o empenho vinculado via `empenho_itens`/`empenhos`.
 - **"Emitir AF" da ATA não abria** no Controle de Entregas: o modal `#modal-edit-exec`
   estava aninhado em `#panel-atas` (invisível em outras abas) e dependia do array
   `atasExec` não carregado fora da aba Atas. Agora o modal é reparentado ao `body` ao

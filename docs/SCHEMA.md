@@ -55,6 +55,11 @@ que o licita). Campos monetários "cadastrado" (planejado) vs. corrente (executa
 | `vl_unitario`, `vl_total` | numeric | **valores executados** |
 | `vl_unitario_cadastrado`, `vl_total_cadastrado` | numeric | **valores planejados** |
 
+> Na aba **Emendas**, `emenda_itens.status`, `nota_fiscal`, `empenho`, `patrimonio` e
+> `data_entrega` podem ser fallback legado. A exibição consolidada deve preferir dados
+> derivados do ciclo real em `itens`, `itens_entregas`, `itens_entregas_unidades`,
+> `empenho_itens` e `nota_fiscal_itens`.
+
 ### `processos` (12 colunas)
 A licitação / processo de contratação.
 
@@ -143,6 +148,10 @@ Autorização de Fornecimento (AF) / recebimento agregado por item.
 | `qtde_autorizada`, `qtde_recebida` | numeric | |
 | `patrimonio`, `numero_serie` | text | **agregado/legado** (preenchido por trigger a partir de `itens_entregas_unidades`) |
 | `status` | text | |
+
+`data_entrega_unidade`, `termo_arquivo`, `termo_responsavel` e `termo_cargo` registram a
+confirmação de entrega na unidade. Linhas com `af_numero` alimentam a subaba
+**Confirmação de Entrega na Unidade** e o painel consolidado de **Emendas**.
 
 ### `itens_entregas_unidades` (11 colunas)
 **Uma linha por unidade física recebida** (patrimônio/série individuais). Introduzida

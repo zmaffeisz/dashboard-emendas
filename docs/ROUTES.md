@@ -47,8 +47,9 @@ Navegação por `showTab('<name>')` ([index.html:2799](../index.html)).
 
 Algumas abas têm subvisões internas (não são rotas):
 
-- **Itens / Controle de Entregas**: `itensShowSub('entregas' | ...)` — alterna sub-views
-  (entregas, itens de atas espelhados etc.).
+- **Itens / Controle de Entregas**: `itensShowSub('entregas' | 'confirmacao' | 'empenhos')`
+  alterna sub-views. `entregas` mostra itens aguardando AF/prazo; `confirmacao` mostra
+  itens com AF/execução para confirmar entrega na unidade; `empenhos` gerencia vínculos.
 - **Modais** (`<div class="modal-overlay" id="panel-...">`): nova emenda
   (`panel-nova-emenda`), novo item (`panel-novo-item`), atualizar status
   (`panel-atualizar-status`) e dezenas de modais abertos por funções `abrirModal...`.

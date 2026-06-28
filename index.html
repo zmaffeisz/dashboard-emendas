@@ -127,7 +127,8 @@
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></span><span class="hdr-filter-btn" id="hf-qtde" onclick="openHeaderFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_unitario_cadastrado')">Vl. unit. plan. <span class="sort-icon" id="si-vl_unitario_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario_cadastrado" onclick="openHeaderFilter(event,'vl_unitario_cadastrado')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_total_cadastrado')">Vl. total plan. <span class="sort-icon" id="si-vl_total_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_total_cadastrado" onclick="openHeaderFilter(event,'vl_total_cadastrado')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_total')">Valor total <span class="sort-icon" id="si-vl_total"></span></span><span class="hdr-filter-btn" id="hf-vl_total" onclick="openHeaderFilter(event,'vl_total')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_unitario')">Vl. unit. exec. <span class="sort-icon" id="si-vl_unitario"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario" onclick="openHeaderFilter(event,'vl_unitario')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_total')">Vl. total exec. <span class="sort-icon" id="si-vl_total"></span></span><span class="hdr-filter-btn" id="hf-vl_total" onclick="openHeaderFilter(event,'vl_total')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></span><span class="hdr-filter-btn" id="hf-cpl" onclick="openHeaderFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></span><span class="hdr-filter-btn" id="hf-status_cat" onclick="openHeaderFilter(event,'status_cat')" title="Filtrar">▾</span></span></th>
               <th style="min-width:200px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('status_raw')">Status completo <span class="sort-icon" id="si-status_raw"></span></span><span class="hdr-filter-btn" id="hf-status_raw" onclick="openHeaderFilter(event,'status_raw')" title="Filtrar">▾</span></span></th>
@@ -2774,6 +2775,7 @@ const STATUS_MAP = {
   "EM LICITAÇÃO":{color:"#378ADD",label:"Em licitação"},
   "EM ANDAMENTO":{color:"#888780",label:"Em andamento"},
   "AGUARDANDO RESERVA":{color:"#EF9F27",label:"Aguard. reserva"},
+  "AGUARDANDO AF":{color:"#EF9F27",label:"Aguard. AF"},
   "FRACASSADO":{color:"#E24B4A",label:"Fracassado"},
   "SEGOV":{color:"#D4537E",label:"SEGOV"},
   "PREGÃO AGENDADO":{color:"#7F77DD",label:"Pregão agendado"},
@@ -2792,7 +2794,8 @@ function catStatus(s){
   if(u.includes("ADQUIRIDO/ENTREGUE")||u.includes("ADQUIRIDO / ENTREGUE")||u.includes("ADQUIRIDO EM 20")) return "ENTREGUE";
   if(u.includes("CANCELADO")||u.includes("ITEM CANCELADO")||u.includes("ITEM REMOVIDO")||u.includes("ITEM PREJUDICADO")||u.includes("SEM SALDO")) return "CANCELADO";
   if(u.includes("FRACASSADO")) return "FRACASSADO";
-  if(u.includes("AF EMITIDA")||u.includes("AGUARDANDO ENTREGA")) return "AF EMITIDA";
+  if(u.includes("AGUARDANDO AF")) return "AGUARDANDO AF";
+  if(u.includes("AF EMITIDA")||u.includes("AGUARDANDO ENTREGA")||u.includes("AGUARDANDO CONFIRMACAO")) return "AF EMITIDA";
   if(u.includes("AGUARDANDO RESERVA")||u.includes("RESERVA SOLICITADA")) return "AGUARDANDO RESERVA";
   if(u.includes("SEAD")||u.includes("ELABORANDO EDITAL")||u.includes("ANALISE DE EDITAL")||u.includes("ANÁLISE JURÍDICA")) return "EM LICITAÇÃO";
   if(u.includes("PREGÃO AGENDADO")||u.includes("PREGAO AGENDADO")) return "PREGÃO AGENDADO";
@@ -3653,8 +3656,10 @@ function verTudoEmendaItem(id){
     ['Parlamentar', r.parlamentar],
     ['Unidade beneficiada', r.unidade],
     ['Quantidade', r.qtde],
-    ['Valor unitário', r.vl_unitario?_fmtBRL(r.vl_unitario):null],
-    ['Valor total', r.vl_total?_fmtBRL(r.vl_total):null],
+    ['Valor unitário planejado', r.vl_unitario_cadastrado?_fmtBRL(r.vl_unitario_cadastrado):null],
+    ['Valor total planejado', r.vl_total_cadastrado?_fmtBRL(r.vl_total_cadastrado):null],
+    ['Valor unitário executado', r.vl_unitario?_fmtBRL(r.vl_unitario):null],
+    ['Valor total executado', r.vl_total?_fmtBRL(r.vl_total):null],
     ['Status', r.status_raw],
     ['Categoria', r.status_cat],
     ['CPL / Processo', r.cpl],
@@ -6019,11 +6024,12 @@ async function salvarAF(){
   }
   document.getElementById('modal-af').classList.remove('active');
   if(window.toast) toast('AF emitida','success');
-  // Recarrega PRIMEIRO a lista que o usuário está vendo (Controle de Entregas), de forma
-  // independente: se loadItens() falhar, a lista de entregas ainda atualiza (item sai de
-  // "aguardando AF" e ganha os botões Receber/Prazo).
+  // Recarrega as duas subabas afetadas: a emissão da AF tira o item do Controle de
+  // Entregas/Prazos e o coloca em Confirmação de Entrega na Unidade.
   itensEntregasCarregado=false;
+  confirmacoesCarregado=false;
   try{ await loadItensEntregas(); }catch(e){ console.error('Falha ao recarregar Controle de Entregas:',e); }
+  try{ await loadConfirmacoes(); }catch(e){ console.error('Falha ao recarregar Confirmação:',e); }
   try{ await loadItens(); }catch(e){ console.error('Falha ao recarregar Itens:',e); }
 }
 
@@ -6191,13 +6197,21 @@ async function loadItensEntregas(){
     .select('*, empenhos(numero), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
+  const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data')
+    .order('af_data',{ascending:false});
+  if(e1b) console.warn('AF base:',e1b.message);
+  const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
   const recebidoPorItem={};
-  (aq||[]).forEach(r=>{
+  (aqCalc||[]).forEach(r=>{
     if((r.status||'')==='cancelada') return;
     recebidoPorItem[r.item_id]=(recebidoPorItem[r.item_id]||0)+(Number(r.qtde_recebida)||0);
   });
+  const aqDetalhadaIds=new Set();
   (aq||[]).forEach(r=>{
     const it=r.itens||{};
+    if(!it.id) return;
+    aqDetalhadaIds.add(String(r.id));
     const cancelado=(r.status||'')==='cancelada';
     const recebido=!cancelado && ((Number(r.qtde_recebida)||0)>0 || !!r.data_recebimento);
     const limiteISO=_toISODate(r.data_limite_entrega);
@@ -6251,8 +6265,19 @@ async function loadItensEntregas(){
     .eq('origem','aquisicao').not('contrato_id','is',null);
   if(!e3){
     const autPorItem={};
-    (aq||[]).forEach(r=>{ if((r.status||'')!=='cancelada') autPorItem[r.item_id]=(autPorItem[r.item_id]||0)+(Number(r.qtde_autorizada)||0); });
     const itemIds=(itc||[]).map(i=>i.id);
+    if(itemIds.length){
+      const {data:afsSaldo,error:eSaldo}=await sb.from('itens_entregas')
+        .select('item_id,qtde_autorizada,status')
+        .in('item_id',itemIds);
+      const fonteSaldo=eSaldo?aqCalc:afsSaldo;
+      if(eSaldo) console.warn('AF saldo pendente:',eSaldo.message);
+      (fonteSaldo||[]).forEach(r=>{
+        const st=String(r.status||'').toLowerCase();
+        if(st.startsWith('cancelad')) return;
+        autPorItem[r.item_id]=(autPorItem[r.item_id]||0)+(Number(r.qtde_autorizada)||0);
+      });
+    }
     const contratoIds=[...new Set((itc||[]).map(i=>i.contrato_id).filter(Boolean))];
     const empPorItem={}, empPorContrato={};
     if(itemIds.length){
@@ -6263,6 +6288,40 @@ async function loadItensEntregas(){
       const {data:ec}=await sb.from('empenhos').select('numero,contrato_id').in('contrato_id',contratoIds);
       (ec||[]).forEach(e=>{ if(e.contrato_id){ (empPorContrato[e.contrato_id]=empPorContrato[e.contrato_id]||[]).push(e.numero||''); } });
     }
+    const itemPorId=Object.fromEntries((itc||[]).map(it=>[String(it.id),it]));
+    (aqCalc||[]).forEach(r=>{
+      if(!r.id || aqDetalhadaIds.has(String(r.id)) || (r.status||'')==='cancelada') return;
+      const it=itemPorId[String(r.item_id)]||{};
+      if(!it.id) return;
+      const cancelado=(r.status||'')==='cancelada';
+      const recebido=!cancelado && ((Number(r.qtde_recebida)||0)>0 || !!r.data_recebimento);
+      const limiteISO=_toISODate(r.data_limite_entrega);
+      const qtdeAut=Number(r.qtde_autorizada)||0;
+      const qtdeRec=Number(r.qtde_recebida)||0;
+      const saldoAf=qtdeAut-qtdeRec;
+      const itemQtde=Number(it.qtde)||0;
+      const saldoItem=itemQtde-(Number(recebidoPorItem[r.item_id])||0);
+      out.push({
+        tipo:'Aquisição', entrega_id:r.id, item_id:r.item_id,
+        processo:it.processos?.identificador||'', processo_id:it.processo_id||null,
+        contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
+        contrato_id:it.contrato_id||null, fornecedor_id:it.fornecedor_id||null,
+        fonte_tipo:it.fonte_tipo||'', fonte_descricao:it.fonte_descricao||'',
+        emenda_id:it.emenda_id||null, emenda_item_id:it.emenda_item_id||null,
+        empresa:it.fornecedores?.razao_social||'', item:it.descricao||'',
+        marca:it.marca||'', modelo:it.modelo||'', numero_serie:r.numero_serie||'',
+        unidade:it.unidades?.nome||'', af_numero:r.af_numero||'',
+        af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
+        saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
+        data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
+        recebimento_tipo:r.recebimento_tipo||'', patrimonio:r.patrimonio||'',
+        empenho_id:r.empenho_id||null, empenho:r.empenho||'',
+        nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.nota_fiscal||'',
+        nf_dataISO:_toISODate(r.nf_data),
+        valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0,
+        status:_prazoStatus(limiteISO,recebido,cancelado)
+      });
+    });
     (itc||[]).forEach(it=>{
       const saldoAut=(Number(it.qtde)||0)-(Number(autPorItem[it.id])||0);
       if(saldoAut<=0) return; // já totalmente autorizado por AFs
@@ -6290,7 +6349,9 @@ function renderItensEntregas(){
   const fT=document.getElementById('entregas-f-tipo')?.value||'';
   const fP=document.getElementById('entregas-f-prazo')?.value||'';
   const rows=entregasRows.filter(r=>{
-    // já entregues saem desta sub-aba (vão para "Confirmação de Entrega na Unidade"); ainda acessíveis pelo filtro de prazo = "recebido"
+    // Aquisição com AF emitida sai desta sub-aba e passa para "Confirmação de Entrega na Unidade".
+    if(r.tipo==='Aquisição' && !r._pendente) return false;
+    // ATAs já entregues saem desta sub-aba; ainda acessíveis pelo filtro de prazo = "recebido".
     const entregue = r.recebido && (r.tipo==='ATA' ? true : (Number(r.saldo_af)||0)<=0);
     if(entregue && fP!=='recebido') return false;
     if(fT && r.tipo!==fT) return false;
@@ -6303,7 +6364,7 @@ function renderItensEntregas(){
     return (_diasRestantes(a.limiteISO)??99999)-(_diasRestantes(b.limiteISO)??99999);
   });
   const cEl=document.getElementById('entregas-count'); if(cEl) cEl.textContent=`${rows.length} registro(s)`;
-  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item aguardando entrega. Aquisições aparecem aqui ao <b>gerar contrato</b> (aguardando AF); atas vêm ao <b>solicitar/executar</b> na aba <b>Atas Rp Vigentes</b>. Itens já entregues vão para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
+  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item aguardando AF. Depois da emissão da AF, a aquisição passa para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
   wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
       <th style="padding:7px 8px;width:28px" title="Selecionar para advertência">⚖️</th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
@@ -6829,19 +6890,31 @@ async function loadConfirmacoes(){
   const rows=[];
   const {data:aq,error:e1}=await sb.from('itens_entregas')
     .select('*, empenhos(numero), notas_fiscais(numero), itens(id,descricao,qtde,processo_id,contrato_id,fornecedor_id,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
-    .not('qtde_recebida','is',null)
-    .order('data_recebimento',{ascending:false});
+    .not('af_numero','is',null)
+    .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
+  const confItemIds=[...new Set((aq||[]).map(r=>r.item_id).filter(Boolean))];
+  const confContratoIds=[...new Set((aq||[]).map(r=>r.itens?.contrato_id).filter(Boolean))];
+  const empPorItem={}, empPorContrato={};
+  if(confItemIds.length){
+    const {data:ei}=await sb.from('empenho_itens').select('item_id,empenhos(numero)').in('item_id',confItemIds);
+    (ei||[]).forEach(x=>{ if(x.item_id){ (empPorItem[x.item_id]=empPorItem[x.item_id]||[]).push(x.empenhos?.numero||''); } });
+  }
+  if(confContratoIds.length){
+    const {data:ec}=await sb.from('empenhos').select('numero,contrato_id').in('contrato_id',confContratoIds);
+    (ec||[]).forEach(e=>{ if(e.contrato_id){ (empPorContrato[e.contrato_id]=empPorContrato[e.contrato_id]||[]).push(e.numero||''); } });
+  }
   (aq||[]).forEach(r=>{
     if((r.status||'')==='cancelada') return;
-    if((Number(r.qtde_recebida)||0)<=0 && !r.data_recebimento) return;
+    if(!r.af_numero && !r.af_data) return;
     const it=r.itens||{};
+    const empVinculado=(empPorItem[r.item_id]||empPorContrato[it.contrato_id]||[]).filter(Boolean).join(', ');
     rows.push({
       tipo:'Aquisição', id:r.id, item_id:r.item_id,
       processo:it.processos?.identificador||'', contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
       empresa:it.fornecedores?.razao_social||'', item:it.descricao||'', unidade:it.unidades?.nome||'',
-      qtde:Number(r.qtde_recebida)||0, patrimonio:r.patrimonio||'', empenho:r.empenhos?.numero||r.empenho||'',
-      nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'', data_recebimento:_toISODate(r.data_recebimento),
+      qtde:Number(r.qtde_recebida)||Number(r.qtde_autorizada)||0, patrimonio:r.patrimonio||'', empenho:r.empenhos?.numero||r.empenho||empVinculado||'',
+      nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'', af_numero:r.af_numero||'', af_data:_toISODate(r.af_data), data_recebimento:_toISODate(r.data_recebimento),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
       termo_responsavel:r.termo_responsavel||'', termo_cargo:r.termo_cargo||'', confirmacao_obs:r.confirmacao_obs||'',
       emenda_item_id:it.emenda_item_id||null
@@ -6891,7 +6964,7 @@ function renderConfirmacoes(){
         <td style="padding:6px 8px">${_sanEsc(r.item||'—')}</td>
         <td style="padding:6px 8px">${_sanEsc(r.unidade||'—')}</td>
         <td style="padding:6px 8px;text-align:right">${r.qtde||'—'}</td>
-        <td style="padding:6px 8px;white-space:nowrap;color:var(--text3)">Emp: ${_sanEsc(r.empenho||'—')}<br>NF: ${_sanEsc(r.nota_fiscal||'—')}${r.patrimonio?('<br>Pat: '+_sanEsc(r.patrimonio)):''}</td>
+        <td style="padding:6px 8px;white-space:nowrap;color:var(--text3)">${r.af_numero?('AF: '+_sanEsc(r.af_numero)+(r.af_data?' · '+fmtDate(r.af_data):'')+'<br>'):''}Emp: ${_sanEsc(r.empenho||'—')}<br>NF: ${_sanEsc(r.nota_fiscal||'—')}${r.patrimonio?('<br>Pat: '+_sanEsc(r.patrimonio)):''}</td>
         <td style="padding:6px 8px;white-space:nowrap">${r.data_recebimento?fmtDate(r.data_recebimento):'—'}</td>
         <td style="padding:6px 8px;white-space:nowrap">${r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):'—'}</td>
         <td style="padding:6px 8px">${_sanEsc(r.termo_responsavel||'—')}${r.termo_cargo?('<br><span style="color:var(--text3)">'+_sanEsc(r.termo_cargo)+'</span>'):''}</td>
@@ -8241,32 +8314,91 @@ async function _carregarFluxoEmendaItens(eiIds){
     if(itf) itensFlow.push(...itf);
   }
   const itemIds=itensFlow.map(x=>x.id);
-  const afByItem={};
+  const afByItem={}, empByItem={}, nfByItem={}, unidadeByItem={};
+  const addUnique=(map,key,val)=>{
+    if(!key||!val) return;
+    const s=map[key]=map[key]||new Set();
+    String(val).split(/[;,]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>s.add(x));
+  };
+  const latestDate=(a,b)=>{
+    const da=_toISODate(a), db=_toISODate(b);
+    if(!da) return db||"";
+    if(!db) return da;
+    return db>da?db:da;
+  };
   for(let k=0;k<itemIds.length;k+=200){
     const slice=itemIds.slice(k,k+200); if(!slice.length) break;
-    const {data:afs}=await sb.from("itens_entregas").select("item_id,qtde_autorizada,qtde_recebida,status").in("item_id",slice);
-    (afs||[]).forEach(a=>{ if((a.status||"")==="cancelada") return; const m=afByItem[a.item_id]=afByItem[a.item_id]||{aut:0,rec:0}; m.aut+=Number(a.qtde_autorizada)||0; m.rec+=Number(a.qtde_recebida)||0; });
+    const {data:afs}=await sb.from("itens_entregas")
+      .select("item_id,qtde_autorizada,qtde_recebida,status,af_numero,af_data,data_recebimento,data_entrega_unidade,empenho,nota_fiscal,patrimonio,numero_serie,empenhos(numero),notas_fiscais(numero)")
+      .in("item_id",slice);
+    (afs||[]).forEach(a=>{
+      if((a.status||"").toLowerCase()==="cancelada") return;
+      const m=afByItem[a.item_id]=afByItem[a.item_id]||{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:"",patrimonios:new Set(),series:new Set()};
+      const aut=Number(a.qtde_autorizada)||0;
+      const rec=Number(a.qtde_recebida)||0;
+      m.aut+=aut;
+      m.rec+=rec;
+      if(a.data_entrega_unidade) m.conf+=(rec||aut||1);
+      if(!m.afNumero&&a.af_numero) m.afNumero=a.af_numero;
+      m.afData=latestDate(m.afData,a.af_data);
+      m.dataRecebimento=latestDate(m.dataRecebimento,a.data_recebimento);
+      m.dataEntregaUnidade=latestDate(m.dataEntregaUnidade,a.data_entrega_unidade);
+      if(a.patrimonio) m.patrimonios.add(a.patrimonio);
+      if(a.numero_serie) m.series.add(a.numero_serie);
+      addUnique(empByItem,a.item_id,a.empenhos?.numero||a.empenho);
+      addUnique(nfByItem,a.item_id,a.notas_fiscais?.numero||a.nota_fiscal);
+    });
+    const {data:emps}=await sb.from("empenho_itens").select("item_id,empenhos(numero)").in("item_id",slice);
+    (emps||[]).forEach(e=>addUnique(empByItem,e.item_id,e.empenhos?.numero));
+    const {data:nfs}=await sb.from("nota_fiscal_itens").select("item_id,notas_fiscais(numero)").in("item_id",slice);
+    (nfs||[]).forEach(n=>addUnique(nfByItem,n.item_id,n.notas_fiscais?.numero));
+    const {data:uns}=await sb.from("itens_entregas_unidades").select("item_id,patrimonio,numero_serie,notas_fiscais(numero)").in("item_id",slice);
+    (uns||[]).forEach(u=>{
+      const m=afByItem[u.item_id]=afByItem[u.item_id]||{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:"",patrimonios:new Set(),series:new Set()};
+      if(u.patrimonio) m.patrimonios.add(u.patrimonio);
+      if(u.numero_serie) m.series.add(u.numero_serie);
+      addUnique(nfByItem,u.item_id,u.notas_fiscais?.numero);
+      unidadeByItem[u.item_id]=(unidadeByItem[u.item_id]||0)+1;
+    });
   }
   itensFlow.forEach(it=>{
     const eid=it.emenda_item_id; if(!eid) return;
-    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,af:{aut:0,rec:0},temContrato:false,temProcesso:false};
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,temContrato:false,temProcesso:false};
     if(!f.cpl) f.cpl=it.contratos?.cpl||it.processos?.identificador||"";
     if(!f.sim && it.contratos?.numero_contrato) f.sim=it.contratos.numero_contrato;
     if(!f.fornecedor && it.fornecedores?.razao_social) f.fornecedor=it.fornecedores.razao_social;
     if(!f.unidade && it.unidades?.nome) f.unidade=it.unidades.nome;
+    f.qtde += Number(it.qtde)||0;
     f.valor += (Number(it.valor_contratado)||Number(it.valor_estimado)||0)*(Number(it.qtde)||0);
     if(it.contrato_id) f.temContrato=true;
     if(it.processo_id) f.temProcesso=true;
-    const a=afByItem[it.id]; if(a){ f.af.aut+=a.aut; f.af.rec+=a.rec; }
+    const a=afByItem[it.id];
+    if(a){
+      f.af.aut+=a.aut; f.af.rec+=a.rec; f.af.conf+=a.conf;
+      if(!f.af.afNumero&&a.afNumero) f.af.afNumero=a.afNumero;
+      f.af.afData=latestDate(f.af.afData,a.afData);
+      f.af.dataRecebimento=latestDate(f.af.dataRecebimento,a.dataRecebimento);
+      f.af.dataEntregaUnidade=latestDate(f.af.dataEntregaUnidade,a.dataEntregaUnidade);
+      (a.patrimonios||new Set()).forEach(v=>f.patrimonios.add(v));
+      (a.series||new Set()).forEach(v=>f.series.add(v));
+    }
+    (empByItem[it.id]||new Set()).forEach(v=>f.empenhos.add(v));
+    (nfByItem[it.id]||new Set()).forEach(v=>f.notas.add(v));
+    f.unidadesFisicas += Number(unidadeByItem[it.id])||0;
   });
   return flow;
 }
 // Deriva um texto de status a partir do estágio do fluxo (catStatus categoriza depois)
 function _flowStatusFromFlow(f){
   if(!f) return "";
-  if(f.af.aut>0 && f.af.rec>=f.af.aut) return "ADQUIRIDO/ENTREGUE";
-  if(f.af.aut>0) return "AF EMITIDA - AGUARDANDO ENTREGA DOS ITENS";
-  if(f.temContrato) return "CONTRATADO - AGUARDANDO EMPENHO/AF";
+  const aut=Number(f.af.aut)||0, rec=Number(f.af.rec)||0, conf=Number(f.af.conf)||0, qtde=Number(f.qtde)||0;
+  const totalEsperado=aut||qtde||0;
+  if(conf>0 && (!totalEsperado || conf>=totalEsperado)) return "ADQUIRIDO/ENTREGUE NA UNIDADE";
+  if(conf>0) return "ENTREGA PARCIAL CONFIRMADA NA UNIDADE";
+  if(rec>0 && (!aut || rec>=aut)) return "RECEBIDO - AGUARDANDO CONFIRMACAO NA UNIDADE";
+  if(rec>0) return "RECEBIDO PARCIAL - AGUARDANDO CONFIRMACAO NA UNIDADE";
+  if(aut>0) return "AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO";
+  if(f.temContrato) return f.empenhos&&f.empenhos.size?"AGUARDANDO AF":"CONTRATADO - AGUARDANDO EMPENHO/AF";
   if(f.temProcesso) return "EM LICITAÇÃO";
   return "";
 }
@@ -8306,11 +8438,20 @@ async function loadData(){
       const cplFlow=f?(f.cpl||""):"";
       const cplFinal=cplFlow||cplStored;
       const unidEntStored=(i.unidade_entrega||"").toString().trim();
-      const unidEntFinal=unidEntStored||(f?f.unidade:"")||"";
+      const unidEntFinal=(f?f.unidade:"")||unidEntStored||"";
       const vlTotalStored=num(i.vl_total);
-      const vlTotalFinal=vlTotalStored||(f?Number(f.valor.toFixed(2)):0);
+      const vlUnitExec=num(i.vl_unitario);
+      const qtdeExec=num(i.qtde);
+      const vlTotalCalc=vlUnitExec>0&&qtdeExec>0?Number((vlUnitExec*qtdeExec).toFixed(2)):0;
+      const vlTotalFinal=vlTotalStored||vlTotalCalc||(f?Number(f.valor.toFixed(2)):0);
       const statusStored=(i.status||"").toString().trim();
-      const statusFinal=(statusStored||(i.status_id!=null?statusStored:_flowStatusFromFlow(f)))||statusStored;
+      const statusFlow=_flowStatusFromFlow(f);
+      const statusFinal=statusFlow||statusStored;
+      const empenhoFlow=f&&f.empenhos?Array.from(f.empenhos).filter(Boolean).join("; "):"";
+      const nfFlow=f&&f.notas?Array.from(f.notas).filter(Boolean).join("; "):"";
+      const patrimonioFlow=f&&f.patrimonios?Array.from(f.patrimonios).filter(Boolean).join("; "):"";
+      const dataFluxo=f?(f.af.dataEntregaUnidade||f.af.dataRecebimento||f.af.afData||""):"";
+      const dataAtualizacaoFluxo=f?(f.af.dataEntregaUnidade||f.af.dataRecebimento||f.af.afData||""):"";
       return {
         id:i.id,                       // uuid do item (chave para updates)
         emenda_id:i.emenda_id,         // uuid da emenda (FK)
@@ -8324,7 +8465,7 @@ async function loadData(){
         // ── executado ──
         item:(i.item||"").toString().trim(),
         qtde:(i.qtde!=null?i.qtde:"").toString().trim(),
-        vl_unitario:num(i.vl_unitario),
+        vl_unitario:vlUnitExec,
         vl_total:vlTotalFinal,
         // ── plano de trabalho aprovado (cadastrado/planejado) ──
         item_cadastrado:(i.item_cadastrado||"").toString().trim(),
@@ -8336,15 +8477,16 @@ async function loadData(){
         fornecedor_fluxo:(f?f.fornecedor:"")||"",
         status_raw:statusFinal,
         status_id:(i.status_id!=null?i.status_id:null),
-        nota_fiscal:(i.nota_fiscal||"").toString().trim(),
-        empenho:(i.empenho||"").toString().trim(),
-        patrimonio:(i.patrimonio||"").toString().trim(),
+        _status_derivado:!!statusFlow,
+        nota_fiscal:nfFlow||(i.nota_fiscal||"").toString().trim(),
+        empenho:empenhoFlow||(i.empenho||"").toString().trim(),
+        patrimonio:patrimonioFlow||(i.patrimonio||"").toString().trim(),
         unidade_entrega:unidEntFinal,
-        data_entrega:(i.data_entrega||"").toString().trim(),
+        data_entrega:dataFluxo||(i.data_entrega||"").toString().trim(),
         ordem_pagamento:(i.ordem_pagamento||"").toString().trim(),
-        data_atualizacao:(i.data_atualizacao||"").toString().trim(),
+        data_atualizacao:dataAtualizacaoFluxo||(i.data_atualizacao||"").toString().trim(),
       };
-    }).map(r=>({...r,status_cat:(r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
+    }).map(r=>({...r,status_cat:(!r._status_derivado&&r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
     const [{data:eData},{data:uData},{data:pData}]=await Promise.all([
       sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido,unidade,unidade_id").order("emenda",{ascending:true}),
       sb.from("unidades").select("id,nome").eq("ativo",true).order("nome"),
@@ -8385,7 +8527,8 @@ const HDR_FILTER_COLS = {
   qtde:{label:'Qtde', get:r=>r.qtde, disp:v=>v||'(vazio)'},
   vl_unitario_cadastrado:{label:'Vl. unit. plan.', get:r=>r.vl_unitario_cadastrado, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   vl_total_cadastrado:{label:'Vl. total plan.', get:r=>r.vl_total_cadastrado, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
-  vl_total:{label:'Valor total', get:r=>r.vl_total, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
+  vl_unitario:{label:'Vl. unit. exec.', get:r=>r.vl_unitario, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
+  vl_total:{label:'Vl. total exec.', get:r=>r.vl_total, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   cpl:{label:'CPL / Processo', get:r=>r.cpl, disp:v=>v||'(vazio)'},
   status_cat:{label:'Status', get:r=>r.status_cat, disp:v=>((STATUS_MAP[v]&&STATUS_MAP[v].label)||v||'(vazio)')},
   status_raw:{label:'Status completo', get:r=>r.status_raw, disp:v=>v||'(vazio)'},
@@ -9144,6 +9287,7 @@ function renderTable(){
     <td style="text-align:right">${r.qtde||"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
+    <td style="text-align:right;white-space:nowrap">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${r.cpl||"—"}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>
     <td>${statusBadge(r.status_cat)}</td>
@@ -9363,7 +9507,7 @@ function doSearch(){
       <div class="ficha-grid">
         ${ficha("Emenda",r.emenda)}${ficha("Tipo",r.tipo)}${ficha("Parlamentar",r.parlamentar)}
         ${ficha("Unidade beneficiada",r.unidade)}${ficha("CPL / Processo",r.cpl)}
-        ${ficha("Quantidade",r.qtde)}${ficha("Valor total",r.vl_total?fmtFull(r.vl_total):"")}
+        ${ficha("Quantidade",r.qtde)}${ficha("Vl. unit. exec.",r.vl_unitario?fmtFull(r.vl_unitario):"")}${ficha("Vl. total exec.",r.vl_total?fmtFull(r.vl_total):"")}
         ${ficha("Nota fiscal",r.nota_fiscal)}${ficha("Nº empenho",r.empenho)}
         ${ficha("Nº patrimônio",r.patrimonio)}${ficha("Unidade de entrega",r.unidade_entrega)}
         ${ficha("Data de entrega",r.data_entrega)}${ficha("Ordem de pagamento",r.ordem_pagamento)}

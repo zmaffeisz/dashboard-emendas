@@ -31,7 +31,14 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
       `atas_itens`.
 - [ ] Abrir aba **Atas Rp** e confirmar que reflete alterações de Contratos (encerrar/
       prorrogar/editar) — reload automático.
-- [ ] Emitir AF, vincular empenho, registrar recebimento (aba **Controle de Entregas**).
+- [ ] Vincular empenho antes da AF e emitir AF (aba **Controle de Entregas**).
+- [ ] Após emitir AF de aquisição, confirmar que o item sai de **Controle de Entregas /
+      Prazos** e aparece em **Confirmação de Entrega na Unidade** com AF e empenho
+      herdado.
+- [ ] Confirmar entrega na unidade (data, responsável, termo) e voltar para **Emendas**:
+      o item deve mostrar status derivado do fluxo, data de entrega, empenho/NF/patrimônio
+      quando existirem; item sem AF deve aparecer como "aguardando AF".
+- [ ] Registrar recebimento/NF quando aplicável (aba **Controle de Entregas**).
 - [ ] Recebimento por unidade física (`itens_entregas_unidades`): patrimônio/série por
       unidade.
 

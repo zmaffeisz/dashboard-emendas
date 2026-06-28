@@ -9,7 +9,7 @@
 | # | Regra | Status no código |
 |---|---|---|
 | G1 | **Fonte única da verdade** no banco; abas são views da mesma base. | Implementado (recarregamento + views) |
-| G2 | Alteração em uma aba **reflete automaticamente** nas abas relacionadas. | Implementado para Contratos→Atas (reload sempre) e espelhamentos |
+| G2 | Alteração em uma aba **reflete automaticamente** nas abas relacionadas. | Implementado para Contratos→Atas, Controle de Entregas→Emendas e espelhamentos |
 | G3 | **Integridade referencial** entre Emenda, Licitação, Contrato, Ata e Execução. | Implementado via FKs (ver [DATABASE.md](DATABASE.md#chaves-estrangeiras)) |
 | G4 | **Evitar duplicidade de valores** (especialmente NF e saldo). | Implementado (modelo NF + view de saldo) |
 
@@ -19,6 +19,10 @@
 - `valor_cedido` é o teto da emenda.
 - Em `emenda_itens` há **dois pares de valores**: planejado
   (`vl_*_cadastrado`) e executado (`vl_*`).
+  - Planejado: `vl_unitario_cadastrado` e `vl_total_cadastrado`.
+  - Executado: `vl_unitario` e `vl_total`; a aba **Emendas** deve exibir ambos, não só o
+    total executado. Quando `vl_total` não estiver preenchido, a exibição pode derivar o
+    total executado por `qtde × vl_unitario`.
 - `vw_emendas_saldo`:
   - `total_planejado` = Σ `vl_total_cadastrado`.
   - `total_executado` = Σ `vl_total`.
@@ -35,6 +39,11 @@
   comprometido), avisando se o comprometido exceder o global.
   - O status inicial do item vem da **mesma fonte da aba Licitações** (`status_opcoes`
     `contexto='licitacao'`, opções manuais).
+  - A aba **Emendas** não fica presa ao cadastro inicial: ela consolida o ciclo real do
+    item a partir de `itens`, `itens_entregas`, `itens_entregas_unidades`,
+    `empenhos`/`empenho_itens` e `notas_fiscais`/`nota_fiscal_itens`. AF emitida,
+    aguardando AF, recebimento, confirmação na unidade, NF, empenho, patrimônio e data de
+    entrega devem aparecer ali como reflexo do fluxo.
   - Modelo anterior (1 linha de `emendas` por unidade, com o valor dividido igualmente)
     foi **substituído**; emendas antigas multi-linha permanecem válidas.
 
@@ -88,6 +97,15 @@
 ## 7. Recebimento de itens / AF
 
 - AF de **aquisição** gera `itens_entregas` (autorizada vs. recebida).
+- Na subaba **Controle de Entregas / Prazos**, aquisições com saldo de AF pendente ficam
+  como "aguardando AF". Quando a AF cobre a quantidade do item, o item sai dessa subaba e
+  entra em **Confirmação de Entrega na Unidade**.
+- A subaba **Confirmação de Entrega na Unidade** lista aquisições com `af_numero`, mesmo
+  antes de NF/recebimento físico. O empenho exibido pode vir da entrega ou ser herdado de
+  `empenho_itens`/`empenhos` pelo item/contrato.
+- Confirmar a entrega na unidade grava `data_entrega_unidade`, responsável/cargo e termo em
+  `itens_entregas`; a aba **Emendas** deve refletir esse item como entregue/confirmado na
+  unidade e preencher a data de entrega derivada.
 - AF de **ATA**: o botão "Emitir AF" no Controle de Entregas abre modal dedicado que grava
   `af_numero`, `data_af` e `prev_entrega` em `atas_execucao` (gera o nº da AF, espelhando o
   fluxo da aquisição). Após emitir, o item sai de "aguardando AF" e libera o "Receber".

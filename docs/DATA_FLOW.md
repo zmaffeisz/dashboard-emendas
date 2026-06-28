@@ -37,13 +37,13 @@
 | Etapa | Nasce em | Editado em | Consumido por |
 |---|---|---|---|
 | Emenda | aba **Emendas** (`emendas`) | modal nova emenda | Saldo, Itens, relatórios |
-| Item da emenda | aba **Emendas** (`emenda_itens`) | modal **Nova emenda** (itens inline) / Novo item / status | Licitação, Saldo, Sanções |
+| Item da emenda | aba **Emendas** (`emenda_itens`) | modal **Nova emenda** (itens inline) / Novo item / status | Licitação, Saldo, Sanções, painel consolidado do ciclo do item |
 | Licitação/processo | aba **Licitações** (`processos`) | novo/editar processo | Emenda (status do item), Contrato |
 | Status de licitação | `itens.status_lic_id` / `emenda_itens.status_id` | aba Licitações (por item) | Emenda (somente leitura) |
 | Contrato (matriz) | aba **Contratos** (`contratos`) | editar contrato (admin) | Atas, Itens, Empenhos, Chamados, Sanções |
 | Ata (itens) | espelhada ao salvar contrato ATA (`atas_itens`) | aba **Atas Rp** | Execução de ata, Itens |
 | Execução de ata | aba **Atas Rp** (`atas_execucao`) | AF/entrega/termo | Saldo, Inventário |
-| AF / entrega | aba **Itens** (`itens_entregas`) | modal AF / recebimento | Saldo, NF, Inventário |
+| AF / entrega | aba **Itens** (`itens_entregas`) | modal AF / recebimento / confirmação na unidade | Emendas, Saldo, NF, Inventário |
 | Recebimento por unidade | aba **Itens** (`itens_entregas_unidades`) | modal recebimento | agregado em `itens_entregas` (trigger) |
 | Empenho | aba **Itens/Contratos** (`empenhos`,`empenho_itens`) | modal empenho | Saldo, NF |
 | Nota Fiscal | aba **Itens** (`notas_fiscais`,`nota_fiscal_itens`) | modal NF/recebimento | Saldo, conferência |
@@ -63,7 +63,11 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    ([index.html:7118+](../index.html), `abrirModalNovoContrato`)
 3. **Trigger de agregação** — `itens_entregas_unidades` → `_sync_entrega_agregado()`
    atualiza `itens_entregas.patrimonio/numero_serie` sem duplicar dado.
-4. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`
+4. **Emendas como painel consolidado** — a aba Emendas lê o item cadastrado e agrega o
+   fluxo de `itens`, `itens_entregas`, `itens_entregas_unidades`, `empenho_itens` e
+   `nota_fiscal_itens`. Por isso AF emitida, aguardando AF, confirmação na unidade,
+   empenho, NF, patrimônio e data de entrega precisam aparecer ali sem edição manual.
+5. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`
    sempre que lida (não há valor "congelado" duplicado).
 
 ## 4. Exemplo de fluxo ponta a ponta
@@ -79,10 +83,13 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    **espelhados** para `atas_itens`.
 4. **Execução da ata** — em `atas_execucao` registram-se AF, unidade, quantidade, valor,
    previsão e entrega; e/ou em `itens_entregas` (AF), com empenho vinculado.
-5. **Recebimento** — `itens_entregas.qtde_recebida` e, por unidade física, linhas em
+5. **Recebimento e confirmação** — `itens_entregas.qtde_recebida`, `data_entrega_unidade`
+   e, por unidade física, linhas em
    `itens_entregas_unidades` (patrimônio/série). A **NF** é cadastrada **uma vez** em
    `notas_fiscais` (valor total) e rateada em `nota_fiscal_itens`.
-6. **Saldo** — `vw_emendas_saldo` reflete `total_executado` (soma de `vl_total`) e
+6. **Emendas** — a aba Emendas reflete o estágio atual do item: aguardando AF, AF emitida,
+   recebido aguardando confirmação, ou adquirido/entregue na unidade.
+7. **Saldo** — `vw_emendas_saldo` reflete `total_executado` (soma de `vl_total`) e
    `saldo_remanescente = valor_cedido − comprometido`.
 
 ## 5. Pontos de atenção de integridade

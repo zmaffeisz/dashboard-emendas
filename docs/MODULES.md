@@ -7,7 +7,7 @@
 
 | Módulo (aba) | Tabelas/Views consumidas | Onde o dado nasce | Onde é editado |
 |---|---|---|---|
-| Emendas (dashboard) | `emendas`, `emenda_itens`, `vw_emendas_saldo` | Cadastro de emenda/itens | Modais nova emenda / novo item / status |
+| Emendas (dashboard) | `emendas`, `emenda_itens`, `itens`, `itens_entregas`, `empenhos`, `notas_fiscais`, `vw_emendas_saldo` | Cadastro de emenda/itens | Modais nova emenda / novo item / status |
 | Saldo das Emendas | `vw_emendas_saldo` | derivado | leitura |
 | Consulta rápida | múltiplas | — | leitura |
 | Chamados Antigos | (Google Sheets — consulta) | externo | **somente leitura** |
@@ -32,7 +32,11 @@ Aba inicial e única visível sem permissões adicionais. Lista emendas e seus i
 seus itens nascem aqui. O modal **Nova emenda** cadastra a emenda (valor cedido global) e
 seus **itens inline** (item + valor unitário + status + unidades/qtde), calculando o valor
 por unidade = unitário × qtde. Ver [BUSINESS_RULES.md](BUSINESS_RULES.md). Reflete o fluxo completo (status do item ao longo da licitação,
-contratação, entrega).
+contratação, AF, recebimento e confirmação na unidade). Quando Controle de Entregas muda
+AF, empenho, NF, patrimônio, unidade/data de entrega ou termo, a aba Emendas deve exibir
+esse avanço como painel consolidado, sem depender de edição manual no cadastro do item.
+Na planilha da aba, os valores planejados (`vl_unitario_cadastrado`, `vl_total_cadastrado`)
+e executados (`vl_unitario`, `vl_total`) devem aparecer separados.
 
 ## 2. Saldo das Emendas
 Leitura da view `vw_emendas_saldo`: planejado, executado, comprometido, saldo
@@ -63,6 +67,14 @@ Acompanhamento/fiscalização de chamados e contratos: histórico
 
 ## 8. Controle de Entregas (Itens)
 Ciclo de vida do item após a contratação:
+- **Controle de Entregas / Prazos**: lista aquisições que ainda possuem saldo aguardando
+  AF e execuções de ATA pendentes/prazos. Ao emitir AF de aquisição que cubra a quantidade,
+  o item deixa esta subaba.
+- **Confirmação de Entrega na Unidade**: lista aquisições com `af_numero` e execuções de
+  ATA para confirmar a entrega real na unidade, termo e responsável. A confirmação alimenta
+  a aba Emendas.
+- **Empenhos**: cadastro e vínculo de empenhos; a confirmação/Emendas pode herdar o empenho
+  de `empenho_itens` ou do contrato.
 - **AF (Autorização de Fornecimento)** — aquisição: `abrirModalAF`, `abrirAFLote` →
   `itens_entregas`. ATA: `abrirModalAtaAF`/`salvarAtaAF` → grava `af_numero`/`data_af`/
   `prev_entrega` em `atas_execucao` (modal dedicado `#modal-ata-af`).
