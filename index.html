@@ -80,7 +80,7 @@
     </div>
     <button onclick="abrirModalLogin()" style="flex-shrink:0;font-size:13px;padding:8px 20px;border-radius:var(--radius-sm);border:2px solid rgba(255,255,255,.6);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-weight:600;white-space:nowrap">🔑 Fazer Login</button>
   </div>
-  <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Google Sheets...</div>
+  <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Supabase...</div>
   <div id="main" style="display:none">
     <div>
       <div style="margin-bottom:1rem;display:flex;gap:8px;align-items:center">
@@ -6422,16 +6422,17 @@ async function loadItensEntregas(){
       status:_prazoStatus(limiteISO,recebido,cancelado)
     });
   });
-  // Atas: atas_execucao. Enriquece com atas_itens se disponível, senão busca do banco.
+  // Atas: atas_execucao. Enriquece com atas_itens; se o cache estiver parcial, busca os IDs faltantes.
   const {data:at,error:e2}=await sb.from('atas_execucao').select('*');
   if(e2){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (atas): '+_sanEsc(e2.message)+'</div>'; return; }
   let _ataItemPorId={};
   if(atasItens&&atasItens.length) _ataItemPorId=Object.fromEntries(atasItens.map(i=>[String(i.id),i]));
-  else if(at&&at.length){
-    const ids=[...new Set(at.map(r=>r.ata_item_id).filter(Boolean))];
+  if(at&&at.length){
+    const ids=[...new Set(at.map(r=>r.ata_item_id).filter(Boolean).map(String))]
+      .filter(id=>!_ataItemPorId[id]);
     if(ids.length){
-      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,prazo_entrega,contrato_id,contratos(cpl,numero_contrato),fornecedores(razao_social)').in('id',ids);
-      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.fornecedores?.razao_social||'',prazo_entrega:i.prazo_entrega||null}; });
+      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,prazo_entrega,contrato_id,contratos(cpl,numero_contrato,prestador)').in('id',ids);
+      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.empresa||i.contratos?.prestador||'',prazo_entrega:i.prazo_entrega||null}; });
     }
   }
   (at||[]).forEach(r=>{
@@ -8566,9 +8567,14 @@ async function _carregarFluxoEmendaItens(eiIds){
   };
   for(let k=0;k<itemIds.length;k+=200){
     const slice=itemIds.slice(k,k+200); if(!slice.length) break;
-    const {data:afs}=await sb.from("itens_entregas")
-      .select("item_id,qtde_autorizada,qtde_recebida,status,af_numero,af_data,data_recebimento,data_entrega_unidade,empenho,nota_fiscal,patrimonio,numero_serie,empenhos(numero),notas_fiscais(numero)")
-      .in("item_id",slice);
+    const [{data:afs},{data:emps},{data:nfs},{data:uns}]=await Promise.all([
+      sb.from("itens_entregas")
+        .select("item_id,qtde_autorizada,qtde_recebida,status,af_numero,af_data,data_recebimento,data_entrega_unidade,empenho,nota_fiscal,patrimonio,numero_serie,empenhos(numero),notas_fiscais(numero)")
+        .in("item_id",slice),
+      sb.from("empenho_itens").select("item_id,empenhos(numero)").in("item_id",slice),
+      sb.from("nota_fiscal_itens").select("item_id,notas_fiscais(numero)").in("item_id",slice),
+      sb.from("itens_entregas_unidades").select("item_id,patrimonio,numero_serie,notas_fiscais(numero)").in("item_id",slice)
+    ]);
     (afs||[]).forEach(a=>{
       if((a.status||"").toLowerCase()==="cancelada") return;
       const m=afByItem[a.item_id]=afByItem[a.item_id]||{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:"",patrimonios:new Set(),series:new Set()};
@@ -8586,11 +8592,8 @@ async function _carregarFluxoEmendaItens(eiIds){
       addUnique(empByItem,a.item_id,a.empenhos?.numero||a.empenho);
       addUnique(nfByItem,a.item_id,a.notas_fiscais?.numero||a.nota_fiscal);
     });
-    const {data:emps}=await sb.from("empenho_itens").select("item_id,empenhos(numero)").in("item_id",slice);
     (emps||[]).forEach(e=>addUnique(empByItem,e.item_id,e.empenhos?.numero));
-    const {data:nfs}=await sb.from("nota_fiscal_itens").select("item_id,notas_fiscais(numero)").in("item_id",slice);
     (nfs||[]).forEach(n=>addUnique(nfByItem,n.item_id,n.notas_fiscais?.numero));
-    const {data:uns}=await sb.from("itens_entregas_unidades").select("item_id,patrimonio,numero_serie,notas_fiscais(numero)").in("item_id",slice);
     (uns||[]).forEach(u=>{
       const m=afByItem[u.item_id]=afByItem[u.item_id]||{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:"",patrimonios:new Set(),series:new Set()};
       if(u.patrimonio) m.patrimonios.add(u.patrimonio);
@@ -8604,7 +8607,7 @@ async function _carregarFluxoEmendaItens(eiIds){
   const _ataExecByEiid={}, _ataItemPlaceholder={};
   for(let k=0;k<eiIds.length;k+=200){
     const slice=eiIds.slice(k,k+200);
-    const {data:aex}=await sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf,patrimonio").in("emenda_item_id",slice);
+    const {data:aex}=await sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf").in("emenda_item_id",slice);
     if(aex) aex.forEach(r=>{
       const eid=r.emenda_item_id; if(!eid) return;
       (_ataExecByEiid[eid]=_ataExecByEiid[eid]||[]).push(r);
@@ -8642,10 +8645,13 @@ async function _carregarFluxoEmendaItens(eiIds){
       f.af.dataEntregaUnidade=latestDate(f.af.dataEntregaUnidade,r.data_entrega_unidade);
       if(r.empenho) f.empenhos.add(r.empenho);
       if(r.nf) f.notas.add(r.nf);
-      if(r.patrimonio) f.patrimonios.add(r.patrimonio);
     });
     if(qAta>0) f.qtde+=qAta;
     if(vAta>0) f.valor+=vAta;
+    if(vAta>0 && qAta>0 && f.valorUnit===null){
+      f.valorUnit=Number((vAta/qAta).toFixed(2));
+      f._qtdeRef=qAta;
+    }
     f.temContrato=true;
     f._ataSolicitada=true;
   });
@@ -8704,6 +8710,7 @@ function _flowStatusFromFlow(f){
 }
 async function loadData(){
   document.getElementById("loading").style.display="block";
+  document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando dados do Supabase...';
   document.getElementById("main").style.display="none";
   document.getElementById("conn-pill").textContent="⏳ Conectando";
   document.getElementById("conn-pill").className="pill pill-loading";
@@ -8716,6 +8723,7 @@ async function loadData(){
     }
     let raw=[], desde=0; const PAG=1000;
     while(true){
+      document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando itens das emendas...';
       const {data,error}=await sb
         .from("emenda_itens")
         .select("*, emendas(tipo,emenda,parlamentar,sei_emenda,valor_cedido,unidade,ano)")
@@ -8729,7 +8737,9 @@ async function loadData(){
     const num=v=>v==null||v===""?0:Number(v);
     // ── Fonte única da verdade: deriva CPL/contrato/unidade/valor/status do fluxo real
     //    (itens → processos/contratos/itens_entregas) por emenda_item_id, sem gravar no banco.
+    document.getElementById("loading").innerHTML='<span class="spinner"></span>Consolidando AF, empenhos, notas e entregas...';
     const _flow=await _carregarFluxoEmendaItens([...new Set(raw.map(i=>i.id).filter(Boolean))]);
+    document.getElementById("loading").innerHTML='<span class="spinner"></span>Montando painel de emendas...';
     allRows=raw.map(i=>{
       const e=i.emendas||{};
       const f=_flow[i.id]||null;
