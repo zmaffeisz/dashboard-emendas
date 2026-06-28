@@ -321,8 +321,9 @@
       </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000"></div>
-      <div class="form-group"><div class="form-label">Unidade beneficiada *</div>
-        <select id="ne-unidade-sel"><option value="">Selecione...</option></select>
+      <div class="form-group full"><div class="form-label">Unidade(s) beneficiada(s) * <span style="font-size:10px;color:var(--text3);font-weight:400">(pesquise e clique p/ adicionar várias — uma linha por unidade)</span></div>
+        <select id="ne-unidade-sel" multiple style="min-height:90px"></select>
+        <div id="ne-unidade-rateio" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
       </div>
     </div>
     <div class="form-actions" style="margin-top:1.25rem">
@@ -1282,6 +1283,30 @@
   </div>
 </div>
 
+<!-- Modal Emitir AF em lote (vários itens do mesmo contrato) -->
+<div class="modal-overlay" id="modal-af-lote">
+  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Emitir AF para vários itens</span>
+      <button onclick="document.getElementById('modal-af-lote').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <div id="afl-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">Número da AF *</div><input type="text" id="afl-numero" placeholder="ex: 10310/2026"></div>
+      <div class="form-group"><div class="form-label">Data da AF *</div><input type="date" id="afl-data"></div>
+    </div>
+    <div class="form-group" style="margin-top:.25rem">
+      <div class="form-label">Itens incluídos nesta AF</div>
+      <div id="afl-itens" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);max-height:300px;overflow-y:auto;font-size:12px"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="afl-salvar" onclick="confirmarAFLote()">Emitir AF e gerar PDF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-af-lote').classList.remove('active')">Cancelar</button>
+      <span id="afl-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Registrar Recebimento (Fase 6) -->
 <div class="modal-overlay" id="modal-recebimento">
   <div class="modal-box" style="width:760px;max-width:96vw;max-height:92vh;overflow-y:auto">
@@ -1423,8 +1448,8 @@
       <button onclick="document.getElementById('modal-processo').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
     </div>
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
-      <div class="form-group full"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
-      <div class="form-group"><div class="form-label">Tipo * <span style="font-size:10px;color:var(--text3);font-weight:400">(origem do processo)</span></div><select id="proc-tipo"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
+      <div class="form-group full"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
+      <div class="form-group"><div class="form-label">Tipo * <span style="font-size:10px;color:var(--text3);font-weight:400">(origem do processo)</span></div><select id="proc-tipo" onchange="_procIdentFiltrar()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
       <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
@@ -1631,10 +1656,10 @@
           <div class="form-group full"><div class="form-label">Unidade *</div><input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU"><div id="ne2-unidade-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Preenchida automaticamente pela emenda.</div></div>
           <div class="form-group"><div class="form-label">Qtde *</div><input type="number" id="ne2-qtde" placeholder="ex: 2" oninput="calcValorExec()"></div>
           <div class="form-group"><div class="form-label">Valor total (R$)</div><input type="number" id="ne2-valor" placeholder="Calculado auto" step="0.01"></div>
-          <div class="form-group"><div class="form-label">Data AF</div><input type="date" id="ne2-data-af"></div>
-          <div class="form-group"><div class="form-label">Dt. entrega</div><input type="date" id="ne2-dt-entrega"></div>
+          <input type="hidden" id="ne2-data-af">
+          <input type="hidden" id="ne2-dt-entrega">
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px">Empenho, NF e prazo de entrega são preenchidos depois em <b>Itens → Controle de Entregas/Prazos</b>.</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">A solicitação fica <b>aguardando AF</b>. A <b>Autorização de Fornecimento</b> (AF), empenho, NF e prazo de entrega são emitidos depois em <b>Itens → Controle de Entregas/Prazos</b>.</div>
         <div class="form-actions">
           <button class="btn-primary" onclick="salvarNovaExec()">Salvar</button>
           <button class="btn-secondary" onclick="document.getElementById('modal-nova-exec').classList.remove('active')">Cancelar</button>
@@ -2762,7 +2787,7 @@ function statusBadge(cat){const i=STATUS_MAP[cat]||{color:"#888",label:cat};retu
 function abrirModalEdicao(name){
   if(bloquearSeVisualiz()) return;
   popularSelectsEdicao();
-  if(name==='nova-emenda'){ preencherSelectParlamentares(); preencherSelectUnidades('ne-unidade-sel', false); }
+  if(name==='nova-emenda'){ preencherSelectParlamentares(); preencherSelectUnidades('ne-unidade-sel', false).then(()=>{ const s=document.getElementById('ne-unidade-sel'); if(s){ [...s.options].forEach(o=>o.selected=false); enhanceMultiSelect(s,{placeholder:'Pesquisar unidade...'}); s.addEventListener('change',_neRateioHint); const v=document.getElementById('ne-valor'); if(v&&!v._rateioWired){ v.addEventListener('input',_neRateioHint); v._rateioWired=true; } _neRateioHint(); } }); }
   if(name==='atualizar-status'){ resetModalFilters(); limparStatus(); }
   document.getElementById("panel-"+name).classList.add("active");
 }
@@ -4512,33 +4537,54 @@ async function excluirExec(execId){
 }
 
 // ═══ PRORROGAR PRAZO DE ENTREGA ═══
-let _prorrogarExecId=null;
+let _prorrogarExecId=null, _prorrogarEntregaId=null;
 function abrirModalProrrogarPrazo(execId){
   const r=atasExec.find(x=>String(x.id)===String(execId));
   if(!r) return;
-  _prorrogarExecId=r.id;
+  _prorrogarExecId=r.id; _prorrogarEntregaId=null;
   document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade}`;
   document.getElementById("pp-data").value=r?.prev_entrega||"";
   document.getElementById("pp-obs").value="";
   document.getElementById("pp-msg").className="fmsg";
   document.getElementById("modal-prorrogar-prazo").classList.add("active");
 }
+function abrirModalProrrogarPrazoAquisicao(entregaId){
+  const r=entregasRows.find(x=>String(x.entrega_id)===String(entregaId));
+  if(!r) return;
+  _prorrogarEntregaId=r.entrega_id; _prorrogarExecId=null;
+  document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade}`;
+  document.getElementById("pp-data").value=r.limiteISO||"";
+  document.getElementById("pp-obs").value="";
+  document.getElementById("pp-msg").className="fmsg";
+  document.getElementById("modal-prorrogar-prazo").classList.add("active");
+}
 async function salvarProrrogarPrazo(){
   if(bloquearSeVisualiz()) return;
-  const r=atasExec.find(x=>String(x.id)===String(_prorrogarExecId));
-  if(!r) return;
   const data=document.getElementById("pp-data").value;
   const obs=document.getElementById("pp-obs").value.trim();
   if(!data){showMsg("pp","Informe a nova data (*)","err");return}
   const btn=document.querySelector("#modal-prorrogar-prazo .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
   const obsPrazo=obs?"Prorrogado: "+obs:"";
-  const {data:salvo,error}=await sb.from("atas_execucao").update({prev_entrega:data,obs_prazo:obsPrazo||null}).eq("id",r.id).select("id,prev_entrega,obs_prazo");
-  btn.disabled=false;btn.textContent="Salvar";
-  if(error){showMsg("pp","Erro: "+error.message,"err");return;}
-  if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
-  Object.assign(r,{prev_entrega:data,obs_prazo:obsPrazo});
-  filtrarExecs();
+  if(_prorrogarEntregaId){
+    const r=entregasRows.find(x=>String(x.entrega_id)===String(_prorrogarEntregaId));
+    if(!r){btn.disabled=false;btn.textContent="Salvar";return;}
+    const {data:salvo,error}=await sb.from("itens_entregas").update({data_limite_entrega:data}).eq("id",r.entrega_id).select("id,data_limite_entrega");
+    btn.disabled=false;btn.textContent="Salvar";
+    if(error){showMsg("pp","Erro: "+error.message,"err");return;}
+    if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
+    Object.assign(r,{limiteISO:data,status:_prazoStatus(data,r.recebido,r.cancelado)});
+    renderItensEntregas();
+  }else{
+    const r=atasExec.find(x=>String(x.id)===String(_prorrogarExecId));
+    if(!r){btn.disabled=false;btn.textContent="Salvar";return;}
+    const {data:salvo,error}=await sb.from("atas_execucao").update({prev_entrega:data,obs_prazo:obsPrazo||null}).eq("id",r.id).select("id,prev_entrega,obs_prazo");
+    btn.disabled=false;btn.textContent="Salvar";
+    if(error){showMsg("pp","Erro: "+error.message,"err");return;}
+    if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
+    Object.assign(r,{prev_entrega:data,obs_prazo:obsPrazo});
+    filtrarExecs();
+  }
   showMsg("pp","✓ Prazo prorrogado!","ok");
   setTimeout(()=>document.getElementById("modal-prorrogar-prazo").classList.remove("active"),1000);
 }
@@ -5123,6 +5169,15 @@ function abrirEditarProcesso(id){
   document.getElementById('proc-msg').className='fmsg';
   document.getElementById('modal-processo').classList.add('active');
 }
+// SEI = somente números e separadores (. / -). CPL e demais tipos podem ter letras.
+function _procIdentFiltrar(){
+  const tipo=document.getElementById('proc-tipo')?.value;
+  const inp=document.getElementById('proc-identificador'); if(!inp) return;
+  if(tipo==='SEI'){
+    const limpo=inp.value.replace(/[A-Za-zÀ-ÿ]/g,'');
+    if(limpo!==inp.value){ const p=inp.selectionStart; inp.value=limpo; try{inp.setSelectionRange(p-1,p-1);}catch(_){} }
+  }
+}
 async function salvarProcesso(){
   const ident=document.getElementById('proc-identificador').value.trim();
   const tipo=document.getElementById('proc-tipo').value;
@@ -5130,6 +5185,7 @@ async function salvarProcesso(){
   const natureza=document.getElementById('proc-natureza').value;
   const secao=document.getElementById('proc-secao').value;
   if(!ident||!tipo||!natureza||!secao){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza e Seção.','err');return;}
+  if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
   const dados={
     identificador:ident,
     tipo,
@@ -5334,7 +5390,7 @@ async function _persistProcItens(processoId, natureza){
     if(!ehAta && fonte_tipo==='emenda'){ emenda_id=g('pi-emenda').value||null; if(!emenda_id) throw new Error('Selecione a emenda dos itens com fonte = Emenda.'); emenda_item_id=c.dataset.emendaItemId||null; }
     else if(!ehAta){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     current.push({id:c.dataset.itemId||null, row:{
-      processo_id:processoId, origem, fonte_tipo:ehAta?'ata':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
+      processo_id:processoId, origem, fonte_tipo:ehAta?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
       prazo_entrega_dias:parseInt(g('pi-prazo').value)||null,
@@ -5818,9 +5874,12 @@ async function salvarAF(){
   }
   document.getElementById('modal-af').classList.remove('active');
   if(window.toast) toast('AF emitida','success');
-  await loadItens();
+  // Recarrega PRIMEIRO a lista que o usuário está vendo (Controle de Entregas), de forma
+  // independente: se loadItens() falhar, a lista de entregas ainda atualiza (item sai de
+  // "aguardando AF" e ganha os botões Receber/Prazo).
   itensEntregasCarregado=false;
-  if(document.getElementById('itens-sub-entregas')?.style.display!=='none') loadItensEntregas();
+  try{ await loadItensEntregas(); }catch(e){ console.error('Falha ao recarregar Controle de Entregas:',e); }
+  try{ await loadItens(); }catch(e){ console.error('Falha ao recarregar Itens:',e); }
 }
 
 // ═══ Fase 11: vincular empenho ao item (Controle de Entregas/Prazos) ═══
@@ -6030,12 +6089,15 @@ async function loadItensEntregas(){
   (at||[]).forEach(r=>{
     const recebido=!!(r.dt_entrega && String(r.dt_entrega).trim());
     const limiteISO=_toISODate(r.prev_entrega);
+    const temAF=!!(r.data_af && String(r.data_af).trim());
+    const pendenteAF=!temAF && !recebido; // requisição de ata aguardando emissão da AF
     out.push({
       tipo:'ATA', exec_id:r.id, processo:r.cpl||'', contrato:r.sim||'', empresa:'',
       item:r.item||'', unidade:r.unidade||'', af_numero:'',
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega),
-      status:_prazoStatus(limiteISO,recebido,false)
+      _ataPendenteAF:pendenteAF,
+      status:pendenteAF?'aguardando AF':_prazoStatus(limiteISO,recebido,false)
     });
   });
   // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando Ordem de Entrega)
@@ -6120,10 +6182,12 @@ function renderItensEntregas(){
         const podeRec=r.tipo==='Aquisição'&&!r.cancelado&&pode&&saldoAF>0;
         const recBtn=podeRec?`<button onclick="abrirRecebimento('${r.entrega_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">Receber item</button>`:'';
         const verBtn=totalmenteRecebido?`<button onclick="verRecebimento('${r.entrega_id}')" title="Item totalmente recebido — visualizar dados do recebimento" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;white-space:nowrap">✓ Ver recebimento</button>`:'';
-        const advBtn=(r.tipo==='Aquisição'&&pode)?`<button onclick="abrirAdvertenciaAquisicao('${r.entrega_id}')" title="Gerar advertência / multa à empresa" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--orange,#EF9F27);background:var(--surface);color:var(--orange,#EF9F27);cursor:pointer;white-space:nowrap">⚖️ Advertência</button>`:'';
-        const ataPrazoBtn=(r.tipo==='ATA'&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
-        const ataRecBtn=(r.tipo==='ATA'&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Registrar/editar entrega (empenho, NF, datas)" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver/editar':'📥 Receber'}</button>`:'';
-        acoes=(recBtn||verBtn||advBtn||ataPrazoBtn||ataRecBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataRecBtn}${advBtn}${ataPrazoBtn}</div>`:'—';
+        const aqPrazoBtn=(r.tipo==='Aquisição'&&!r.recebido&&!r.cancelado&&pode)?`<button onclick="abrirModalProrrogarPrazoAquisicao('${r.entrega_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
+        // ATA aguardando AF: só "Emitir AF" (define data AF + prazo). Após emitir, libera Receber/Prazo.
+        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Emitir AF (Autorização de Fornecimento): informe data da AF e prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap">📄 Emitir AF</button>`:'';
+        const ataPrazoBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
+        const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Registrar/editar entrega (empenho, NF, datas)" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver/editar':'📥 Receber'}</button>`:'';
+        acoes=(recBtn||verBtn||aqPrazoBtn||ataAFBtn||ataPrazoBtn||ataRecBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}</div>`:'—';
         docs=r.tipo==='Aquisição'
           ?`<div>Emp: ${_sanEsc(r.empenho||'—')}</div><div>NF: ${_sanEsc(r.nota_fiscal||'—')}${r.nf_dataISO?(' · '+fmtDate(r.nf_dataISO)):''}</div>${r.patrimonio?('<div>Pat: '+_sanEsc(r.patrimonio)+'</div>'):''}${r.numero_serie?('<div>Série: '+_sanEsc(r.numero_serie)+'</div>'):''}${marcaMod?('<div>'+_sanEsc(marcaMod)+'</div>'):''}`
           :'—';
@@ -6168,13 +6232,97 @@ function _ceAdvToggle(key,cb){
   renderItensEntregas();
 }
 function _ceAdvLimpar(){ _ceAdvSel.clear(); _ceAdvLock=''; renderItensEntregas(); }
+function _ceSelRows(){ return entregasRows.filter(r=>_ceAdvSel.has(_ceRowKey(r))); }
 function _ceAdvBar(){
   const n=_ceAdvSel.size; if(!n) return '';
+  const pendentesAF=_ceSelRows().filter(r=>r._pendente && r.tipo==='Aquisição');
+  const afBtn=pendentesAF.length?`<button onclick="abrirAFLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar AF (${pendentesAF.length})</button>`:'';
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-bg,#fff7e6);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:10px">
     <span style="font-size:12px;color:var(--text2)">${n} item(ns) · contrato <b>${_sanEsc(_ceAdvLock||'—')}</b></span>
+    ${afBtn}
     <button onclick="abrirAdvertenciaCE()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar advertência</button>
     <button onclick="_ceAdvLimpar()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Limpar seleção</button>
   </div>`;
+}
+// ── Emitir AF para vários itens do mesmo contrato (a partir da seleção) ──
+let _aflRows=[], _aflContrato=null;
+async function abrirAFLote(){
+  if(bloquearSeVisualiz('itens')) return;
+  const sel=_ceSelRows().filter(r=>r._pendente && r.tipo==='Aquisição');
+  if(!sel.length){ if(window.toast) toast('Selecione itens de aquisição aguardando AF (mesmo contrato).','error'); return; }
+  const cid=sel.find(r=>r.contrato_id)?.contrato_id;
+  let c={}; if(cid){ const {data}=await sb.from('contratos').select('id,numero_contrato,cnpj,objeto,prestador').eq('id',cid).single(); c=data||{}; }
+  _aflContrato=c;
+  const ids=[...new Set(sel.map(r=>r.item_id).filter(Boolean))];
+  const valById={};
+  if(ids.length){ const {data}=await sb.from('itens').select('id,valor_contratado,valor_estimado').in('id',ids); (data||[]).forEach(it=>{ valById[it.id]=Number(it.valor_contratado)||Number(it.valor_estimado)||0; }); }
+  _aflRows=sel.map(r=>{
+    const semPrazo=(r.prazo_entrega_dias==null||r.prazo_entrega_dias===''||isNaN(Number(r.prazo_entrega_dias)));
+    const semEmp=!r.empenho_vinculado;
+    return {...r, _vlUnit:valById[r.item_id]||0, _bloqueio: semEmp?'sem empenho':(semPrazo?'sem prazo de entrega':'')};
+  });
+  const numero=c.numero_contrato||sel[0].contrato||'—';
+  const empresa=c.prestador||sel.find(r=>r.empresa)?.empresa||'—';
+  document.getElementById('afl-info').innerHTML=`<strong>Contrato:</strong> ${_sanEsc(numero)} &nbsp;·&nbsp; <strong>Empresa:</strong> ${_sanEsc(empresa)} &nbsp;·&nbsp; <strong>CNPJ:</strong> ${_sanEsc(c.cnpj||'—')}`;
+  document.getElementById('afl-numero').value='';
+  document.getElementById('afl-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('afl-itens').innerHTML=_aflRows.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 6px;border-bottom:1px solid var(--border)">
+    <span><strong>${_sanEsc(r.item)}</strong> · ${_sanEsc(r.unidade||'—')} <span style="color:var(--text3)">· qtde ${r.qtde||'—'}${r._vlUnit?(' · '+fmtFull(r._vlUnit)):''}</span></span>
+    ${r._bloqueio?`<span style="color:var(--red);white-space:nowrap">⚠ ${r._bloqueio}</span>`:'<span style="color:var(--green);white-space:nowrap">ok</span>'}
+  </div>`).join('');
+  const msg=document.getElementById('afl-msg'); msg.className='fmsg'; msg.textContent='';
+  document.getElementById('modal-af-lote').classList.add('active');
+}
+async function confirmarAFLote(){
+  if(bloquearSeVisualiz('itens')) return;
+  const numero=document.getElementById('afl-numero').value.trim();
+  const afData=document.getElementById('afl-data').value;
+  const msg=document.getElementById('afl-msg'); msg.className='fmsg';
+  if(!numero){ msg.textContent='Informe o número da AF.'; msg.classList.add('err'); return; }
+  if(!afData){ msg.textContent='Informe a data da AF.'; msg.classList.add('err'); return; }
+  const validos=_aflRows.filter(r=>!r._bloqueio);
+  if(!validos.length){ msg.textContent='Nenhum item elegível (todos sem empenho ou sem prazo).'; msg.classList.add('err'); return; }
+  const btn=document.getElementById('afl-salvar'); btn.disabled=true; btn.textContent='Emitindo...';
+  const regs=[], usados=[];
+  for(const r of validos){
+    const {data:afs}=await sb.from('itens_entregas').select('qtde_autorizada,status').eq('item_id',r.item_id);
+    let aut=0;(afs||[]).forEach(e=>{ if((e.status||'')!=='cancelada') aut+=(Number(e.qtde_autorizada)||0); });
+    const {data:it}=await sb.from('itens').select('qtde').eq('id',r.item_id).single();
+    const saldo=(Number(it?.qtde)||0)-aut;
+    const q=Math.min(Number(r.qtde)||0, saldo);
+    if(q<=0) continue;
+    const limite=_addDiasISO(afData, Number(r.prazo_entrega_dias));
+    regs.push({item_id:r.item_id, af_numero:numero, af_data:afData, qtde_autorizada:q, data_limite_entrega:limite||null, status:'af_emitida'});
+    usados.push({...r, _q:q, _limite:limite});
+  }
+  if(!regs.length){ btn.disabled=false; btn.textContent='Emitir AF e gerar PDF'; msg.textContent='Sem saldo a autorizar nos itens selecionados.'; msg.classList.add('err'); return; }
+  const {error}=await sb.from('itens_entregas').insert(regs);
+  if(error){ btn.disabled=false; btn.textContent='Emitir AF e gerar PDF'; msg.textContent='Erro: '+error.message; msg.classList.add('err'); return; }
+  _afLotePDF(numero, afData, usados, _aflContrato||{});
+  document.getElementById('modal-af-lote').classList.remove('active');
+  btn.disabled=false; btn.textContent='Emitir AF e gerar PDF';
+  if(window.toast) toast(`AF ${numero} emitida para ${regs.length} item(ns)`,'success');
+  _ceAdvLimpar();
+  itensEntregasCarregado=false;
+  try{ await loadItensEntregas(); }catch(e){ console.error('reload entregas:',e); }
+}
+function _afLotePDF(numero, afData, rows, c){
+  const janela=window.open('','_blank'); if(!janela){ if(window.toast) toast('Permita pop-ups para gerar o PDF.','error'); return; }
+  const empresa=c.prestador||rows.find(r=>r.empresa)?.empresa||'—';
+  const numContrato=c.numero_contrato||rows[0]?.contrato||'—';
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  const dataFmt=afData?afData.split('-').reverse().join('/'):hoje;
+  const linhas=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${_sanEsc(r.item||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${r._q||r.qtde||'—'}</td><td style="text-align:right">${r._vlUnit?fmtFull(r._vlUnit):'—'}</td><td style="text-align:right">${(r._vlUnit&&r._q)?fmtFull(r._vlUnit*r._q):'—'}</td><td>${r._limite?r._limite.split('-').reverse().join('/'):'—'}</td><td>${_sanEsc(r.empenho||'—')}</td></tr>`).join('');
+  const total=rows.reduce((s,r)=>s+((r._vlUnit||0)*(r._q||0)),0);
+  janela.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>AF ${_sanEsc(numero)}</title><style>@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:11pt;margin:0}header{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:16px}header h1{font-size:14pt;margin:8px 0 2px}.ident{border:1px solid #555;padding:10px;margin:12px 0;background:#f5f5f5}.ident div{margin:3px 0}table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-top:8px}th,td{border:1px solid #777;padding:4px 5px;vertical-align:top}th{background:#eee}.total{text-align:right;font-weight:bold;margin-top:6px}.corpo{text-align:justify}.assinatura{margin:60px auto 0;text-align:center;width:320px;border-top:1px solid #111;padding-top:6px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>
+  <header><strong>PREFEITURA DE SOROCABA · SECRETARIA DA SAÚDE</strong><p>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde — SUEQ</p><h1>AUTORIZAÇÃO DE FORNECIMENTO Nº ${_sanEsc(numero)}</h1><p>Emitida em ${dataFmt}</p></header>
+  <div class="ident"><div><strong>Contrato/SIM:</strong> ${_sanEsc(numContrato)}</div><div><strong>Empresa:</strong> ${_sanEsc(empresa)}</div><div><strong>CNPJ:</strong> ${_sanEsc(c.cnpj||'—')}</div><div><strong>Objeto:</strong> ${_sanEsc(c.objeto||'—')}</div></div>
+  <p class="corpo">Autorizamos o fornecimento dos itens abaixo discriminados, nos termos do contrato/ata acima e da Lei nº 14.133/2021, devendo a entrega ocorrer no prazo indicado para cada item.</p>
+  <table><thead><tr><th>#</th><th>Item</th><th>Unidade</th><th>Qtde</th><th>Vl. unit.</th><th>Vl. total</th><th>Prazo entrega</th><th>Empenho</th></tr></thead><tbody>${linhas}</tbody></table>
+  <div class="total">TOTAL: ${fmtFull(total)}</div>
+  <div class="assinatura"><strong>${_sanEsc(currentProfile?.nome||currentProfile?.email||'Responsável')}</strong><br>Seção de Aquisição de Equipamentos e Mobiliários da Saúde<br>${hoje}</div>
+  <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script><\/body><\/html>`);
+  janela.document.close();
 }
 async function abrirAdvertenciaCE(){
   if(bloquearSeVisualiz('itens')) return;
@@ -7924,7 +8072,7 @@ async function loadData(){
       };
     }).map(r=>({...r,status_cat:(r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
     const [{data:eData},{data:uData},{data:pData}]=await Promise.all([
-      sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido").order("emenda",{ascending:true}),
+      sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido,unidade,unidade_id").order("emenda",{ascending:true}),
       sb.from("unidades").select("id,nome").eq("ativo",true).order("nome"),
       sb.from("processos").select("id,identificador").order("identificador")
     ]);
@@ -8949,7 +9097,7 @@ function popularSelectsEdicao(){
   const tipos=[...new Set(allRows.map(r=>r.tipo).filter(Boolean))].sort();
   // ni-emenda — usa cachedEmendas para incluir emendas sem itens
   const todasEmendas=cachedEmendas.length
-    ? cachedEmendas.map(e=>String(e.emenda)).filter(Boolean).sort()
+    ? [...new Set(cachedEmendas.map(e=>String(e.emenda)).filter(Boolean))].sort()
     : emendas;
   const ni=document.getElementById("ni-emenda");
   if(ni){const s=[...ni.selectedOptions].map(o=>o.value);ni.innerHTML=todasEmendas.map(e=>`<option value="${e}"${s.includes(e)?" selected":""}>${e}</option>`).join("");enhanceMultiSelect(ni,{placeholder:'Pesquisar emenda...'});}
@@ -9109,54 +9257,44 @@ function popularItens(){
 function selectAll(v){document.querySelectorAll('#as-itens-lista input[type=checkbox]').forEach(c=>c.checked=v)}
 
 // ═══ NOVO ITEM ═══
+// Unidades cadastradas para uma emenda (uma linha de emenda por unidade). Fallback: todas as unidades.
+function _unidadesDaEmenda(em){
+  const us=[...new Set(cachedEmendas.filter(e=>String(e.emenda)===String(em)).map(e=>e.unidade).filter(Boolean))];
+  return us.length?us:cachedUnidades.map(u=>u.nome);
+}
 function autoPreencherEmenda(){
   const selecionadas=[...document.getElementById("ni-emenda").selectedOptions].map(o=>o.value);
   const div=document.getElementById("ni-emendas-detalhe");
   if(!selecionadas.length){
-    div.innerHTML='<div style="font-size:12px;color:var(--text3)">Selecione as emendas acima para preencher unidade e quantidade de cada uma.</div>';
+    div.innerHTML='<div style="font-size:12px;color:var(--text3)">Selecione as emendas acima para escolher a(s) unidade(s) e quantidade de cada uma.</div>';
     return;
   }
-  // Preservar valores já digitados
-  const existing={};
-  div.querySelectorAll("[data-emenda]").forEach(row=>{
-    const em=row.dataset.emenda;
-    existing[em]={
-      unidade:row.querySelector(".ni-row-unidade")?.value||"",
-      qtde:row.querySelector(".ni-row-qtde")?.value||""
-    };
-  });
-
-
+  // Preservar marcações/quantidades já digitadas por (emenda|unidade)
+  const prevMap={};
+  div.querySelectorAll(".ni-u-row").forEach(r=>{ prevMap[r.dataset.key]={chk:r.querySelector(".ni-u-chk")?.checked,qtde:r.querySelector(".ni-u-qtde")?.value||""}; });
+  const inp='font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)';
   div.innerHTML=selecionadas.map(em=>{
     const r=allRows.find(x=>x.emenda===em);
     const ce=cachedEmendas.find(x=>String(x.emenda)===em);
     const parl=r?r.parlamentar:(ce?ce.parlamentar||"":"");
     const tipo=r?r.tipo:(ce?ce.tipo||"":"");
-    const prev=existing[em]||{};
-    return`<div data-emenda="${em}" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem;display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
-      <div>
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Emenda</div>
-        <div style="font-size:13px;font-weight:500">${em}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${parl}</div>
-        <div style="margin-top:4px"><span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;background:${tipo==='FEDERAL'?'#E6F1FB':tipo==='ESTADUAL'?'#E1F5EE':'#EEEDFE'};color:${tipo==='FEDERAL'?'#0C447C':tipo==='ESTADUAL'?'#085041':'#26215C'}">${tipo||'—'}</span></div>
+    const unidades=_unidadesDaEmenda(em);
+    const linhasU=unidades.map(u=>{
+      const key=em+"|"+u; const p=prevMap[key]||{};
+      return `<div class="ni-u-row" data-key="${_sanEsc(key)}" data-unidade="${_sanEsc(u)}" style="display:grid;grid-template-columns:auto 1fr 90px 120px;gap:10px;align-items:center;padding:3px 0">
+        <input type="checkbox" class="ni-u-chk" ${p.chk?'checked':''} onchange="recalcTotais()">
+        <span style="font-size:13px">${_sanEsc(u)}</span>
+        <input type="number" class="ni-u-qtde" placeholder="qtde" value="${p.qtde||''}" ${p.chk?'':'disabled'} oninput="recalcTotais()" style="width:80px;${inp}">
+        <span class="ni-u-total" style="font-size:13px;font-weight:500;color:var(--text2)">—</span>
+      </div>`;
+    }).join("");
+    return `<div data-emenda="${_sanEsc(em)}" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div><span style="font-size:13px;font-weight:600">Emenda ${_sanEsc(em)}</span> <span style="font-size:11px;color:var(--text3)">${_sanEsc(parl||'')}</span></div>
+        <span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;background:${tipo==='FEDERAL'?'#E6F1FB':tipo==='ESTADUAL'?'#E1F5EE':'#EEEDFE'};color:${tipo==='FEDERAL'?'#0C447C':tipo==='ESTADUAL'?'#085041':'#26215C'}">${tipo||'—'}</span>
       </div>
-      <div>
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Unidade beneficiada *</div>
-        <select class="ni-row-unidade" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
-          <option value="">Selecione...</option>
-          ${cachedUnidades.map(u=>`<option value="${_sanEsc(u.nome)}"${prev.unidade===u.nome?' selected':''}>${_sanEsc(u.nome)}</option>`).join('')}
-        </select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Qtde *</div>
-          <input type="number" class="ni-row-qtde" placeholder="ex: 2" value="${prev.qtde||""}" oninput="recalcTotais()" style="font-size:13px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);width:80px;background:var(--surface);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Vl. total</div>
-          <div class="ni-row-total" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--text2)">—</div>
-        </div>
-      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Marque a(s) unidade(s) que receberão este item (limitadas às unidades da emenda) — uma linha por unidade:</div>
+      ${linhasU}
     </div>`;
   }).join("");
   recalcTotais();
@@ -9164,10 +9302,12 @@ function autoPreencherEmenda(){
 
 function recalcTotais(){
   const vlU=parseFloat(document.getElementById("ni-vl-unit").value)||0;
-  document.querySelectorAll("#ni-emendas-detalhe [data-emenda]").forEach(row=>{
-    const qtde=parseFloat(row.querySelector(".ni-row-qtde")?.value)||0;
-    const total=row.querySelector(".ni-row-total");
-    if(total) total.textContent=vlU&&qtde?("R$ "+(vlU*qtde).toLocaleString("pt-BR",{minimumFractionDigits:2})):"—";
+  document.querySelectorAll("#ni-emendas-detalhe .ni-u-row").forEach(row=>{
+    const chk=row.querySelector(".ni-u-chk")?.checked;
+    const qInp=row.querySelector(".ni-u-qtde"); if(qInp) qInp.disabled=!chk;
+    const qtde=parseFloat(qInp?.value)||0;
+    const total=row.querySelector(".ni-u-total");
+    if(total) total.textContent=(chk&&vlU&&qtde)?("R$ "+(vlU*qtde).toLocaleString("pt-BR",{minimumFractionDigits:2})):"—";
   });
 }
 function calcTotal(){
@@ -9199,9 +9339,21 @@ async function obterOuCriarParlamentar(nome){
 async function preencherSelectUnidades(selId, comNovo){
   const sel=document.getElementById(selId); if(!sel) return;
   const {data}=await sb.from('unidades').select('id,nome').eq('ativo',true).order('nome');
-  sel.innerHTML='<option value="">Selecione...</option>'
+  const placeholder=sel.multiple?'':'<option value="">Selecione...</option>';
+  sel.innerHTML=placeholder
     + (data||[]).map(u=>`<option value="${u.id}">${_sanEsc(u.nome)}</option>`).join('')
     + (comNovo?'<option value="__nova__">➕ Cadastrar nova unidade</option>':'');
+}
+// Dica de rateio do valor cedido quando há várias unidades na nova emenda
+function _neRateioHint(){
+  const sel=document.getElementById('ne-unidade-sel'); const hint=document.getElementById('ne-unidade-rateio');
+  if(!sel||!hint) return;
+  const n=[...sel.selectedOptions].length;
+  const valor=parseFloat(document.getElementById('ne-valor')?.value)||0;
+  if(n>1){
+    hint.style.display='';
+    hint.textContent=valor?`Será criada 1 emenda por unidade (${n}). Valor cedido dividido igualmente: ${fmtFull(valor/n)} por unidade.`:`Será criada 1 emenda por unidade (${n}). O valor cedido será dividido igualmente entre elas.`;
+  }else{ hint.style.display='none'; hint.textContent=''; }
 }
 async function obterOuCriarUnidade(nome){
   if(!nome) return null;
@@ -9216,25 +9368,28 @@ async function salvarNovaEmenda(){
   const tipo=document.getElementById("ne-tipo").value,emenda=document.getElementById("ne-emenda").value.trim();
   const valor=document.getElementById("ne-valor").value;
   const _uSel=document.getElementById("ne-unidade-sel");
-  const unidade=_uSel&&_uSel.value?_uSel.options[_uSel.selectedIndex].text.trim():'';
-  if(!tipo||!emenda||!valor||!unidade){showMsg("ne","Preencha os campos obrigatórios (*)","err");return}
+  // múltiplas unidades → uma linha (emenda) por unidade
+  const unidadesSel=_uSel?[..._uSel.selectedOptions].map(o=>({id:Number(o.value)||null,nome:o.textContent.trim()})).filter(u=>u.nome):[];
+  if(!tipo||!emenda||!valor||!unidadesSel.length){showMsg("ne","Preencha os campos obrigatórios (*), incluindo ao menos uma unidade.","err");return}
   const anoStr=document.getElementById("ne-ano").value.trim();
   const _pSel=document.getElementById("ne-parlamentar-sel");
   const parlamentarNome=(_pSel?_pSel.value:'')||null;
   const btn=document.querySelector("#panel-nova-emenda .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
-  const unidade_id=_uSel&&_uSel.value?(Number(_uSel.value)||null):null;
-  const {error}=await sb.from("emendas").insert({
+  const valorTotal=parseFloat(valor);
+  const valorPorUnidade=unidadesSel.length>1?(valorTotal/unidadesSel.length):valorTotal;
+  const base={
     tipo, emenda,
     parlamentar:parlamentarNome,
     sei_emenda:document.getElementById("ne-sei").value.trim()||null,
-    valor_cedido:parseFloat(valor),
-    unidade, unidade_id,
+    valor_cedido:valorPorUnidade,
     ano: anoStr?parseInt(anoStr):null
-  });
+  };
+  const linhas=unidadesSel.map(u=>({...base, unidade:u.nome, unidade_id:u.id}));
+  const {error}=await sb.from("emendas").insert(linhas);
   btn.disabled=false;btn.textContent=label;
   if(error){showMsg("ne","✗ Erro: "+error.message,"err");return}
-  showMsg("ne","✓ Emenda salva! Atualizando...","ok");
+  showMsg("ne",`✓ ${linhas.length} emenda(s)/unidade salva(s)! Atualizando...`,"ok");
   setTimeout(()=>loadData(),1200);
 }
 
@@ -9245,21 +9400,22 @@ async function salvarNovoItem(){
   const vlExec=vlExecRaw===""?null:(parseFloat(vlExecRaw)||0);
   const cpl=document.getElementById("ni-cpl").value.trim();
   const status=document.getElementById("ni-status").value;
-  const rows=[...document.querySelectorAll("#ni-emendas-detalhe [data-emenda]")];
-  if(!rows.length||!item){showMsg("ni","Selecione ao menos uma emenda e preencha o item (*)","err");return}
-  const invalidas=rows.filter(row=>!row.querySelector(".ni-row-unidade")?.value.trim()||!row.querySelector(".ni-row-qtde")?.value);
-  if(invalidas.length){showMsg("ni","Preencha unidade e quantidade para todas as emendas","err");return}
+  const rows=[...document.querySelectorAll("#ni-emendas-detalhe .ni-u-row")].filter(r=>r.querySelector(".ni-u-chk")?.checked);
+  if(!rows.length||!item){showMsg("ni","Selecione ao menos uma unidade e preencha o item (*)","err");return}
+  const invalidas=rows.filter(row=>!row.querySelector(".ni-u-qtde")?.value);
+  if(invalidas.length){showMsg("ni","Preencha a quantidade para todas as unidades marcadas","err");return}
   const btn=document.querySelector("#panel-novo-item .btn-primary");
   const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
 
   const registros=rows.map(row=>{
-    const emenda=row.dataset.emenda;
-    const unidade=row.querySelector(".ni-row-unidade")?.value.trim();
-    const qtde=parseFloat(row.querySelector(".ni-row-qtde").value)||0;
+    const emenda=row.closest("[data-emenda]").dataset.emenda;
+    const unidade=row.dataset.unidade;
+    const qtde=parseFloat(row.querySelector(".ni-u-qtde").value)||0;
     const r=allRows.find(x=>x.emenda===emenda);
-    const ce=cachedEmendas.find(x=>String(x.emenda)===emenda);
+    // prioriza a linha de emenda correspondente à unidade (1 emenda por unidade); fallback p/ qualquer
+    const ce=cachedEmendas.find(x=>String(x.emenda)===emenda && x.unidade===unidade) || cachedEmendas.find(x=>String(x.emenda)===emenda);
     return {
-      emenda_id: r?r.emenda_id:(ce?ce.id:null),
+      emenda_id: ce?ce.id:(r?r.emenda_id:null),
       emenda,
       unidade_beneficiada: unidade,
       // plano de trabalho aprovado (sempre salvo)
@@ -10329,6 +10485,100 @@ function enhanceMultiSelect(sel, opts){
   render();
   return sel._ss;
 }
+// ══ Select pesquisável (single) — enriquece <select> simples com busca interna ══
+function enhanceSelect(sel, opts){
+  if(!sel || sel.multiple) return null;
+  opts=opts||{};
+  if(sel._ss){ sel._ss.render(); return sel._ss; }
+  const phSel=opts.emptyText||'Selecione...';
+  const phSearch=opts.placeholder||'🔍 Pesquisar...';
+  sel.style.display='none';
+  const box=document.createElement('div'); box.className='ss-box ss-single';
+  const control=document.createElement('div'); control.className='ss-control';
+  const value=document.createElement('span'); value.className='ss-value';
+  const input=document.createElement('input'); input.type='text'; input.className='ss-input'; input.placeholder=phSearch; input.style.display='none';
+  const caret=document.createElement('span'); caret.className='ss-caret'; caret.textContent='▾';
+  const dropdown=document.createElement('div'); dropdown.className='ss-dropdown'; dropdown.style.display='none';
+  control.appendChild(value); control.appendChild(input); control.appendChild(caret);
+  box.appendChild(control); box.appendChild(dropdown);
+  sel.parentNode.insertBefore(box, sel.nextSibling);
+  let activeIdx=-1;
+  const allOpts=()=>[...sel.options];
+  function current(){ return sel.options[sel.selectedIndex]||null; }
+  function renderValue(){
+    const c=current(); const has=c && c.value!=='';
+    value.textContent=has?c.textContent:phSel;
+    value.classList.toggle('ss-ph',!has);
+  }
+  function pick(o){
+    sel.selectedIndex=[...sel.options].indexOf(o);
+    sel.dispatchEvent(new Event('change',{bubbles:true}));
+    renderValue(); close();
+  }
+  function renderDropdown(){
+    const q=input.value.trim().toLowerCase();
+    const list=allOpts().filter(o=>o.textContent.toLowerCase().includes(q));
+    if(!list.length){ dropdown.innerHTML='<div class="ss-empty">Nenhum resultado</div>'; return; }
+    dropdown.innerHTML='';
+    list.forEach((o,i)=>{
+      const d=document.createElement('div');
+      d.className='ss-opt'+(o.selected?' ss-sel':'')+(i===activeIdx?' ss-active':'');
+      d.textContent=o.textContent||(o.value===''?phSel:'');
+      d.onmousedown=e=>{ e.preventDefault(); pick(o); };
+      dropdown.appendChild(d);
+    });
+  }
+  function open(){
+    dropdown.style.display='block'; control.classList.add('ss-open');
+    value.style.display='none'; input.style.display=''; input.value=''; activeIdx=-1;
+    renderDropdown(); input.focus();
+  }
+  function close(){
+    dropdown.style.display='none'; control.classList.remove('ss-open');
+    input.style.display='none'; value.style.display=''; activeIdx=-1;
+  }
+  function render(){ renderValue(); if(dropdown.style.display==='block') renderDropdown(); }
+  control.addEventListener('click',()=>{ if(dropdown.style.display==='block') close(); else open(); });
+  input.addEventListener('input',()=>{ activeIdx=-1; renderDropdown(); });
+  input.addEventListener('keydown',e=>{
+    const ds=[...dropdown.querySelectorAll('.ss-opt')];
+    if(e.key==='ArrowDown'){ e.preventDefault(); activeIdx=Math.min(activeIdx+1,ds.length-1); renderDropdown(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); activeIdx=Math.max(activeIdx-1,0); renderDropdown(); }
+    else if(e.key==='Enter'){ e.preventDefault(); if(activeIdx>=0&&ds[activeIdx]) ds[activeIdx].dispatchEvent(new MouseEvent('mousedown')); }
+    else if(e.key==='Escape'){ close(); }
+  });
+  document.addEventListener('mousedown',e=>{ if(!box.contains(e.target)) close(); });
+  const mo=new MutationObserver(()=>render()); mo.observe(sel,{childList:true});
+  // reflete sel.value=... atribuído programaticamente
+  try{
+    const desc=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value');
+    Object.defineProperty(sel,'value',{configurable:true,get(){return desc.get.call(sel);},set(v){desc.set.call(sel,v); renderValue();}});
+  }catch(_){}
+  sel._ss={render,open,close};
+  renderValue();
+  return sel._ss;
+}
+// Requisito global: todo <select> simples com mais de 10 opções ganha campo de busca interno.
+// Opt-out por elemento: data-search="off".
+function autoEnhanceSelects(root){
+  (root||document).querySelectorAll('select:not([multiple])').forEach(sel=>{
+    if(sel._ss || sel.dataset.search==='off') return;
+    if(sel.options.length>10) enhanceSelect(sel);
+  });
+}
+(function _initSelectSearchObserver(){
+  let queued=false;
+  const run=()=>{ queued=false; autoEnhanceSelects(document); };
+  const schedule=()=>{ if(!queued){ queued=true; setTimeout(run,120); } };
+  const obs=new MutationObserver(muts=>{
+    for(const m of muts){
+      const t=m.target;
+      if((t && (t.tagName==='SELECT'||t.tagName==='OPTGROUP')) || (m.addedNodes&&m.addedNodes.length)){ schedule(); break; }
+    }
+  });
+  const start=()=>{ try{ obs.observe(document.body,{childList:true,subtree:true}); autoEnhanceSelects(document); }catch(_){} };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
 // Fase 10: múltiplos fiscais + empenhos no Gerar Contrato
 async function _ncPreencherFiscalMulti(){
   const sel=document.getElementById('nc-fiscalizacao'); if(!sel) return;
@@ -10361,6 +10611,11 @@ function _ncEmpItemHtml(sid){
           <input type="number" id="nci-emp-vlnovo-${sid}" placeholder="Valor R$ *" step="any" style="width:110px;${inp}">
           <input type="text" id="nci-emp-desp-${sid}" placeholder="Nº Despesa" style="width:100px;${inp}">
           <input type="date" id="nci-emp-dat-${sid}" style="width:130px;${inp}">
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">
+          <select id="nci-emp-fonte-${sid}" title="Fonte" style="width:140px;${inp}"></select>
+          <input type="text" id="nci-emp-fontedesc-${sid}" placeholder="Detalhe da fonte" style="flex:1;min-width:120px;${inp}">
+          <select id="nci-emp-emenda-${sid}" title="Emenda (opcional)" style="flex:1;min-width:160px;${inp}"></select>
         </div>
       </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
@@ -10402,6 +10657,14 @@ async function _ncAbrirPickerEmp(sid){
   const vlEl=document.getElementById('nci-emp-vlitem-'+sid); if(vlEl) vlEl.value='';
   const msgEl=document.getElementById('nci-emp-msg-'+sid); if(msgEl) msgEl.textContent='';
   const formNovo=document.getElementById('nci-emp-form-novo-'+sid); if(formNovo) formNovo.style.display='none';
+  // Fonte + Emenda no "novo empenho" — espelha o modal da subaba Empenhos
+  const fonteEl=document.getElementById('nci-emp-fonte-'+sid);
+  if(fonteEl && !fonteEl.options.length){ fonteEl.innerHTML='<option value="">Fonte —</option>'+(typeof PROC_FONTES!=='undefined'?PROC_FONTES:[]).map(([v,l])=>`<option value="${v}">${_sanEsc(l)}</option>`).join(''); }
+  const emEl=document.getElementById('nci-emp-emenda-'+sid);
+  if(emEl){
+    if(!window._ncEmpEmendas){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar').order('ano',{ascending:false}); window._ncEmpEmendas=data||[]; }
+    if(!emEl.options.length) emEl.innerHTML='<option value="">— sem emenda —</option>'+(window._ncEmpEmendas||[]).map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join('');
+  }
 }
 
 function _ncEmpSelChange(sid){
@@ -10452,6 +10715,9 @@ async function _ncVinculEmp(sid){
       ano:parseInt(document.getElementById('nci-emp-ano-'+sid)?.value)||null,
       valor_empenhado:valor, saldo_empenho:valor,
       numero_despesa:(document.getElementById('nci-emp-desp-'+sid)?.value||'').trim()||null,
+      fonte_tipo:(document.getElementById('nci-emp-fonte-'+sid)?.value||null),
+      fonte_descricao:(document.getElementById('nci-emp-fontedesc-'+sid)?.value||'').trim()||null,
+      emenda_id:(document.getElementById('nci-emp-emenda-'+sid)?.value||null),
       data_emissao:(document.getElementById('nci-emp-dat-'+sid)?.value||null),
       updated_at:new Date().toISOString()
     };
