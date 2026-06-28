@@ -307,7 +307,7 @@
 
 <!-- ══════════════════════ MODAL NOVA EMENDA ══════════════════════ -->
 <div class="modal-overlay" id="panel-nova-emenda">
-  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
+  <div class="modal-box" style="width:860px;max-width:96vw;max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:.875rem;border-bottom:1px solid var(--border)">
       <span style="font-size:15px;font-weight:700">➕ Cadastrar nova emenda</span>
       <button onclick="fecharModalEdicao('nova-emenda')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
@@ -320,15 +320,22 @@
         <select id="ne-parlamentar-sel"><option value="">Selecione...</option></select>
       </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
-      <div class="form-group"><div class="form-label">Valor cedido (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000"></div>
-      <div class="form-group full"><div class="form-label">Unidade(s) beneficiada(s) * <span style="font-size:10px;color:var(--text3);font-weight:400">(pesquise e clique p/ adicionar várias — uma linha por unidade)</span></div>
-        <select id="ne-unidade-sel" multiple style="min-height:90px"></select>
-        <div id="ne-unidade-rateio" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
-      </div>
+      <div class="form-group"><div class="form-label">Valor cedido GLOBAL (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000" oninput="neRecalc()"></div>
     </div>
+
+    <!-- ITENS DA EMENDA (inline) -->
+    <div style="margin-top:1.1rem;border-top:1px solid var(--border);padding-top:.9rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+        <span style="font-weight:700;font-size:13px">📦 Itens da emenda <span style="font-size:11px;color:var(--text3);font-weight:400">— escolha unidade, item e valor unitário; o valor por unidade = unitário × qtde</span></span>
+        <button type="button" class="btn-secondary" onclick="neAddItem()" style="white-space:nowrap">+ Adicionar item</button>
+      </div>
+      <div id="ne-itens"></div>
+      <div id="ne-resumo" style="margin-top:.75rem;font-size:12px"></div>
+    </div>
+
     <div class="form-actions" style="margin-top:1.25rem">
       <button class="btn-primary" onclick="salvarNovaEmenda()">Salvar emenda</button>
-      <button class="btn-secondary" onclick="limparForm('ne')">Limpar</button>
+      <button class="btn-secondary" onclick="limparForm('ne');neInitItens()">Limpar</button>
       <button class="btn-secondary" onclick="fecharModalEdicao('nova-emenda')">Fechar</button>
       <span id="ne-msg" class="fmsg"></span>
     </div>
@@ -1875,6 +1882,41 @@
       </div>
     </div>
 
+<!-- Modal Emitir AF para item de ATA (espelha o fluxo de AF da aquisição) -->
+<div class="modal-overlay" id="modal-ata-af">
+  <div class="modal-box" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Emitir AF — Autorização de Fornecimento (ATA)</span>
+      <button onclick="document.getElementById('modal-ata-af').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div id="ataaf-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <input type="hidden" id="ataaf-exec-id">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">AF número *</div>
+        <input type="text" id="ataaf-numero" placeholder="ex: AF 123/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">AF data *</div>
+        <input type="date" id="ataaf-data">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Previsão de entrega *</div>
+        <input type="date" id="ataaf-prev">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Empenho <span style="color:var(--text3);font-weight:400">(opcional)</span></div>
+        <input type="text" id="ataaf-empenho" placeholder="ex: 2026NE000123">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ataaf-salvar" onclick="salvarAtaAF()">Emitir AF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ata-af').classList.remove('active')">Cancelar</button>
+      <span id="ataaf-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ CONTRATOS (SUPABASE) ══════════════════════ -->
 <div id="panel-contratos" class="panel">
   <div id="contratos-loading" class="loading"><span class="spinner"></span>Carregando contratos...</div>
@@ -2787,9 +2829,32 @@ function statusBadge(cat){const i=STATUS_MAP[cat]||{color:"#888",label:cat};retu
 function abrirModalEdicao(name){
   if(bloquearSeVisualiz()) return;
   popularSelectsEdicao();
-  if(name==='nova-emenda'){ preencherSelectParlamentares(); preencherSelectUnidades('ne-unidade-sel', false).then(()=>{ const s=document.getElementById('ne-unidade-sel'); if(s){ [...s.options].forEach(o=>o.selected=false); enhanceMultiSelect(s,{placeholder:'Pesquisar unidade...'}); s.addEventListener('change',_neRateioHint); const v=document.getElementById('ne-valor'); if(v&&!v._rateioWired){ v.addEventListener('input',_neRateioHint); v._rateioWired=true; } _neRateioHint(); } }); }
+  if(name==='nova-emenda'){ preencherSelectParlamentares(); neInitItens(); }
   if(name==='atualizar-status'){ resetModalFilters(); limparStatus(); }
+  if(name==='novo-item'||name==='atualizar-status'){ popularStatusLicitacao(); }
   document.getElementById("panel-"+name).classList.add("active");
+}
+
+// Popula os controles de status dos modais (novo item / atualizar status) com a MESMA
+// fonte da aba "Licitações em andamento": status_opcoes contexto='licitacao' (manuais).
+// Mantém o fallback hardcoded do HTML caso a consulta falhe.
+let _statusLicCache=null;
+async function popularStatusLicitacao(){
+  if(!_statusLicCache){
+    const {data,error}=await sb.from('status_opcoes')
+      .select('nome,ordem,automatico').eq('contexto','licitacao').eq('ativo',true).order('ordem');
+    if(error||!data||!data.length) return;
+    _statusLicCache=data.filter(s=>!s.automatico).map(s=>s.nome);
+    if(!_statusLicCache.length){ _statusLicCache=null; return; }
+  }
+  const sel=document.getElementById('ni-status');
+  if(sel){
+    const atual=sel.value;
+    sel.innerHTML='<option value="">Selecione...</option>'+_statusLicCache.map(n=>`<option value="${_sanEsc(n)}">${_sanEsc(n)}</option>`).join('');
+    if(atual) sel.value=atual;
+  }
+  const dl=document.getElementById('status-opcoes');
+  if(dl){ dl.innerHTML=_statusLicCache.map(n=>`<option value="${_sanEsc(n)}">`).join(''); }
 }
 
 function fecharModalEdicao(name){
@@ -4731,8 +4796,14 @@ async function neEmendaItemChange(){
 }
 
 let _editExecId=null;
-function abrirModalEditExec(execId){
-  const r=atasExec.find(x=>String(x.id)===String(execId));
+async function abrirModalEditExec(execId){
+  let r=atasExec.find(x=>String(x.id)===String(execId));
+  if(!r){
+    // aberto a partir da aba "Controle de Entregas", onde atasExec não está carregado:
+    // busca a execução direto do banco e a injeta para que salvarEditExec a encontre.
+    const {data}=await sb.from("atas_execucao").select("*").eq("id",execId).single();
+    if(data){ r=data; atasExec.push(r); }
+  }
   if(!r) return;
   _editExecId=r.id;
   document.getElementById("ee-info").textContent=`${r.cpl} · ${r.sim} · ${r.item} · ${r.unidade}`;
@@ -4742,7 +4813,9 @@ function abrirModalEditExec(execId){
   document.getElementById("ee-dt-entrega").value=r.dt_entrega||"";
   document.getElementById("ee-nf").value=r.nf||"";
   document.getElementById("ee-msg").className="fmsg";
-  document.getElementById("modal-edit-exec").classList.add("active");
+  const _eem=document.getElementById("modal-edit-exec");
+  if(_eem.parentElement!==document.body) document.body.appendChild(_eem); // sai de dentro de #panel-atas p/ aparecer em qualquer aba
+  _eem.classList.add("active");
 }
 
 function abrirModalEditAta(itemId){
@@ -4829,8 +4902,52 @@ async function salvarEditExec(){
   if(!data?.length){showMsg("ee","A execução não foi atualizada. Verifique sua permissão.","err");return;}
   Object.assign(exec,dados);
   filtrarAtas();
+  // se o modal foi aberto pela aba "Controle de Entregas", recarrega aquela lista
+  if(window._activeTab==='itens' && typeof loadItensEntregas==='function') loadItensEntregas();
   showMsg("ee","✓ Salvo!","ok");
   setTimeout(()=>document.getElementById("modal-edit-exec").classList.remove("active"),900);
+}
+
+// ── Emitir AF para item de ATA (gera nº de AF, igual ao fluxo da aquisição) ──
+async function abrirModalAtaAF(execId){
+  if(!podeEditar('itens')&&!podeEditar('atas')){ alert("⛔ Você não tem permissão para emitir AF."); return; }
+  let r=atasExec.find(x=>String(x.id)===String(execId));
+  if(!r){
+    const {data}=await sb.from("atas_execucao").select("*").eq("id",execId).single();
+    if(data){ r=data; atasExec.push(r); }
+  }
+  if(!r){ if(window.toast)toast('Execução não encontrada','error'); return; }
+  document.getElementById('ataaf-exec-id').value=r.id;
+  document.getElementById('ataaf-info').innerHTML=`<b>${_sanEsc(r.item||'—')}</b><br>${_sanEsc(r.cpl||'—')} · ${_sanEsc(r.sim||'—')} · ${_sanEsc(r.unidade||'—')}`;
+  document.getElementById('ataaf-numero').value=r.af_numero||'';
+  document.getElementById('ataaf-data').value=r.data_af||new Date().toISOString().slice(0,10);
+  document.getElementById('ataaf-prev').value=r.prev_entrega||'';
+  document.getElementById('ataaf-empenho').value=r.empenho||'';
+  const msg=document.getElementById('ataaf-msg'); msg.textContent=''; msg.className='fmsg';
+  document.getElementById('modal-ata-af').classList.add('active');
+}
+async function salvarAtaAF(){
+  if(!podeEditar('itens')&&!podeEditar('atas')){ alert("⛔ Você não tem permissão para emitir AF."); return; }
+  const execId=document.getElementById('ataaf-exec-id').value;
+  const numero=document.getElementById('ataaf-numero').value.trim();
+  const afData=document.getElementById('ataaf-data').value;
+  const prev=document.getElementById('ataaf-prev').value;
+  const empenho=document.getElementById('ataaf-empenho').value.trim();
+  const msg=document.getElementById('ataaf-msg');
+  if(!numero){ msg.textContent='Informe o número da AF.'; msg.style.color='var(--red)'; return; }
+  if(!afData){ msg.textContent='Informe a data da AF.'; msg.style.color='var(--red)'; return; }
+  if(!prev){ msg.textContent='Informe a previsão de entrega.'; msg.style.color='var(--red)'; return; }
+  const btn=document.getElementById('ataaf-salvar'); btn.disabled=true; btn.textContent='Salvando...';
+  const dados={af_numero:numero, data_af:afData, prev_entrega:prev, empenho:empenho};
+  const {data,error}=await sb.from('atas_execucao').update(dados).eq('id',execId).select('id');
+  btn.disabled=false; btn.textContent='Emitir AF';
+  if(error){ msg.textContent='Erro: '+error.message; msg.style.color='var(--red)'; return; }
+  if(!data?.length){ msg.textContent='Não foi possível emitir a AF. Verifique sua permissão.'; msg.style.color='var(--red)'; return; }
+  const exec=atasExec.find(x=>String(x.id)===String(execId)); if(exec) Object.assign(exec,dados);
+  msg.style.color='var(--green)'; msg.textContent='✓ AF emitida!';
+  if(typeof filtrarAtas==='function') filtrarAtas();
+  if(window._activeTab==='itens' && typeof loadItensEntregas==='function'){ itensEntregasCarregado=false; try{ await loadItensEntregas(); }catch(e){ console.error(e); } }
+  setTimeout(()=>document.getElementById('modal-ata-af').classList.remove('active'),800);
 }
 
 // ═══ USUÁRIOS ═══
@@ -6121,7 +6238,7 @@ async function loadItensEntregas(){
     const pendenteAF=!temAF && !recebido; // requisição de ata aguardando emissão da AF
     out.push({
       tipo:'ATA', exec_id:r.id, processo:r.cpl||'', contrato:r.sim||'', empresa:'',
-      item:r.item||'', unidade:r.unidade||'', af_numero:'',
+      item:r.item||'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:r.empenho||'',
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega),
       _ataPendenteAF:pendenteAF,
@@ -6212,7 +6329,7 @@ function renderItensEntregas(){
         const verBtn=totalmenteRecebido?`<button onclick="verRecebimento('${r.entrega_id}')" title="Item totalmente recebido — visualizar dados do recebimento" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;white-space:nowrap">✓ Ver recebimento</button>`:'';
         const aqPrazoBtn=(r.tipo==='Aquisição'&&!r.recebido&&!r.cancelado&&pode)?`<button onclick="abrirModalProrrogarPrazoAquisicao('${r.entrega_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         // ATA aguardando AF: só "Emitir AF" (define data AF + prazo). Após emitir, libera Receber/Prazo.
-        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Emitir AF (Autorização de Fornecimento): informe data da AF e prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap">📄 Emitir AF</button>`:'';
+        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalAtaAF('${r.exec_id}')" title="Emitir AF (Autorização de Fornecimento): gere o número da AF, a data e a previsão de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap">📄 Emitir AF</button>`:'';
         const ataPrazoBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Registrar/editar entrega (empenho, NF, datas)" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver/editar':'📥 Receber'}</button>`:'';
         acoes=(recBtn||verBtn||aqPrazoBtn||ataAFBtn||ataPrazoBtn||ataRecBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}</div>`:'—';
@@ -9535,33 +9652,156 @@ async function obterOuCriarUnidade(nome){
   return novo.id;
 }
 
+// ═══ NOVA EMENDA COM ITENS INLINE ═══
+// O modal cria UMA emenda (valor_cedido = valor global) e seus emenda_itens inline.
+// Cada item tem valor unitário e uma ou mais unidades com quantidade; o valor por
+// unidade = unitário × qtde (não há divisão igual do valor global).
+let _neUnidadesCache=null;
+async function _neEnsureUnidades(){
+  if(_neUnidadesCache) return _neUnidadesCache;
+  const {data}=await sb.from('unidades').select('id,nome').eq('ativo',true).order('nome');
+  _neUnidadesCache=data||[];
+  return _neUnidadesCache;
+}
+function _neUnidadeOptions(){
+  return '<option value="">Unidade...</option>'+(_neUnidadesCache||[]).map(u=>`<option value="${u.id}">${_sanEsc(u.nome)}</option>`).join('');
+}
+function _neStatusOptions(){
+  return '<option value="">Status inicial...</option>'+(_statusLicCache||[]).map(n=>`<option value="${_sanEsc(n)}">${_sanEsc(n)}</option>`).join('');
+}
+async function neInitItens(){
+  const box=document.getElementById('ne-itens'); if(box) box.innerHTML='';
+  const r=document.getElementById('ne-resumo'); if(r) r.innerHTML='';
+  await Promise.all([_neEnsureUnidades(), popularStatusLicitacao()]);
+  neAddItem();
+}
+function neAddItem(){
+  const box=document.getElementById('ne-itens'); if(!box) return;
+  const div=document.createElement('div');
+  div.className='ne-item';
+  div.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--surface2)';
+  div.innerHTML=`
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:2;min-width:180px"><div class="form-label">Item / Descrição *</div><input type="text" class="ne-it-desc" placeholder="ex: AR CONDICIONADO 12000 BTU"></div>
+      <div style="flex:1;min-width:120px"><div class="form-label">Valor unitário (R$) *</div><input type="number" class="ne-it-vlunit" placeholder="ex: 2400" oninput="neRecalc()"></div>
+      <div style="flex:1.4;min-width:160px"><div class="form-label">Status inicial</div><select class="ne-it-status">${_neStatusOptions()}</select></div>
+      <button type="button" onclick="neRemoveItem(this)" title="Remover item" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);cursor:pointer;padding:6px 9px;height:34px">🗑</button>
+    </div>
+    <div style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;color:var(--text3)">Unidades que recebem este item (uma linha por unidade):</span>
+        <button type="button" class="btn-secondary" onclick="neAddUnidade(this)" style="font-size:11px;padding:3px 8px">+ unidade</button>
+      </div>
+      <div class="ne-it-unidades"></div>
+    </div>`;
+  box.appendChild(div);
+  _neAddUnidadeRow(div);
+  neRecalc();
+}
+function neRemoveItem(btn){ const it=btn.closest('.ne-item'); if(it) it.remove(); neRecalc(); }
+function neAddUnidade(btn){ const it=btn.closest('.ne-item'); if(it) _neAddUnidadeRow(it); }
+function _neAddUnidadeRow(itemDiv){
+  const wrap=itemDiv.querySelector('.ne-it-unidades'); if(!wrap) return;
+  const row=document.createElement('div');
+  row.className='ne-u-row';
+  row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px';
+  row.innerHTML=`
+    <select class="ne-u-sel" style="flex:2;min-width:160px" onchange="neRecalc()">${_neUnidadeOptions()}</select>
+    <input type="number" class="ne-u-qtde" placeholder="qtde" style="flex:1;min-width:80px" oninput="neRecalc()">
+    <span class="ne-u-total" style="flex:1;min-width:110px;font-size:12px;color:var(--text2);text-align:right">—</span>
+    <button type="button" onclick="neRemoveUnidade(this)" title="Remover unidade" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);cursor:pointer;padding:4px 8px">✕</button>`;
+  wrap.appendChild(row);
+  neRecalc();
+}
+function neRemoveUnidade(btn){ const r=btn.closest('.ne-u-row'); if(r) r.remove(); neRecalc(); }
+function neRecalc(){
+  const global=parseFloat(document.getElementById('ne-valor')?.value)||0;
+  let comprometido=0; const porUnidade={};
+  document.querySelectorAll('#ne-itens .ne-item').forEach(it=>{
+    const vlU=parseFloat(it.querySelector('.ne-it-vlunit')?.value)||0;
+    it.querySelectorAll('.ne-u-row').forEach(row=>{
+      const qtde=parseFloat(row.querySelector('.ne-u-qtde')?.value)||0;
+      const nome=row.querySelector('.ne-u-sel')?.selectedOptions?.[0]?.textContent||'';
+      const tot=vlU*qtde;
+      const totEl=row.querySelector('.ne-u-total');
+      if(totEl) totEl.textContent=(vlU&&qtde)?('R$ '+tot.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—';
+      if(qtde&&vlU){ comprometido+=tot; if(nome) porUnidade[nome]=(porUnidade[nome]||0)+tot; }
+    });
+  });
+  const resumo=document.getElementById('ne-resumo'); if(!resumo) return;
+  const linhas=Object.entries(porUnidade).map(([u,v])=>`<div style="display:flex;justify-content:space-between"><span>${_sanEsc(u)}</span><span>${fmtFull(v)}</span></div>`).join('');
+  const saldo=global-comprometido;
+  const saldoCor=saldo<0?'var(--red)':'var(--text2)';
+  resumo.innerHTML=`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px">
+      <div style="font-weight:700;margin-bottom:4px">Resumo por unidade</div>
+      ${linhas||'<div style="color:var(--text3)">Adicione itens e unidades…</div>'}
+      <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between"><span>Total comprometido</span><span><b>${fmtFull(comprometido)}</b></span></div>
+      <div style="display:flex;justify-content:space-between;color:${saldoCor}"><span>Saldo (global − comprometido)</span><span><b>${fmtFull(saldo)}</b></span></div>
+    </div>`;
+}
+
 async function salvarNovaEmenda(){
-  const tipo=document.getElementById("ne-tipo").value,emenda=document.getElementById("ne-emenda").value.trim();
+  const tipo=document.getElementById("ne-tipo").value;
+  const emenda=document.getElementById("ne-emenda").value.trim();
   const valor=document.getElementById("ne-valor").value;
-  const _uSel=document.getElementById("ne-unidade-sel");
-  // múltiplas unidades → uma linha (emenda) por unidade
-  const unidadesSel=_uSel?[..._uSel.selectedOptions].map(o=>({id:Number(o.value)||null,nome:o.textContent.trim()})).filter(u=>u.nome):[];
-  if(!tipo||!emenda||!valor||!unidadesSel.length){showMsg("ne","Preencha os campos obrigatórios (*), incluindo ao menos uma unidade.","err");return}
   const anoStr=document.getElementById("ne-ano").value.trim();
-  const _pSel=document.getElementById("ne-parlamentar-sel");
-  const parlamentarNome=(_pSel?_pSel.value:'')||null;
+  const parlamentarNome=(document.getElementById("ne-parlamentar-sel")?.value)||null;
+  if(!tipo||!emenda||!valor){showMsg("ne","Preencha os campos obrigatórios (*): tipo, nº da emenda e valor cedido global.","err");return}
+  // coleta e valida itens inline
+  const itens=[];
+  for(const it of document.querySelectorAll('#ne-itens .ne-item')){
+    const desc=it.querySelector('.ne-it-desc')?.value.trim();
+    const vlU=parseFloat(it.querySelector('.ne-it-vlunit')?.value)||0;
+    const status=it.querySelector('.ne-it-status')?.value||null;
+    const unidades=[...it.querySelectorAll('.ne-u-row')].map(r=>{
+      const sel=r.querySelector('.ne-u-sel');
+      return {id:Number(sel?.value)||null, nome:sel?.selectedOptions?.[0]?.textContent?.trim()||'', qtde:parseFloat(r.querySelector('.ne-u-qtde')?.value)||0};
+    }).filter(u=>u.id&&u.qtde>0);
+    if(!desc){ showMsg("ne","Há um item sem descrição. Preencha ou remova.","err"); return; }
+    if(!vlU){ showMsg("ne",`Informe o valor unitário do item "${desc}".`,"err"); return; }
+    if(!unidades.length){ showMsg("ne",`Adicione ao menos uma unidade com quantidade ao item "${desc}".`,"err"); return; }
+    itens.push({desc, vlU, status, unidades});
+  }
+  if(!itens.length){ showMsg("ne","Adicione ao menos um item à emenda.","err"); return; }
+  const valorGlobal=parseFloat(valor);
+  const comprometido=itens.reduce((a,it)=>a+it.unidades.reduce((s,u)=>s+it.vlU*u.qtde,0),0);
+  if(comprometido>valorGlobal){
+    if(!confirm(`⚠️ O total comprometido (${fmtFull(comprometido)}) ultrapassa o valor cedido global (${fmtFull(valorGlobal)}).\nO saldo ficará negativo (${fmtFull(valorGlobal-comprometido)}).\n\nSalvar mesmo assim?`)) return;
+  }
   const btn=document.querySelector("#panel-nova-emenda .btn-primary");
-  const label=btn.textContent;btn.disabled=true;btn.textContent="Salvando...";
-  const valorTotal=parseFloat(valor);
-  const valorPorUnidade=unidadesSel.length>1?(valorTotal/unidadesSel.length):valorTotal;
-  const base={
-    tipo, emenda,
-    parlamentar:parlamentarNome,
-    sei_emenda:document.getElementById("ne-sei").value.trim()||null,
-    valor_cedido:valorPorUnidade,
-    ano: anoStr?parseInt(anoStr):null
-  };
-  const linhas=unidadesSel.map(u=>({...base, unidade:u.nome, unidade_id:u.id}));
-  const {error}=await sb.from("emendas").insert(linhas);
-  btn.disabled=false;btn.textContent=label;
-  if(error){showMsg("ne","✗ Erro: "+error.message,"err");return}
-  showMsg("ne",`✓ ${linhas.length} emenda(s)/unidade salva(s)! Atualizando...`,"ok");
-  setTimeout(()=>loadData(),1200);
+  const label=btn.textContent; btn.disabled=true; btn.textContent="Salvando...";
+  try{
+    if(parlamentarNome) await obterOuCriarParlamentar(parlamentarNome);
+    const nomesUnid=[...new Set(itens.flatMap(it=>it.unidades.map(u=>u.nome)))];
+    const idsUnid=[...new Set(itens.flatMap(it=>it.unidades.map(u=>u.id)))];
+    const {data:em,error:e1}=await sb.from("emendas").insert({
+      tipo, emenda, parlamentar:parlamentarNome,
+      sei_emenda:document.getElementById("ne-sei").value.trim()||null,
+      valor_cedido:valorGlobal,
+      ano: anoStr?parseInt(anoStr):null,
+      unidade: nomesUnid.length===1?nomesUnid[0]:('Várias ('+nomesUnid.length+')'),
+      unidade_id: idsUnid.length===1?idsUnid[0]:null
+    }).select("id").single();
+    if(e1) throw e1;
+    const registros=[];
+    itens.forEach(it=>it.unidades.forEach(u=>registros.push({
+      emenda_id:em.id, emenda,
+      unidade_beneficiada:u.nome, unidade_beneficiada_id:u.id,
+      item_cadastrado:it.desc, item:it.desc,
+      qtde_cadastrada:u.qtde, qtde:u.qtde,
+      vl_unitario_cadastrado:it.vlU, vl_total_cadastrado:it.vlU*u.qtde,
+      status:it.status||null
+    })));
+    const {error:e2}=await sb.from("emenda_itens").insert(registros);
+    if(e2) throw e2;
+    showMsg("ne",`✓ Emenda criada com ${registros.length} item(ns)/unidade! Atualizando...`,"ok");
+    setTimeout(()=>loadData(),1200);
+  }catch(err){
+    showMsg("ne","✗ Erro: "+(err.message||err),"err");
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
 }
 
 async function salvarNovoItem(){
@@ -10716,14 +10956,33 @@ function enhanceSelect(sel, opts){
       dropdown.appendChild(d);
     });
   }
+  // posiciona o dropdown com position:fixed relativo ao controle, escapando de
+  // qualquer ancestral com overflow:hidden (ex.: o bloco de licitação) que antes cortava a lista.
+  function positionDropdown(){
+    const r=control.getBoundingClientRect();
+    dropdown.style.position='fixed';
+    dropdown.style.left=r.left+'px';
+    dropdown.style.right='auto';
+    dropdown.style.width=r.width+'px';
+    const espacoAbaixo=window.innerHeight-r.bottom;
+    if(espacoAbaixo<240 && r.top>espacoAbaixo){
+      dropdown.style.top='auto'; dropdown.style.bottom=(window.innerHeight-r.top+2)+'px';
+    }else{
+      dropdown.style.bottom='auto'; dropdown.style.top=(r.bottom+2)+'px';
+    }
+  }
   function open(){
     dropdown.style.display='block'; control.classList.add('ss-open');
     value.style.display='none'; input.style.display=''; input.value=''; activeIdx=-1;
-    renderDropdown(); input.focus();
+    renderDropdown(); positionDropdown(); input.focus();
+    window.addEventListener('scroll',positionDropdown,true);
+    window.addEventListener('resize',positionDropdown);
   }
   function close(){
     dropdown.style.display='none'; control.classList.remove('ss-open');
     input.style.display='none'; value.style.display=''; activeIdx=-1;
+    window.removeEventListener('scroll',positionDropdown,true);
+    window.removeEventListener('resize',positionDropdown);
   }
   function render(){ renderValue(); if(dropdown.style.display==='block') renderDropdown(); }
   control.addEventListener('click',()=>{ if(dropdown.style.display==='block') close(); else open(); });
