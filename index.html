@@ -10032,6 +10032,62 @@ async function salvarEditarItem(){
   setTimeout(fecharEditarItem,700);
 }
 
+function _emendaDeleteResumo(counts){
+  const c=counts||{};
+  const labels=[
+    ['itens','item(ns) de processo/contrato'],
+    ['itens_entregas','AF(s)/entrega(s)'],
+    ['itens_entregas_unidades','unidade(s) física(s) de recebimento'],
+    ['atas_execucao','execução(ões) de ATA'],
+    ['empenho_itens','vínculo(s) de empenho'],
+    ['nota_fiscal_itens','rateio(s) de NF'],
+    ['sancao_itens','item(ns) em solicitação de sanção'],
+    ['inventario_desvinculado','registro(s) de inventário que serão desvinculados'],
+    ['notas_fiscais_possivelmente_orfas','NF(s) que podem ser excluídas se ficarem sem vínculo'],
+    ['empenhos_possivelmente_orfaos','empenho(s) que podem ser excluídos se ficarem sem vínculo'],
+    ['processos_possivelmente_orfaos','processo(s) que podem ser excluídos se ficarem sem vínculo']
+  ];
+  const linhas=labels.map(([k,label])=>[Number(c[k])||0,label]).filter(([n])=>n>0).map(([n,label])=>`• ${n} ${label}`);
+  return linhas.length?linhas.join('\n'):'• Somente a linha da emenda';
+}
+
+async function excluirEmendaItem(id){
+  if(!podeEditar('dashboard')){ alert('Sem permissão para excluir itens de emendas.'); return; }
+  const r=allRows.find(item=>String(item.id)===String(id));
+  if(!r){ alert('Item de emenda não encontrado na tela. Recarregue a página.'); return; }
+  let prev;
+  try{
+    const {data,error}=await sb.rpc('excluir_emenda_item_cascade',{p_emenda_item_id:id,p_dry_run:true});
+    if(error) throw error;
+    prev=data||{};
+  }catch(e){
+    alert('Não foi possível preparar a exclusão: '+(e.message||e));
+    return;
+  }
+  if(prev.blocked){
+    alert('Exclusão bloqueada.\n\nEste item já possui recebimento, entrega ou unidade física registrada. Para proteger o histórico real, ele não será apagado por este fluxo.');
+    return;
+  }
+  const resumo=_emendaDeleteResumo(prev.counts);
+  const msg=`Excluir este item da emenda?\n\n${r.emenda||'Emenda'} · ${r.item||'item'}\n\nEsta ação remove a linha e tudo que foi criado a partir dela porque o item não será executado:\n${resumo}\n\nDocumentos compartilhados com outros itens serão preservados.`;
+  const ok=window.uiConfirm ? await uiConfirm(msg) : confirm(msg);
+  if(!ok) return;
+  try{
+    const {data,error}=await sb.rpc('excluir_emenda_item_cascade',{p_emenda_item_id:id,p_dry_run:false});
+    if(error) throw error;
+    allRows=allRows.filter(item=>String(item.id)!==String(id));
+    filtered=filtered.filter(item=>String(item.id)!==String(id));
+    sancaoSelecionados.delete(String(id));
+    saldoEmendaCarregado=false;
+    renderTable();
+    if(window.toast) toast('Item excluído e vínculos limpos.','success');
+    else alert('Item excluído e vínculos limpos.');
+    return data;
+  }catch(e){
+    alert('Erro ao excluir: '+(e.message||e));
+  }
+}
+
 function sortTable(col){
   if(sortCol===col){sortAsc=!sortAsc}else{sortCol=col;sortAsc=true}
   // Atualizar ícones
@@ -10065,7 +10121,7 @@ function renderTable(){
   if(thSaldo) thSaldo.style.display=podeVerSaldo?'':'none';
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>`<tr>
-    <td style="white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" title="Ver tudo sobre este item" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">🔎 Ver tudo</button>${_isAdmin()?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" style="background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">✏️ Editar</button>`:''}</td>
+    <td style="white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" title="Ver tudo sobre este item" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">🔎 Ver tudo</button>${_isAdmin()?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" style="background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">✏️ Editar</button>`:''}${podeEditar('dashboard')?`<button onclick="excluirEmendaItem(decodeURIComponent('${encodeURIComponent(String(r.id))}'))" title="Excluir item não executado e limpar vínculos" style="background:var(--surface);color:var(--red);border:1px solid var(--red-bg);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">🗑️ Excluir</button>`:''}</td>
     <td>${tipoBadge(r.tipo)}</td>
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
