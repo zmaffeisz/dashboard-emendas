@@ -3118,31 +3118,57 @@ async function loadInventario(){
         emenda_item_id:it.emenda_item_id||null
       });
     });
+    const ataEmendaInfo={};
+    const ataEmendaIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
+    if(ataEmendaIds.length){
+      const {data:emInfo}=await sb.from('emenda_itens')
+        .select('id,item,emenda,unidade_beneficiada,unidade_entrega,empenho,nota_fiscal,patrimonio,emendas:emenda_id(emenda,ano,parlamentar)')
+        .in('id',ataEmendaIds);
+      (emInfo||[]).forEach(e=>{ ataEmendaInfo[String(e.id)]=e; });
+    }
+    const ataItemInfo={};
+    const ataItemIds=[...new Set((at||[]).map(r=>r.ata_item_id).filter(Boolean))];
+    if(ataItemIds.length){
+      const {data:aiInfo}=await sb.from('atas_itens')
+        .select('id,cpl,sim,item,empresa,contratos(cpl,numero_contrato,prestador)')
+        .in('id',ataItemIds);
+      (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
+    }
     (at||[]).forEach(r=>{
+      const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
+      const em=emInfo.emendas||{};
+      const ai=ataItemInfo[String(r.ata_item_id||'')]||{};
+      const processo=r.cpl||ai.cpl||ai.contratos?.cpl||'';
+      const contrato=r.sim||ai.sim||ai.contratos?.numero_contrato||'';
+      const item=r.item||ai.item||emInfo.item||'';
+      const unidade=r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'';
+      const empresa=ai.empresa||ai.contratos?.prestador||'';
+      const nf=r.nf||emInfo.nota_fiscal||'';
+      if(!item && !processo && !contrato) return;
       rows.push({
         tipo:'ATA', id:r.id,
-        item:r.item||'',
-        unidade:r.unidade||'',
-        empresa:'', cnpj:'',
-        processo:r.cpl||'',
-        contrato:r.sim||'',
-        cpl:r.cpl||'', numero_contrato:r.sim||'',
+        item,
+        unidade,
+        empresa, cnpj:'',
+        processo,
+        contrato,
+        cpl:processo, numero_contrato:contrato,
         qtde:Number(r.qtde)||0,
-        patrimonio:r.patrimonio||'',
+        patrimonio:emInfo.patrimonio||r.patrimonio||'',
         numero_serie:r.numero_serie||'',
-        empenho:r.empenho||'',
+        empenho:r.empenho||emInfo.empenho||'',
         valor_empenhado:null, empenho_data:null,
-        nota_fiscal:r.nf||'',
+        nota_fiscal:nf,
         nf_data:null, nf_valor:null,
-        data_recebimento:_toISODate(r.dt_entrega||r.data_af),
+        data_recebimento:_toISODate(r.dt_entrega),
         data_entrega_unidade:_toISODate(r.data_entrega_unidade),
         recebido_por:'', recebimento_tipo:'',
         termo_responsavel:r.termo_responsavel||'',
         termo_cargo:r.termo_cargo||'',
         termo_arquivo:r.termo_arquivo||'',
         confirmacao_obs:r.confirmacao_obs||'',
-        af_numero:'', af_data:null,
-        emenda:'', emenda_ano:'', parlamentar:'', emenda_item_desc:'',
+        af_numero:r.af_numero||'', af_data:_toISODate(r.data_af),
+        emenda:emInfo.emenda||em.emenda||'', emenda_ano:em.ano||'', parlamentar:em.parlamentar||'', emenda_item_desc:emInfo.item||'',
         emenda_item_id:r.emenda_item_id||null
       });
     });
