@@ -272,6 +272,7 @@
       <div class="form-group"><div class="form-label">Nota fiscal</div><input type="text" id="ei-nf" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="ei-empenho" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Patrimônio</div><input type="text" id="ei-patrimonio" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Unidade exibida</div><input type="text" id="ei-unidade" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Unidade de entrega</div><input type="text" id="ei-unidade-entrega" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Data de entrega</div><input type="date" id="ei-data-entrega" style="background:var(--surface);color:var(--text)"></div>
     </div>
@@ -4877,6 +4878,17 @@ async function _neEmendaItensJaUsados(ids){
   (ataRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
   return set;
 }
+function _isUnidadeVarias(v){
+  const s=(v||'').toString().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  return s==='VARIAS';
+}
+function _preferUnidadeExec(unidadeBeneficiada, unidadeEntrega, fallback=''){
+  const entrega=(unidadeEntrega||'').toString().trim();
+  const beneficiada=(unidadeBeneficiada||'').toString().trim();
+  if(entrega&&!_isUnidadeVarias(entrega)) return entrega;
+  if(beneficiada) return beneficiada;
+  return entrega||fallback||'';
+}
 async function neEmendaChange(){
   const eid=document.getElementById("ne2-emenda").value;
   const sel=document.getElementById("ne2-emenda-item");
@@ -4887,7 +4899,7 @@ async function neEmendaChange(){
   const usados=await _neEmendaItensJaUsados((data||[]).map(i=>i.id));
   sel.innerHTML='<option value="">Selecione...</option>'+(data||[]).map(i=>{
     const locked=usados.has(String(i.id));
-    const unidade=i.unidade_beneficiada||i.unidade_entrega||'sem unidade';
+    const unidade=_preferUnidadeExec(i.unidade_beneficiada,i.unidade_entrega,'sem unidade')||'sem unidade';
     const txt=`${i.item||'item'}${i.qtde?(' · qtde '+i.qtde):''} · ${unidade}${locked?' · já vinculado':''}`;
     return `<option value="${i.id}" ${locked?'disabled':''} data-locked="${locked?'1':'0'}">${_sanEsc(txt)}</option>`;
   }).join("");
@@ -4898,7 +4910,7 @@ async function neEmendaItemChange(){
   const uni=document.getElementById("ne2-unidade");
   const em=_neEmendasCache.find(e=>String(e.id)===String(eid));
   let unidade=em?.unidade||'';
-  if(iid){ const {data}=await sb.from('emenda_itens').select('unidade_beneficiada,unidade_entrega').eq('id',iid).single(); unidade=data?.unidade_beneficiada||data?.unidade_entrega||unidade; }
+  if(iid){ const {data}=await sb.from('emenda_itens').select('unidade_beneficiada,unidade_entrega').eq('id',iid).single(); unidade=_preferUnidadeExec(data?.unidade_beneficiada,data?.unidade_entrega,unidade); }
   uni.value=unidade||'';
 }
 
@@ -9988,7 +10000,7 @@ function abrirEditarItem(id){
   if(!r) return;
   _editItemId=r.id;
   document.getElementById('ei-planejado').innerHTML=`<strong>Item planejado:</strong> ${_sanEsc(r.item_cadastrado||'—')}<br><strong>Qtde planejada:</strong> ${_sanEsc(r.qtde_cadastrada||'—')} &nbsp;·&nbsp; <strong>Vl. unit. planejado:</strong> ${fmtFull(Number(r.vl_unitario_cadastrado)||0)} &nbsp;·&nbsp; <strong>Vl. total planejado:</strong> ${fmtFull(Number(r.vl_total_cadastrado)||0)}`;
-  const valores={'ei-item':r.item,'ei-qtde':r.qtde,'ei-vl-unit':r.vl_unitario,'ei-cpl':r.cpl,'ei-status':r.status_raw,'ei-nf':r.nota_fiscal,'ei-empenho':r.empenho,'ei-patrimonio':r.patrimonio,'ei-unidade-entrega':r.unidade_entrega,'ei-data-entrega':r.data_entrega};
+  const valores={'ei-item':r.item,'ei-qtde':r.qtde,'ei-vl-unit':r.vl_unitario,'ei-cpl':r.cpl,'ei-status':r.status_raw,'ei-nf':r.nota_fiscal,'ei-empenho':r.empenho,'ei-patrimonio':r.patrimonio,'ei-unidade':r.unidade,'ei-unidade-entrega':r.unidade_entrega,'ei-data-entrega':r.data_entrega};
   Object.entries(valores).forEach(([campo,valor])=>document.getElementById(campo).value=valor??'');
   (function(){
     const sel=document.getElementById('ei-status-id'); if(!sel) return;
@@ -10016,14 +10028,16 @@ async function salvarEditarItem(){
     cpl:document.getElementById('ei-cpl').value.trim(),status:document.getElementById('ei-status').value.trim(),
     status_id:(function(v){return v?Number(v):null;})(document.getElementById('ei-status-id').value),
     nota_fiscal:document.getElementById('ei-nf').value.trim(),empenho:document.getElementById('ei-empenho').value.trim(),
-    patrimonio:document.getElementById('ei-patrimonio').value.trim(),unidade_entrega:document.getElementById('ei-unidade-entrega').value.trim(),
+    patrimonio:document.getElementById('ei-patrimonio').value.trim(),unidade_beneficiada:document.getElementById('ei-unidade').value.trim(),unidade_entrega:document.getElementById('ei-unidade-entrega').value.trim(),
     data_entrega:document.getElementById('ei-data-entrega').value||null
   };
   const btn=document.getElementById('ei-salvar'); btn.disabled=true; btn.textContent='Salvando...';
   const {error}=await sb.from('emenda_itens').update(payload).eq('id',_editItemId);
   if(error){showMsg('ei','Erro: '+error.message,'err');btn.disabled=false;btn.textContent='Salvar';return;}
+  const unidadeResp=await sb.rpc('editar_emenda_item_unidade_cascade',{p_emenda_item_id:_editItemId,p_unidade:payload.unidade_beneficiada||null,p_unidade_entrega:payload.unidade_entrega||null});
+  if(unidadeResp.error){showMsg('ei','Item salvo, mas erro ao atualizar vínculos de unidade: '+unidadeResp.error.message,'err');btn.disabled=false;btn.textContent='Salvar';return;}
   const r=allRows.find(item=>String(item.id)===String(_editItemId));
-  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_id:payload.status_id,status_cat:(payload.status_id!=null&&window._catById&&window._catById[payload.status_id])?window._catById[payload.status_id]:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade_entrega:payload.unidade_entrega,data_entrega:payload.data_entrega||''});
+  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_id:payload.status_id,status_cat:(payload.status_id!=null&&window._catById&&window._catById[payload.status_id])?window._catById[payload.status_id]:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade:_preferUnidadeExec(payload.unidade_beneficiada,payload.unidade_entrega,payload.unidade_beneficiada),unidade_entrega:payload.unidade_entrega,data_entrega:payload.data_entrega||''});
   saldoEmendaCarregado=false;
   applyFilters();
   renderTable();
