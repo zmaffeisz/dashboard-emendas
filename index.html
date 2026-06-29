@@ -1326,6 +1326,8 @@
     <div id="rec-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
     <input type="hidden" id="rec-entrega-id">
     <input type="hidden" id="rec-item-id">
+    <input type="hidden" id="rec-origem" value="Aquisicao">
+    <input type="hidden" id="rec-exec-id">
     <div class="form-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="form-group"><div class="form-label">Qtde autorizada</div><input type="text" id="rec-qtde-autorizada" disabled></div>
       <div class="form-group"><div class="form-label">Ja recebida na AF</div><input type="text" id="rec-ja-recebida" disabled></div>
@@ -1463,7 +1465,7 @@
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
       <div class="form-group"><div class="form-label">Seção *</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
-      <div class="form-group full"><div class="form-label">Objeto</div><input type="text" id="proc-objeto" placeholder="Objeto do processo"></div>
+      <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="proc-objeto" placeholder="Objeto do processo"></div>
       <div class="form-group"><div class="form-label">Modalidade</div><input type="text" id="proc-modalidade" placeholder="ex: Pregão Eletrônico"></div>
       <div class="form-group"><div class="form-label">Valor estimado (R$)</div><input type="number" id="proc-valor" step="0.01" placeholder="ex: 50000"></div>
       <div class="form-group full"><div class="form-label">Observação / andamento</div><input type="text" id="proc-obs" placeholder="anotações livres"></div>
@@ -2076,7 +2078,7 @@
         <input type="hidden" id="nc-cpl">
         <label id="nc-gera-mais-wrap" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:6px;cursor:pointer"><input type="checkbox" id="nc-gera-mais" style="margin:0"> Esta CPL ainda vai gerar mais contratos (continua aparecendo na lista ao gerar contrato)</label>
       </div>
-      <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" placeholder="ex: 123/2025"></div>
+      <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" inputmode="numeric" placeholder="somente números"></div>
       <div class="form-group full"><div class="form-label">Prestador *</div>
         <div class="company-picker-row">
           <div class="company-combobox" id="nc-fornecedor-combobox">
@@ -4829,6 +4831,18 @@ function neOrigemChange(){
   document.getElementById("ne2-unidade-auto").style.display=emenda?'block':'none';
   if(!emenda){ uni.value=''; }
 }
+async function _neEmendaItensJaUsados(ids){
+  const set=new Set();
+  const clean=(ids||[]).filter(Boolean);
+  if(!clean.length) return set;
+  const [itRes, ataRes]=await Promise.all([
+    sb.from('itens').select('emenda_item_id').in('emenda_item_id',clean),
+    sb.from('atas_execucao').select('emenda_item_id').in('emenda_item_id',clean)
+  ]);
+  (itRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
+  (ataRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
+  return set;
+}
 async function neEmendaChange(){
   const eid=document.getElementById("ne2-emenda").value;
   const sel=document.getElementById("ne2-emenda-item");
@@ -4836,7 +4850,13 @@ async function neEmendaChange(){
   document.getElementById("ne2-unidade").value='';
   if(!eid) return;
   const {data}=await sb.from('emenda_itens').select('id,item,qtde,unidade_beneficiada,unidade_entrega').eq('emenda_id',eid).order('item');
-  sel.innerHTML='<option value="">Selecione...</option>'+(data||[]).map(i=>`<option value="${i.id}">${_sanEsc(i.item||'item')}${i.qtde?(' · qtde '+i.qtde):''}</option>`).join("");
+  const usados=await _neEmendaItensJaUsados((data||[]).map(i=>i.id));
+  sel.innerHTML='<option value="">Selecione...</option>'+(data||[]).map(i=>{
+    const locked=usados.has(String(i.id));
+    const unidade=i.unidade_beneficiada||i.unidade_entrega||'sem unidade';
+    const txt=`${i.item||'item'}${i.qtde?(' · qtde '+i.qtde):''} · ${unidade}${locked?' · já vinculado':''}`;
+    return `<option value="${i.id}" ${locked?'disabled':''} data-locked="${locked?'1':'0'}">${_sanEsc(txt)}</option>`;
+  }).join("");
 }
 async function neEmendaItemChange(){
   const eid=document.getElementById("ne2-emenda").value;
@@ -4850,6 +4870,8 @@ async function neEmendaItemChange(){
 
 let _editExecId=null;
 async function abrirModalEditExec(execId){
+  const entregaAta=entregasRows.find(r=>String(r.exec_id)===String(execId)&&r.tipo==='ATA');
+  if(entregaAta) return abrirRecebimentoAta(execId);
   let r=atasExec.find(x=>String(x.id)===String(execId));
   if(!r){
     // aberto a partir da aba "Controle de Entregas", onde atasExec não está carregado:
@@ -4915,6 +4937,13 @@ async function salvarNovaExec(){
   const emendaItemId=document.getElementById("ne2-emenda-item").value||null;
   if(!at||!unidade||!qtde){showMsg("ne2","Selecione o item da ATA e preencha Unidade e Quantidade (*)","err");return}
   if(origem==='emenda' && (!emendaId||!emendaItemId)){showMsg("ne2","Selecione a emenda e o item da emenda (*)","err");return}
+  if(origem==='emenda' && emendaItemId){
+    const usados=await _neEmendaItensJaUsados([emendaItemId]);
+    if(usados.has(String(emendaItemId))){
+      showMsg("ne2","Este item da emenda já está vinculado a outro processo/solicitação. Escolha outro item.","err");
+      return;
+    }
+  }
   const saldo=getSaldo(at);
   if(qtde>saldo){showMsg("ne2",`Quantidade maior que o saldo disponível (${saldo}).`,"err");return;}
   const btn=document.querySelector("#modal-nova-exec .btn-primary");
@@ -5411,13 +5440,14 @@ async function salvarProcesso(){
   const status=document.getElementById('proc-status')?.value||null;
   const natureza=document.getElementById('proc-natureza').value;
   const secao=document.getElementById('proc-secao').value;
-  if(!ident||!tipo||!natureza||!secao){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza e Seção.','err');return;}
+  const objeto=document.getElementById('proc-objeto').value.trim();
+  if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
   const dados={
     identificador:ident,
     tipo,
     natureza,
-    objeto:document.getElementById('proc-objeto').value.trim()||null,
+    objeto,
     modalidade:document.getElementById('proc-modalidade').value.trim()||null,
     status,
     secao,
@@ -5701,16 +5731,23 @@ let empenhosRows=[], empenhosCarregado=false, _empContratoItens=[], _empEmendasC
 function _empNum(id){ const v=document.getElementById(id)?.value; if(v==null||String(v).trim()==='') return null; const n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n:null; }
 function _empVinculado(e){ return (e.empenho_itens||[]).reduce((s,ei)=>s+(Number(ei.valor_vinculado)||0),0); }
 function _empSaldoCalc(e){ return (Number(e.valor_empenhado)||0)-(Number(e.valor_anulado)||0)-_empVinculado(e); }
+async function _recalcularSaldoEmpenho(eid){
+  if(!eid) return;
+  const {data:e}=await sb.from('empenhos').select('valor_empenhado,valor_anulado').eq('id',eid).maybeSingle();
+  const {data:lis}=await sb.from('empenho_itens').select('valor_vinculado').eq('empenho_id',eid);
+  const vinc=(lis||[]).reduce((s,x)=>s+(Number(x.valor_vinculado)||0),0);
+  await sb.from('empenhos').update({saldo_empenho:(Number(e?.valor_empenhado)||0)-(Number(e?.valor_anulado)||0)-vinc}).eq('id',eid);
+}
 async function loadEmpenhos(){
   if(!userCanView('itens')&&!_isAdmin()) return;
   const wrap=document.getElementById('empenhos-wrap'); if(!wrap) return;
   wrap.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando empenhos...</div>';
   const {data,error}=await sb.from('empenhos')
-    .select('*, contratos(cpl,numero_contrato), emendas(emenda,ano), fornecedores(razao_social), empenho_itens(id,valor_vinculado,quantidade_vinculada,item_id)')
+    .select('*, contratos(cpl,numero_contrato,tipo_instrumento), emendas(emenda,ano), fornecedores(razao_social), empenho_itens(id,valor_vinculado,quantidade_vinculada,item_id,emenda_item_id)')
     .order('created_at',{ascending:false});
   if(error){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro: '+_sanEsc(error.message)+'</div>'; return; }
   empenhosRows=(data||[]).map(e=>({...e,
-    _contrato:[e.contratos?.cpl,e.contratos?.numero_contrato].filter(Boolean).join(' · '),
+    _contrato:[e.contratos?.tipo_instrumento==='ATA'?'ATA':'Contrato',e.contratos?.cpl,e.contratos?.numero_contrato].filter(Boolean).join(' · '),
     _emenda:e.emendas?.emenda?(e.emendas.emenda+(e.emendas.ano?('/'+e.emendas.ano):'')):'',
     _fornecedor:e.fornecedores?.razao_social||'',
     _vinc:_empVinculado(e), _saldo:_empSaldoCalc(e)
@@ -5821,11 +5858,11 @@ function _s2SetValue(key,value){
 async function _empPopularSelects(){
   document.getElementById('emp-fonte-tipo').innerHTML='<option value="">—</option>'+PROC_FONTES.map(([v,l])=>`<option value="${v}">${_sanEsc(l)}</option>`).join('');
   if(!_empEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar').order('ano',{ascending:false}); _empEmendasCache=data||[]; }
-  if(!_empContratosCache.length){ const {data}=await sb.from('contratos').select('id,cpl,numero_contrato,prestador,fornecedor_id').order('id',{ascending:false}); _empContratosCache=data||[]; }
+  if(!_empContratosCache.length){ const {data}=await sb.from('contratos').select('id,cpl,numero_contrato,prestador,fornecedor_id,tipo_instrumento').order('id',{ascending:false}); _empContratosCache=data||[]; }
   document.getElementById('emp-emenda').innerHTML='<option value="">— sem emenda —</option>'+_empEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join('');
   _s2Init('emp-contrato',[
     {value:'',label:'— selecione um contrato —'},
-    ..._empContratosCache.map(c=>({value:String(c.id),label:[c.cpl,c.numero_contrato,c.prestador].filter(Boolean).join(' · ')||'Contrato '+c.id, cb:()=>_empContratoChange()}))
+    ..._empContratosCache.map(c=>({value:String(c.id),label:[c.tipo_instrumento==='ATA'?'ATA':'Contrato',c.cpl,c.numero_contrato,c.prestador].filter(Boolean).join(' · ')||'Contrato '+c.id, cb:()=>_empContratoChange()}))
   ]);
 }
 async function abrirModalEmpenho(id){
@@ -5845,7 +5882,11 @@ async function abrirModalEmpenho(id){
   document.getElementById('emp-emenda').value=e?.emenda_id||'';
   _s2SetValue('emp-contrato',e?.contrato_id||'');
   document.getElementById('emp-obs').value=e?.observacoes||'';
-  const prev=e?(e.empenho_itens||[]).reduce((m,ei)=>{m[ei.item_id]={q:ei.quantidade_vinculada,v:ei.valor_vinculado};return m;},{}):{};
+  const prev=e?(e.empenho_itens||[]).reduce((m,ei)=>{
+    if(ei.item_id) m['item:'+ei.item_id]={q:ei.quantidade_vinculada,v:ei.valor_vinculado};
+    if(ei.emenda_item_id) m['ata:'+ei.emenda_item_id]={q:ei.quantidade_vinculada,v:ei.valor_vinculado};
+    return m;
+  },{}):{};
   await _empContratoChange(prev);
   document.getElementById('modal-empenho').classList.add('active');
 }
@@ -5855,6 +5896,11 @@ async function _empContratoChange(prev){
   _empContratoItens=[];
   if(!cid){ wrap.innerHTML='Selecione um contrato para listar os itens.'; _empRecalcSaldo(); return; }
   wrap.innerHTML='<span class="spinner"></span> carregando itens...';
+  const contrato=_empContratosCache.find(c=>String(c.id)===String(cid));
+  if(contrato?.tipo_instrumento==='ATA'){
+    await _empContratoAtaChange(cid,prev||{});
+    return;
+  }
   const {data,error}=await sb.from('itens').select('id,descricao,qtde,valor_contratado,valor_estimado').eq('contrato_id',cid).order('created_at');
   if(error){ wrap.innerHTML='<span style="color:var(--red)">Erro: '+_sanEsc(error.message)+'</span>'; return; }
   _empContratoItens=data||[];
@@ -5865,14 +5911,70 @@ async function _empContratoChange(prev){
     _empContratoItens.map(it=>`<tr data-item="${it.id}" style="border-top:1px solid var(--border)">
       <td style="padding:4px 6px">${_sanEsc(it.descricao||'—')}</td>
       <td style="padding:4px 6px;text-align:right">${it.qtde??'—'}</td>
-      <td style="padding:4px 6px"><input type="number" class="empi-q" min="0" step="any" value="${pv[it.id]?.q??''}" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>
-      <td style="padding:4px 6px"><input type="number" class="empi-v" min="0" step="any" oninput="_empRecalcSaldo()" value="${pv[it.id]?.v??''}" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>
+      <td style="padding:4px 6px"><input type="number" class="empi-q" min="0" step="any" value="${pv['item:'+it.id]?.q??''}" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>
+      <td style="padding:4px 6px"><input type="number" class="empi-v" min="0" step="any" oninput="_empRecalcSaldo()" value="${pv['item:'+it.id]?.v??''}" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>
     </tr>`).join('')}</tbody></table>`;
+  _empRecalcSaldo();
+}
+function _empFiltrarAtaPedidos(){
+  const q=(document.getElementById('emp-ata-busca')?.value||'').toLowerCase();
+  document.querySelectorAll('#emp-itens-wrap .emp-ata-row').forEach(tr=>{
+    tr.style.display=(!q||String(tr.dataset.search||'').includes(q))?'':'none';
+  });
+}
+async function _empContratoAtaChange(cid,prev){
+  const wrap=document.getElementById('emp-itens-wrap');
+  const empAtual=document.getElementById('emp-id')?.value||'';
+  const {data:atas,error:eAta}=await sb.from('atas_itens').select('id,item,cpl,sim,empresa,valor_unit').eq('contrato_id',cid);
+  if(eAta){ wrap.innerHTML='<span style="color:var(--red)">Erro: '+_sanEsc(eAta.message)+'</span>'; return; }
+  const ataIds=(atas||[]).map(a=>a.id);
+  if(!ataIds.length){ wrap.innerHTML='Nenhum item de ATA vinculado a este contrato.'; _empRecalcSaldo(); return; }
+  const ataMap=Object.fromEntries((atas||[]).map(a=>[String(a.id),a]));
+  const {data:execs,error:eExec}=await sb.from('atas_execucao')
+    .select('id,ata_item_id,emenda_id,emenda_item_id,item,unidade,qtde,valor,empenho,af_numero,data_af,prev_entrega,cpl,sim')
+    .in('ata_item_id',ataIds)
+    .order('created_at',{ascending:false});
+  if(eExec){ wrap.innerHTML='<span style="color:var(--red)">Erro: '+_sanEsc(eExec.message)+'</span>'; return; }
+  const emendaItemIds=[...new Set((execs||[]).map(e=>e.emenda_item_id).filter(Boolean))];
+  let vincPorEmendaItem={};
+  if(emendaItemIds.length){
+    const {data:vincs}=await sb.from('empenho_itens').select('empenho_id,emenda_item_id,empenhos(numero,ano)').in('emenda_item_id',emendaItemIds);
+    (vincs||[]).forEach(v=>{ vincPorEmendaItem[String(v.emenda_item_id)]=v; });
+  }
+  const rows=(execs||[]).map(ex=>{
+    const ai=ataMap[String(ex.ata_item_id)]||{};
+    const key=ex.emenda_item_id?('ata:'+ex.emenda_item_id):('exec:'+ex.id);
+    const pv=prev[key];
+    const vinc=vincPorEmendaItem[String(ex.emenda_item_id||'')];
+    const vincOutro=vinc&&String(vinc.empenho_id)!==String(empAtual);
+    return {...ex,_ai:ai,_key:key,_prev:pv,_vinc:vinc,_vincOutro:vincOutro};
+  }).filter(ex=>ex._prev || (!ex._vincOutro && !String(ex.empenho||'').trim()));
+  if(!rows.length){ wrap.innerHTML='Nenhum pedido de ATA aguardando vínculo de empenho para este contrato.'; _empRecalcSaldo(); return; }
+  const inp='width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
+  wrap.innerHTML=`<input type="text" id="emp-ata-busca" placeholder="Pesquisar pedido por item, unidade, CPL, SIM, fornecedor..." oninput="_empFiltrarAtaPedidos()" style="width:100%;margin-bottom:8px;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+  <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--text2);text-align:left">
+    <th style="padding:4px 6px;width:26px"></th><th style="padding:4px 6px">Pedido da ATA</th><th style="padding:4px 6px;text-align:right">Qtde</th><th style="padding:4px 6px;text-align:right">Valor</th><th style="padding:4px 6px">Situação</th></tr></thead><tbody>${
+    rows.map(ex=>{
+      const ai=ex._ai||{};
+      const valor=Number(ex.valor)||((Number(ai.valor_unit)||0)*(Number(ex.qtde)||0))||0;
+      const checked=!!ex._prev;
+      const situacao=ex._vinc?`vinculado a ${_sanEsc(ex._vinc.empenhos?.numero||'empenho')}`:(ex.af_numero?'AF emitida':'aguardando empenho');
+      const search=[ex.item,ai.item,ex.unidade,ex.cpl,ai.cpl,ex.sim,ai.sim,ai.empresa,ex.af_numero].filter(Boolean).join(' ').toLowerCase();
+      return `<tr class="emp-ata-row" data-ata-exec="${ex.id}" data-emenda-item="${ex.emenda_item_id||''}" data-search="${_sanEsc(search)}" style="border-top:1px solid var(--border)">
+        <td style="padding:4px 6px"><input type="checkbox" class="empi-ata-chk" ${checked?'checked':''} onchange="_empRecalcSaldo()"></td>
+        <td style="padding:4px 6px"><b>${_sanEsc(ex.item||ai.item||'item')}</b><br><span style="color:var(--text3)">${_sanEsc(ex.unidade||'—')} · ${_sanEsc(ex.cpl||ai.cpl||'—')} · ${_sanEsc(ex.sim||ai.sim||'—')}</span></td>
+        <td style="padding:4px 6px;text-align:right"><input type="hidden" class="empi-q" value="${ex._prev?.q??(ex.qtde||'')}">${ex.qtde??'—'}</td>
+        <td style="padding:4px 6px;text-align:right"><input type="hidden" class="empi-v" value="${ex._prev?.v??valor}">${fmtFull(ex._prev?.v??valor)}</td>
+        <td style="padding:4px 6px;color:${ex._vinc?'var(--green)':'var(--text3)'}">${situacao}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
   _empRecalcSaldo();
 }
 function _empRecalcSaldo(){
   const valor=_empNum('emp-valor')||0;
-  let vinc=0; document.querySelectorAll('#emp-itens-wrap .empi-v').forEach(i=>{ vinc+=Number(String(i.value).replace(',','.'))||0; });
+  let vinc=0;
+  document.querySelectorAll('#emp-itens-wrap tr[data-item]').forEach(tr=>{ vinc+=Number(String(tr.querySelector('.empi-v')?.value||'').replace(',','.'))||0; });
+  document.querySelectorAll('#emp-itens-wrap tr[data-ata-exec]').forEach(tr=>{ if(tr.querySelector('.empi-ata-chk')?.checked) vinc+=Number(String(tr.querySelector('.empi-v')?.value||'').replace(',','.'))||0; });
   const saldo=valor-vinc;
   document.getElementById('emp-resumo-valor').textContent=fmtFull(valor);
   document.getElementById('emp-resumo-vinc').textContent=fmtFull(vinc);
@@ -5893,8 +5995,16 @@ async function salvarEmpenho(){
     const v=Number(String(tr.querySelector('.empi-v').value).replace(',','.'))||null;
     if(q||v) vincs.push({item_id:tr.dataset.item, quantidade_vinculada:q, valor_vinculado:v});
   });
+  const ataVincs=[];
+  document.querySelectorAll('#emp-itens-wrap tr[data-ata-exec]').forEach(tr=>{
+    if(!tr.querySelector('.empi-ata-chk')?.checked) return;
+    const q=Number(String(tr.querySelector('.empi-q')?.value||'').replace(',','.'))||null;
+    const v=Number(String(tr.querySelector('.empi-v')?.value||'').replace(',','.'))||null;
+    ataVincs.push({exec_id:tr.dataset.ataExec, emenda_item_id:tr.dataset.emendaItem||null, quantidade_vinculada:q, valor_vinculado:v});
+  });
   const totalVinc=vincs.reduce((s,x)=>s+(x.valor_vinculado||0),0);
-  if(totalVinc-valor>0.005){ if(!await uiConfirm(`O valor vinculado (${fmtFull(totalVinc)}) excede o valor do empenho (${fmtFull(valor)}). Salvar mesmo assim?`)) return; }
+  const totalAtaVinc=ataVincs.reduce((s,x)=>s+(x.valor_vinculado||0),0);
+  if((totalVinc+totalAtaVinc)-valor>0.005){ if(!await uiConfirm(`O valor vinculado (${fmtFull(totalVinc+totalAtaVinc)}) excede o valor do empenho (${fmtFull(valor)}). Salvar mesmo assim?`)) return; }
   const cid=document.getElementById('emp-contrato').value||null;
   const eid=document.getElementById('emp-emenda').value||null;
   const reg={
@@ -5903,7 +6013,7 @@ async function salvarEmpenho(){
     valor_empenhado:valor, data_emissao:document.getElementById('emp-data').value||null,
     emenda_id:eid, contrato_id:cid?Number(cid):null, observacoes:document.getElementById('emp-obs').value.trim()||null,
     numero_normalizado:(typeof normalizarNumeroDocumento==='function'?normalizarNumeroDocumento(numero):numero),
-    saldo_empenho:valor-totalVinc, updated_at:new Date().toISOString()
+    saldo_empenho:valor-totalVinc-totalAtaVinc, updated_at:new Date().toISOString()
   };
   // herda fornecedor do contrato, se houver
   if(cid){ const c=_empContratosCache.find(x=>String(x.id)===String(cid)); if(c?.fornecedor_id) reg.fornecedor_id=c.fornecedor_id; }
@@ -5915,12 +6025,33 @@ async function salvarEmpenho(){
   else{ const ins=await sb.from('empenhos').insert(reg).select('id').single(); res=ins; empId=ins.data?.id; }
   if(res.error){ btn.disabled=false; msg.textContent='Erro: '+res.error.message; msg.classList.add('err'); return; }
   // substitui vínculos
+  const {data:antigosDoEmp}=await sb.from('empenho_itens').select('emenda_item_id').eq('empenho_id',empId);
+  const antigosAtaIds=(antigosDoEmp||[]).map(x=>x.emenda_item_id).filter(Boolean).map(String);
+  const novosAtaIds=ataVincs.map(x=>x.emenda_item_id).filter(Boolean).map(String);
+  const removidosAtaIds=antigosAtaIds.filter(id=>!novosAtaIds.includes(id));
   await sb.from('empenho_itens').delete().eq('empenho_id',empId);
+  if(removidosAtaIds.length) await sb.from('atas_execucao').update({empenho:null}).in('emenda_item_id',removidosAtaIds);
   if(vincs.length){ const linhas=vincs.map(v=>({...v, empenho_id:empId, emenda_id:eid})); const r2=await sb.from('empenho_itens').insert(linhas); if(r2.error){ btn.disabled=false; msg.textContent='Empenho salvo, mas erro nos vínculos: '+r2.error.message; msg.classList.add('err'); return; } }
+  const empTexto=`${numero}${(_empNum('emp-ano')||null)?('/'+(_empNum('emp-ano')||'')):''}`;
+  for(const v of ataVincs){
+    const {data:ex}=await sb.from('atas_execucao').select('id,emenda_id,emenda_item_id,qtde,valor').eq('id',v.exec_id).maybeSingle();
+    await sb.from('atas_execucao').update({empenho:empTexto}).eq('id',v.exec_id);
+    const emi=v.emenda_item_id||ex?.emenda_item_id||null;
+    if(!emi) continue;
+    const {data:ant}=await sb.from('empenho_itens').select('id,empenho_id').eq('emenda_item_id',emi);
+    const linha={empenho_id:empId,item_id:null,emenda_id:ex?.emenda_id||eid||null,emenda_item_id:emi,quantidade_vinculada:v.quantidade_vinculada||ex?.qtde||null,valor_vinculado:v.valor_vinculado||ex?.valor||null};
+    const rAta=await sb.from('empenho_itens').insert(linha).select('id').single();
+    if(rAta.error){ btn.disabled=false; msg.textContent='Empenho salvo, mas erro no vínculo da ATA: '+rAta.error.message; msg.classList.add('err'); return; }
+    if(ant?.length) await sb.from('empenho_itens').delete().in('id',ant.map(x=>x.id));
+    for(const old of [...new Set((ant||[]).map(x=>String(x.empenho_id)).filter(x=>x&&x!==String(empId)))]) await _recalcularSaldoEmpenho(old);
+  }
+  await _recalcularSaldoEmpenho(empId);
   btn.disabled=false;
   if(window.toast) toast(idAtual?'Empenho atualizado!':'Empenho cadastrado!','success');
   document.getElementById('modal-empenho').classList.remove('active');
   loadEmpenhos();
+  itensEntregasCarregado=false;
+  if(document.getElementById('itens-sub-entregas')?.style.display!=='none') loadItensEntregas();
 }
 async function excluirEmpenho(id){
   if(bloquearSeVisualiz('itens')) return;
@@ -6024,6 +6155,37 @@ function _afRecalcLimite(){
     document.getElementById('af-data-limite').value='';
   }
 }
+async function _ataExecEmpenhoVinculado(exec){
+  if(exec?.empenho && String(exec.empenho).trim()) return String(exec.empenho).trim();
+  const emendaItemId=exec?.emenda_item_id||exec?._ataEmendaItemId||null;
+  if(!emendaItemId) return '';
+  const {data}=await sb.from('empenho_itens')
+    .select('empenhos(numero,ano)')
+    .eq('emenda_item_id',emendaItemId)
+    .limit(1);
+  const emp=data?.[0]?.empenhos;
+  return emp?.numero ? `${emp.numero}${emp.ano?('/'+emp.ano):''}` : '';
+}
+async function _itemEmpenhoVinculado(row){
+  if(row?.empenho && String(row.empenho).trim()) return String(row.empenho).trim();
+  if(row?.item_id){
+    const {data}=await sb.from('empenho_itens')
+      .select('empenhos(numero,ano)')
+      .eq('item_id',row.item_id)
+      .limit(1);
+    const emp=data?.[0]?.empenhos;
+    if(emp?.numero) return `${emp.numero}${emp.ano?('/'+emp.ano):''}`;
+  }
+  if(row?.contrato_id){
+    const {data}=await sb.from('empenhos')
+      .select('numero,ano')
+      .eq('contrato_id',row.contrato_id)
+      .limit(1);
+    const emp=data?.[0];
+    if(emp?.numero) return `${emp.numero}${emp.ano?('/'+emp.ano):''}`;
+  }
+  return '';
+}
 async function abrirModalAF(itemId, execId){
   if(bloquearSeVisualiz('itens')) return;
   const isAta=!!execId;
@@ -6037,6 +6199,12 @@ async function abrirModalAF(itemId, execId){
       if(data) exec={...(exec||{}),...data};
     }
     if(!exec){ if(window.toast)toast('Solicitação de ATA não encontrada','error'); return; }
+    const empAta=await _ataExecEmpenhoVinculado(exec);
+    if(!empAta){
+      if(window.toast) toast('Nenhum empenho vinculado. Vincule um empenho antes de emitir a AF.','error');
+      return;
+    }
+    exec.empenho=exec.empenho||empAta;
     // busca prazo de entrega do item da ATA (múltiplas fontes)
     const ataId=exec.ata_item_id||er?.ata_item_id;
     let pa=Number(exec.prazo_entrega_dias||er?.prazo_entrega_dias)||0;
@@ -6143,6 +6311,13 @@ async function salvarAF(){
   if(!limite){ msg.textContent='Data limite de entrega nao calculada. Verifique a data da AF e o prazo da origem.'; msg.style.color='var(--red)'; return; }
   msg.style.color='var(--text3)'; msg.textContent='Salvando...';
   if(isAta){
+    const {data:execAtual}=await sb.from('atas_execucao').select('id,empenho,emenda_item_id').eq('id',execId).maybeSingle();
+    const empAta=await _ataExecEmpenhoVinculado(execAtual||cache||{});
+    if(!empAta){
+      msg.textContent='Nenhum empenho vinculado. Vincule um empenho antes de emitir a AF.';
+      msg.style.color='var(--red)';
+      return;
+    }
     // ── ATA: atualiza atas_execucao com dados da AF ──
     const {error}=await sb.from('atas_execucao').update({af_numero:numero, data_af:afData, prev_entrega:limite}).eq('id',execId);
     if(error){ msg.textContent='Erro: '+error.message; msg.style.color='var(--red)'; return; }
@@ -6215,29 +6390,59 @@ async function salvarAF(){
 
 // ═══ Fase 11: vincular empenho ao item (Controle de Entregas/Prazos) ═══
 let _veEmpenhos=[];
-async function abrirVincularEmpenho(itemId){
+let _veContext={tipo:'item', itemId:null, execId:null, exec:null};
+function _veAtaSingle(chk){ document.querySelectorAll('#ve-lista .ve-chk').forEach(c=>{ if(c!==chk) c.checked=false; }); }
+function _veFiltrarEmpenhos(){
+  const q=(document.getElementById('ve-busca')?.value||'').toLowerCase();
+  document.querySelectorAll('#ve-lista tr[data-emp]').forEach(tr=>{
+    tr.style.display=(!q||String(tr.dataset.search||'').includes(q))?'':'none';
+  });
+}
+async function abrirVincularEmpenho(itemId, execId){
   if(bloquearSeVisualiz('itens')) return;
-  document.getElementById('ve-item-id').value=itemId;
+  const isAta=!!execId;
+  _veContext={tipo:isAta?'ata':'item', itemId:itemId||null, execId:execId||null, exec:null};
+  document.getElementById('ve-item-id').value=itemId||'';
   document.getElementById('ve-msg').textContent='';
   const lista=document.getElementById('ve-lista'); lista.innerHTML='<span class="spinner"></span> carregando...';
-  const {data:it}=await sb.from('itens').select('id,descricao,qtde,contrato_id,emenda_id,processos(identificador)').eq('id',itemId).single();
-  document.getElementById('ve-info').innerHTML=`<b>${_sanEsc(it?.descricao||'item')}</b> · qtde ${it?.qtde??'—'} · ${_sanEsc(it?.processos?.identificador||'')}`;
+  let it=null, prev={};
+  if(isAta){
+    const {data:ex,error:exErr}=await sb.from('atas_execucao').select('id,ata_item_id,emenda_id,emenda_item_id,item,unidade,qtde,valor,empenho,cpl,sim').eq('id',execId).single();
+    if(exErr||!ex){ lista.innerHTML='<div style="color:var(--red)">Execução de ATA não encontrada.</div>'; document.getElementById('modal-vincular-empenho').classList.add('active'); return; }
+    _veContext.exec=ex;
+    let ai={};
+    if(ex.ata_item_id){
+      const {data:ait}=await sb.from('atas_itens').select('contrato_id,item,cpl,sim,empresa,contratos(cpl,numero_contrato)').eq('id',ex.ata_item_id).maybeSingle();
+      ai=ait||{};
+    }
+    it={id:null,descricao:ex.item||ai.item||'item da ATA',qtde:ex.qtde,contrato_id:ai.contrato_id||null,emenda_id:ex.emenda_id||null,emenda_item_id:ex.emenda_item_id||null,processos:{identificador:ex.cpl||ai.cpl||''}};
+    if(ex.emenda_item_id){
+      const {data:jaAta}=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('emenda_item_id',ex.emenda_item_id).limit(1);
+      prev=Object.fromEntries((jaAta||[]).map(x=>[String(x.empenho_id),x]));
+    }
+    document.getElementById('ve-info').innerHTML=`<b>${_sanEsc(it.descricao)}</b> · ATA · qtde ${it.qtde??'—'} · ${_sanEsc(ex.sim||ai.sim||ai.contratos?.numero_contrato||'')}`;
+  }else{
+    const {data}=await sb.from('itens').select('id,descricao,qtde,contrato_id,emenda_id,processos(identificador)').eq('id',itemId).single();
+    it=data;
+    document.getElementById('ve-info').innerHTML=`<b>${_sanEsc(it?.descricao||'item')}</b> · qtde ${it?.qtde??'—'} · ${_sanEsc(it?.processos?.identificador||'')}`;
+    const {data:ja}=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('item_id',itemId);
+    prev=Object.fromEntries((ja||[]).map(x=>[String(x.empenho_id),x]));
+  }
   // empenhos compatíveis: do mesmo contrato ou ainda sem contrato
   let qb=sb.from('empenhos').select('id,numero,ano,valor_empenhado,saldo_empenho,contrato_id').order('created_at',{ascending:false});
   const {data:emps}=await qb;
   _veEmpenhos=(emps||[]).filter(e=>!e.contrato_id || String(e.contrato_id)===String(it?.contrato_id));
-  const {data:ja}=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('item_id',itemId);
-  const prev=Object.fromEntries((ja||[]).map(x=>[String(x.empenho_id),x]));
   if(!_veEmpenhos.length){ lista.innerHTML='<div style="color:var(--text3)">Nenhum empenho compatível. Cadastre em <b>Itens → Empenhos</b> (vinculando ao contrato deste item).</div>'; document.getElementById('modal-vincular-empenho').classList.add('active'); return; }
   const inp='font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
-  lista.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text2);text-align:left;font-size:11px">
+  lista.innerHTML=`<input type="text" id="ve-busca" placeholder="Pesquisar empenho..." oninput="_veFiltrarEmpenhos()" style="width:100%;margin-bottom:8px;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+  <table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text2);text-align:left;font-size:11px">
     <th style="padding:4px 6px"></th><th style="padding:4px 6px">Empenho</th><th style="padding:4px 6px;text-align:right">Saldo</th><th style="padding:4px 6px;width:90px">Qtde</th><th style="padding:4px 6px;width:120px">Valor</th></tr></thead><tbody>${
-    _veEmpenhos.map(e=>{const p=prev[String(e.id)];return `<tr data-emp="${e.id}" style="border-top:1px solid var(--border)">
-      <td style="padding:4px 6px"><input type="checkbox" class="ve-chk" ${p?'checked':''}></td>
+    _veEmpenhos.map(e=>{const p=prev[String(e.id)]; const qAta=isAta?(it.qtde??''):''; const vAta=isAta?(_veContext.exec?.valor??''):''; const search=[e.numero,e.ano,e.valor_empenhado,e.saldo_empenho].filter(Boolean).join(' ').toLowerCase(); return `<tr data-emp="${e.id}" data-search="${_sanEsc(search)}" style="border-top:1px solid var(--border)">
+      <td style="padding:4px 6px"><input type="checkbox" class="ve-chk" ${p?'checked':''} ${isAta?'onchange="_veAtaSingle(this)"':''}></td>
       <td style="padding:4px 6px">${_sanEsc(e.numero)}${e.ano?('/'+e.ano):''}</td>
       <td style="padding:4px 6px;text-align:right;white-space:nowrap">${fmtFull(e.saldo_empenho!=null?e.saldo_empenho:e.valor_empenhado)}</td>
-      <td style="padding:4px 6px"><input type="number" class="ve-q" min="0" step="any" value="${p?.quantidade_vinculada??''}" style="width:100%;${inp}"></td>
-      <td style="padding:4px 6px"><input type="number" class="ve-v" min="0" step="any" value="${p?.valor_vinculado??''}" style="width:100%;${inp}"></td>
+      <td style="padding:4px 6px"><input type="number" class="ve-q" min="0" step="any" ${isAta?'readonly':''} value="${p?.quantidade_vinculada??qAta}" style="width:100%;${inp}${isAta?'background:var(--surface2);color:var(--text3);':''}"></td>
+      <td style="padding:4px 6px"><input type="number" class="ve-v" min="0" step="any" ${isAta?'readonly':''} value="${p?.valor_vinculado??vAta}" style="width:100%;${inp}${isAta?'background:var(--surface2);color:var(--text3);':''}"></td>
     </tr>`;}).join('')}</tbody></table>`;
   document.getElementById('modal-vincular-empenho').classList.add('active');
 }
@@ -6245,14 +6450,44 @@ async function salvarVincularEmpenho(){
   if(bloquearSeVisualiz('itens')) return;
   const itemId=document.getElementById('ve-item-id').value;
   const msg=document.getElementById('ve-msg'); msg.className='fmsg';
-  const {data:it}=await sb.from('itens').select('emenda_id').eq('id',itemId).single();
-  const novos=[];
+  const isAta=_veContext.tipo==='ata';
+  const selected=[];
   document.querySelectorAll('#ve-lista tr[data-emp]').forEach(tr=>{
     if(!tr.querySelector('.ve-chk')?.checked) return;
     const q=Number(String(tr.querySelector('.ve-q').value).replace(',','.'))||null;
     const v=Number(String(tr.querySelector('.ve-v').value).replace(',','.'))||null;
-    novos.push({empenho_id:tr.dataset.emp, item_id:itemId, emenda_id:it?.emenda_id||null, quantidade_vinculada:q, valor_vinculado:v});
+    selected.push({empenho_id:tr.dataset.emp, quantidade_vinculada:q, valor_vinculado:v});
   });
+  if(isAta){
+    if(!selected.length){ msg.textContent='Selecione um empenho para vincular.'; msg.classList.add('err'); return; }
+    const btn=document.getElementById('ve-salvar'); btn.disabled=true;
+    const ex=_veContext.exec||{};
+    const emp=_veEmpenhos.find(e=>String(e.id)===String(selected[0].empenho_id));
+    const empTexto=emp?`${emp.numero}${emp.ano?('/'+emp.ano):''}`:'';
+    const {error:upErr}=await sb.from('atas_execucao').update({empenho:empTexto}).eq('id',_veContext.execId);
+    if(upErr){ btn.disabled=false; msg.textContent='Erro: '+upErr.message; msg.classList.add('err'); return; }
+    if(ex.emenda_item_id){
+      const {data:antVinc}=await sb.from('empenho_itens').select('id,empenho_id').eq('emenda_item_id',ex.emenda_item_id);
+      const vinc={empenho_id:selected[0].empenho_id,item_id:null,emenda_id:ex.emenda_id||null,emenda_item_id:ex.emenda_item_id,quantidade_vinculada:selected[0].quantidade_vinculada||ex.qtde||null,valor_vinculado:selected[0].valor_vinculado||ex.valor||null};
+      const ins=await sb.from('empenho_itens').insert(vinc).select('id').single();
+      if(ins.error) console.error('vinculo empenho_itens ATA:',ins.error);
+      else if(antVinc?.length){
+        await sb.from('empenho_itens').delete().in('id',antVinc.map(x=>x.id));
+        for(const old of [...new Set(antVinc.map(x=>String(x.empenho_id)).filter(x=>x&&x!==String(selected[0].empenho_id)))]) await _recalcularSaldoEmpenho(old);
+      }
+    }
+    await _recalcularSaldoEmpenho(selected[0].empenho_id);
+    btn.disabled=false;
+    if(window.toast) toast('Empenho vinculado à ATA.','success');
+    document.getElementById('modal-vincular-empenho').classList.remove('active');
+    itensEntregasCarregado=false;
+    if(empenhosCarregado) loadEmpenhos();
+    if(document.getElementById('itens-sub-entregas')?.style.display!=='none') loadItensEntregas();
+    if(typeof loadData==='function') loadData().catch(e=>console.error(e));
+    return;
+  }
+  const {data:it}=await sb.from('itens').select('emenda_id').eq('id',itemId).single();
+  const novos=selected.map(x=>({empenho_id:x.empenho_id, item_id:itemId, emenda_id:it?.emenda_id||null, quantidade_vinculada:x.quantidade_vinculada, valor_vinculado:x.valor_vinculado}));
   const btn=document.getElementById('ve-salvar'); btn.disabled=true;
   // empenhos afetados (antigos + novos) p/ recálculo de saldo
   const {data:ant}=await sb.from('empenho_itens').select('empenho_id').eq('item_id',itemId);
@@ -6431,9 +6666,23 @@ async function loadItensEntregas(){
     const ids=[...new Set(at.map(r=>r.ata_item_id).filter(Boolean).map(String))]
       .filter(id=>!_ataItemPorId[id]);
     if(ids.length){
-      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,prazo_entrega,contrato_id,contratos(cpl,numero_contrato,prestador)').in('id',ids);
-      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.empresa||i.contratos?.prestador||'',prazo_entrega:i.prazo_entrega||null}; });
+      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,prazo_entrega,contrato_id,valor_unit,contratos(cpl,numero_contrato,prestador)').in('id',ids);
+      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.empresa||i.contratos?.prestador||'',prazo_entrega:i.prazo_entrega||null,contrato_id:i.contrato_id||null,valor_unit:i.valor_unit||null}; });
     }
+  }
+  const _empAtaPorEmendaItem={};
+  const _ataEmendaItemIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
+  if(_ataEmendaItemIds.length){
+    const {data:vAta}=await sb.from('empenho_itens').select('emenda_item_id,empenhos(numero,ano)').in('emenda_item_id',_ataEmendaItemIds);
+    (vAta||[]).forEach(v=>{
+      const emp=v.empenhos;
+      if(emp?.numero) _empAtaPorEmendaItem[String(v.emenda_item_id)]=`${emp.numero}${emp.ano?('/'+emp.ano):''}`;
+    });
+  }
+  const _emendaInfoPorId={};
+  if(_ataEmendaItemIds.length){
+    const {data:emInfo}=await sb.from('emenda_itens').select('id,empenho,nota_fiscal,patrimonio').in('id',_ataEmendaItemIds);
+    (emInfo||[]).forEach(e=>{ _emendaInfoPorId[String(e.id)]=e; });
   }
   (at||[]).forEach(r=>{
     const recebido=!!(r.dt_entrega && String(r.dt_entrega).trim());
@@ -6441,11 +6690,16 @@ async function loadItensEntregas(){
     const temAF=!!(r.data_af && String(r.data_af).trim());
     const pendenteAF=!temAF && !recebido;
     const ai=_ataItemPorId[String(r.ata_item_id)]||{};
+    const emInfo=_emendaInfoPorId[String(r.emenda_item_id||'')]||{};
+    const empAta=(r.empenho&&String(r.empenho).trim())||_empAtaPorEmendaItem[String(r.emenda_item_id||'')]||emInfo.empenho||'';
     out.push({
-      tipo:'ATA', exec_id:r.id, ata_item_id:r.ata_item_id||null, emenda_id:r.emenda_id||null, emenda_item_id:r.emenda_item_id||null, processo:r.cpl||ai.cpl||'', contrato:r.sim||ai.sim||'',
-      empresa:ai.empresa||'', item:r.item||ai.item||'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:r.empenho||'',
+      tipo:'ATA', exec_id:r.id, ata_item_id:r.ata_item_id||null, emenda_id:r.emenda_id||null, emenda_item_id:r.emenda_item_id||null, processo:r.cpl||ai.cpl||'', contrato:r.sim||ai.sim||'', contrato_id:ai.contrato_id||null,
+      empresa:ai.empresa||'', item:r.item||ai.item||'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:empAta,
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
+      valor_item:(Number(r.valor)&&Number(r.qtde))?(Number(r.valor)/Number(r.qtde)):(Number(ai.valor_unit)||0),
+      nota_fiscal:r.nf||emInfo.nota_fiscal||'', patrimonio:emInfo.patrimonio||'', numero_serie:'',
+      empenho_vinculado:!!empAta,
       _ataPendenteAF:pendenteAF,
       status:pendenteAF?'aguardando AF':_prazoStatus(limiteISO,recebido,false)
     });
@@ -6625,13 +6879,16 @@ function renderItensEntregas(){
         const verBtn=totalmenteRecebido?`<button onclick="verRecebimento('${r.entrega_id}')" title="Item totalmente recebido — visualizar dados do recebimento" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;white-space:nowrap">✓ Ver recebimento</button>`:'';
         const aqPrazoBtn=(r.tipo==='Aquisição'&&!r.recebido&&!r.cancelado&&pode)?`<button onclick="abrirModalProrrogarPrazoAquisicao('${r.entrega_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         // ATA aguardando AF: só "Emitir AF" (define data AF + prazo). Após emitir, libera Receber/Prazo.
-        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalAF('','${r.exec_id}')" title="Emitir AF: gere o número da AF e a data — o prazo de entrega é calculado automaticamente" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap">📄 Emitir AF</button>`:'';
+        const ataPodeAF=!!(r.empenho_vinculado||r.empenho);
+        const ataVincBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode&&!ataPodeAF)?`<button onclick="abrirVincularEmpenho('', '${r.exec_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">Vincular empenho</button>`:'';
+        const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalAF('','${r.exec_id}')" ${ataPodeAF?'':'disabled title="Nenhum empenho vinculado. Vincule um empenho antes de emitir a AF."'} style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:${ataPodeAF?'var(--blue)':'var(--surface2)'};color:${ataPodeAF?'#fff':'var(--text3)'};cursor:${ataPodeAF?'pointer':'not-allowed'};white-space:nowrap">📄 Emitir AF</button>`:'';
         const ataPrazoBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
-        const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalEditExec('${r.exec_id}')" title="Registrar/editar entrega (empenho, NF, datas)" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver/editar':'📥 Receber'}</button>`:'';
-        acoes=(recBtn||verBtn||aqPrazoBtn||ataAFBtn||ataPrazoBtn||ataRecBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}</div>`:'—';
+        const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirRecebimentoAta('${r.exec_id}')" title="Registrar recebimento administrativo" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver recebimento':'📥 Receber'}</button>`:'';
+        const pdfBtn=r.af_numero?`<button onclick="baixarAFPDF('${_ceRowKey(r)}')" title="Baixar AF em PDF" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--surface);color:var(--blue);cursor:pointer;white-space:nowrap">Baixar AF em PDF</button>`:'';
+        acoes=(recBtn||verBtn||aqPrazoBtn||ataVincBtn||ataAFBtn||ataPrazoBtn||ataRecBtn||pdfBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataVincBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}${pdfBtn}</div>`:'—';
         docs=r.tipo==='Aquisição'
           ?`<div>Emp: ${_sanEsc(r.empenho||'—')}</div><div>NF: ${_sanEsc(r.nota_fiscal||'—')}${r.nf_dataISO?(' · '+fmtDate(r.nf_dataISO)):''}</div>${r.patrimonio?('<div>Pat: '+_sanEsc(r.patrimonio)+'</div>'):''}${r.numero_serie?('<div>Série: '+_sanEsc(r.numero_serie)+'</div>'):''}${marcaMod?('<div>'+_sanEsc(marcaMod)+'</div>'):''}`
-          :'—';
+          :`<div>Emp: ${r.empenho?_sanEsc(r.empenho):'<span style="color:var(--red)">não vinculado</span>'}</div><div>NF: ${_sanEsc(r.nota_fiscal||'—')}</div>${r.patrimonio?('<div>Pat: '+_sanEsc(r.patrimonio)+'</div>'):''}`;
         recInfo=r.tipo==='Aquisição'
           ?`${r.qtde_recebida||0}<br><span style="color:var(--text3)">saldo AF ${r.saldo_af}</span><br><span style="color:var(--text3)">saldo item ${r.saldo_item}</span>`
           :(r.recebido?'sim':'—');
@@ -6659,6 +6916,74 @@ function renderItensEntregas(){
 let _ceAdvSel=new Set(), _ceAdvLock='', _ceAdvAtivo=false, _ceAdvRows=[], _ceAdvContrato=null;
 function _ceRowKey(r){ return r.entrega_id?('a'+r.entrega_id):(r.exec_id?('t'+r.exec_id):('i'+(r.item_id||r.item||''))); }
 function _ceAdvLockKey(r){ return String(r.contrato||r.processo||''); }
+async function baixarAFPDF(key){
+  const row=entregasRows.find(r=>_ceRowKey(r)===key);
+  if(!row){ if(window.toast) toast('Registro da AF não encontrado.','error'); return; }
+  if(!row.af_numero){ if(window.toast) toast('Este item ainda não tem AF emitida.','error'); return; }
+  let c={};
+  if(row.contrato_id){
+    const {data}=await sb.from('contratos').select('id,cpl,numero_contrato,prestador,cnpj,objeto,secao').eq('id',row.contrato_id).maybeSingle();
+    c=data||{};
+  }
+  const afData=row.af_dataISO?fmtDate(row.af_dataISO):'—';
+  const limite=row.limiteISO?fmtDate(row.limiteISO):'—';
+  const qtde=Number(row.qtde)||0;
+  const unit=Number(row.valor_item)||0;
+  const total=unit&&qtde?unit*qtde:0;
+  const empresa=c.prestador||row.empresa||'—';
+  const contrato=c.numero_contrato||row.contrato||'—';
+  const cnpj=c.cnpj||'—';
+  const objeto=c.objeto||row.item||'—';
+  const responsavel=currentProfile?.nome||currentProfile?.email||'Responsável';
+  let empPDF=row.empenho||'';
+  if(row.tipo==='ATA'&&row.exec_id){
+    const {data:ex}=await sb.from('atas_execucao').select('id,empenho,emenda_item_id').eq('id',row.exec_id).maybeSingle();
+    empPDF=await _ataExecEmpenhoVinculado({...row,...(ex||{})})||empPDF;
+  }else{
+    empPDF=await _itemEmpenhoVinculado(row)||empPDF;
+  }
+  if(empPDF) row.empenho=empPDF;
+  const pdfCell='border:1px solid #777!important;padding:5px!important;background:#fff!important;color:#111!important';
+  const pdfLabel=pdfCell+';width:30%;font-weight:700!important';
+  const pdfHead='border:1px solid #777!important;padding:5px!important;background:#eee!important;color:#111!important;font-weight:700!important';
+  const pdfRight=pdfCell+';text-align:right!important';
+  const html=document.createElement('div');
+  html.style.cssText='width:190mm;min-height:267mm;padding:12mm;background:#fff!important;color:#111!important;font-family:Arial,sans-serif;font-size:10pt;color-scheme:light';
+  html.innerHTML=`<div style="background:#fff!important;color:#111!important">
+  <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:8mm;margin-bottom:8mm;background:#fff!important;color:#111!important">
+    <div style="font-weight:700;font-size:11pt;background:#fff!important;color:#111!important">PREFEITURA DE SOROCABA - SECRETARIA DA SAÚDE</div>
+    <div>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde</div>
+    <h1 style="font-size:15pt;margin:7mm 0 1mm;background:#fff!important;color:#111!important">AUTORIZAÇÃO DE FORNECIMENTO</h1>
+    <div style="font-size:12pt;font-weight:700;background:#fff!important;color:#111!important">AF nº ${_sanEsc(row.af_numero)}</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:7mm;background:#fff!important;color:#111!important">
+    <tbody>
+      <tr><td style="${pdfLabel}">Data da AF</td><td style="${pdfCell}">${afData}</td></tr>
+      <tr><td style="${pdfLabel}">Processo/CPL</td><td style="${pdfCell}">${_sanEsc(row.processo||c.cpl||'—')}</td></tr>
+      <tr><td style="${pdfLabel}">Contrato/ATA</td><td style="${pdfCell}">${_sanEsc(contrato)}</td></tr>
+      <tr><td style="${pdfLabel}">Fornecedor</td><td style="${pdfCell}">${_sanEsc(empresa)}</td></tr>
+      <tr><td style="${pdfLabel}">CNPJ</td><td style="${pdfCell}">${_sanEsc(cnpj)}</td></tr>
+      <tr><td style="${pdfLabel}">Empenho</td><td style="${pdfCell}">${_sanEsc(empPDF||'—')}</td></tr>
+      <tr><td style="${pdfLabel}">Local de entrega</td><td style="${pdfCell}">${_sanEsc(row.unidade||'—')}</td></tr>
+      <tr><td style="${pdfLabel}">Prazo/data limite</td><td style="${pdfCell}">${limite}</td></tr>
+      <tr><td style="${pdfLabel}">Objeto</td><td style="${pdfCell}">${_sanEsc(objeto)}</td></tr>
+    </tbody>
+  </table>
+  <table style="width:100%;border-collapse:collapse;background:#fff!important;color:#111!important">
+    <thead><tr><th style="${pdfHead}">Item</th><th style="${pdfHead}">Unidade</th><th style="${pdfHead};text-align:right!important">Qtde</th><th style="${pdfHead};text-align:right!important">Valor unitário</th><th style="${pdfHead};text-align:right!important">Valor total</th></tr></thead>
+    <tbody><tr><td style="${pdfCell}">${_sanEsc(row.item||'—')}</td><td style="${pdfCell}">${_sanEsc(row.unidade||'—')}</td><td style="${pdfRight}">${qtde||'—'}</td><td style="${pdfRight}">${unit?fmtFull(unit):'—'}</td><td style="${pdfRight}">${total?fmtFull(total):'—'}</td></tr></tbody>
+  </table>
+  <p style="margin-top:8mm;text-align:justify;background:#fff!important;color:#111!important">Autorizamos o fornecimento do item acima, conforme condições pactuadas no contrato/ata e documentos vinculados.</p>
+  <div style="margin-top:28mm;text-align:center;background:#fff!important;color:#111!important"><div style="border-top:1px solid #111;width:80mm;margin:0 auto 2mm;background:#fff!important;color:#111!important"></div><strong>${_sanEsc(responsavel)}</strong><br>Responsável pela emissão</div>
+  </div>`;
+  document.body.appendChild(html);
+  try{
+    await ensureLib('html2pdf');
+    await html2pdf().set({margin:[8,8,8,8],filename:`AF-${_safeFileName(row.af_numero)}.pdf`,html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(html).save();
+  }finally{
+    html.remove();
+  }
+}
 function _ceAdvElegivel(r){ return !r.recebido && !r.cancelado && !!(r.contrato||r.processo); }
 function _ceAdvCheckbox(r){
   if(!_ceAdvElegivel(r)||!podeEditar('itens')) return '';
@@ -6880,6 +7205,19 @@ async function _recCarregarDocs(row){
 // Empenho herdado: vinculado ao item (empenho_itens) antes da AF, ou ao contrato.
 async function _recCarregarEmpenhoHerdado(row){
   let emp=null;
+  if(row.tipo==='ATA'){
+    if(row.emenda_item_id){
+      const {data:ei}=await sb.from('empenho_itens').select('empenho_id, empenhos(id,numero,ano)').eq('emenda_item_id',row.emenda_item_id).limit(1);
+      if(ei&&ei.length&&ei[0].empenhos) emp=ei[0].empenhos;
+    }
+    if(!emp && row.empenho) emp={id:null,numero:row.empenho,ano:null};
+    window._recEmpenhoHerdado=emp;
+    const info=document.getElementById('rec-empenho-info');
+    const hid=document.getElementById('rec-empenho-id-herdado');
+    if(info) info.value=emp?`${emp.numero}${emp.ano?(' / '+emp.ano):''}`:'(nenhum empenho vinculado)';
+    if(hid) hid.value=emp?.id||'';
+    return emp;
+  }
   const {data:ei}=await sb.from('empenho_itens').select('empenho_id, empenhos(id,numero,ano)').eq('item_id',row.item_id).limit(1);
   if(ei&&ei.length&&ei[0].empenhos) emp=ei[0].empenhos;
   if(!emp && row.contrato_id){
@@ -6940,6 +7278,8 @@ async function abrirRecebimento(entregaId){
   const row=entregasRows.find(r=>String(r.entrega_id)===String(entregaId));
   if(!row||row.tipo!=='Aquisição'){ if(window.toast) toast('Recebimento disponivel apenas para aquisicoes','error'); return; }
   const saldo=Number(row.saldo_af)||0;
+  document.getElementById('rec-origem').value='Aquisicao';
+  document.getElementById('rec-exec-id').value='';
   document.getElementById('rec-entrega-id').value=row.entrega_id;
   document.getElementById('rec-item-id').value=row.item_id;
   document.getElementById('rec-info').innerHTML=`<b>${_sanEsc(row.item||'Item')}</b><br>AF ${_sanEsc(row.af_numero||'—')} · Processo ${_sanEsc(row.processo||'—')} · Fornecedor ${_sanEsc(row.empresa||'—')}`;
@@ -6958,6 +7298,36 @@ async function abrirRecebimento(entregaId){
   let off=0;
   try{ const {count}=await sb.from('itens_entregas_unidades').select('id',{count:'exact',head:true}).eq('entrega_id',row.entrega_id); off=Number(count)||0; }catch(_){}
   window._recUnidadeOffset=off;
+  _recRenderUnidades();
+  try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
+  catch(e){ _recSetMsg('Erro ao carregar documentos: '+e.message,'err'); }
+  document.getElementById('modal-recebimento').classList.add('active');
+}
+async function abrirRecebimentoAta(execId){
+  if(bloquearSeVisualiz('itens')) return;
+  const row=entregasRows.find(r=>String(r.exec_id)===String(execId)&&r.tipo==='ATA');
+  if(!row){ if(window.toast) toast('Recebimento da ATA nao encontrado','error'); return; }
+  if(!row.af_numero&&!row.af_dataISO){ if(window.toast) toast('Emita a AF antes de receber o item da ata.','error'); return; }
+  const qtde=Number(row.qtde)||0;
+  const jaRecebida=row.recebido?qtde:0;
+  const saldo=Math.max(0,qtde-jaRecebida);
+  document.getElementById('rec-origem').value='ATA';
+  document.getElementById('rec-entrega-id').value='';
+  document.getElementById('rec-item-id').value='';
+  document.getElementById('rec-exec-id').value=row.exec_id;
+  document.getElementById('rec-info').innerHTML=`<b>${_sanEsc(row.item||'Item')}</b><br>AF ${_sanEsc(row.af_numero||'â€”')} Â· Processo ${_sanEsc(row.processo||'â€”')} Â· Fornecedor ${_sanEsc(row.empresa||'â€”')}`;
+  document.getElementById('rec-qtde-autorizada').value=qtde||0;
+  document.getElementById('rec-ja-recebida').value=jaRecebida||0;
+  document.getElementById('rec-saldo-af').value=saldo;
+  document.getElementById('rec-qtde').value=saldo>0?saldo:qtde||'';
+  document.getElementById('rec-tipo').value='total';
+  document.getElementById('rec-data').value=row.entregaISO||new Date().toISOString().slice(0,10);
+  document.getElementById('rec-recebido-por').value=row.recebido_por||'';
+  document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'â€”';
+  ['rec-nf-numero','rec-nf-serie','rec-nf-data','rec-nf-chave','rec-nf-valor','rec-nf-obs','rec-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
+  _recSetMsg('');
+  window._recUnidadeOffset=0;
   _recRenderUnidades();
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
   catch(e){ _recSetMsg('Erro ao carregar documentos: '+e.message,'err'); }
@@ -7042,8 +7412,60 @@ async function _recWriteBackEmenda(row, empenho, nf, patrimonio){
     if(error) throw error;
   }
 }
+async function salvarRecebimentoAta(){
+  const execId=document.getElementById('rec-exec-id').value;
+  const row=entregasRows.find(r=>String(r.exec_id)===String(execId)&&r.tipo==='ATA');
+  if(!row){ _recSetMsg('Registro da ATA nao encontrado.','err'); return; }
+  const qtde=_recNum('rec-qtde');
+  const totalAut=Number(row.qtde)||0;
+  if(!qtde||qtde<=0){ _recSetMsg('Informe uma quantidade recebida maior que zero.','err'); return; }
+  if(totalAut && qtde!==totalAut){
+    _recSetMsg('Recebimento de ATA deve fechar a quantidade total autorizada nesta AF.','err');
+    return;
+  }
+  const dataRec=document.getElementById('rec-data').value;
+  if(!dataRec){ _recSetMsg('Informe a data do recebimento.','err'); return; }
+  const btn=document.getElementById('rec-salvar'); const label=btn.textContent;
+  btn.disabled=true; btn.textContent='Salvando...'; _recSetMsg('Salvando...');
+  try{
+    const nf=await _recObterOuCriarNF(row);
+    const emp=await _recCarregarEmpenhoHerdado(row);
+    const empNumero=emp?.numero||row.empenho||null;
+    if(!empNumero) throw new Error('Item sem empenho vinculado. Vincule o empenho antes do recebimento.');
+    const unidades=[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
+      patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
+      numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
+    }));
+    const patrimonioWB=unidades.map(u=>{
+      if(u.patrimonio&&u.numero_serie) return `${u.patrimonio} (serie ${u.numero_serie})`;
+      return u.patrimonio||u.numero_serie||'';
+    }).filter(Boolean).join('; ')||null;
+    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero};
+    const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
+    if(error) throw error;
+    await _recWriteBackEmenda(row,{numero:empNumero},nf,patrimonioWB);
+    row.recebido=true;
+    row.entregaISO=dataRec;
+    row.nota_fiscal=nf.numero||row.nota_fiscal||'';
+    row.patrimonio=patrimonioWB||row.patrimonio||'';
+    row.empenho=empNumero;
+    document.getElementById('modal-recebimento').classList.remove('active');
+    if(window.toast) toast('Recebimento da ATA registrado','success');
+    itensEntregasCarregado=false;
+    confirmacoesCarregado=false;
+    await loadItensEntregas();
+    await loadConfirmacoes();
+    await loadAtas();
+    if(row.emenda_item_id) loadData();
+  }catch(e){
+    _recSetMsg('Erro: '+e.message,'err');
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
+}
 async function salvarRecebimento(){
   if(bloquearSeVisualiz('itens')) return;
+  if((document.getElementById('rec-origem')?.value||'')==='ATA') return salvarRecebimentoAta();
   const entregaId=document.getElementById('rec-entrega-id').value;
   const row=entregasRows.find(r=>String(r.entrega_id)===String(entregaId));
   if(!row){ _recSetMsg('Registro de AF nao encontrado.','err'); return; }
@@ -7105,6 +7527,7 @@ async function salvarRecebimento(){
   }
 }
 window.abrirRecebimento=abrirRecebimento;
+window.abrirRecebimentoAta=abrirRecebimentoAta;
 window.salvarRecebimento=salvarRecebimento;
 window._recToggleNovoDoc=_recToggleNovoDoc;
 window.normalizarNumeroDocumento=normalizarNumeroDocumento;
@@ -7161,14 +7584,21 @@ async function loadConfirmacoes(){
   });
   const {data:at,error:e2}=await sb.from('atas_execucao').select('*').order('created_at',{ascending:false});
   if(e2){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (atas): '+_sanEsc(e2.message)+'</div>'; return; }
+  const ataEmendaInfo={};
+  const ataEmendaIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
+  if(ataEmendaIds.length){
+    const {data:emInfo}=await sb.from('emenda_itens').select('id,empenho,nota_fiscal,patrimonio').in('id',ataEmendaIds);
+    (emInfo||[]).forEach(e=>{ ataEmendaInfo[String(e.id)]=e; });
+  }
   (at||[]).forEach(r=>{
+    const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
     rows.push({
       tipo:'ATA', id:r.id, processo:r.cpl||'', contrato:r.sim||'', empresa:'',
-      item:r.item||'', unidade:r.unidade||'', qtde:Number(r.qtde)||0, patrimonio:r.patrimonio||'',
-      empenho:r.empenho||'', nota_fiscal:r.nf||'', data_recebimento:_toISODate(r.dt_entrega||r.data_af),
+      item:r.item||'', unidade:r.unidade||'', qtde:Number(r.qtde)||0, patrimonio:emInfo.patrimonio||r.patrimonio||'',
+      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:r.nf||emInfo.nota_fiscal||'', data_recebimento:_toISODate(r.dt_entrega||r.data_af),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
       termo_responsavel:r.termo_responsavel||'', termo_cargo:r.termo_cargo||'', confirmacao_obs:r.confirmacao_obs||'',
-      emenda_item_id:null
+      emenda_item_id:r.emenda_item_id||null
     });
   });
   confirmacaoRows=rows;
@@ -11758,8 +12188,20 @@ async function salvarNovoContrato(){
   const fiscalizacao=fiscais.join(', ');
   const email=document.getElementById("nc-email").value.trim();
   const modoNC=_ncModo(window._gerarContratoProcesso?.natureza);
+  const numeroContrato=document.getElementById("nc-numero").value.trim();
+  const inicioContrato=document.getElementById("nc-inicio").value||null;
+  const secSelEarly=document.getElementById("nc-secao");
+  const secaoEarly=secSelEarly?.value==='__nova__'
+    ?document.getElementById("nc-secao-novo").value.trim()
+    :(secSelEarly?.value||'');
   if(!window._gerarContratoProcesso){showMsg("nc","Selecione o processo (licitação) (*).","err");return;}
   if(!cpl){showMsg("nc","Selecione o processo (*)","err");return;}
+  if(tipoInstrumento==="ATA"){
+    if(!numeroContrato){showMsg("nc","Informe o número da ATA/contrato (*).","err");return;}
+    if(!/^\d+$/.test(numeroContrato)){showMsg("nc","Número da ATA/contrato deve conter somente números, sem letras, barras, símbolos ou espaços.","err");return;}
+    if(!inicioContrato){showMsg("nc","Informe a data de início da ATA/contrato (*).","err");return;}
+    if(!secaoEarly){showMsg("nc","Informe a seção da ATA/contrato (*).","err");return;}
+  }
   if(!sel.value){showMsg("nc","Selecione a empresa (ou cadastre uma nova).","err");return;}
   if(novaEmpresa&&!prestador){showMsg("nc","Informe a razão social da nova empresa.","err");return;}
   if(!email){showMsg("nc","Informe o e-mail da empresa (*).","err");return;}
@@ -11793,12 +12235,12 @@ async function salvarNovoContrato(){
   for(const nome of fiscais){ try{ await obterOuCriarPessoa(nome); }catch(_){} }
   const dados={
     cpl, prestador, objeto, fornecedor_id,tipo_instrumento:tipoInstrumento,
-    numero_contrato:_mn("nc-numero"),
+    numero_contrato:numeroContrato||null,
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
     secao:secaoVal,
     status:document.getElementById("nc-status").value,
-    data_inicio:document.getElementById("nc-inicio").value||null,
+    data_inicio:inicioContrato,
     data_assinatura:document.getElementById("nc-assinatura").value||null,
     vigencia_atual:_mn("nc-vigencia"),
     vencimento:_mn("nc-vencimento"),

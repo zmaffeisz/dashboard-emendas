@@ -45,7 +45,7 @@
 | Execução de ata | aba **Atas Rp** (`atas_execucao`) | AF/entrega/termo | Saldo, Inventário |
 | AF / entrega | aba **Itens** (`itens_entregas`) | modal AF / recebimento / confirmação na unidade | Emendas, Saldo, NF, Inventário |
 | Recebimento por unidade | aba **Itens** (`itens_entregas_unidades`) | modal recebimento | agregado em `itens_entregas` (trigger) |
-| Empenho | aba **Itens/Contratos** (`empenhos`,`empenho_itens`) | modal empenho | Saldo, NF |
+| Empenho | aba **Itens/Contratos** (`empenhos`,`empenho_itens`) | modal empenho | Saldo, NF, AF de ATA |
 | Nota Fiscal | aba **Itens** (`notas_fiscais`,`nota_fiscal_itens`) | modal NF/recebimento | Saldo, conferência |
 | Sanção | aba **Sanções** | solicitação/aplicação | Contrato |
 | Chamado | `chamado.html` (público) / aba Chamados | controle interno | Fiscalização, Contrato |
@@ -61,12 +61,17 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    itens selecionados são copiados para `atas_itens` e `itens.ata_item_id` é preenchido
    (idempotente; não duplica). A **fonte de verdade da execução** permanece na aba Atas.
    ([index.html:7118+](../index.html), `abrirModalNovoContrato`)
+   - Para ATA RP, o contrato gerado exige número apenas numérico, data de início e seção.
+   - A execução/solicitação de ATA originada de Emenda só pode usar `emenda_item_id` ainda
+     livre; item já vinculado fica bloqueado na seleção e também é barrado no salvamento.
 3. **Trigger de agregação** — `itens_entregas_unidades` → `_sync_entrega_agregado()`
    atualiza `itens_entregas.patrimonio/numero_serie` sem duplicar dado.
 4. **Emendas como painel consolidado** — a aba Emendas lê o item cadastrado e agrega o
    fluxo de `itens`, `itens_entregas`, `itens_entregas_unidades`, `empenho_itens` e
    `nota_fiscal_itens`. Por isso AF emitida, aguardando AF, confirmação na unidade,
    empenho, NF, patrimônio e data de entrega precisam aparecer ali sem edição manual.
+   Para ATA, `atas_execucao` também alimenta esse painel: empenho vinculado, AF, prazo
+   calculado e entrega precisam refletir no item da emenda correspondente.
 5. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`
    sempre que lida (não há valor "congelado" duplicado).
 
@@ -81,8 +86,12 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
 3. **Contrato/ATA** — homologado, cria-se o registro em `contratos` com
    `tipo_instrumento = 'ATA'`, vinculado ao `processo_id` e `fornecedor_id`. Os itens são
    **espelhados** para `atas_itens`.
-4. **Execução da ata** — em `atas_execucao` registram-se AF, unidade, quantidade, valor,
-   previsão e entrega; e/ou em `itens_entregas` (AF), com empenho vinculado.
+4. **Execução da ata** — em `atas_execucao` registram-se unidade, quantidade, valor,
+   empenho, AF, previsão e entrega. A AF só pode ser emitida depois de vínculo de empenho;
+   a data limite vem de `data_af + prazo_entrega` herdado da ATA/licitação.
+   O vínculo de empenho pode nascer diretamente na subaba **Empenhos** ao selecionar o
+   pedido da ATA; nesse caso o Controle de Entregas apenas libera **Emitir AF**, sem criar
+   novo vínculo/rateio.
 5. **Recebimento e confirmação** — `itens_entregas.qtde_recebida`, `data_entrega_unidade`
    e, por unidade física, linhas em
    `itens_entregas_unidades` (patrimônio/série). A **NF** é cadastrada **uma vez** em

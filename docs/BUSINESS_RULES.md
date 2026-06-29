@@ -51,6 +51,8 @@
 
 - O **status de licitação viaja por item** (`itens.status_lic_id`,
   `emenda_itens.status_id`), não pela emenda. A emenda apenas **lê** o status.
+- Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
+  com espaços.
 - `status_opcoes` é o catálogo (com `ordem`, `contexto`, `orgao`, `automatico`).
 - **A confirmar:** regra de "auto-trava" de status automáticos (campo `automatico`) e o
   conjunto canônico de status oficiais para "Controle de processos". Ver [DATABASE.md](DATABASE.md#status).
@@ -66,6 +68,12 @@
   encerrar/prorrogar/editar feitos em Contratos. **Não é subaba de Contratos.**
 - Ao salvar contrato `tipo=ATA`, os itens são **espelhados** para `atas_itens`
   (idempotente; `itens.ata_item_id` preenchido). Fonte de verdade da execução = aba Atas.
+- Ao gerar contrato/ATA a partir de **ATA de Registro de Preços**, número do instrumento,
+  data de início e seção são obrigatórios. O número do contrato/ATA deve conter somente
+  dígitos, sem letras, barras, símbolos ou espaços.
+- Na solicitação/execução de ATA com origem em **Emenda**, item de emenda já vinculado a
+  outro processo/solicitação não pode ser selecionado nem salvo novamente. A lista deve
+  mostrar item, quantidade e unidade para evitar vínculo errado.
 
 ## 5. Notas Fiscais (anti-duplicidade) {#notas-fiscais}
 
@@ -91,6 +99,13 @@
 - `empenhos` com `valor_empenhado`, `valor_anulado`, `saldo_empenho`.
 - `empenho_itens` faz o vínculo/rateio (`valor_vinculado`, `quantidade_vinculada`) a
   emenda/item/item-físico.
+- Para **ATA de Registro de Preços**, o empenho deve poder ser vinculado diretamente ao
+  pedido/execução da ATA na subaba **Empenhos**. Esse vínculo já libera a emissão de AF no
+  Controle de Entregas; não deve ser necessário vincular de novo nem digitar novamente
+  quantidade/valor.
+- O mesmo pedido de ATA não pode gerar dois vínculos financeiros simultâneos em
+  `empenho_itens`. Ao trocar o empenho do pedido, o vínculo anterior deve ser substituído e
+  o saldo dos empenhos afetados recalculado.
 - No "gerar contrato" o empenho considera **fonte + emenda** (memória do projeto, lote
   27/06). **A confirmar** comportamento exato.
 
@@ -113,6 +128,11 @@
   ele é herdado de `atas_itens.prazo_entrega` (ou do item de origem vinculado) e a data
   limite é calculada por `data_af + prazo`. Após emitir, o item sai de "aguardando AF",
   libera o "Receber" e a aba **Emendas** reflete o estágio "AF emitida".
+- AF de **ATA** e de **aquisição** exige empenho vinculado antes da emissão. Sem empenho, o
+  sistema deve bloquear o botão/salvamento e orientar o usuário a usar **Vincular empenho**.
+- Após emitir AF, o Controle de Entregas deve disponibilizar **Baixar AF em PDF** com os
+  dados oficiais da autorização: número/data da AF, processo, contrato/ATA, fornecedor,
+  CNPJ, empenho, item, quantidade, valores, unidade/local de entrega, prazo e responsável.
 - Recebimento por unidade física: `itens_entregas_unidades` (patrimônio/série individuais
   por unidade; `unidade_seq` 1..N).
 - Trigger `_sync_entrega_agregado` mantém `itens_entregas.patrimonio/numero_serie` como

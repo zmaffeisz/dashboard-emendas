@@ -74,13 +74,20 @@ Ciclo de vida do item após a contratação:
   ATA para confirmar a entrega real na unidade, termo e responsável. A confirmação alimenta
   a aba Emendas.
 - **Empenhos**: cadastro e vínculo de empenhos; a confirmação/Emendas pode herdar o empenho
-  de `empenho_itens` ou do contrato.
+  de `empenho_itens`, do contrato ou de `atas_execucao.empenho`.
 - **AF (Autorização de Fornecimento)** — aquisição: `abrirModalAF`, `abrirAFLote` →
   `itens_entregas`. ATA: `abrirModalAF` grava `af_numero`/`data_af`/`prev_entrega` em
   `atas_execucao`, herdando o prazo de `atas_itens.prazo_entrega` (ou do item de origem)
   para calcular a data limite. Se a origem não tiver prazo, a emissão da AF da ATA deve ser
   bloqueada até o cadastro ser corrigido.
 - **Empenho**: vínculo via `empenhos`/`empenho_itens` (`abrirVincularEmpenho`).
+  A emissão de AF de aquisição e ATA deve ser bloqueada sem empenho vinculado.
+  Em ATA RP, a subaba **Empenhos** também lista pedidos de ATA aguardando vínculo; ao
+  selecionar o pedido ali, o Controle de Entregas deve tratar como empenho já vinculado e
+  exibir apenas o fluxo normal de emissão da AF.
+- **PDF de AF**: depois da emissão, a linha deve oferecer **Baixar AF em PDF** com dados do
+  processo, contrato/ATA, fornecedor, CNPJ, empenho, item, quantidades, valores, prazo e
+  responsável.
 - **Recebimento**: `abrirRecebimento` → quantidade recebida, NF, patrimônio/série.
   Recebimento **por unidade física** em `itens_entregas_unidades` (cada unidade com
   patrimônio/série próprios; NF referenciada sem valor).
@@ -102,6 +109,8 @@ execução em `atas_execucao`.
 > - Ao cadastrar um contrato do tipo ATA, os itens selecionados são **espelhados** para
 >   `atas_itens` (`abrirModalNovoContrato` → espelhamento; a fonte de verdade da execução
 >   permanece na aba Atas).
+> - Ao solicitar execução de ATA com origem em Emenda, item de emenda já vinculado a outro
+>   fluxo deve ficar bloqueado e não pode ser salvo novamente.
 
 ## 10. Contratos em execução  ⭐ MATRIZ
 Aba-**matriz** de todos os instrumentos contratuais (`contratos`). Inclui vigências
