@@ -4713,11 +4713,12 @@ async function excluirExec(execId){
 // ═══ PRORROGAR PRAZO DE ENTREGA ═══
 let _prorrogarExecId=null, _prorrogarEntregaId=null;
 function abrirModalProrrogarPrazo(execId){
-  const r=atasExec.find(x=>String(x.id)===String(execId));
+  const r=(atasExec||[]).find(x=>String(x.id)===String(execId))
+    || entregasRows.find(x=>String(x.exec_id)===String(execId));
   if(!r) return;
-  _prorrogarExecId=r.id; _prorrogarEntregaId=null;
+  _prorrogarExecId=r.id||r.exec_id; _prorrogarEntregaId=null;
   document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade}`;
-  document.getElementById("pp-data").value=r?.prev_entrega||"";
+  document.getElementById("pp-data").value=r?.prev_entrega||r?.limiteISO||"";
   document.getElementById("pp-obs").value="";
   document.getElementById("pp-msg").className="fmsg";
   document.getElementById("modal-prorrogar-prazo").classList.add("active");
@@ -4750,14 +4751,21 @@ async function salvarProrrogarPrazo(){
     Object.assign(r,{limiteISO:data,status:_prazoStatus(data,r.recebido,r.cancelado)});
     renderItensEntregas();
   }else{
-    const r=atasExec.find(x=>String(x.id)===String(_prorrogarExecId));
+    const r=(atasExec||[]).find(x=>String(x.id)===String(_prorrogarExecId))
+      || entregasRows.find(x=>String(x.exec_id)===String(_prorrogarExecId));
     if(!r){btn.disabled=false;btn.textContent="Salvar";return;}
-    const {data:salvo,error}=await sb.from("atas_execucao").update({prev_entrega:data,obs_prazo:obsPrazo||null}).eq("id",r.id).select("id,prev_entrega,obs_prazo");
+    const execId=r.id||r.exec_id;
+    const {data:salvo,error}=await sb.from("atas_execucao").update({prev_entrega:data,obs_prazo:obsPrazo||null}).eq("id",execId).select("id,prev_entrega,obs_prazo");
     btn.disabled=false;btn.textContent="Salvar";
     if(error){showMsg("pp","Erro: "+error.message,"err");return;}
     if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
-    Object.assign(r,{prev_entrega:data,obs_prazo:obsPrazo});
-    filtrarExecs();
+    Object.assign(r,{prev_entrega:data,limiteISO:data,obs_prazo:obsPrazo,status:_prazoStatus(data,r.recebido,false)});
+    const ataRow=entregasRows.find(x=>String(x.exec_id)===String(execId));
+    if(ataRow&&ataRow!==r) Object.assign(ataRow,{limiteISO:data,obs_prazo:obsPrazo,status:_prazoStatus(data,ataRow.recebido,false)});
+    const execRow=(atasExec||[]).find(x=>String(x.id)===String(execId));
+    if(execRow&&execRow!==r) Object.assign(execRow,{prev_entrega:data,obs_prazo:obsPrazo});
+    if(typeof filtrarExecs==="function") filtrarExecs();
+    renderItensEntregas();
   }
   showMsg("pp","✓ Prazo prorrogado!","ok");
   setTimeout(()=>document.getElementById("modal-prorrogar-prazo").classList.remove("active"),1000);
