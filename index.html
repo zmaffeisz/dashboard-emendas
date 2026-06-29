@@ -7571,12 +7571,14 @@ async function loadConfirmacoes(){
     if(!(Number(r.qtde_recebida)||0) && !r.data_recebimento) return;
     const it=r.itens||{};
     const empVinculado=(empPorItem[r.item_id]||empPorContrato[it.contrato_id]||[]).filter(Boolean).join(', ');
+    const nfAq=r.notas_fiscais?.numero||r.nota_fiscal||'';
+    if(!nfAq) return;
     rows.push({
       tipo:'Aquisição', id:r.id, item_id:r.item_id,
       processo:it.processos?.identificador||'', contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
       empresa:it.fornecedores?.razao_social||'', item:it.descricao||'', unidade:it.unidades?.nome||'',
       qtde:Number(r.qtde_recebida)||Number(r.qtde_autorizada)||0, patrimonio:r.patrimonio||'', empenho:r.empenhos?.numero||r.empenho||empVinculado||'',
-      nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'', af_numero:r.af_numero||'', af_data:_toISODate(r.af_data), data_recebimento:_toISODate(r.data_recebimento),
+      nota_fiscal:nfAq, af_numero:r.af_numero||'', af_data:_toISODate(r.af_data), data_recebimento:_toISODate(r.data_recebimento),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
       termo_responsavel:r.termo_responsavel||'', termo_cargo:r.termo_cargo||'', confirmacao_obs:r.confirmacao_obs||'',
       emenda_item_id:it.emenda_item_id||null
@@ -7587,15 +7589,26 @@ async function loadConfirmacoes(){
   const ataEmendaInfo={};
   const ataEmendaIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
   if(ataEmendaIds.length){
-    const {data:emInfo}=await sb.from('emenda_itens').select('id,empenho,nota_fiscal,patrimonio').in('id',ataEmendaIds);
+    const {data:emInfo}=await sb.from('emenda_itens').select('id,item,unidade_beneficiada,unidade_entrega,empenho,nota_fiscal,patrimonio').in('id',ataEmendaIds);
     (emInfo||[]).forEach(e=>{ ataEmendaInfo[String(e.id)]=e; });
+  }
+  const ataItemInfo={};
+  const ataItemIds=[...new Set((at||[]).map(r=>r.ata_item_id).filter(Boolean))];
+  if(ataItemIds.length){
+    const {data:aiInfo}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,contratos(cpl,numero_contrato,prestador)').in('id',ataItemIds);
+    (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
   }
   (at||[]).forEach(r=>{
     const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
+    const ai=ataItemInfo[String(r.ata_item_id||'')]||{};
+    const nfAta=r.nf||emInfo.nota_fiscal||'';
+    const dataRec=_toISODate(r.dt_entrega);
+    // ATA so aparece aqui apos recebimento administrativo com NF.
+    if(!dataRec || !nfAta) return;
     rows.push({
-      tipo:'ATA', id:r.id, processo:r.cpl||'', contrato:r.sim||'', empresa:'',
-      item:r.item||'', unidade:r.unidade||'', qtde:Number(r.qtde)||0, patrimonio:emInfo.patrimonio||r.patrimonio||'',
-      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:r.nf||emInfo.nota_fiscal||'', data_recebimento:_toISODate(r.dt_entrega||r.data_af),
+      tipo:'ATA', id:r.id, processo:r.cpl||ai.cpl||ai.contratos?.cpl||'', contrato:r.sim||ai.sim||ai.contratos?.numero_contrato||'', empresa:ai.empresa||ai.contratos?.prestador||'',
+      item:r.item||ai.item||emInfo.item||'', unidade:r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'', qtde:Number(r.qtde)||0, patrimonio:emInfo.patrimonio||r.patrimonio||'',
+      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, data_recebimento:dataRec,
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
       termo_responsavel:r.termo_responsavel||'', termo_cargo:r.termo_cargo||'', confirmacao_obs:r.confirmacao_obs||'',
       emenda_item_id:r.emenda_item_id||null
