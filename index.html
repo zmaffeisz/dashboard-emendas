@@ -87,6 +87,13 @@
         <input type="text" id="f-busca" placeholder="🔎 Buscar por qualquer coisa: item, CPL, empenho, NF, patrimônio, unidade, parlamentar..." oninput="applyFilters()" style="flex:1;min-width:0;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
         <button class="clear-btn" onclick="clearAllFilters()" style="white-space:nowrap">✕ Limpar</button>
       </div>
+      <div style="margin:-.35rem 0 .85rem;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text3);font-weight:600">Mostrar municipais antigas:</span>
+        <button type="button" id="em-muni-2022" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2022,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2022" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2022</button>
+        <button type="button" id="em-muni-2023" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2023,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2023" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2023</button>
+        <button type="button" id="em-muni-2024" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2024,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2024" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2024</button>
+        <button type="button" id="em-muni-2025" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2025,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2025" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2025</button>
+      </div>
       <div style="min-width:0">
 
     <div class="metrics">
@@ -121,6 +128,7 @@
               <th style="white-space:nowrap">Ações</th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('ano')">Ano <span class="sort-icon" id="si-ano"></span></span><span class="hdr-filter-btn" id="hf-ano" onclick="openHeaderFilter(event,'ano')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></span><span class="hdr-filter-btn" id="hf-unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></span><span class="hdr-filter-btn" id="hf-item" onclick="openHeaderFilter(event,'item')" title="Filtrar">▾</span></span></th>
@@ -229,7 +237,13 @@
         <div class="fg-label">Filtro livre por palavra</div>
         <input type="text" id="se-busca" placeholder="Busque por emenda, parlamentar, unidade, status..." oninput="renderSaldoEmendas()" style="width:100%;background:var(--surface);color:var(--text)">
       </div>
-      <label title="Municipais de exercícios anteriores (antes de 2026) ficam ocultas por padrão para não confundir com as municipais atuais" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none"><input type="checkbox" id="se-muni-antigas" onchange="renderSaldoEmendas()"> Mostrar municipais antigas</label>
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text3);font-weight:600">Mostrar municipais antigas:</span>
+        <button type="button" id="se-muni-2022" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('se',2022,renderSaldoEmendas)" title="Mostrar ou ocultar emendas municipais de 2022" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2022</button>
+        <button type="button" id="se-muni-2023" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('se',2023,renderSaldoEmendas)" title="Mostrar ou ocultar emendas municipais de 2023" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2023</button>
+        <button type="button" id="se-muni-2024" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('se',2024,renderSaldoEmendas)" title="Mostrar ou ocultar emendas municipais de 2024" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2024</button>
+        <button type="button" id="se-muni-2025" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('se',2025,renderSaldoEmendas)" title="Mostrar ou ocultar emendas municipais de 2025" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2025</button>
+      </div>
       <button onclick="limparFiltrosSaldo()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;cursor:pointer">Limpar filtros</button>
     </div>
     <div class="table-card">
@@ -3831,7 +3845,9 @@ async function loadAtas(){
     if(r3.error) throw r3.error;
     if(r4.error) throw r4.error;
     const fornecedorPorId=new Map((r4.data||[]).map(f=>[String(f.id),f]));
-    atasContratos=(r3.data||[]).map(c=>{
+    atasContratos=(r3.data||[])
+      .filter(c=>!String(c.status||"").toUpperCase().startsWith("ENCERRAD"))
+      .map(c=>{
       const fornecedor=fornecedorPorId.get(String(c.fornecedor_id))||null;
       return {...c,
         empresa:(fornecedor?.razao_social||c.prestador||"").trim(),
@@ -3842,6 +3858,8 @@ async function loadAtas(){
     atasItens=(r1.data||[]).map(r=>{
       const contrato=contratoPorId.get(String(r.contrato_id));
       if(!contrato) return null;
+      const statusItem=(r.status_contrato||contrato.status||"VIGENTE").trim();
+      if(statusItem.toUpperCase().startsWith("ENCERRAD")) return null;
       return {
       id:r.id,
       contrato_id:r.contrato_id,
@@ -3853,7 +3871,7 @@ async function loadAtas(){
       qtde_contratada:Number(r.qtde_contratada)||0,
       valor_unit:Number(r.valor_unit)||0,
       vencimento:(contrato.vencimento||"").trim(),
-      status:(contrato.status||"VIGENTE").trim(),
+      status:statusItem,
       empresa:contrato.empresa,
       prazo_entrega:parseInt(r.prazo_entrega)||0,
       contrato
@@ -6713,8 +6731,8 @@ async function loadItensEntregas(){
     const ids=[...new Set(at.map(r=>r.ata_item_id).filter(Boolean).map(String))]
       .filter(id=>!_ataItemPorId[id]);
     if(ids.length){
-      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,prazo_entrega,contrato_id,valor_unit,contratos(cpl,numero_contrato,prestador)').in('id',ids);
-      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.empresa||i.contratos?.prestador||'',prazo_entrega:i.prazo_entrega||null,contrato_id:i.contrato_id||null,valor_unit:i.valor_unit||null}; });
+      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,status_contrato,prazo_entrega,contrato_id,valor_unit,contratos(cpl,numero_contrato,prestador,status)').in('id',ids);
+      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',empresa:i.empresa||i.contratos?.prestador||'',status:i.status_contrato||i.contratos?.status||'',prazo_entrega:i.prazo_entrega||null,contrato_id:i.contrato_id||null,valor_unit:i.valor_unit||null}; });
     }
   }
   const _empAtaPorEmendaItem={};
@@ -6737,6 +6755,7 @@ async function loadItensEntregas(){
     const temAF=!!(r.data_af && String(r.data_af).trim());
     const pendenteAF=!temAF && !recebido;
     const ai=_ataItemPorId[String(r.ata_item_id)]||{};
+    if(String(ai.status||'').toUpperCase().startsWith('ENCERRAD')) return;
     const emInfo=_emendaInfoPorId[String(r.emenda_item_id||'')]||{};
     const empAta=(r.empenho&&String(r.empenho).trim())||_empAtaPorEmendaItem[String(r.emenda_item_id||'')]||emInfo.empenho||'';
     out.push({
@@ -7642,12 +7661,13 @@ async function loadConfirmacoes(){
   const ataItemInfo={};
   const ataItemIds=[...new Set((at||[]).map(r=>r.ata_item_id).filter(Boolean))];
   if(ataItemIds.length){
-    const {data:aiInfo}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,contratos(cpl,numero_contrato,prestador)').in('id',ataItemIds);
+    const {data:aiInfo}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,contratos(cpl,numero_contrato,prestador,status)').in('id',ataItemIds);
     (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
   }
   (at||[]).forEach(r=>{
     const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
     const ai=ataItemInfo[String(r.ata_item_id||'')]||{};
+    if(String(ai.contratos?.status||'').toUpperCase().startsWith('ENCERRAD')) return;
     const nfAta=r.nf||emInfo.nota_fiscal||'';
     const dataRec=_toISODate(r.dt_entrega);
     // ATA so aparece aqui apos recebimento administrativo com NF.
@@ -9321,6 +9341,7 @@ function populateFilters(){
 const HDR_FILTER_COLS = {
   tipo:{label:'Tipo', get:r=>r.tipo, disp:v=>v||'(vazio)'},
   emenda:{label:'Emenda', get:r=>r.emenda, disp:v=>v||'(vazio)'},
+  ano:{label:'Ano', get:r=>r.ano, disp:v=>v||'(vazio)'},
   parlamentar:{label:'Parlamentar', get:r=>r.parlamentar, disp:v=>v||'(vazio)'},
   unidade:{label:'Unidade', get:r=>r.unidade, disp:v=>v||'(vazio)'},
   item:{label:'Item', get:r=>r.item, disp:v=>v||'(vazio)'},
@@ -9551,8 +9572,46 @@ function clearF(id){
   if(id.startsWith("cn-")) return filtrarChamadosNovos();
   applyFilters();
 }
+const MUNICIPAL_ANTIGA_ANOS=[2022,2023,2024,2025];
+function _municipalAnoAtivo(prefix,ano){
+  return document.getElementById(`${prefix}-muni-${ano}`)?.dataset.active==='true';
+}
+function _ehMunicipalAntiga(r){
+  return String(r?.tipo||'').toUpperCase()==='MUNICIPAL' && Number(r?.ano)>0 && Number(r?.ano)<2026;
+}
+function _municipalAntigaVisivel(prefix,r){
+  if(!_ehMunicipalAntiga(r)) return true;
+  return _municipalAnoAtivo(prefix,Number(r.ano));
+}
+function _updateMunicipalAnoButtons(prefix){
+  MUNICIPAL_ANTIGA_ANOS.forEach(ano=>{
+    const btn=document.getElementById(`${prefix}-muni-${ano}`);
+    if(!btn) return;
+    const ativo=btn.dataset.active==='true';
+    btn.setAttribute('aria-pressed',ativo?'true':'false');
+    btn.style.background=ativo?'var(--blue)':'var(--surface)';
+    btn.style.color=ativo?'#fff':'var(--text2)';
+    btn.style.borderColor=ativo?'var(--blue)':'var(--border)';
+    btn.style.fontWeight=ativo?'700':'500';
+  });
+}
+function toggleMunicipalAno(prefix,ano,callback){
+  const btn=document.getElementById(`${prefix}-muni-${ano}`);
+  if(!btn) return;
+  btn.dataset.active=btn.dataset.active==='true'?'false':'true';
+  _updateMunicipalAnoButtons(prefix);
+  if(typeof callback==='function') callback();
+}
+function resetMunicipalAnos(prefix){
+  MUNICIPAL_ANTIGA_ANOS.forEach(ano=>{
+    const btn=document.getElementById(`${prefix}-muni-${ano}`);
+    if(btn) btn.dataset.active='false';
+  });
+  _updateMunicipalAnoButtons(prefix);
+}
 function clearAllFilters(){
   ["f-cpl","f-empenho","f-patrimonio","f-nf","f-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  resetMunicipalAnos('em');
   Object.keys(headerFilters).forEach(c=>headerFilters[c]=[]);
   sortCol=null;
   document.querySelectorAll(".sort-icon").forEach(el=>el.textContent="");
@@ -9564,7 +9623,9 @@ function applyFilters(){
   const get=id=>document.getElementById(id)?.value||"";
   const cpl=get("f-cpl").toLowerCase(),busca=get("f-busca").toLowerCase();
   const empenho=get("f-empenho").toLowerCase(),patrimonio=get("f-patrimonio").toLowerCase(),nf=get("f-nf").toLowerCase();
+  _updateMunicipalAnoButtons('em');
   filtered=allRows.filter(r=>{
+    if(!_municipalAntigaVisivel('em',r)) return false;
     for(const col in headerFilters){
       const sel=headerFilters[col];
       if(sel.length){
@@ -9602,7 +9663,8 @@ let _emExpand={};
 function _emSalvarConfigLS(){ try{localStorage.setItem('em_config',JSON.stringify(_emConfig));}catch(_){} }
 function renderEmModoBar(){
   const bar=document.getElementById('em-modo-bar'); if(!bar) return;
-  const disp=EM_MODOS.filter(([k])=>_emConfig.disponiveis.includes(k));
+  const modosPermitidos=new Set(['planilha','por-emenda']);
+  const disp=EM_MODOS.filter(([k])=>modosPermitidos.has(k));
   if(!disp.some(([k])=>k===_emModo)) _emModo=disp[0]?.[0]||'planilha';
   bar.innerHTML='<span style="font-size:11px;color:var(--text3);margin-right:4px">Visualizar:</span>'+
     disp.map(([k,l])=>`<button onclick="emSetModo('${k}')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:${_emModo===k?'var(--blue)':'var(--surface)'};color:${_emModo===k?'#fff':'var(--text2)'}">${l}${k===_emConfig.principal?' ★':''}</button>`).join('')+
@@ -9926,14 +9988,14 @@ function sortSaldoEmendas(col){
   renderSaldoEmendas();
 }
 function limparFiltrosSaldo(){
-  document.getElementById('se-busca').value=''; saldoHeaderFilters={}; saldoSortCol=null; saldoSortAsc=true; closeSaldoHeaderFilter(); renderSaldoEmendas();
+  document.getElementById('se-busca').value=''; saldoHeaderFilters={}; saldoSortCol=null; saldoSortAsc=true; resetMunicipalAnos('se'); closeSaldoHeaderFilter(); renderSaldoEmendas();
 }
 function _saldoRowsVisiveis(){
   const busca=normalizar(document.getElementById('se-busca')?.value||'');
-  const mostrarMuniAntigas=document.getElementById('se-muni-antigas')?.checked||false;
+  _updateMunicipalAnoButtons('se');
   const rows=saldoEmendasRows.map(_saldoComPercentual).filter(r=>{
-    // municipais de exercícios anteriores (histórico de atas encerradas) ficam ocultas por padrão
-    if(!mostrarMuniAntigas && String(r.tipo||'').toUpperCase()==='MUNICIPAL' && Number(r.ano)>0 && Number(r.ano)<2026) return false;
+    // municipais históricas ficam ocultas por padrão e aparecem só pelo botão do respectivo ano
+    if(!_municipalAntigaVisivel('se',r)) return false;
     if(busca&&!normalizar([r.numero_emenda,r.tipo,r.parlamentar,r.unidade,r.status_execucao,r.valor_cedido,r.total_planejado,r.total_executado,r.total_comprometido,r.saldo_remanescente,r.qtd_itens].join(' ')).includes(busca)) return false;
     return Object.entries(saldoHeaderFilters).every(([col,selecionados])=>selecionados.includes(_saldoFilterValue(col,r)));
   });
@@ -10121,7 +10183,7 @@ function renderTable(){
     rows.sort((a,b)=>{
       let va=sortCol==="saldo_emenda"?_saldoEmendaValor(a.emenda_id):a[sortCol],vb=sortCol==="saldo_emenda"?_saldoEmendaValor(b.emenda_id):b[sortCol];
       // Numérico
-      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"||sortCol==="saldo_emenda"){
+      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"||sortCol==="saldo_emenda"||sortCol==="ano"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
       } else if(sortCol==="qtde"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
@@ -10161,6 +10223,14 @@ function renderTable(){
     <td style="font-size:11px;white-space:nowrap">${r.data_entrega||"—"}</td>
     ${podeVerSaldo?`<td>${getSaldoEmenda(r.emenda_id)}</td>`:''}
   </tr>`).join("");
+  document.querySelectorAll("#table-body tr").forEach((tr,idx)=>{
+    const td=document.createElement("td");
+    td.style.fontSize="11px";
+    td.style.color="var(--text3)";
+    td.style.whiteSpace="nowrap";
+    td.textContent=rows[idx]?.ano||"—";
+    tr.insertBefore(td,tr.children[3]||null);
+  });
 }
 
 // ═══ SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO — ITENS DE EMENDAS ═══

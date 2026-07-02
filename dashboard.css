@@ -221,3 +221,6 @@ tr:hover td{background:var(--row-hover)}
 @media(max-width:430px){
   .metrics{grid-template-columns:1fr}
 }
+#em-modo-bar button[onclick="emAbrirConfig()"] {
+  display: none !important;
+}
