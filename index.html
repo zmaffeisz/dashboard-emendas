@@ -31,7 +31,7 @@
   </div>
 </div>
 
-<aside class="sidebar" id="sidebar">
+<aside class="sidebar" id="sidebar" aria-label="Menu lateral">
   <nav class="sidebar-nav">
     <div class="sidebar-section">
       <div class="sidebar-item active" id="sidebar-dashboard" onclick="showTab('dashboard')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Emendas</span></div>
@@ -975,7 +975,7 @@
     </div>
 
     <div id="pl-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
-    <div id="pl-table-wrap" style="display:none;overflow-x:auto;overflow-y:auto;height:calc(100vh - var(--header-h,64px) - var(--table-offset,300px))">
+    <div id="pl-table-wrap" style="display:none;overflow-x:auto;overflow-y:auto;height:max(var(--table-min-height,620px),calc(100vh - var(--table-offset,300px) + var(--table-extra-height,140px)))">
       <table id="pl-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1200px">
         <thead id="pl-thead" style="position:sticky;top:0;z-index:1"></thead>
         <tbody id="pl-tbody"></tbody>
