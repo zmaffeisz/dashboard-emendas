@@ -10,6 +10,27 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
 ## [Não versionado]
 
 ### Adicionado
+- **Filtro "Mostrar municipais antigas"** na aba de Saldo de Emendas: emendas `MUNICIPAL`
+  de exercícios anteriores a 2026 (histórico importado das atas encerradas) ficam **ocultas
+  por padrão** e só aparecem ao marcar a caixinha, evitando confusão com as municipais
+  atuais (`_saldoRowsVisiveis`, `panel-saldo-emendas`).
+
+### Migração de dados (2026-07-02) — correção de processos + cadastro de atas
+- **Licitações:** corrigido o `objeto` (nome) de 12 processos SEI 2026 que estavam poluídos
+  com a lista de itens; criados 5 processos novos que faltavam (planilha "processos dados
+  atualizados"). Números (identificador) já estavam corretos — sem cascata para Emendas.
+- **Atas encerradas:** importadas da planilha "CONTROLE DE ATAS ENCERRADAS" (95 blocos de
+  item, ~800 execuções). Contratos correspondentes convertidos para `tipo_instrumento=ATA`
+  / `status=ENCERRADO` (ou criados quando inexistentes); populadas `atas_itens` e
+  `atas_execucao` com todo o histórico e vínculo de emenda. AC (contrato 272) e CPL 445/2023
+  preservados (este último sobrepõe atas vigentes — revisar manualmente).
+- **Emendas:** criadas 59 emendas MUNICIPAIS históricas (ano deduzido pelo empenho) + itens.
+  Federais/estaduais foram **casadas às existentes por código normalizado e apenas
+  complementadas** (nunca duplicadas/sobrescritas). Entregas históricas marcadas como
+  confirmadas na unidade → refletem no **Inventário** e saem das filas de Controle/Confirmação
+  de entrega. Backup completo em schema `bkp_20260702`.
+
+### Adicionado (anterior)
 - Documentação técnica e funcional completa em `/docs` (ARCHITECTURE, SCHEMA, DATABASE,
   ROUTES, MODULES, DATA_FLOW, BUSINESS_RULES, API, SECURITY, DEPLOYMENT, TESTING, TODO).
 - `README.md`, `CHANGELOG.md`, `.env.example` e `CLAUDE.md` na raiz.

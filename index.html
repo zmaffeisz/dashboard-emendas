@@ -229,6 +229,7 @@
         <div class="fg-label">Filtro livre por palavra</div>
         <input type="text" id="se-busca" placeholder="Busque por emenda, parlamentar, unidade, status..." oninput="renderSaldoEmendas()" style="width:100%;background:var(--surface);color:var(--text)">
       </div>
+      <label title="Municipais de exercícios anteriores (antes de 2026) ficam ocultas por padrão para não confundir com as municipais atuais" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none"><input type="checkbox" id="se-muni-antigas" onchange="renderSaldoEmendas()"> Mostrar municipais antigas</label>
       <button onclick="limparFiltrosSaldo()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;cursor:pointer">Limpar filtros</button>
     </div>
     <div class="table-card">
@@ -9929,7 +9930,10 @@ function limparFiltrosSaldo(){
 }
 function _saldoRowsVisiveis(){
   const busca=normalizar(document.getElementById('se-busca')?.value||'');
+  const mostrarMuniAntigas=document.getElementById('se-muni-antigas')?.checked||false;
   const rows=saldoEmendasRows.map(_saldoComPercentual).filter(r=>{
+    // municipais de exercícios anteriores (histórico de atas encerradas) ficam ocultas por padrão
+    if(!mostrarMuniAntigas && String(r.tipo||'').toUpperCase()==='MUNICIPAL' && Number(r.ano)>0 && Number(r.ano)<2026) return false;
     if(busca&&!normalizar([r.numero_emenda,r.tipo,r.parlamentar,r.unidade,r.status_execucao,r.valor_cedido,r.total_planejado,r.total_executado,r.total_comprometido,r.saldo_remanescente,r.qtd_itens].join(' ')).includes(busca)) return false;
     return Object.entries(saldoHeaderFilters).every(([col,selecionados])=>selecionados.includes(_saldoFilterValue(col,r)));
   });
