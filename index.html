@@ -4193,6 +4193,8 @@ function filtrarAtas(){
         <button onclick="encerrarContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔ Encerrar</button>
         <button onclick="verExecsItem('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋 Solicitações</button>
         `}
+        ${_isAdmin()?`<button onclick="_ataAbrirEditarContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;margin-left:3px" title="Editar dados do contrato (fiscalização, seção, empresa, objeto...)">✏️ Editar</button>`:''}
+        ${podeEditar('contratos')?`<button onclick="_ataAbrirEmailContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;margin-left:3px" title="Configurar e-mail e prefixo de chamado">🔗 Vinculações</button>`:''}
       </td>
     </tr>`;
   }).join("");
@@ -4681,6 +4683,18 @@ async function confirmarEncerramentoCt(){
   }finally{
     btn.disabled=false;btn.textContent="⛔ Encerrar contrato";
   }
+}
+
+// Abrem os modais de "Editar contrato" / "Vinculações" (originalmente da aba Contratos) a
+// partir de Atas Rp Vigentes. Garantem que contratosRows esteja carregado, já que o usuário
+// pode acessar Atas sem nunca ter visitado a aba Contratos.
+async function _ataAbrirEditarContrato(contratoId){
+  if(!contratosCarregado) await loadContratos();
+  abrirEditarContrato(contratoId);
+}
+async function _ataAbrirEmailContrato(contratoId){
+  if(!contratosCarregado) await loadContratos();
+  abrirEmailContrato(contratoId);
 }
 
 // ═══ ENCERRAR CONTRATO ═══
@@ -6775,7 +6789,7 @@ async function loadItensEntregas(){
   });
   // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando AF)
   const {data:itc,error:e3}=await sb.from('itens')
-    .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome)')
+    .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,status,processos(identificador),contratos(cpl,numero_contrato,tipo_instrumento),fornecedores(razao_social),unidades(nome)')
     .eq('origem','aquisicao').not('contrato_id','is',null);
   let itemPorId={};
 	  if(!e3){
@@ -6838,6 +6852,11 @@ async function loadItensEntregas(){
       });
     });
     (itc||[]).forEach(it=>{
+      // Só itens realmente pendentes de AF entram aqui: exclui itens já entregues/cancelados/
+      // fracassados/em licitação (status diferente de "aguardando") e itens de ATA — estes têm
+      // execução própria rastreada exclusivamente em "Atas Rp Vigentes" (atas_execucao).
+      if(it.status!=='aguardando') return;
+      if(it.contratos?.tipo_instrumento==='ATA') return;
       const saldoAut=(Number(it.qtde)||0)-(Number(autPorItem[it.id])||0);
       if(saldoAut<=0) return; // já totalmente autorizado por AFs
       const emps=empPorItem[it.id]||empPorContrato[it.contrato_id]||[];
@@ -12570,6 +12589,9 @@ function filtrarContratos(){
   const d90=new Date(hoje);d90.setDate(d90.getDate()+90);
 
   contratosFiltrados=contratosRows.filter(r=>{
+    // ATAs (Registro de Preços) são exibidas exclusivamente em "Atas Rp Vigentes";
+    // aqui em Contratos em Execução mostramos somente instrumentos do tipo CONTRATO.
+    if(r.tipo_instrumento==="ATA") return false;
     for(const [col,sel] of Object.entries(contratoHeaderFilters)){
       if(!sel.length) continue;
       const val=String(CONTRATO_FILTER_COLS[col].get(r)??'');
@@ -12817,6 +12839,7 @@ async function salvarEdicaoContrato(){
   if(error){showMsg('ec','Erro: '+error.message,'err');return;}
   showMsg('ec','✓ Contrato atualizado.','ok');
   contratosCarregado=false;await loadContratos();
+  if(atasContratos&&atasContratos.length) await loadAtas(); // mantém Atas Rp Vigentes em sincronia se estava carregada
   setTimeout(()=>document.getElementById('modal-editar-contrato').classList.remove('active'),700);
 }
 
