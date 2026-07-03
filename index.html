@@ -1966,26 +1966,26 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table>
+        <table id="ct-table" class="resizable-table">
           <thead>
             <tr>
               <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
-              <th style="width:40px">Ações</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('tipo_instrumento')" style="cursor:pointer;user-select:none">Tipo <span id="sort-ct-tipo_instrumento"></span></span><span class="hdr-filter-btn" id="hfc-tipo_instrumento" onclick="openContratoFilter(event,'tipo_instrumento')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></span><span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('objeto')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('vigencia_atual')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('vencimento')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('dias')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></span><span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap">Ação</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></span><span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('fiscalizacao')" style="cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('valor_mensal')" style="cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor mensal <span id="sort-ct-valor_mensal"></span><span class="hdr-filter-btn" id="hfc-valor_mensal" onclick="openContratoFilter(event,'valor_mensal')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('valor_total')" style="cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor total <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('atualizado_em')" style="cursor:pointer;user-select:none;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap">Editar</th>
+              <th style="width:170px">Ações</th>
+              <th style="width:90px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('tipo_instrumento')" style="cursor:pointer;user-select:none">Tipo <span id="sort-ct-tipo_instrumento"></span></span><span class="hdr-filter-btn" id="hfc-tipo_instrumento" onclick="openContratoFilter(event,'tipo_instrumento')" title="Filtrar">▾</span></span></th>
+              <th style="width:110px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="width:170px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></span><span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('objeto')" style="width:260px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vigencia_atual')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vencimento')" style="width:100px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('dias')" style="width:70px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
+              <th style="width:150px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></span><span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
+              <th style="width:110px;white-space:nowrap">Ação</th>
+              <th style="width:80px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></span><span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('fiscalizacao')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_mensal')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor mensal <span id="sort-ct-valor_mensal"></span><span class="hdr-filter-btn" id="hfc-valor_mensal" onclick="openContratoFilter(event,'valor_mensal')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_total')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor total <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('atualizado_em')" style="width:120px;cursor:pointer;user-select:none;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
+              <th style="width:90px;white-space:nowrap">Editar</th>
             </tr>
           </thead>
           <tbody id="ct-tbody"></tbody>
@@ -2914,6 +2914,9 @@ function showTab(name){
   if(name==="licitacoes") loadLicitacoes();
   if(name==="saldo-emendas"&&!saldoEmendaCarregado) loadSaldoEmendas();
   setTimeout(_setTableOffset,50);
+  _scanResizableTables();
+  setTimeout(_scanResizableTables,400);
+  setTimeout(_scanResizableTables,1200);
 }
 
 // ═══ LOAD ═══
@@ -3658,9 +3661,9 @@ function renderInventario(){
     const emendaLabel=r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):'—';
     return`<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:6px 8px;white-space:nowrap"><span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span></td>
-      <td style="padding:6px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(r.item)}">${_sanEsc(r.item||'—')}</td>
+      <td style="padding:6px 8px;max-width:220px;white-space:normal;word-break:break-word" title="${_sanEsc(r.item)}">${_sanEsc(r.item||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-size:12px">${_sanEsc(r.unidade||'—')}</td>
-      <td style="padding:6px 8px;font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(r.empresa)}">${_sanEsc(r.empresa||'—')}</td>
+      <td style="padding:6px 8px;font-size:12px;max-width:160px;white-space:normal;word-break:break-word" title="${_sanEsc(r.empresa)}">${_sanEsc(r.empresa||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-weight:500">${_sanEsc(r.patrimonio||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap">${r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):'—'}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-size:11px;color:var(--text2)">${_sanEsc(r.empenho||'—')}</td>
@@ -8513,8 +8516,8 @@ function renderPlanilhaAC(rows){
   document.getElementById("pl-tbody").innerHTML=rows.map(r=>`
     <tr id="row-ac-${r.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
       ${AC_COLUNAS.map(c=>`
-        <td style="padding:6px 10px;max-width:${c.width};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" 
-            title="${(r[c.key]||"")}" 
+        <td style="padding:6px 10px;max-width:${c.width};white-space:normal;word-break:break-word;cursor:pointer"
+            title="${(r[c.key]||"")}"
             onclick="editarCelula('${r.id}','${c.key}','${c.label}',\`${String(r[c.key]||"").replace(/`/g,"'")}\`)">
           ${r[c.key]||"<span style='color:var(--text3)'>—</span>"}
         </td>`).join("")}
@@ -9001,7 +9004,7 @@ function renderPlanilhaChamados(rows){
   document.getElementById("pl-tbody").innerHTML=rows.map(r=>`
     <tr id="row-ch-${r.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
       ${CHAMADOS_COLUNAS.map(c=>`
-        <td style="padding:6px 10px;max-width:${c.width};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer"
+        <td style="padding:6px 10px;max-width:${c.width};white-space:normal;word-break:break-word;cursor:pointer"
             title="${String(r[c.key]||"")}"
             onclick="editarCelulaChamado('${r.id}','${c.key}','${c.label}',\`${String(r[c.key]||"").replace(/\`/g,"'")}\`)">
           ${r[c.key]||"<span style='color:var(--text3)'>—</span>"}
@@ -11222,7 +11225,7 @@ function _renderFiscalizacao(){
       <td style="font-size:11px">${ch.patrimonio||"—"}</td>
       <td style="font-size:11px;white-space:nowrap"><strong>${r.cpl_contrato||"—"}</strong></td>
       <td style="font-size:11px">${r.os||"—"}</td>
-      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.servico_realizado||r.feito||''}">${r.servico_realizado||r.feito||"—"}</td>
+      <td style="font-size:11px;max-width:180px;white-space:normal;word-break:break-word" title="${r.servico_realizado||r.feito||''}">${r.servico_realizado||r.feito||"—"}</td>
       <td>${badgeSituacaoFisc(r.situacao_os)}</td>
       <td style="font-size:11px">${r.competencia||"—"}</td>
       <td style="font-size:11px">${r.nf_referencia||"—"}</td>
@@ -12090,7 +12093,7 @@ function autoEnhanceSelects(root){
 }
 (function _initSelectSearchObserver(){
   let queued=false;
-  const run=()=>{ queued=false; autoEnhanceSelects(document); };
+  const run=()=>{ queued=false; autoEnhanceSelects(document); _scanResizableTables(); };
   const schedule=()=>{ if(!queued){ queued=true; setTimeout(run,120); } };
   const obs=new MutationObserver(muts=>{
     for(const m of muts){
@@ -12098,7 +12101,73 @@ function autoEnhanceSelects(root){
       if((t && (t.tagName==='SELECT'||t.tagName==='OPTGROUP')) || (m.addedNodes&&m.addedNodes.length)){ schedule(); break; }
     }
   });
-  const start=()=>{ try{ obs.observe(document.body,{childList:true,subtree:true}); autoEnhanceSelects(document); }catch(_){} };
+  const start=()=>{ try{ obs.observe(document.body,{childList:true,subtree:true}); autoEnhanceSelects(document); _scanResizableTables(); }catch(_){} };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+// Colunas redimensionáveis (arrastar borda do cabeçalho, como no Google Sheets).
+// Aplicado automaticamente a toda tabela dentro de .table-wrap/#pl-table-wrap (ver _scanResizableTables).
+function makeColumnsResizable(table){
+  if(typeof table==='string') table=document.getElementById(table);
+  if(!table||table._resizableInit) return false;
+  if(table.offsetWidth===0) return false; // painel ainda oculto: tentar novamente depois
+  const ths=[...table.querySelectorAll('thead th')];
+  if(!ths.length) return false;
+  // captura as larguras já calculadas pelo layout automático (com base no conteúdo real)
+  // ANTES de travar a tabela em table-layout:fixed, para não alterar a aparência atual.
+  const widths=ths.map(th=>parseFloat(th.style.width)||th.offsetWidth);
+  table._resizableInit=true;
+  table.classList.add('resizable-table');
+  let total=0;
+  ths.forEach((th,i)=>{
+    th.classList.add('resizable-th');
+    const w=widths[i];
+    th.style.width=w+'px';
+    total+=w;
+    const resizer=document.createElement('span');
+    resizer.className='col-resizer';
+    th.appendChild(resizer);
+    let startX=0,startWidth=0;
+    const onMove=e=>{
+      const dx=e.clientX-startX;
+      const newWidth=Math.max(40,startWidth+dx);
+      total+=newWidth-parseFloat(th.style.width);
+      th.style.width=newWidth+'px';
+      table.style.width=total+'px';
+    };
+    const onUp=()=>{
+      document.removeEventListener('mousemove',onMove);
+      document.removeEventListener('mouseup',onUp);
+      resizer.classList.remove('col-resizing');
+    };
+    resizer.addEventListener('mousedown',e=>{
+      e.preventDefault(); e.stopPropagation();
+      startX=e.clientX; startWidth=th.offsetWidth;
+      resizer.classList.add('col-resizing');
+      document.addEventListener('mousemove',onMove);
+      document.addEventListener('mouseup',onUp);
+    });
+    resizer.addEventListener('click',e=>e.stopPropagation());
+  });
+  table.style.width=total+'px';
+  return true;
+}
+// Varre todas as tabelas de dados do site e ativa o redimensionamento assim que
+// cada uma estiver visível e com linhas reais (não placeholder de "carregando").
+function _scanResizableTables(){
+  document.querySelectorAll('.table-wrap table, #pl-table-wrap table').forEach(table=>{
+    if(table._resizableInit) return;
+    const thead=table.querySelector('thead');
+    const tbody=table.querySelector('tbody');
+    const firstRow=tbody&&tbody.querySelector('tr');
+    if(!thead||!firstRow) return;
+    const ths=thead.querySelectorAll('th');
+    const tds=firstRow.querySelectorAll('td');
+    if(!ths.length||tds.length<ths.length) return; // linha placeholder (colspan) — aguardar dados reais
+    makeColumnsResizable(table);
+  });
+}
+(function _initResizableTables(){
+  const start=()=>{ _scanResizableTables(); setTimeout(_scanResizableTables,400); setTimeout(_scanResizableTables,1200); };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 // Fase 10: múltiplos fiscais + empenhos no Gerar Contrato
@@ -12633,7 +12702,7 @@ function renderTabelaContratos(){
       <td><span class="badge" style="background:${r.tipo_instrumento==='ATA'?'var(--blue-bg)':'var(--surface2)'};color:${r.tipo_instrumento==='ATA'?'var(--blue-text)':'var(--text2)'}">${r.tipo_instrumento||'CONTRATO'}</span></td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
-      <td class="td-trunc" style="max-width:220px">${r.objeto||"—"}</td>
+      <td class="td-wrap" style="max-width:280px">${r.objeto||"—"}</td>
       <td style="white-space:nowrap">${r.vigencia_atual||"—"}</td>
       <td style="white-space:nowrap;color:${cor};font-weight:500">${r.vencimento||"—"}</td>
       <td style="text-align:center">${diasHtml}</td>
