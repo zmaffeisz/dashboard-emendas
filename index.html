@@ -12529,7 +12529,10 @@ function filtrarContratos(){
   renderTabelaContratos();
 }
 
-function badgeStatusContrato(status){
+function badgeStatusContrato(status,vencido){
+  if(status==="VIGENTE"&&vencido){
+    return `<span class="badge" style="background:var(--red-bg);color:var(--red-text)" title="Vigência venceu mas o contrato ainda não foi encerrado — provavelmente em renovação">AGUARDANDO RENOVAÇÃO</span>`;
+  }
   const cfg={VIGENTE:{bg:"var(--green-bg)",color:"var(--green-text)"},ENCERRADO:{bg:"var(--surface2)",color:"var(--text3)"},SUSPENSO:{bg:"var(--amber-bg)",color:"var(--amber-text)"}};
   const c=cfg[status]||{bg:"var(--surface2)",color:"var(--text3)"};
   return `<span class="badge" style="background:${c.bg};color:${c.color}">${status||"—"}</span>`;
@@ -12634,7 +12637,7 @@ function renderTabelaContratos(){
       <td style="white-space:nowrap">${r.vigencia_atual||"—"}</td>
       <td style="white-space:nowrap;color:${cor};font-weight:500">${r.vencimento||"—"}</td>
       <td style="text-align:center">${diasHtml}</td>
-      <td>${badgeStatusContrato(r.status)}</td>
+      <td>${badgeStatusContrato(r.status,dias!==null&&dias<0)}</td>
       <td>${btnEncerrarCt}</td>
       <td>${r.secao||"—"}</td>
       <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
@@ -12855,7 +12858,7 @@ async function abrirDetalheContrato(id){
     ["Tipo",c.tipo_instrumento||"CONTRATO"],["CPL",c.cpl],["Nº do contrato",c.numero_contrato],["Prestador",c.prestador],
     ["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],
     ["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],
-    ["Status",badgeStatusContrato(c.status)],["Valor total",(c.valor_atual??c.valor_inicial)!=null?`R$ ${Number(c.valor_atual??c.valor_inicial).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],
+    ["Status",badgeStatusContrato(c.status,(()=>{const d=diasContratoVencer(c.vencimento);return d!==null&&d<0;})())],["Valor total",(c.valor_atual??c.valor_inicial)!=null?`R$ ${Number(c.valor_atual??c.valor_inicial).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],
     ["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]
   ];
   if(c.tipo_instrumento!=="ATA") campos.splice(12,0,["Valor mensal",c.valor_mensal!=null?`R$ ${Number(c.valor_mensal).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"]);
