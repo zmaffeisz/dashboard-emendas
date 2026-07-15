@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Solicitação de Manutenção — SMS Sorocaba</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="chamado.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -18,7 +21,10 @@
       <div class="title">Secretaria Municipal da Saúde — Sorocaba</div>
       <div class="sub">Solicitação de Manutenção de Equipamentos e Bens Permanentes</div>
     </div>
-    <button id="tema-btn" onclick="alternarTema()" class="tema-btn" aria-label="Alternar tema">🌙</button>
+    <button id="tema-btn" onclick="alternarTema()" class="tema-btn" aria-label="Alternar tema">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
   </div>
 
   <!-- Formulário -->
@@ -229,8 +235,8 @@
 </div>
 
 <script>
-const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
-const SUPABASE_KEY = "sb_publishable_62rlfRwV8Lzg_kFLJCEn4g_heoU6pqk";
+const SUPABASE_URL = "https://qpvgpfwuurqcqprnpxua.supabase.co";
+const SUPABASE_KEY = "sb_publishable_SisbCbcyd-MFrIqvYSQZ8A_eaVaepNp";
 const EMAIL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtsCvpSQsnFEXks3GcJyRB-UNh3z5M2-3kAoMGAJeoFTFXioSyMHsmxhDsW8g4_ZLMJQ/exec";
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -241,6 +247,8 @@ let _servico = "";
 let _problema = "";
 let _rechamado = "";
 let _fotos = []; // [{file, blob, nome}]
+let _requestId = null;
+let _envioEmAndamento = false;
 
 async function comprimirImagem(file){
   return new Promise((resolve,reject)=>{
@@ -381,6 +389,7 @@ async function gerarProximoProtocolo(){
 }
 
 async function enviarChamado(){
+  if(_envioEmAndamento) return;
   const err = document.getElementById('error-msg');
   err.style.display='none';
 
@@ -408,6 +417,7 @@ async function enviarChamado(){
   if(!descricao){err.textContent='Descreva o problema detalhadamente.';err.style.display='block';return;}
   if(!_rechamado){err.textContent='Informe se é rechamado.';err.style.display='block';return;}
 
+  _envioEmAndamento=true;
   const btn = document.getElementById('btn-enviar');
   btn.disabled=true;btn.textContent='Enviando...';
 
@@ -418,7 +428,16 @@ async function enviarChamado(){
   const serie = document.getElementById('f-serie').value.trim();
   const data_rechamado = document.getElementById('f-data-rechamado').value || null;
 
-  const {data: rpcData, error} = await sb.rpc('abrir_chamado_publico', {
+  _requestId=_requestId||(crypto.randomUUID
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+        const r=Math.random()*16|0, v=c==='x'?r:(r&0x3|0x8);
+        return v.toString(16);
+      }));
+  let rpcData=null, error=null;
+  try{
+    ({data:rpcData,error}=await sb.rpc('abrir_chamado_publico_v2', {
+    p_request_id:       _requestId,
     p_carimbo:          carimbo,
     p_data_solicitacao: data_solicitacao,
     p_unidade:          unidade,
@@ -438,34 +457,42 @@ async function enviarChamado(){
     p_rechamado:        _rechamado,
     p_data_rechamado:   data_rechamado,
     p_observacao:       ''
-  });
+    }));
+  }catch(e){ error=e; }
 
   if(error){
     err.textContent='Erro ao enviar: '+error.message;
     err.style.display='block';
+    _envioEmAndamento=false;
     btn.disabled=false;btn.textContent='📨 Enviar solicitação';
     return;
   }
 
-  // Protocolo agora vem do banco (gerado atomicamente pela sequence)
-  const protocolo = rpcData;
+  // Protocolo e ID vêm da mesma transação idempotente no banco.
+  const protocolo = rpcData?.protocolo;
+  const chamadoId = rpcData?.chamado_id;
+  if(!protocolo||!chamadoId){
+    err.textContent='O banco não devolveu a identificação do chamado. Tente novamente.';
+    err.style.display='block';
+    _envioEmAndamento=false;
+    btn.disabled=false;btn.textContent='📨 Enviar solicitação';
+    return;
+  }
 
   // Upload de fotos (se houver)
   if(_fotos.length>0){
     btn.textContent='Enviando fotos...';
-    // Buscar o id do chamado pelo protocolo
-    const {data:chRow}=await sb.from('chamados').select('id').eq('protocolo',protocolo).single();
-    if(chRow?.id){
+    if(chamadoId){
       for(const f of _fotos){
         try{
           const ext='jpg';
           const ts=Date.now();
           const nomeSeg=f.nome.replace(/[^a-zA-Z0-9._-]/g,'_');
-          const path=`chamados/${chRow.id}/${ts}-${nomeSeg}`;
+          const path=`chamados/${chamadoId}/${ts}-${nomeSeg}`;
           const {error:upErr}=await sb.storage.from('chamados-fotos').upload(path,f.blob,{contentType:'image/jpeg',upsert:false});
           if(!upErr){
             await sb.from('chamados_anexos').insert({
-              chamado_id:chRow.id,
+              chamado_id:chamadoId,
               storage_path:path,
               nome_original:f.nome,
               tamanho_bytes:f.blob.size,
@@ -502,6 +529,8 @@ function novoFormulario(){
   document.getElementById('btn-enviar').disabled=false;
   document.getElementById('btn-enviar').textContent='📨 Enviar solicitação';
   _fotos=[];
+  _requestId=null;
+  _envioEmAndamento=false;
   atualizarPreviewFotos();
   // Limpar campos
   document.querySelectorAll('.form-input,.form-select,.form-textarea').forEach(el=>el.value='');
@@ -511,7 +540,7 @@ function novoFormulario(){
 }
 </script>
 <script>
-function aplicarTema(t){document.documentElement.dataset.theme=t;var b=document.getElementById('tema-btn');if(b)b.textContent=t==='dark'?'☀️':'🌙';try{localStorage.setItem('tema',t);}catch(e){}}
+function aplicarTema(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('tema',t);}catch(e){}}
 function alternarTema(){aplicarTema(document.documentElement.dataset.theme==='dark'?'light':'dark');}
 aplicarTema((function(){try{return localStorage.getItem('tema');}catch(e){return null;}})()||'dark');
 </script>

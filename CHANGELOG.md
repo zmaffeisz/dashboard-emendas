@@ -1,5 +1,39 @@
 # Changelog
 
+- **AF duplicada por envio concorrente**: a emissão de AF agora bloqueia o botão enquanto a gravação está em andamento. O banco também serializa emissões para o mesmo item, rejeita AF ativa repetida e impede que a soma autorizada ultrapasse a quantidade contratada, inclusive em duas abas ou requisições simultâneas.
+
+- **Seção herdada ao gerar contrato**: ao gerar um contrato a partir de uma licitação, a seção já definida no processo é carregada automaticamente e fica bloqueada no modal, evitando uma segunda seleção e divergências entre licitação e contrato.
+
+- **Modo Planilha com valores de licitação**: a planilha agora exibe e permite filtrar/ordenar o valor unitário e o valor total da licitação, além dos valores planejados e executados; a exportação Excel também foi atualizada.
+
+- **Campos vazios no detalhamento de Emendas**: NF, empenho e patrimônio sem valor agora aparecem como `-`, evitando caracteres corrompidos de codificação.
+
+- **Detalhamento financeiro por item de Emenda**: a expansão agora separa valor unitário planejado, valor unitário em licitação, valor unitário contratado e total executado; campos sem aplicação aparecem como `—` em vez de `R$ 0,00`.
+
+- **Saldo de Emendas por estágio do processo**: o planejado continua vindo do cadastro da Emenda; durante a licitação o saldo passa a considerar o valor estimado dos itens e, após gerar o contrato, passa a considerar o valor contratado. O modal de novo processo agora exibe o saldo de cada Emenda após a vinculação em tempo real.
+
+- **Itens de emenda no processo**: removido o seletor manual de emenda dentro do item; a vinculação passa a ocorrer pelo botão `Puxar de emenda`, usando o item específico da emenda.
+
+- **Modais sem fechamento pelo fundo**: clicar fora de qualquer modal ou pressionar `Escape` não o fecha mais; o fechamento continua nos controles explícitos do modal.
+
+- **Fontes de recurso simplificadas**: os itens agora permitem somente `Emenda`, `Recurso próprio` e `Outro`; valores antigos sem emenda ou municipais são tratados como `Outro` na edição.
+
+- **SC com barra**: o campo Solicitação de Compra agora aceita números e `/`, permitindo referências como `63456/2025`.
+
+- **Campos obrigatórios no cadastro de Emendas**: `Ano`, `Parlamentar` e `Objeto geral da emenda`
+  agora são identificados como obrigatórios no modal e validados antes do salvamento.
+
+- **Licitações já contratadas com status visual correto**: na aba Licitações, processos
+  cujos itens já possuem contrato vinculado agora exibem o selo `CONTRATADO`, sem alterar
+  o status de licitação armazenado nem a apresentação em outras abas.
+
+## 2026-07-11
+
+- **Exclusão segura de solicitações de ATA**: o botão Excluir agora aparece somente antes da emissão da AF. A interface revalida o estado no momento da ação e um trigger no banco bloqueia exclusão quando há AF, prazo, NF, recebimento, patrimônio, entrega, termo ou sanção. Solicitações ainda elegíveis são removidas por RPC transacional, com limpeza dos vínculos de empenho e recálculo dos saldos.
+- **Execuções de ATA expansíveis**: cada linha em Atas Rp Vigentes > Execuções/Solicitações agora expande no próprio quadro para mostrar dados completos da execução e todas as unidades físicas, patrimônios, séries, NF e recebimento. Cada patrimônio possui a ação "Ver tudo", com ficha completa e vínculos de ATA, fornecedor, empenho e Emenda.
+- **Solicitação de ATA com IDs UUID**: corrigido o gatilho de isolamento organizacional que tentava converter IDs UUID de Emendas, itens de ATA e outros pais para `bigint`. A resolução da seção agora aceita com segurança os dois tipos de chave e volta a permitir salvar novas solicitações/execuções.
+- **Patrimônio opcional e explicitamente definido no recebimento**: o modal compartilhado por Aquisições e ATAs agora exige a escolha "Possui patrimônio? Sim/Não" antes de salvar. Os campos por unidade permanecem ocultos até a escolha; "Sim" exige um patrimônio por unidade e mantém a individualização, enquanto "Não" preserva o item consolidado sem criar linhas vazias nas tabelas de unidades físicas. A decisão persiste no banco e fica coerente nos recebimentos parciais seguintes.
+
 Todas as mudanças relevantes deste projeto. Formato baseado em
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
@@ -9,7 +43,135 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
 
 ## [Não versionado]
 
+### Removido
+- **Limpeza do clone `contratos-dag`**: removido o schema desconectado
+  `backup_20260701`, excluídos termos de entrega órfãos do Storage e consolidados os
+  cadastros duplicados de `AFIP` e `CONNECT HEART`, preservando o registro mais antigo e
+  seu CNPJ sem alteração.
+
+### Alterado
+- **Isolamento organizacional em todo o sistema**: perfis agora pertencem a uma seção ou à chefia da divisão; permissões por aba continuam definindo visualizar/editar, enquanto o RLS limita os registros à abrangência organizacional. Administradores escolhem no cabeçalho se trabalham em uma seção específica ou na visão da divisão. Emendas passam a exigir seção responsável, e processos/contratos preenchem a seção do usuário automaticamente.
+- **Acesso público restrito ao necessário**: visitantes continuam consultando Emendas e abrindo chamados, mas deixaram de ter leitura direta de processos, contratos, ATAs, itens, entregas, empenhos, notas fiscais e fornecedores. Chamados e Fiscalização ficam sob a seção `SUEQ - EQUIP`.
+- **Cadastro de processos com tipo simplificado e SC opcional**: o tipo agora fica ao lado esquerdo do identificador e oferece somente CPL, SEI e Outro; Outro abre um campo de texto livre, e o número da Solicitação de Compra pode ser informado separadamente sem ser obrigatório.
+- **Contratos em execucao com visualizacao em cartoes**: a lista de contratos passou a
+  seguir o mesmo padrao visual das licitacoes, com linha inteira clicavel para expandir,
+  destaque para processo/CPL e objeto, e botoes de acao exibidos apenas no contrato aberto.
+- **Servico por demanda/execucao como fluxo leve e separado do mensal fixo**: processos de
+  servico por demanda agora exigem pelo menos um item, calculam o valor estimado pela soma
+  dos itens e geram contratos sem valor mensal automatico. As medicoes manuais podem
+  vincular item, descricao e quantidade medida, registrando `contratos_medicao_itens` para
+  consumo de saldo por contrato e por item, sem reaproveitar a logica mensal fixa.
+- **Vigencia propria para servico por demanda/execucao**: neste tipo de processo, o item
+  nao exibe mais prazo em dias; a vigencia passa a ser informada uma vez no processo, em
+  meses, e herdada pelo contrato para calcular vigencia/vencimento.
+- **Medicao por demanda com multiplos itens**: a medicao manual de servico por demanda
+  permite informar varios itens do contrato na mesma medicao. A descricao fica travada
+  pelo nome do item selecionado, o valor bruto e calculado pela soma dos itens medidos e o
+  fiscal responsavel passa a ser escolhido entre os fiscais cadastrados no contrato.
+- **Refatoração estrutural incremental do frontend**: `index.html` foi reduzido para a
+  estrutura da SPA e carregamento de arquivos externos. O JavaScript monolítico foi
+  extraído e dividido em scripts clássicos menores em `js/legacy/`, preservando ordem de
+  execução e handlers inline. Estilos de documentos de impressão foram extraídos para
+  `css/print-*.css`. Criada a base de módulos nativos em `js/modules/`, `js/state/` e
+  `js/components/` para as próximas extrações sem alterar regra de negócio.
+
+### Corrigido
+- **Preparação segura da migração de chamados para produção**: a abertura pública ganhou
+  chave idempotente gerada no navegador e RPC v2 transacional, impedindo que uma repetição
+  do mesmo envio consuma outro protocolo ou crie outro controle. O ID do chamado agora é
+  devolvido pela RPC para o upload de fotos, sem depender de leitura pública da tabela.
+  A fiscalização passou a atualizar a OS e seu histórico na mesma transação, e o banco
+  voltou a impor um único controle por `chamado_id`.
+- **Histórico completo no visualizador público de Emendas**: restaurada a consolidação pública de processo/CPL, contrato/ATA, AF, empenho, nota fiscal, patrimônio, série, recebimento e entrega. As novas policies liberam somente registros operacionais ligados a itens de Emendas, sem tornar públicos contratos e fluxos sem esse vínculo.
+- **Upload de termos de entrega sem arquivos órfãos**: falhas após o upload agora removem
+  o novo arquivo ainda não vinculado; substituições limpam o termo anterior e exclusões de
+  execuções de ATA tentam remover os respectivos arquivos pela Storage API.
+- **Bloqueio de medição acima do saldo contratado**: medições de serviço por demanda
+  agora impedem salvar item com quantidade maior que o saldo disponível do contrato.
+- **Formulário público de chamados no projeto de teste**: o botão "Abertura de Chamados"
+  agora abre o `chamado.html` do próprio ambiente, em vez da URL antiga do GitHub. A RPC
+  `abrir_chamado_publico` no Supabase de teste (`contratos-dag`) foi ajustada para gerar
+  protocolo via `chamados_seq` com `SECURITY INVOKER`, `search_path` fixo e grants mínimos
+  para `anon/authenticated`, permitindo abertura pública sem conceder leitura pública dos
+  chamados.
+- **Atualização de chamados novos no projeto de teste**: as políticas RLS de
+  `chamados_controle` agora permitem que usuários autenticados com permissão de edição na
+  aba `chamados-novos` atualizem/vinculem o chamado a contrato/CPL, enquanto a abertura
+  pública continua limitada ao status inicial "Aguardando abertura".
+- **Fiscalização gera medição contratual**: o fluxo da aba Fiscalização passou de
+  "Gerar Termo de Ateste" para "Gerar Medição". OS fiscalizadas de um mesmo contrato
+  agora podem gerar uma medição no contrato, vincular a NF informada, registrar o termo de
+  ateste e exibir o botão "Baixar termo" na aba Medições do contrato. O Supabase de teste
+  recebeu a estrutura de `contratos_medicoes`, vínculos com `notas_fiscais`,
+  `termos_ateste` e rastreio das OS em `chamados_controle`.
+- **Ajustes por item sem rascunho e com manutenção de eventos**: o modal de
+  reajuste/aditivo/supressão não permite mais salvar como rascunho; salvar agora
+  formaliza o ajuste. As abas de Aditivos e Supressões ganharam ações para editar ou
+  excluir eventos registrados, com recálculo do valor atual do contrato e ajuste da
+  quantidade do item quando o evento possui item/quantidade rastreável.
+- **Aplicação de aditivos/supressões pendentes e quantidades visíveis**: eventos de
+  aditivo/supressão que já tinham ficado como rascunho agora podem ser aplicados pela
+  própria linha da aba, atualizando quantidade do item e valor atual do contrato. A lista
+  de itens passou a mostrar `Qtde inicial` e `Qtde atual`, deixando claro o efeito de
+  aditivos e supressões.
+- **Percentual de aditivo consistente entre modal e painel**: o card `% aditivo` e a
+  coluna da lista principal agora mostram o percentual de aditivo sobre o valor inicial
+  reajustado do contrato. O consumo do limite de 25% fica no texto secundário do card,
+  evitando confusão com o percentual do limite já utilizado.
+- **Limite de 25% em ajustes por item com reajuste simultâneo**: o modal de
+  reajuste/aditivo/supressão agora aplica o percentual de reajuste também ao valor
+  unitário usado no impacto de aditivo/supressão da mesma linha. Assim, quando o valor
+  inicial reajustado aumenta, o consumo do limite de 25% aumenta pela mesma base dos
+  itens, evitando que um reajuste alto faça um aditivo acima do limite aparecer como OK.
+  Reajustes formalizados também gravam a base reajustada para manter o cálculo correto
+  após recarregar.
+- **Gerar contrato para serviço mensal fixo não herdava/calculava corretamente os dados da
+  licitação**: no modal "Gerar contrato", a vigência e o vencimento agora ficam
+  somente leitura para serviço mensal valor fixo, usando os meses cadastrados na licitação
+  e recalculando o vencimento pela data de início. Valor mensal e valor global também
+  passam a ser calculados automaticamente pelos itens marcados no contrato.
+- **Atas Rp Vigentes "perdia" atas encerradas e suas execuções**: `loadAtas` descartava
+  contratos/itens/execuções com `status=ENCERRADO` já na busca dos dados (não só na
+  exibição), e o filtro de Status do topo só listava valores presentes nesses dados — como
+  encerrados nunca chegavam a existir em memória, "ENCERRADO" nunca aparecia como opção e a
+  ata ficava inacessível pela UI (dado seguia intacto no banco, só inalcançável). Corrigido:
+  `loadAtas` agora mantém tudo em memória (igual `loadContratos` já fazia), e a lógica de
+  "esconder encerrado por padrão, mostrar ao selecionar o filtro" que já existia em
+  `filtrarAtas` passa a funcionar de verdade. A tabela de Execuções/Solicitações (que não
+  tinha filtro de status próprio) ganhou a mesma regra, para não misturar execuções de atas
+  encerradas com as vigentes.
+- **Item de ATA continuava mostrando "VIGENTE" mesmo com o contrato já ENCERRADO**: o status
+  exibido priorizava `atas_itens.status_contrato`, um campo legado nunca sincronizado (sempre
+  gravado como `'VIGENTE'` na criação do item e nunca atualizado ao encerrar/reabrir o
+  contrato) sobre `contratos.status`, que é a fonte real da verdade e é corretamente
+  atualizado pelo botão "Encerrar". Corrigido em `loadAtas` (index.html) e no cache de
+  fallback usado por Controle de Entregas — `contratos.status` agora sempre prevalece.
+- **Controle de Entregas / Prazos não mostrava itens de aquisição contratados aguardando
+  AF**: o filtro comparava `itens.status` com a string `'aguardando'`, que nunca é gravada
+  (o valor real após vincular item a contrato é `'contratado'`). Corrigido em
+  `loadItensEntregas` — aquisições contratadas voltam a aparecer para emissão de AF.
+- **Status do contrato de aquisição ficava travado em "Aguardando emissão da AF" para
+  sempre**: nada atualizava `contratos.status` após a emissão da AF ou o recebimento dos
+  itens, apesar do texto da UI prometer a transição automática. Agora `contratos.status`
+  transiciona automaticamente: `Aguardando emissão da AF` → `VIGENTE` (assim que a 1ª AF é
+  emitida, `_ctMarcarVigente`) → `CONCLUIDO` (quando todos os itens do contrato atingem
+  100% da quantidade contratada recebida em Controle de Entregas/Prazos,
+  `_ctVerificarConclusao`). Contratos `CONCLUIDO` ganham badge próprio e ficam ocultos por
+  padrão em Contratos em Execução (igual `ENCERRADO`), com opção manual em "Editar
+  contrato" para casos excepcionais.
+
 ### Adicionado
+- **Tipo de serviço em Licitações/processos**: ao selecionar Natureza = `SERVIÇO`, o modal
+  de processo exibe o campo obrigatório "Tipo do serviço" com as opções iniciais de
+  contrato de serviço. O valor é salvo em `processos.tipo_servico` e aparece no resumo da
+  licitação para preparar as próximas regras específicas por subtipo.
+- **Serviço mensal valor fixo**: o subtipo ganhou uma lista obrigatória de itens no cadastro
+  da licitação, permitindo vários itens por contrato. Cada item tem descrição, quantidade e
+  valor unitário; a quantidade de meses fica no contrato, e os valores mensal/global são
+  calculados automaticamente. O global alimenta `processos.valor_estimado`.
+- **Itens de serviço mensal na licitação e geração de contrato**: a aba Licitações agora
+  conta e exibe os itens salvos em `processos.servico_mensal_itens`. Ao gerar contrato, os
+  itens mensais aparecem para marcação e viram registros em `itens` vinculados ao contrato.
 - **Filtro "Mostrar municipais antigas"** na aba de Saldo de Emendas: emendas `MUNICIPAL`
   de exercícios anteriores a 2026 (histórico importado das atas encerradas) ficam **ocultas
   por padrão** e só aparecem ao marcar a caixinha, evitando confusão com as municipais
@@ -44,6 +206,30 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   (`neInitItens`, `neAddItem`, `neAddUnidade`, `neRecalc`).
 
 ### Corrigido
+- **Puxar itens de emenda em licitacoes/aquisicoes**: itens de emenda ja vinculados a
+  `atas_execucao` agora ficam bloqueados como "ja vinculado", evitando selecionar de novo
+  a parte ja executada por ATA; apenas o saldo dividido/restante continua disponivel.
+- **Patrimonio/serie por unidade fisica**: recebimentos de aquisicoes e ATAs agora sao
+  refletidos na aba **Emendas** e no **Inventario** como uma linha por patrimonio quando
+  patrimonio/serie forem preenchidos. Enquanto nao houver patrimonio/serie, o item continua
+  consolidado. Criada `atas_execucao_unidades`, alinhada `itens_entregas_unidades` com
+  `unidade_seq`/recebimento e migrado o recebimento ja lancado da ATA para 25 linhas
+  individuais.
+- **Marca/modelo no recebimento de ATA**: o modal de recebimento passa a puxar
+  `atas_itens.marca_modelo`, evitando campo vazio/bugado ao receber item gerado por ATA.
+- **Solicitacao parcial de ATA com origem em Emenda**: o salvamento agora usa RPC
+  transacional que divide `emenda_itens` quando a quantidade solicitada e menor que o saldo,
+  mantendo a parte restante livre para nova solicitacao. Reparado o caso da emenda 2616
+  (`AR CONDICIONADO`, ANGELICA): 25 unidades seguem vinculadas a solicitacao e 25 voltaram
+  como saldo disponivel.
+- **Solicitacao/execucao de ATA no banco de teste**: alinhado o schema de
+  `atas_execucao` no `contratos-dag`, incluindo `origem_recurso` e campos de confirmacao
+  de entrega, evitando erro de schema cache ao salvar nova solicitacao.
+- **Numero da ATA/contrato**: a validacao passou a bloquear apenas letras e espacos,
+  permitindo separadores como barra, ponto e hifen.
+- **RLS da aba Emendas no banco de teste**: adicionadas as politicas de escrita para
+  `emendas` e `emenda_itens`, usando `can_access_tab('dashboard','edit')`, para permitir
+  que usuarios admin/aprovados salvem novas emendas sem erro de row-level security.
 - **AF de ATA com prazo herdado**: o modal de emissão agora busca o vínculo `ata_item_id`,
   herda o prazo da ATA/licitação, calcula `prev_entrega` automaticamente e bloqueia a
   emissão quando a origem não possui prazo cadastrado. Ao salvar, o avanço também é refletido
@@ -65,6 +251,8 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   Supabase). Item com `af_numero` preenchido nunca mais fica invisível.
 
 ### Alterado
+- **Gerar contrato a partir de licitacao**: o campo **Processo / CPL** agora vem travado
+  com o processo clicado, em vez de abrir um select para escolher novamente.
 - **Aba Emendas como painel consolidado do ciclo do item**: agora o dashboard deriva status,
   AF, empenho, NF, patrimônio e data de entrega a partir de `itens`, `itens_entregas`,
   `itens_entregas_unidades`, `empenho_itens` e `nota_fiscal_itens`, em vez de depender

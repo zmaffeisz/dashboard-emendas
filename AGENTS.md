@@ -1,11 +1,11 @@
-# CLAUDE.md — orientações para agentes/IA
+# AGENTS.md — orientações para agentes/IA
 
 > **Ambiente atual:** este código está preparado para produção com o Supabase
 > `qpvgpfwuurqcqprnpxua` (`contratos-dag`). O projeto
 > `djtwoesmgeetnrztyvzw` é legado e permanece estritamente somente leitura.
 > Referências históricas abaixo a "clone de teste" não mudam essa trava atual.
 
-Guia para assistentes de IA (Claude Code e afins) que trabalham neste repositório.
+Guia para assistentes de IA (Codex e afins) que trabalham neste repositório.
 Documentação humana completa em [`/docs`](docs/) e [README.md](README.md).
 
 ## O que é o projeto
@@ -80,32 +80,13 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
   (`userCanView/userCanEdit`). `usuarios`/`cadastros` são admin-only.
 - **Chamados:** "Chamados Antigos" (Google Sheets) é **somente leitura**; chamado órfão sem
   controle = "não aberto" (não criar controle automático).
-
-## Design visual — regras obrigatórias
-
-Guia completo (tokens, componentes, ícones, responsivo): **[docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) — leia antes de criar ou editar qualquer HTML/CSS.** Não criar
-componente novo (botão, badge, card, modal, tabela) sem antes conferir se já existe um
-padrão lá. Resumo do que mais importa:
-
-- **Nunca escrever `*/` dentro do texto de um comentário CSS** (ex.: `funcaoA*/funcaoB`
-  como separador) — fecha o comentário mais cedo do que o pretendido e o navegador
-  descarta silenciosamente a próxima regra real, sem erro em `node --check` nem no
-  console. Já aconteceu uma vez e derrubou `.modal-overlay{display:none}`, abrindo
-  todos os modais ao mesmo tempo. Depois de editar CSS, rode o snippet de
-  balanceamento de chaves descrito em docs/DESIGN_SYSTEM.md.
-- Reaproveitar os tokens de `styles.css` (`--primary`, `--space-*`, `--text-*`,
-  `--radius*`, `--shadow*`, semânticas `--green/--amber/--red/--blue/--neutral` +
-  `-bg`/`-text`) — nunca hardcode cor/espaçamento/raio soltos num componente novo.
-- Componentes já existentes a reutilizar: `.btn-primary/.btn-secondary/.btn-ghost/
-  .btn-danger/.btn-compact/.btn-icon`, `.badge` + `.badge-success/-warning/-danger/
-  -info/-neutral`, `.metrics`/`.metric` (+ `.metric-success/-warning/-danger`),
-  `.filters`/`.fg`, `.table-card`/`.th-sortable-wrap`/`.th-sort-label`/`.table-empty`,
-  `.modal-overlay`/`.modal-box`/`.modal-title`/`.modal-actions`, menu kebab
-  (`js/components/kebab-menu.js`, use quando uma linha de tabela tiver 3+ ações).
-- Ícones: SVG inline monocromático (sem CDN, sem emoji novo em navegação/sidebar).
-- Tema dark é o padrão — todo CSS novo deve funcionar nos dois temas via `var(--token)`.
-- Depois de qualquer mudança visual, testar de fato no navegador (não só
-  `node --check`) — bug de CSS que quebra em runtime não aparece em nenhum lint.
+- **Contratos mensais fixos/manutencao sao um fluxo separado:** as regras ja criadas para
+  contratos de manutencao de equipamentos com pagamento mensal fixo (fiscalizacao, medicao
+  gerada pela fiscalizacao, termo de ateste, NF vinculada, aditivo, supressao e reajuste
+  por item) **nao devem ser reaproveitadas automaticamente** para outros modelos. Ao
+  trabalhar em **Servico por demanda/execucao** ou qualquer outro tipo de contrato, nao
+  puxar a logica do mensal fixo sem pedido explicito do usuario; primeiro confirmar a
+  forma de execucao/pagamento e desenhar um fluxo proprio.
 
 ## Como rodar
 
