@@ -9,7 +9,7 @@
 Instância única global em cada página:
 
 ```js
-const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
+const SUPABASE_URL = "https://qpvgpfwuurqcqprnpxua.supabase.co";
 const SUPABASE_KEY = "sb_publishable_...";   // chave publishable (anon)
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 ```

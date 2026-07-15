@@ -2,13 +2,13 @@
 
 > Complementa [SCHEMA.md](SCHEMA.md). Foca em objetos não-tabela: migrations, views,
 > funções, triggers, regras de integridade e RLS.
-> Banco: PostgreSQL 17, Supabase nuvem `djtwoesmgeetnrztyvzw`, schema `public`.
+> Banco: PostgreSQL 17, Supabase de produção `qpvgpfwuurqcqprnpxua` (`contratos-dag`), schema `public`.
 
 ## 1. Ambientes
 
 | Artefato | Onde |
 |---|---|
-| **Produção (usada pelo app)** | Supabase nuvem `djtwoesmgeetnrztyvzw` (hardcoded no HTML) |
+| **Produção (usada pelo app)** | Supabase nuvem `qpvgpfwuurqcqprnpxua` (`contratos-dag`) |
 | `supabase/config.toml` | Configuração do stack **local** (porta DB 54322, API 54321, Studio 54323) — **não** usado pelo app |
 | `schema_prod.sql` | Dump do schema de produção |
 | `schema_local.sql` | Dump do schema local |

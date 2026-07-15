@@ -1,9 +1,8 @@
 # AGENTS.md — orientações para agentes/IA
 
-> **Ambiente atual:** este código está preparado para produção com o Supabase
+> **Ambiente atual:** este código está em produção no Supabase
 > `qpvgpfwuurqcqprnpxua` (`contratos-dag`). O projeto
-> `djtwoesmgeetnrztyvzw` é legado e permanece estritamente somente leitura.
-> Referências históricas abaixo a "clone de teste" não mudam essa trava atual.
+> `djtwoesmgeetnrztyvzw` é legado, está congelado e permanece estritamente somente leitura.
 
 Guia para assistentes de IA (Codex e afins) que trabalham neste repositório.
 Documentação humana completa em [`/docs`](docs/) e [README.md](README.md).
@@ -35,24 +34,23 @@ chamados, da Secretaria da Saúde de Sorocaba.
   concentra estilos de documentos/impressão extraídos das strings JS.
 - `login.html`, `cadastro.html` — auth. `chamado.html` — formulário público (RPC).
 - `supabase/migrations/` — migrations. `schema*.sql` — dumps.
-- Banco nuvem deste clone de teste: projeto **`qpvgpfwuurqcqprnpxua`** (`contratos-dag`). O projeto original **`djtwoesmgeetnrztyvzw`** (`zmaffeisz's Project`) NÃO deve ser alterado.
+- Banco nuvem de produção: projeto **`qpvgpfwuurqcqprnpxua`** (`contratos-dag`). O projeto legado **`djtwoesmgeetnrztyvzw`** (`zmaffeisz's Project`) não deve receber novas escritas.
 
 ## Trava obrigatória de ambiente Supabase
 
-Este checkout é um **clone de teste**. Qualquer operação executável no Supabase deve mirar
-**somente** o projeto de teste:
+Este checkout usa o Supabase de produção **`qpvgpfwuurqcqprnpxua`** (`contratos-dag`).
+Qualquer operação executável no Supabase deve mirar somente esse projeto:
 
-- **permitido para execução/escrita:** `qpvgpfwuurqcqprnpxua` (`contratos-dag`);
-- **proibido executar/escrever:** `djtwoesmgeetnrztyvzw` (`zmaffeisz's Project`, banco
-  original do usuário).
+- **produção oficial, permitido para execução/escrita:** `qpvgpfwuurqcqprnpxua` (`contratos-dag`);
+- **legado congelado, proibido executar/escrever:** `djtwoesmgeetnrztyvzw` (`zmaffeisz's Project`).
 
 Antes de rodar SQL, migrations, seeds, RPCs, Edge Functions, Storage, Auth Admin,
 alterações de RLS, DDL ou DML, confirme que o `project_id`/URL é
 `qpvgpfwuurqcqprnpxua` / `https://qpvgpfwuurqcqprnpxua.supabase.co`.
 
 Não use dumps, comentários antigos, `.supabase/config.toml`, histórico de migrations ou
-valores hardcoded antigos para trocar o alvo para o projeto original. Se for necessário
-comparar/copiar algo do banco original, faça somente leitura e apenas quando o usuário pedir
+valores hardcoded antigos para trocar o alvo para o projeto legado. Se for necessário
+comparar/copiar algo do banco legado, faça somente leitura e apenas quando o usuário pedir
 explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
 
 ## Convenções e fatos que orientam mudanças
@@ -117,7 +115,7 @@ python -m http.server 8765   # na raiz; abrir http://localhost:8765/login.html
   A lógica de funções como `showTab`, `loadAtas` e `abrirModalNovoContrato` agora está nos
   arquivos externos, não no HTML.
 - **Banco:** seguir a trava obrigatória de ambiente Supabase acima. Nenhuma escrita/execução
-  no projeto original; migrations devem ser idempotentes e fixar `search_path` em funções.
+  no projeto legado; migrations devem ser idempotentes e fixar `search_path` em funções.
 - Rodar `get_advisors` (segurança/performance) após mudanças de schema.
 - Atualizar [CHANGELOG.md](CHANGELOG.md) e os docs relevantes ao mudar comportamento.
 - Confirmar itens marcados como **"A confirmar"** em [docs/TODO.md](docs/TODO.md) antes de

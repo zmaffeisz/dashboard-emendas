@@ -20,9 +20,9 @@ emendas parlamentares, licitações, contratos, atas, execução, entregas e cha
 - Supabase de produção: `qpvgpfwuurqcqprnpxua` (`contratos-dag`).
 - Supabase legado, somente leitura: `djtwoesmgeetnrztyvzw`.
 
-O projeto legado não deve receber novas escritas. Durante uma virada de produção,
-ele deve permanecer preservado até a conclusão da conferência e do período de
-retorno de emergência.
+O projeto legado permanece congelado e somente para consulta. O desenvolvimento,
+as migrações e as novas escritas devem ser direcionados exclusivamente ao
+`contratos-dag`.
 
 ## Como executar localmente
 

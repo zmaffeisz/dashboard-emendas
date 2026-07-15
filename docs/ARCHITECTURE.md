@@ -24,7 +24,7 @@ no PostgreSQL gerenciado pelo Supabase.
          │             │  HTTPS (REST/PostgREST + Auth + Storage + Realtime)
          ▼             ▼
 ┌──────────────────────────────────────────────────────────┐
-│  Supabase (nuvem) — projeto djtwoesmgeetnrztyvzw           │
+│  Supabase (nuvem) — projeto qpvgpfwuurqcqprnpxua            │
 │  • PostgreSQL 17 (37 tabelas, 2 views, funções, RLS)      │
 │  • Auth (e-mail/senha)                                     │
 │  • Storage (buckets de termos/anexos)                     │
@@ -96,8 +96,8 @@ ou `types/`. A organização é por **convenção dentro do arquivo**:
 
 ## 6. Ambientes de banco
 
-> **Importante:** o app aponta para o **Supabase na NUVEM** (`djtwoesmgeetnrztyvzw`),
-> *hardcoded* em `index.html`, `login.html` e `cadastro.html`. Existem arquivos
+> **Importante:** o app aponta para o **Supabase de produção na NUVEM** (`qpvgpfwuurqcqprnpxua`),
+> configurado em `js/legacy/00-core.js`, `login.html`, `cadastro.html` e `chamado.html`. Existem arquivos
 > `schema_local.sql` / `supabase/config.toml` para Supabase local, mas o app **não** usa
 > o stack local. Análises e migrações devem mirar a nuvem. Ver [DATABASE.md](DATABASE.md).
 

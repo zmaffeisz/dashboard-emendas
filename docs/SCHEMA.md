@@ -1,6 +1,6 @@
 # Esquema do Banco de Dados — dashboard-emendas
 
-> Banco: PostgreSQL 17 no Supabase (nuvem, projeto `djtwoesmgeetnrztyvzw`), schema `public`.
+> Banco: PostgreSQL 17 no Supabase de produção (nuvem, projeto `qpvgpfwuurqcqprnpxua`, `contratos-dag`), schema `public`.
 > 37 tabelas base + 2 views. Levantado diretamente do banco em produção.
 > Detalhes de migrations, funções, RLS e triggers em [DATABASE.md](DATABASE.md).
 
