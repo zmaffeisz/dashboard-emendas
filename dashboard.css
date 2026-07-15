@@ -156,6 +156,12 @@ th.resizable-th{position:sticky;background-clip:padding-box}
 .col-resizer:hover,.col-resizer.col-resizing{background:var(--blue,#3b82f6)}
 table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
 
+/* Chamados novos: preserva espaço para a descrição e usa rolagem horizontal. */
+#panel-chamados-novos .cn-table{min-width:2800px}
+#panel-chamados-novos .cn-table th:nth-child(8),
+#panel-chamados-novos .cn-table td:nth-child(8){width:320px;min-width:320px;max-width:420px}
+#panel-chamados-novos .cn-table td:nth-child(8){white-space:normal;word-break:normal;overflow-wrap:anywhere}
+
 /* ── FORMULÁRIOS (dashboard) ── */
 .form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.125rem}
 .form-title{font-size:14px;font-weight:600;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}

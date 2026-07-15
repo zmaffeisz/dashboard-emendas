@@ -1,5 +1,7 @@
 # Changelog
 
+- **Descrição dos chamados legível por padrão**: a tabela de Chamados Novos agora reserva uma largura adequada para a coluna Descrição e mantém rolagem horizontal nas telas que não comportam todas as colunas.
+
 - **AF duplicada por envio concorrente**: a emissão de AF agora bloqueia o botão enquanto a gravação está em andamento. O banco também serializa emissões para o mesmo item, rejeita AF ativa repetida e impede que a soma autorizada ultrapasse a quantidade contratada, inclusive em duas abas ou requisições simultâneas.
 
 - **Seção herdada ao gerar contrato**: ao gerar um contrato a partir de uma licitação, a seção já definida no processo é carregada automaticamente e fica bloqueada no modal, evitando uma segunda seleção e divergências entre licitação e contrato.
