@@ -1,0 +1,134 @@
+@page {
+  size: A4;
+  margin: 10mm;
+}
+
+.pdf-os,
+.pdf-os * {
+  box-sizing: border-box;
+  color: #000 !important;
+  color-scheme: light;
+}
+
+.pdf-os {
+  width: 190mm;
+  max-width: 190mm;
+  margin: 0;
+  padding: 0;
+  background: #fff !important;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.pdf-os .header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 68px;
+  margin: 0 0 6px !important;
+  padding: 0 !important;
+  position: relative !important;
+  top: auto !important;
+  z-index: auto !important;
+  background: #fff !important;
+  border: 0 !important;
+  border-bottom: 1px solid #000 !important;
+  box-shadow: none !important;
+}
+
+.pdf-os .brasao {
+  width: 70px;
+  height: 60px;
+  position: absolute;
+  left: 0;
+  object-fit: contain;
+}
+
+.pdf-os .header-text {
+  text-align: center;
+}
+
+.pdf-os .header-text .pref {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.pdf-os .header-text .sec {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.pdf-os .header-text .setor {
+  font-size: 9px;
+  font-weight: normal;
+}
+
+.pdf-os table {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed;
+  margin: 0 0 4px !important;
+  background: #fff !important;
+}
+
+.pdf-os tr,
+.pdf-os tr:nth-child(odd),
+.pdf-os tr:nth-child(even),
+.pdf-os td,
+.pdf-os th,
+.pdf-os tr:nth-child(odd) td,
+.pdf-os tr:nth-child(even) td {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.pdf-os td,
+.pdf-os th {
+  border: 1px solid #000 !important;
+  padding: 3px 5px !important;
+  vertical-align: top !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: normal;
+}
+
+.pdf-os .titulo {
+  background: #e0e0e0 !important;
+  text-align: center;
+  font-weight: bold;
+  font-size: 10px;
+  padding: 4px !important;
+}
+
+.pdf-os .label {
+  font-weight: bold;
+  font-size: 9px;
+}
+
+.pdf-os .rotulo {
+  display: none !important;
+}
+
+.pdf-os .servico-opcao {
+  display: inline-block;
+  white-space: nowrap;
+  margin: 1px 10px 1px 0;
+}
+
+.pdf-os .footer {
+  text-align: center;
+  font-size: 8px;
+  margin-top: 8px;
+  border-top: 1px solid #000;
+  padding-top: 4px;
+}
+
+@media print {
+  button {
+    display: none;
+  }
+}

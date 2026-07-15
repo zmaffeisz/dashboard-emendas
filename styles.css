@@ -35,10 +35,26 @@
   --sorocaba-azul:#1a5fa8;
   --sorocaba-ouro:#c9a84c;
 
+  /* Neutro semântico (tags "Indefinido", "Não classificado" etc.) */
+  --neutral:#64748b; --neutral-bg:#eef1f5; --neutral-text:#3b4a5e;
+
+  /* Aliases para código novo (mesma cor de --blue, nome semântico) */
+  --primary:var(--blue); --primary-text:var(--blue-text); --primary-soft:var(--blue-bg);
+  --info:var(--blue); --info-text:var(--blue-text); --info-soft:var(--blue-bg);
+
+  /* Escala de espaçamento — usar só estes valores em CSS novo */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px;
+
+  /* Escala tipográfica */
+  --text-xs:11px; --text-sm:12.5px; --text-base:14px; --text-lg:16px; --text-xl:20px; --text-2xl:28px;
+
   /* Utilitários */
   --radius:10px;
   --radius-sm:6px;
+  --radius-lg:14px;
   --shadow:rgba(0,0,0,.08);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.08);
+  --shadow-lg:0 20px 60px rgba(0,0,0,.35);
 
   /* Componentes */
   --tabs-bg:#fff;
@@ -75,7 +91,11 @@ html[data-theme="dark"]{
   --accent-soft:#1c2e44;
   --accent-bg:#1b2533;
 
+  --neutral:#8b97a8; --neutral-bg:#1c2530; --neutral-text:#c3ccd8;
+
   --shadow:rgba(0,0,0,.35);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.35);
+  --shadow-lg:0 20px 60px rgba(0,0,0,.6);
   --tabs-bg:#0b0f16;
   --filters-bg:#15202e;
   --dropdown-bg:#15202e;
@@ -91,23 +111,54 @@ html[data-theme="dark"]{
 
 /* ── BASE ── */
 html{transition:background .2s}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:var(--text-base)}
 select,input,textarea{color-scheme:light dark}
 select:not([class]){background:var(--surface);color:var(--text)}
 
+/* Números tabulares em toda coluna/valor numérico */
+.metric-value,.ficha-field-value,.scnt,.bar-val,td.num,th.num,.tabular-nums{font-variant-numeric:tabular-nums}
+
+*:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+
 /* ── BOTÃO TEMA ── */
-.tema-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--accent,var(--blue));font-size:18px;cursor:pointer;line-height:1}
+.tema-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--accent,var(--blue));font-size:18px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+
+/* Ícone de tema: dois SVGs (sol/lua), CSS decide qual mostrar conforme data-theme — sem depender de JS reescrever conteúdo */
+#tema-btn{display:inline-flex;align-items:center;justify-content:center;gap:0}
+#tema-btn .icon-sun,#tema-btn .icon-moon{display:none;flex-shrink:0}
+html[data-theme="dark"] #tema-btn .icon-sun{display:inline-flex}
+html:not([data-theme="dark"]) #tema-btn .icon-moon{display:inline-flex}
 
 /* ── BOTÕES BASE ── */
 button{color:var(--text)}
 button[style*="background:var(--surface)"],button[style*="background: var(--surface)"]{color:var(--text2)}
 button[style*="background:none"],button[style*="background: none"]{color:var(--text2)}
 
-.btn-primary{font-size:13px;padding:8px 20px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500}
-.btn-primary:hover{opacity:.9}
+.btn-primary{font-size:var(--text-sm);height:36px;padding:0 18px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,opacity .15s,transform .1s}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:active{transform:translateY(1px)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-.btn-secondary{font-size:13px;padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
-.btn-secondary:hover{background:var(--surface2)}
+.btn-secondary{font-size:var(--text-sm);height:36px;padding:0 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:500;transition:background .15s,border-color .15s}
+.btn-secondary:hover{background:var(--surface2);border-color:var(--text3)}
+.btn-secondary:disabled{opacity:.5;cursor:not-allowed}
+
+/* Ghost: sem borda, usado em ações discretas de tabela/menu */
+.btn-ghost{font-size:var(--text-sm);height:36px;padding:0 12px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,color .15s}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-ghost:disabled{opacity:.5;cursor:not-allowed}
+
+/* Destrutivo: Encerrar/Excluir — secundário com texto vermelho por padrão, sólido só em confirmação */
+.btn-danger{font-size:var(--text-sm);height:36px;padding:0 16px;border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--red) 45%,transparent);background:transparent;color:var(--red);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;transition:background .15s,color .15s}
+.btn-danger:hover{background:var(--red);border-color:var(--red);color:#fff}
+.btn-danger.btn-solid{background:var(--red);border-color:var(--red);color:#fff}
+.btn-danger.btn-solid:hover{filter:brightness(1.1)}
+
+/* Compacto: ações dentro de linha de tabela */
+.btn-compact{height:28px;padding:0 10px;font-size:var(--text-xs)}
+
+/* Ícone-only (fechar modal, etc.) */
+.btn-icon{width:32px;height:32px;padding:0;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s}
+.btn-icon:hover{background:var(--surface2);color:var(--text)}
 
 /* ── FORMULÁRIOS (compartilhado) ── */
 .form-group{display:flex;flex-direction:column;gap:4px}
@@ -118,6 +169,26 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-group input[readonly]{background:var(--surface2);color:var(--text3)}
 .form-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.proc-ident-grid{display:grid;grid-template-columns:minmax(140px,180px) minmax(0,1fr);gap:12px}
+.proc-ident-grid.full{grid-column:1/-1}
+.proc-tipo-outro{grid-column:1}
+.proc-sc{grid-column:2}
+@media(max-width:600px){.proc-ident-grid{grid-template-columns:1fr}.proc-tipo-outro,.proc-sc{grid-column:1}}
+
+/* selects estilizados (form-group / ne-item): remove o widget nativo (que no Windows em
+   modo escuro ignora parte do background do autor) e desenha uma seta própria */
+.form-group select,.ne-item select{-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%238896a8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:10px 7px;padding-right:28px;height:34px;box-sizing:border-box}
+/* option vazia ("Selecione...") deve pesar visualmente igual ao placeholder de um input */
+.form-group select:has(option:checked[value=""]),.ne-item select:has(option:checked[value=""]){color:var(--text3);font-weight:400}
+
+/* ── ITENS INLINE (ex.: cadastro de emenda) ── */
+.ne-item input,.ne-item select{font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background-color:var(--surface);color:var(--text);height:34px;box-sizing:border-box;width:100%}
+.ne-item input:focus,.ne-item select:focus{outline:none;border-color:var(--blue)}
+/* linha unidade+qtde+total+remover em grid: larguras fixas e alinhadas, sem "sobra" de flex desbalanceado */
+.ne-item .ne-u-row{display:grid;grid-template-columns:2fr 90px 110px 34px;gap:8px;align-items:center;margin-bottom:6px}
+.ne-item .ne-u-row select,.ne-item .ne-u-row input{width:100%;min-width:0}
+.ne-item .ne-u-total{height:34px;display:flex;align-items:center;justify-content:flex-end;font-size:12px;color:var(--text2)}
+.ne-item .ne-u-row .ne-u-remove{width:34px;height:34px;box-sizing:border-box;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* ── SELECT PESQUISÁVEL (s2) ── */
 .s2-outer{position:relative}
@@ -141,8 +212,62 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .fmsg.ok{background:var(--green-bg);color:var(--green-text);display:inline-block}
 .fmsg.err{background:var(--red-bg);color:var(--red-text);display:inline-block}
 
-/* ── BADGE ── */
-.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
+/* ── BADGE / STATUS PILL ──
+   Formato único para todo status do sistema: pill soft (fundo translúcido + texto na cor).
+   Uso: <span class="badge badge-success">VIGENTE</span> */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:var(--text-xs);padding:3px 10px;border-radius:999px;font-weight:600;white-space:nowrap;border:1px solid transparent;line-height:1.5}
+.badge-success{background:var(--green-bg);color:var(--green-text);border-color:color-mix(in srgb,var(--green) 35%,transparent)}
+.badge-warning{background:var(--amber-bg);color:var(--amber-text);border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
+.badge-danger{background:var(--red-bg);color:var(--red-text);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.badge-info,.badge-primary{background:var(--blue-bg);color:var(--blue-text);border-color:color-mix(in srgb,var(--blue) 35%,transparent)}
+.badge-purple{background:var(--purple-bg);color:var(--purple-text);border-color:color-mix(in srgb,var(--purple) 35%,transparent)}
+.badge-neutral{background:var(--neutral-bg);color:var(--neutral-text);border-color:color-mix(in srgb,var(--neutral) 30%,transparent)}
+.badge .tabular-nums,.badge-num{font-variant-numeric:tabular-nums}
+
+/* Contratos: visão resumida e detalhes apenas após abrir o cartão. */
+.ct-contract-card{position:relative;width:100%;min-height:88px;box-sizing:border-box;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.10);transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.ct-contract-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(15,23,42,.18);transform:translateY(-1px)}
+.ct-contract-card.is-expanded{border-color:var(--blue);box-shadow:0 5px 18px rgba(15,23,42,.20)}
+.ct-contract-summary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;padding:14px 20px 12px}
+.ct-contract-summary.has-status{grid-template-columns:auto minmax(0,1fr) 220px}
+.ct-contract-summary>.ct-contract-status{align-self:center}
+.ct-contract-summary:not(.has-status) .ct-contract-status{display:none}
+.ct-contract-object,.ct-contract-status{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ct-contract-identity{min-width:0;display:flex;flex-direction:row;align-items:center;gap:12px}
+.ct-contract-identity-info{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ct-contract-icon{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;background:var(--blue-bg);color:var(--blue-text)}
+.ct-contract-icon svg{width:20px;height:20px}
+.ct-contract-kicker{font-size:10px;font-weight:700;letter-spacing:.065em;text-transform:uppercase;color:var(--text3)}
+.ct-contract-identity-info strong{font-size:15px;line-height:1.2;color:var(--text)}
+.ct-contract-number{font-size:11px;color:var(--text3)}
+.ct-contract-object strong{font-size:14px;font-weight:400;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ct-contract-status{align-items:flex-end;text-align:right;font-size:12px;font-weight:700;line-height:1.15}.ct-contract-status small{font-size:11px;font-weight:500}
+.ct-contract-status .ct-contract-alerts{position:absolute;top:50%;transform:translateY(-50%);right:250px;left:auto;bottom:auto;justify-content:flex-end;text-align:right;max-width:280px;pointer-events:none}
+.ct-contract-status .ct-contract-alerts .badge{pointer-events:auto}
+.ct-contract-alerts{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:3px;text-align:right}.ct-contract-alerts .badge{margin-right:0!important;font-size:10px;line-height:1.2}
+.ct-contract-details{padding:16px 20px 18px;background:var(--surface)}
+.ct-contract-items-table{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+.ct-contract-items-table table{min-width:0!important;table-layout:fixed}.ct-contract-items-table th,.ct-contract-items-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Confirmação de Entrega: a grade se adapta ao painel em vez de criar rolagem lateral. */
+#confirmacao-wrap{overflow-x:hidden!important}
+#confirmacao-wrap table{table-layout:fixed}
+#confirmacao-wrap th,#confirmacao-wrap td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
+/* Gestão do contrato: a tabela de medições ocupa o modal sem rolagem lateral. */
+.ct-medicoes-table{overflow-x:auto!important}.ct-medicoes-table table{width:100%;min-width:1200px;table-layout:fixed}.ct-medicoes-table th,.ct-medicoes-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}.ct-medicoes-table th:nth-child(8),.ct-medicoes-table td:nth-child(8){width:165px;min-width:165px}
+/* Fiscalizadores no modal do contrato: sem rolagem lateral desnecessária. */
+.ct-fiscais-table{overflow-x:hidden!important}.ct-fiscais-table table{width:100%;table-layout:fixed}.ct-fiscais-table th,.ct-fiscais-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
+/* Itens do contrato: distribuição pela largura do modal, sem barra lateral. */
+.ct-itens-table{overflow-x:hidden!important}.ct-itens-table table{width:100%;table-layout:fixed}.ct-itens-table th,.ct-itens-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
+.ct-contract-meta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 20px;padding-bottom:15px}.ct-contract-meta{min-width:0;display:flex;flex-direction:column;gap:4px}.ct-contract-meta span{font-size:10px;font-weight:700;letter-spacing:.055em;text-transform:uppercase;color:var(--text3)}.ct-contract-meta strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.3;color:var(--text)}
+.ct-contract-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--border)}
+/* Contratos em execução: cards soltos sobre o fundo da página. */
+#contratos-main>.table-card{background:transparent;border:0;box-shadow:none;overflow:visible;margin-bottom:0}
+#contratos-main>.table-card>.table-hdr{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.10);margin-bottom:12px}
+#contratos-main>.table-card>.table-wrap{background:transparent;overflow:visible;max-height:none}
+#contratos-main #ct-table{background:transparent}
+#contratos-main #ct-table>tbody>tr,#contratos-main #ct-table>tbody>tr>td{background:transparent!important;border:0!important}
+@media(max-width:820px){.ct-contract-summary{grid-template-columns:1fr;gap:12px;padding:16px}.ct-contract-status{align-items:flex-start;text-align:left;flex-direction:row;flex-wrap:wrap;align-items:center}.ct-contract-details{padding-left:16px;padding-right:16px}.ct-contract-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.ct-contract-meta-grid{grid-template-columns:1fr}.ct-contract-object strong{font-size:14px}}
 
 /* ── PILL (header) ── */
 .pill{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
@@ -157,16 +282,37 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 /* ── LOADING ── */
 .loading{text-align:center;padding:3rem;color:var(--text3);font-size:14px}
 
-/* ── MODAIS ── */
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:999;align-items:center;justify-content:center}
-.modal-overlay.active{display:flex}
-.modal-box{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-.modal-title{font-size:15px;font-weight:600;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;padding-bottom:.75rem;border-bottom:1px solid var(--border)}.modal-title-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);line-height:1;padding:4px;flex-shrink:0}
-.modal-sub{font-size:13px;color:var(--text2);margin-bottom:1rem}
-.modal-input{width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.75rem}
+/* ── ESTADO VAZIO DE TABELA ── */
+.table-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:2.5rem 1rem;color:var(--text3);font-size:13px}
+.table-empty svg{width:32px;height:32px;stroke:var(--text3);fill:none;stroke-width:1.5;opacity:.7}
+
+/* ── MENU "⋮" (KEBAB) — ações de linha de tabela com 3+ ações ── */
+.kebab-wrap{position:relative;display:inline-block}
+.kebab-trigger{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+.kebab-trigger:hover{background:var(--surface2);border-color:var(--text3);color:var(--text)}
+.kebab-menu{display:none;flex-direction:column;position:absolute;right:0;top:calc(100% + 4px);z-index:120;min-width:200px;background:var(--dropdown-bg,var(--surface));border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);padding:4px}
+.kebab-menu.open{display:flex}
+.kebab-item{width:100%;text-align:left;font-size:var(--text-sm);padding:8px 10px;border:none;background:transparent;color:var(--text);cursor:pointer;border-radius:4px;white-space:nowrap}
+.kebab-item:hover{background:var(--surface2)}
+.kebab-item-danger{color:var(--red)}
+.kebab-item-danger:hover{background:var(--red-bg)}
+.kebab-item-divider{border-top:1px solid var(--border);margin-top:4px;padding-top:10px}
+
+/* ── MODAIS ──
+   .modal-title já funciona como header (borda inferior) e .modal-actions como footer;
+   aqui só elevamos o chrome (blur, sombra, raio, animação) sem mudar a estrutura DOM
+   existente, para não quebrar nenhuma função de abrir/fechar modal já implementada. */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.modal-overlay.active{display:flex;animation:modalOverlayIn .18s ease-out}
+.modal-box{background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;width:320px;max-width:100%;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalBoxIn .18s ease-out}
+@keyframes modalOverlayIn{from{opacity:0}to{opacity:1}}
+@keyframes modalBoxIn{from{opacity:0;transform:scale(.98) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-title{font-size:var(--text-lg);font-weight:600;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;padding-bottom:.75rem;border-bottom:1px solid var(--border)}.modal-title-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);line-height:1;padding:4px;flex-shrink:0;border-radius:var(--radius-sm);transition:background .15s,color .15s}.modal-title-close:hover{background:var(--surface2);color:var(--text)}
+.modal-sub{font-size:var(--text-sm);color:var(--text2);margin-bottom:1rem}
+.modal-input{width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.75rem;background:var(--input-bg,var(--surface));color:var(--text)}
 .modal-input:focus{outline:none;border-color:var(--blue)}
 .modal-err{font-size:12px;color:var(--red);margin-bottom:.75rem;display:none}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:12px;margin-top:12px}
 .modal-filter-btn{width:100%;text-align:left;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer}
 .modal-filter-btn:hover{border-color:var(--blue)}
 .modal-filter-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
@@ -184,8 +330,8 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .login-btn:disabled{opacity:.5;cursor:not-allowed}
 .login-btn-sec{background:var(--sec-bg);color:var(--text2);margin-top:.5rem}
 .login-btn-sec:hover{background:var(--sec-hover)}
-.login-error{font-size:13px;color:#E24B4A;background:#FCEBEB;border-radius:6px;padding:8px 12px;margin-top:.75rem;display:none}
-.login-success{font-size:13px;color:#085041;background:#E1F5EE;border-radius:6px;padding:8px 12px;margin-top:.75rem;display:none}
+.login-error{font-size:13px;color:var(--red-text);background:var(--red-bg);border-radius:6px;padding:8px 12px;margin-top:.75rem;display:none}
+.login-success{font-size:13px;color:var(--green-text);background:var(--green-bg);border-radius:6px;padding:8px 12px;margin-top:.75rem;display:none}
 .login-footer{text-align:center;font-size:12px;color:var(--text3);margin-top:1.5rem}
 .login-info{font-size:12px;color:var(--text3);background:var(--info-bg);border-radius:6px;padding:8px 12px;margin-bottom:1rem;text-align:center}
 

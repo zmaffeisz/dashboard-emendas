@@ -1,0 +1,85 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 30px;
+  color: #1a1a1a;
+  font-size: 13px;
+}
+
+.header {
+  text-align: center;
+  border-bottom: 2px solid #1a5fa8;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.header h2 {
+  color: #1a5fa8;
+  margin: 4px 0;
+  font-size: 18px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.info-item {
+  border: 1px solid #ddd;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #555;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 11px;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #1a5fa8;
+  color: #fff;
+}
+
+.ateste-box {
+  border: 2px solid #1a5fa8;
+  padding: 14px;
+  margin: 20px 0;
+  background: #f0f7ff;
+  text-align: justify;
+  line-height: 1.6;
+}
+
+.assinatura {
+  margin-top: 60px;
+  text-align: center;
+}
+
+.linha-assinatura {
+  border-top: 1px solid #333;
+  width: 300px;
+  margin: 0 auto 8px;
+}
+
+@media print {
+  body {
+    margin: 15mm;
+  }
+}

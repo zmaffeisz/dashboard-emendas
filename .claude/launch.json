@@ -2,10 +2,22 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "static",
+      "name": "static-server",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8765"],
       "port": 8765
+    },
+    {
+      "name": "app-react",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "app-react", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "static-server-2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8777"],
+      "port": 8777
     }
   ]
 }
