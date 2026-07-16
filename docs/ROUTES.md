@@ -8,7 +8,7 @@
 | URL | Arquivo | Acesso | Descrição |
 |---|---|---|---|
 | `/login.html` | `login.html` | Público | Login (Supabase Auth). Sessão ativa → redireciona a `index.html`. |
-| `/cadastro.html` | `cadastro.html` | Público | Auto-cadastro. Cria `profiles` com `papel=visualizador`. |
+| `/cadastro.html` | `cadastro.html` | Público | Auto-cadastro, acessível diretamente pelo botão `Criar conta` no banner público. Cria `profiles` com `papel=visualizador`. |
 | `/index.html` | `index.html` | Autenticado | Aplicação principal (abas via `showTab`). |
 | `/chamado.html` | `chamado.html` | **Público** | Abertura de chamado via RPC `abrir_chamado_publico` (sem login). |
 

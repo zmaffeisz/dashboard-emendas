@@ -17,6 +17,14 @@
 .refresh-btn:hover{background:rgba(255,255,255,.25)}
 .hamburger{display:none;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;line-height:1;width:38px;height:38px;border-radius:var(--radius-sm);cursor:pointer;flex-shrink:0;margin-right:4px;align-items:center;justify-content:center;transition:background .15s}
 .hamburger:hover{background:rgba(255,255,255,.22)}
+.guest-banner-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.guest-banner-action{min-height:36px;padding:8px 20px;border-radius:var(--radius-sm);border:2px solid rgba(255,255,255,.6);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s,transform .1s}
+.guest-banner-action:active{transform:translateY(1px)}
+.guest-banner-login{background:rgba(255,255,255,.15);color:#fff}
+.guest-banner-login:hover{background:rgba(255,255,255,.25);border-color:#fff}
+.guest-banner-signup{background:#fff;border-color:#fff;color:#1a4f86}
+.guest-banner-signup:hover{background:#eef6ff;border-color:#eef6ff}
+.guest-banner-action:focus-visible{outline:3px solid rgba(255,255,255,.45);outline-offset:2px}
 
 /* ── SIDEBAR ── */
 .sidebar{position:fixed;top:var(--header-h,64px);left:0;width:var(--sidebar-expanded);height:calc(100vh - var(--header-h,64px));background:var(--surface);border-right:1px solid var(--border);padding:.75rem 0;overflow-y:auto;overflow-x:hidden;z-index:96;transition:width .22s ease,transform .25s ease,box-shadow .22s ease}
@@ -263,6 +271,8 @@ table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
   .header{padding:.55rem .8rem}
   .header-title{font-size:13px;line-height:1.25}
   .header-sub{font-size:10px}
+  .guest-banner-actions{width:100%}
+  .guest-banner-action{flex:1}
   .company-picker-row{align-items:stretch;flex-direction:column}
   .company-register-btn{align-self:flex-start;min-height:32px}
   /* filtros empilham e ocupam a largura toda */

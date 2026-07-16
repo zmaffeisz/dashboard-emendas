@@ -93,7 +93,10 @@
       <div style="font-size:14px;font-weight:600;margin-bottom:3px">🔓 Modo de visualização pública</div>
       <div style="font-size:12px;opacity:.85">Você está vendo as emendas em modo público. Faça login para acessar todas as seções e funcionalidades.</div>
     </div>
-    <button onclick="abrirModalLogin()" style="flex-shrink:0;font-size:13px;padding:8px 20px;border-radius:var(--radius-sm);border:2px solid rgba(255,255,255,.6);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-weight:600;white-space:nowrap">🔑 Fazer Login</button>
+    <div class="guest-banner-actions">
+      <button id="guest-login-btn" class="guest-banner-action guest-banner-login" onclick="abrirModalLogin()">🔑 Fazer Login</button>
+      <a id="guest-signup-link" class="guest-banner-action guest-banner-signup" href="cadastro.html">Criar conta</a>
+    </div>
   </div>
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Supabase...</div>
   <div id="main" style="display:none">

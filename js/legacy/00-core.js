@@ -240,10 +240,12 @@ function entrarModoConvidado(){
     banner.style.display="flex";
     const title=banner.querySelector("div div:first-child");
     const sub=banner.querySelector("div div:nth-child(2)");
-    const btn=banner.querySelector("button");
+    const btn=document.getElementById("guest-login-btn");
+    const signup=document.getElementById("guest-signup-link");
     if(title) title.textContent="Modo de visualização pública";
     if(sub) sub.textContent="Você está vendo as emendas em modo público. Faça login para acessar todas as seções e funcionalidades.";
     if(btn){ btn.textContent="Fazer Login"; btn.onclick=abrirModalLogin; }
+    if(signup) signup.style.display="inline-flex";
   }
   document.getElementById("btn-login-header").style.display="inline-block";
   showTab("dashboard");
@@ -261,10 +263,12 @@ function entrarModoPendente(){
     banner.style.display="flex";
     const title=banner.querySelector("div div:first-child");
     const sub=banner.querySelector("div div:nth-child(2)");
-    const btn=banner.querySelector("button");
+    const btn=document.getElementById("guest-login-btn");
+    const signup=document.getElementById("guest-signup-link");
     if(title) title.textContent="Acesso aguardando aprovação";
     if(sub) sub.textContent="Sua conta foi criada, mas um administrador precisa aprovar seu acesso interno. Enquanto isso, você pode consultar as emendas públicas.";
     if(btn){ btn.textContent="Sair"; btn.onclick=async()=>{ await sb.auth.signOut(); window.location.reload(); }; }
+    if(signup) signup.style.display="none";
   }
   document.getElementById("btn-login-header").style.display="none";
   const greetEl=document.getElementById("user-greeting");
