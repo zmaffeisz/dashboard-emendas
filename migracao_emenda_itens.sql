@@ -1,6 +1,6 @@
 -- =====================================================================
 -- MIGRAÇÃO: emenda_itens  ->  itens (+ notas_fiscais / empenhos / entregas)
--- Projeto Supabase nuvem deste clone de teste: qpvgpfwuurqcqprnpxua (contratos-dag)
+-- Projeto Supabase de produção: qpvgpfwuurqcqprnpxua (contratos-dag)
 -- Gerado em 2026-06-26
 --
 -- SEGURANÇA:

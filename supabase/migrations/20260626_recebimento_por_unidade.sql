@@ -1,6 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- Migração: Recebimento por unidade física (patrimônio/série individuais por unidade)
--- Projeto NUVEM: djtwoesmgeetnrztyvzw
+-- Projeto de produção atual: qpvgpfwuurqcqprnpxua (contratos-dag)
 -- Data: 2026-06-26
 -- NÃO APLICAR sem aprovação. Idempotente. Faça backup/branch antes de rodar em prod.
 -- ════════════════════════════════════════════════════════════════════════════

@@ -2,6 +2,11 @@
 
 - **Cadastro visível no modo público**: o banner da página inicial agora exibe `Criar conta` ao lado de `Fazer Login`, levando diretamente ao auto-cadastro. Para contas já autenticadas e aguardando aprovação, o banner continua exibindo somente a ação de sair.
 
+- **Produção oficial no Supabase `contratos-dag`**: a documentação e os exemplos de
+  configuração passam a tratar `qpvgpfwuurqcqprnpxua` como o único projeto autorizado
+  para desenvolvimento, migrations e novas escritas. O projeto `djtwoesmgeetnrztyvzw`
+  permanece congelado e somente para consulta.
+
 - **Descrição dos chamados legível por padrão**: a tabela de Chamados Novos agora reserva uma largura adequada para a coluna Descrição e mantém rolagem horizontal nas telas que não comportam todas as colunas.
 
 - **AF duplicada por envio concorrente**: a emissão de AF agora bloqueia o botão enquanto a gravação está em andamento. O banco também serializa emissões para o mesmo item, rejeita AF ativa repetida e impede que a soma autorizada ultrapasse a quantidade contratada, inclusive em duas abas ou requisições simultâneas.

@@ -1,4 +1,4 @@
--- Limpeza validada no clone de teste contratos-dag.
+-- Limpeza validada no projeto de produção contratos-dag.
 -- Mantém o cadastro mais antigo de cada razão social duplicada sem alterar seu CNPJ
 -- e redireciona vínculos existentes antes de excluir os duplicados.
 

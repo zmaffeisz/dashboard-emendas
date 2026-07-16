@@ -7,7 +7,7 @@
 
 - **Frontend estático puro**: HTML/CSS/JS. **Sem `package.json`, sem build, sem
   transpilação, sem bundler.** Os arquivos são servidos como estão.
-- **Backend**: Supabase nuvem (`djtwoesmgeetnrztyvzw`) — gerenciado, não precisa de deploy
+- **Backend**: Supabase nuvem de produção (`qpvgpfwuurqcqprnpxua`, `contratos-dag`) — gerenciado, não precisa de deploy
   de servidor.
 
 ## 2. Dependências
@@ -23,7 +23,7 @@ Atualmente as credenciais do Supabase estão **hardcoded** nas páginas (`index.
 `login.html`, `cadastro.html`):
 
 ```js
-const SUPABASE_URL = "https://djtwoesmgeetnrztyvzw.supabase.co";
+const SUPABASE_URL = "https://qpvgpfwuurqcqprnpxua.supabase.co";
 const SUPABASE_KEY = "sb_publishable_...";
 ```
 
