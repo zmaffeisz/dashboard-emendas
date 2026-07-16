@@ -971,11 +971,17 @@ const _flowLatestDate=(a,b)=>{
 // (dependente do resultado anterior), o detalhamento de entregas/empenhos/NF por item.
 // Os chunks de 200 ids são disparados em paralelo (antes eram sequenciais).
 async function _fetchItensFlowData(eiIds){
-  const itensFlow=(await Promise.all(_chunkArray(eiIds,200).map(slice=>
-    sb.from("itens")
-      .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,processo_id,contrato_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome)")
-      .in("emenda_item_id",slice)
-  ))).flatMap(r=>r.data||[]);
+  const [itemChunks,{data:statusLicRows}]=await Promise.all([
+    Promise.all(_chunkArray(eiIds,200).map(slice=>
+      sb.from("itens")
+        .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,processo_id,contrato_id,status_lic_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome)")
+        .in("emenda_item_id",slice)
+    )),
+    sb.from("status_opcoes").select("id,nome,ordem,orgao,automatico").eq("contexto","licitacao")
+  ]);
+  const itensFlow=itemChunks.flatMap(r=>r.data||[]);
+  const statusLicById={};
+  (statusLicRows||[]).forEach(s=>{ statusLicById[String(s.id)]=s; });
   const itemIds=itensFlow.map(x=>x.id);
   const afByItem={}, empByItem={}, nfByItem={}, unidadeByItem={};
   const chunkResults=await Promise.all(_chunkArray(itemIds,200).map(slice=>Promise.all([
@@ -1015,7 +1021,7 @@ async function _fetchItensFlowData(eiIds){
       unidadeByItem[u.item_id]=(unidadeByItem[u.item_id]||0)+1;
     });
   });
-  return {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem};
+  return {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem,statusLicById};
 }
 // Integração ATA RP: atas_execucao → fluxo da Emenda (independente da busca de itens acima).
 async function _fetchAtaFlowData(eiIds){
@@ -1066,11 +1072,11 @@ async function _carregarFluxoEmendaItens(eiIds){
     _fetchAtaFlowData(eiIds).catch(e=>{ console.error('_carregarFluxoEmendaItens ATA:', e); return null; })
   ]);
   console.timeEnd('fluxo:itens+atas (paralelo)');
-  const {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem}=itensData;
+  const {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem,statusLicById}=itensData;
   if(ataData){
   const {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec}=ataData;
   Object.entries(_ataExecByEiid).forEach(([eid,execs])=>{
-    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),statusLicitacao:new Map(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
     let qAta=0, vAta=0;
     execs.forEach(r=>{
       const ai=_ataItemInf[r.ata_item_id]||{};
@@ -1111,7 +1117,9 @@ async function _carregarFluxoEmendaItens(eiIds){
   }
   itensFlow.forEach(it=>{
     const eid=it.emenda_item_id; if(!eid) return;
-    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),statusLicitacao:new Map(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+    const statusLic=statusLicById[String(it.status_lic_id||"")];
+    if(statusLic&&statusLic.nome) f.statusLicitacao.set(String(statusLic.id),statusLic);
     if(!f.cpl) f.cpl=it.contratos?.cpl||it.processos?.identificador||"";
     if(!f.sim && it.contratos?.numero_contrato) f.sim=it.contratos.numero_contrato;
     if(!f.fornecedor && it.fornecedores?.razao_social) f.fornecedor=it.fornecedores.razao_social;
@@ -1149,6 +1157,15 @@ async function _carregarFluxoEmendaItens(eiIds){
   });
   return flow;
 }
+function _flowStatusLicitacaoFromFlow(f){
+  if(!f||!(f.statusLicitacao instanceof Map)) return "";
+  const detalhes=Array.from(f.statusLicitacao.values())
+    .filter(s=>s&&s.nome)
+    .sort((a,b)=>(Number(a.ordem)||0)-(Number(b.ordem)||0)||String(a.nome).localeCompare(String(b.nome),'pt-BR'));
+  const nomes=[...new Set(detalhes.map(s=>String(s.nome).trim()).filter(Boolean))];
+  if(!nomes.length) return "";
+  return nomes.length===1?nomes[0]:`VÁRIOS: ${nomes.join(" / ")}`;
+}
 // Deriva um texto de status a partir do estágio do fluxo (catStatus categoriza depois)
 function _flowStatusFromFlow(f){
   if(!f) return "";
@@ -1161,7 +1178,7 @@ function _flowStatusFromFlow(f){
   if(aut>0) return "AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO";
   if(f._ataSolicitada) return "AGUARDANDO AF";
   if(f.temContrato) return f.empenhos&&f.empenhos.size?"AGUARDANDO AF":"CONTRATADO - AGUARDANDO EMPENHO/AF";
-  if(f.temProcesso) return "EM LICITAÇÃO";
+  if(f.temProcesso) return _flowStatusLicitacaoFromFlow(f)||"EM LICITAÇÃO";
   return "";
 }
 function _expandirLinhaEmendaPorUnidades(base, unidades){

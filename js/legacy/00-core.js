@@ -357,6 +357,7 @@ const STATUS_MAP = {
 function catStatus(s){
   if(!s||s.trim()===""||s==="nan") return "SEM STATUS";
   const u=s.toUpperCase();
+  if(u==="EM LICITAÇÃO") return "EM LICITAÇÃO";
   if(u.includes("ADQUIRIDO/ENTREGUE")||u.includes("ADQUIRIDO / ENTREGUE")||u.includes("ADQUIRIDO EM 20")) return "ENTREGUE";
   if(u.includes("CANCELADO")||u.includes("ITEM CANCELADO")||u.includes("ITEM REMOVIDO")||u.includes("ITEM PREJUDICADO")||u.includes("SEM SALDO")) return "CANCELADO";
   if(u.includes("FRACASSADO")) return "FRACASSADO";

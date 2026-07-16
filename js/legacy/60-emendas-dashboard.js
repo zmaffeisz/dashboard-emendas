@@ -56,6 +56,7 @@ async function loadData(){
       const vlTotalCalc=vlUnitExec>0&&qtdeExec>0?Number((vlUnitExec*qtdeExec).toFixed(2)):0;
       const vlTotalFinal=vlTotalStored||vlTotalCalc||(f?Number(f.valor.toFixed(2)):0);
       const statusStored=(i.status||"").toString().trim();
+      const statusLicitacao=f?_flowStatusLicitacaoFromFlow(f):"";
       const statusFlow=_flowStatusFromFlow(f);
       const statusFinal=statusFlow||statusStored;
       const empenhoFlow=f&&f.empenhos?Array.from(f.empenhos).filter(Boolean).join("; "):"";
@@ -93,6 +94,7 @@ async function loadData(){
         contrato_sim:(f?f.sim:"")||"",
         fornecedor_fluxo:(f?f.fornecedor:"")||"",
         status_raw:statusFinal,
+        status_licitacao:statusLicitacao&&statusFinal===statusLicitacao?statusLicitacao:"",
         status_id:(i.status_id!=null?i.status_id:null),
         _status_derivado:!!statusFlow,
         nota_fiscal:nfFlow||(i.nota_fiscal||"").toString().trim(),
@@ -670,10 +672,16 @@ function renderEmPorParlamentar(){
     </div>`;
   }).join('');
 }
+function _emStatusLabel(i){ return i.status_licitacao||i.status_cat||'—'; }
 function _emStatusChip(i){
   const c=i.status_cat||'';
   const cor=/ENTREGUE/i.test(c)?'var(--green)':(/(FRACASS|CANCEL|SUSPEN)/i.test(c)?'var(--red)':'var(--text2)');
-  return `<span style="font-size:11px;font-weight:600;color:${cor}">${_sanEsc(c||'—')}</span>`;
+  return `<span style="font-size:11px;font-weight:600;color:${cor}">${_sanEsc(_emStatusLabel(i))}</span>`;
+}
+function _emStatusBadge(i){
+  const c=i.status_cat||'';
+  const info=STATUS_MAP[c]||{color:'#888'};
+  return `<span class="badge" style="background:${info.color}22;color:${info.color}">${_sanEsc(_emStatusLabel(i))}</span>`;
 }
 function emTogglePorEmenda(em){ _emExpand[em]=!_emExpand[em]; renderEmPorEmenda(); }
 function renderEmPorEmenda(){
@@ -820,7 +828,7 @@ function _renderSaldoDetalhesLegacy(emendaId){
     <tbody>${itens.map(r=>`<tr>
       <td>${_sanEsc(r.item_cadastrado||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total_cadastrado)||0)}</td>
       <td>${_sanEsc(r.item||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total)||0)}</td>
-      <td style="text-align:right;white-space:nowrap;font-weight:600">${fmtFull(_valorComprometidoItem(r))}</td><td>${_sanEsc(r.cpl||'—')}</td><td>${statusBadge(r.status_cat)}</td>
+      <td style="text-align:right;white-space:nowrap;font-weight:600">${fmtFull(_valorComprometidoItem(r))}</td><td>${_sanEsc(r.cpl||'—')}</td><td>${_emStatusBadge(r)}</td>
     </tr>`).join('')}</tbody></table></div>`;
 }
 function _renderSaldoDetalhesLegacy2(emendaId){
@@ -830,7 +838,7 @@ function _renderSaldoDetalhesLegacy2(emendaId){
     <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor planejado</th><th style="text-align:right">Em licitação</th><th style="text-align:right">Contratado / executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
     <tbody>${itens.map(r=>`<tr>
       <td>${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total_cadastrado)||0)}</td>
-      <td style="text-align:right;white-space:nowrap;color:var(--blue)">${fmtFull(Number(r.valor_licitacao)||0)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${fmtFull(Number(r.valor_contratado)||0)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${statusBadge(r.status_cat)}</td><td>${_sanEsc(r.cpl||'—')}</td>
+      <td style="text-align:right;white-space:nowrap;color:var(--blue)">${fmtFull(Number(r.valor_licitacao)||0)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${fmtFull(Number(r.valor_contratado)||0)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${_emStatusBadge(r)}</td><td>${_sanEsc(r.cpl||'—')}</td>
     </tr>`).join('')}</tbody></table></div>`;
 }
 function _renderSaldoDetalhes(emendaId){
@@ -839,7 +847,7 @@ function _renderSaldoDetalhes(emendaId){
   const money=(v)=>Number(v)>0?fmtFull(v):'—';
   return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="min-width:1400px;font-size:11px;background:var(--surface)">
     <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor unit. planejado</th><th style="text-align:right">Valor unit. licitação</th><th style="text-align:right">Valor unit. contratado</th><th style="text-align:right">Total executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
-    <tbody>${itens.map(r=>`<tr><td>${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${statusBadge(r.status_cat)}</td><td>${_sanEsc(r.cpl||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+    <tbody>${itens.map(r=>`<tr><td>${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${_emStatusBadge(r)}</td><td>${_sanEsc(r.cpl||'—')}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function toggleSaldoEmenda(emendaId,button){
   const detalhe=document.getElementById(_seDomId(emendaId));
@@ -1159,7 +1167,7 @@ function renderTable(){
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${r.cpl||"—"}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>
-    <td>${statusBadge(r.status_cat)}</td>
+    <td>${_emStatusBadge(r)}</td>
     <td style="font-size:11px;max-width:240px;white-space:pre-wrap;word-break:break-word">${r.status_raw||"—"}</td>
     <td style="font-size:11px;white-space:nowrap;color:var(--text3)">${r.data_atualizacao||"—"}</td>
     <td style="font-size:11px">${r.nota_fiscal||"—"}</td>
@@ -1385,7 +1393,7 @@ function doSearch(){
   }
   document.getElementById("q-results").innerHTML=results.slice(0,20).map((r,i)=>`
     <div class="ficha" style="display:block;margin-bottom:1rem">
-      <div class="ficha-title">${i+1}. ${r.item||"(sem item)"} ${statusBadge(r.status_cat)}</div>
+      <div class="ficha-title">${i+1}. ${r.item||"(sem item)"} ${_emStatusBadge(r)}</div>
       <div class="ficha-grid">
         ${ficha("Emenda",r.emenda)}${ficha("Tipo",r.tipo)}${ficha("Parlamentar",r.parlamentar)}
         ${ficha("Unidade beneficiada",r.unidade)}${ficha("CPL / Processo",r.cpl)}
@@ -1557,7 +1565,7 @@ function popularItens(){
       <input type="checkbox" id="ci-${i}" data-id="${r.id}" checked>
       <div class="item-info">
         <div class="item-name">${nome}</div>
-        <div class="item-meta">${r.emenda} · ${r.unidade||"—"} · ${statusBadge(r.status_cat)}</div>
+        <div class="item-meta">${r.emenda} · ${r.unidade||"—"} · ${_emStatusBadge(r)}</div>
         <div class="item-fields">
           <div class="item-field"><div class="item-field-label">CPL / Processo</div><select id="cpl-${i}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:100%"><option value="">— Nenhum —</option>${cachedProcessos.map(p=>`<option value="${_sanEsc(p.identificador)}"${r.cpl===p.identificador?' selected':''}>${_sanEsc(p.identificador)}</option>`).join('')}</select></div>
           <div class="item-field"><div class="item-field-label">Nota fiscal</div><input type="text" id="nf-${i}" placeholder="ex: NF 84253" value="${esc(r.nota_fiscal)}"></div>

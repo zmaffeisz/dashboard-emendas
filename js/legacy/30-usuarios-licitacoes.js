@@ -340,8 +340,11 @@ async function _cpGravarStatus(itemId, statusId){
 async function cpSetItemStatus(itemId, val){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
   const statusId=val?Number(val):null;
-  try{ await _cpGravarStatus(itemId, statusId); }catch(e){ alert('Erro ao salvar: '+(e.message||e)); }
-  renderLicitacoes();
+  try{
+    await _cpGravarStatus(itemId, statusId);
+    renderLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){ alert('Erro ao salvar: '+(e.message||e)); renderLicitacoes(); }
 }
 async function cpBulkApply(pid){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
@@ -351,8 +354,11 @@ async function cpBulkApply(pid){
   const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i));
   if(!alvos.length){ alert('Nenhum item editável neste processo (os já contratados/executados são controlados em outras abas).'); return; }
   if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" a ${alvos.length} item(ns)?`)) return;
-  try{ for(const it of alvos){ await _cpGravarStatus(it.id, statusId); } }catch(e){ alert('Erro: '+(e.message||e)); }
-  renderLicitacoes();
+  try{
+    for(const it of alvos){ await _cpGravarStatus(it.id, statusId); }
+    renderLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){ alert('Erro: '+(e.message||e)); renderLicitacoes(); }
 }
 
 async function preencherSelectStatusProcesso(){

@@ -49,8 +49,10 @@
 
 ## 3. Licitação / status por item
 
-- O **status de licitação viaja por item** (`itens.status_lic_id`,
-  `emenda_itens.status_id`), não pela emenda. A emenda apenas **lê** o status.
+- O **status detalhado da licitação viaja por item** (`itens.status_lic_id`), não pela
+  emenda. `emenda_itens.status_id` permanece como categoria/fallback do cadastro; no painel,
+  a Emenda apenas **lê e exibe** o status real do item da licitação. Alterações feitas em
+  Licitações devem recarregar imediatamente o painel de Emendas.
 - Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
   com espaços.
 - `status_opcoes` é o catálogo (com `ordem`, `contexto`, `orgao`, `automatico`).

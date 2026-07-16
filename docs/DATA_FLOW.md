@@ -39,7 +39,7 @@
 | Emenda | aba **Emendas** (`emendas`) | modal nova emenda | Saldo, Itens, relatórios |
 | Item da emenda | aba **Emendas** (`emenda_itens`) | modal **Nova emenda** (itens inline) / Novo item / status | Licitação, Saldo, Sanções, painel consolidado do ciclo do item |
 | Licitação/processo | aba **Licitações** (`processos`) | novo/editar processo | Emenda (status do item), Contrato |
-| Status de licitação | `itens.status_lic_id` / `emenda_itens.status_id` | aba Licitações (por item) | Emenda (somente leitura) |
+| Status detalhado da licitação | `itens.status_lic_id` (`emenda_itens.status_id` é categoria/fallback) | aba Licitações (por item) | Emenda (somente leitura) |
 | Contrato (matriz) | aba **Contratos** (`contratos`) | editar contrato (admin) | Atas, Itens, Empenhos, Chamados, Sanções |
 | Ata (itens) | espelhada ao salvar contrato ATA (`atas_itens`) | aba **Atas Rp** | Execução de ata, Itens |
 | Execução de ata | aba **Atas Rp** (`atas_execucao`) | AF/entrega/termo | Saldo, Inventário |
@@ -70,6 +70,8 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    fluxo de `itens`, `itens_entregas`, `itens_entregas_unidades`, `empenho_itens` e
    `nota_fiscal_itens`. Por isso AF emitida, aguardando AF, confirmação na unidade,
    empenho, NF, patrimônio e data de entrega precisam aparecer ali sem edição manual.
+   Enquanto o item está na licitação, o nome detalhado de `itens.status_lic_id` é exibido e
+   o painel é recarregado logo após a alteração na aba Licitações.
    Para ATA, `atas_execucao` também alimenta esse painel: empenho vinculado, AF, prazo
    calculado e entrega precisam refletir no item da emenda correspondente.
 5. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`

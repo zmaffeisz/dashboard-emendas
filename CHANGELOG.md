@@ -1,5 +1,10 @@
 # Changelog
 
+- **Status detalhado da licitação refletido em Emendas**: alterações feitas por item em
+  **Licitações em andamento** agora aparecem imediatamente nas linhas correspondentes da
+  aba Emendas, preservando nomes como `SEAD – ANALISE DO NACP`. A categoria geral continua
+  sendo usada nos filtros e métricas, sem substituir o status detalhado exibido.
+
 - **Cadastro visível no modo público**: o banner da página inicial agora exibe `Criar conta` ao lado de `Fazer Login`, levando diretamente ao auto-cadastro. Para contas já autenticadas e aguardando aprovação, o banner continua exibindo somente a ação de sair.
 
 - **Produção oficial no Supabase `contratos-dag`**: a documentação e os exemplos de
