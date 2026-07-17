@@ -65,5 +65,7 @@ Algumas abas têm subvisões internas (não são rotas):
 - Demais: visíveis conforme `user_tab_permissions.can_view`.
 - Seções inteiras da sidebar se ocultam quando nenhum item dentro é visível
   (`updateSidebarSections()`).
+- O último item da seção **Configurações** é um atalho externo sempre visível para o
+  **Portal Unidades**, aberto em uma nova aba; ele não corresponde a um painel da SPA.
 
 Ver [SECURITY.md](SECURITY.md) para o modelo completo de permissões.

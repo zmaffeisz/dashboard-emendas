@@ -1,5 +1,9 @@
 # Changelog
 
+- **Divisão como gestora do Portal Unidades**: perfis aprovados definidos com escopo de Divisão passam a ter, somente no Portal Unidades, a mesma visão e as mesmas ações do administrador, sem receber o papel global de admin.
+
+- **Atalho para o Portal Unidades**: o menu lateral agora exibe, como último item, um link que abre o Portal Unidades em uma nova aba.
+
 - **Status detalhado preservado na aba Emendas**: o status por item vindo de
   Licitações (por exemplo, `SEAD – ANALISE DO NACP`) continua sendo exibido mesmo
   quando o status operacional derivado do fluxo estiver diferente.

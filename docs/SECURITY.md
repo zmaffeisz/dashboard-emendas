@@ -25,6 +25,8 @@ Regras-chave:
 - **Sem login**: vê apenas Emendas.
 - `usuarios` e `cadastros` são **admin-only** (`ADMIN_ONLY_TABS`).
 - `planilhas` fica **oculta por padrão** (`DEFAULT_HIDDEN_TABS`), liberada por admin.
+- Um perfil aprovado com escopo organizacional **Divisão** recebe poderes de gestão no
+  **Portal Unidades** (e somente nele), sem ser promovido a `admin` neste dashboard.
 - Perfil precisa estar **aprovado** (`profiles.aprovado`) para acessar dados.
 
 ## 3. Dupla camada (banco + cliente)

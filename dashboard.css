@@ -31,7 +31,7 @@
 .sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 .5rem}
 .sidebar-section{display:flex;flex-direction:column;gap:2px}
 .sidebar-section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:.75rem .75rem .25rem;white-space:nowrap;transition:opacity .16s ease,max-height .2s ease,padding .2s ease}
-.sidebar-item{position:relative;display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:background .12s,color .12s;user-select:none;white-space:nowrap}
+.sidebar-item{position:relative;display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);text-decoration:none;transition:background .12s,color .12s;user-select:none;white-space:nowrap}
 .sidebar-item:hover{background:var(--surface2);color:var(--text)}
 .sidebar-item.active{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
 .sidebar-item.active::before{content:"";position:absolute;left:-.5rem;top:6px;bottom:6px;width:3px;border-radius:0 3px 3px 0;background:var(--primary)}
