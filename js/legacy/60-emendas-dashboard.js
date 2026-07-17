@@ -94,7 +94,12 @@ async function loadData(){
         contrato_sim:(f?f.sim:"")||"",
         fornecedor_fluxo:(f?f.fornecedor:"")||"",
         status_raw:statusFinal,
-        status_licitacao:statusLicitacao&&statusFinal===statusLicitacao?statusLicitacao:"",
+        // O status detalhado da licitação é uma informação própria do item.
+        // Não o descarte só porque o status operacional derivado mudou
+        // (por exemplo, ao vincular contrato ou iniciar a execução): a aba
+        // Emendas deve continuar exibindo o mesmo status escolhido em
+        // Licitações enquanto ele existir no item.
+        status_licitacao:statusLicitacao||"",
         status_id:(i.status_id!=null?i.status_id:null),
         _status_derivado:!!statusFlow,
         nota_fiscal:nfFlow||(i.nota_fiscal||"").toString().trim(),

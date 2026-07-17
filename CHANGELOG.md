@@ -1,5 +1,9 @@
 # Changelog
 
+- **Status detalhado preservado na aba Emendas**: o status por item vindo de
+  Licitações (por exemplo, `SEAD – ANALISE DO NACP`) continua sendo exibido mesmo
+  quando o status operacional derivado do fluxo estiver diferente.
+
 - **Status detalhado da licitação refletido em Emendas**: alterações feitas por item em
   **Licitações em andamento** agora aparecem imediatamente nas linhas correspondentes da
   aba Emendas, preservando nomes como `SEAD – ANALISE DO NACP`. A categoria geral continua
