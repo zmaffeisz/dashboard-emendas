@@ -253,6 +253,7 @@ function renderLicitacoes(){
         bloco+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;background:rgba(55,138,221,.08);border-top:1px solid var(--border)">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap">Aplicar a todos:</span>
           <select id="cp-bulk-${p.id}" style="flex:1;max-width:340px;font-size:12px;padding:5px 8px"><option value="">selecione um status manual...</option>${opts}</select>
+          <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);white-space:nowrap">DESDE <input id="cp-bulk-desde-${p.id}" type="date" value="${_cpDataInput(new Date().toISOString())}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"></label>
           <button onclick="cpBulkApply(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
         </div>`;
       }
@@ -279,7 +280,7 @@ function renderLicitacoes(){
         } else if(cur&&cur.automatico){
           ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
         } else if(podeEd){
-          ctrl=`<select onchange="cpSetItemStatus('${it.id}', this.value)" style="font-size:11px;padding:4px 6px;max-width:330px">
+          ctrl=`<select onchange="cpSetItemStatus('${it.id}', this.value, document.getElementById('cp-desde-${it.id}')?.value)" style="font-size:11px;padding:4px 6px;max-width:330px">
             <option value="">— indefinido —</option>
             ${manuais.map(s=>`<option value="${s.id}"${String(it.status_lic_id)===String(s.id)?' selected':''}>${_sanEsc(s.nome)}</option>`).join('')}
           </select>`;
@@ -290,7 +291,7 @@ function renderLicitacoes(){
           <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}</td>
           <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
           <td style="padding:8px 8px">${ctrl}</td>
-          <td style="padding:8px 13px;color:var(--text3);width:70px;text-align:right;white-space:nowrap">${_cpDesde(it.status_lic_desde)}</td>
+          <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
         </tr>`;
       });
       bloco+=`</tbody></table>`;
@@ -317,6 +318,19 @@ async function _cpFetchAllItens(){
     if(!data||data.length<size) break;
     from+=size;
   }
+  const atualizadoPorItem={};
+  try{
+    let hist=[], hfrom=0;
+    while(true){
+      const {data,error}=await sb.from('itens_status_historico').select('item_id,created_at').not('item_id','is',null).order('created_at',{ascending:false}).range(hfrom,hfrom+size-1);
+      if(error) throw error;
+      hist=hist.concat(data||[]);
+      if(!data||data.length<size) break;
+      hfrom+=size;
+    }
+    hist.forEach(h=>{ if(atualizadoPorItem[h.item_id]===undefined) atualizadoPorItem[h.item_id]=h.created_at; });
+  }catch(_){ }
+  all.forEach(it=>{ it.status_lic_atualizado_em=atualizadoPorItem[it.id]||null; });
   return all;
 }
 function _cpRollup(items){
@@ -330,34 +344,48 @@ function _cpStatusBadge(r){
   return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;color:${cor};background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:20px">${dot}${_sanEsc(r.nome)}</span>`;
 }
 function _cpDesde(d){ if(!d) return ''; const dias=Math.floor((Date.now()-new Date(d).getTime())/86400000); return dias<=0?'hoje':('há '+dias+'d'); }
+function _cpDataInput(d){ return d?String(d).slice(0,10):''; }
+function _cpDataCurta(d){ return d?new Date(d).toLocaleDateString('pt-BR'):''; }
 function cpToggle(pid){ _cpExpanded[pid]=!_cpExpanded[pid]; renderLicitacoes(); }
-async function _cpGravarStatus(itemId, statusId){
+async function _cpGravarStatus(itemId, statusId, desde){
   const so=statusId?_cpStatusById[statusId]:null;
-  const agora=new Date().toISOString();
+  const agora=desde?new Date(desde+'T12:00:00').toISOString():new Date().toISOString();
   const {error}=await sb.from('itens').update({status_lic_id:statusId||null, status_lic_desde:agora}).eq('id',itemId);
   if(error) throw error;
   try{ await sb.from('itens_status_historico').insert({item_id:itemId, status_id:statusId||null, status_nome:so?so.nome:null, mudado_por:currentUser?.id||null, origem:'manual'}); }catch(_){}
-  const local=_cpItens.find(i=>String(i.id)===String(itemId)); if(local){ local.status_lic_id=statusId||null; local.status_lic_desde=agora; }
+  const local=_cpItens.find(i=>String(i.id)===String(itemId)); if(local){ local.status_lic_id=statusId||null; local.status_lic_desde=agora; local.status_lic_atualizado_em=new Date().toISOString(); }
 }
-async function cpSetItemStatus(itemId, val){
+async function cpSetItemStatus(itemId, val, desde){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
   const statusId=val?Number(val):null;
   try{
-    await _cpGravarStatus(itemId, statusId);
+    await _cpGravarStatus(itemId, statusId, desde||null);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro ao salvar: '+(e.message||e)); renderLicitacoes(); }
+}
+async function cpSetItemDesde(itemId, val){
+  if(!podeEditar('contratos')){ alert('Sem permissÃ£o.'); return; }
+  const item=_cpItens.find(i=>String(i.id)===String(itemId));
+  if(!item) return;
+  try{
+    await _cpGravarStatus(itemId, item.status_lic_id?Number(item.status_lic_id):null, val||null);
+    renderLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){ alert('Erro ao salvar a data: '+(e.message||e)); renderLicitacoes(); }
 }
 async function cpBulkApply(pid){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
   const sel=document.getElementById('cp-bulk-'+pid); const val=sel?.value;
   if(!val){ alert('Selecione um status para aplicar.'); return; }
+  const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
+  if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
   const statusId=Number(val);
   const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i));
   if(!alvos.length){ alert('Nenhum item editável neste processo (os já contratados/executados são controlados em outras abas).'); return; }
-  if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" a ${alvos.length} item(ns)?`)) return;
+  if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" desde ${desde.split('-').reverse().join('/')} a ${alvos.length} item(ns)?`)) return;
   try{
-    for(const it of alvos){ await _cpGravarStatus(it.id, statusId); }
+    for(const it of alvos){ await _cpGravarStatus(it.id, statusId, desde); }
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro: '+(e.message||e)); renderLicitacoes(); }

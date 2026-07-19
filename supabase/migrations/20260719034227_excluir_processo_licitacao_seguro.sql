@@ -76,8 +76,6 @@ begin
     execute 'delete from public.itens_status_historico where item_id = any($1)' using v_item_ids;
   end if;
 
-  -- Evita referencias internas de item_origem_id impedirem a remocao.
-  update public.itens set item_origem_id = null where item_origem_id = any(v_item_ids);
   delete from public.itens where id = any(v_item_ids);
   get diagnostics v_count = row_count;
 

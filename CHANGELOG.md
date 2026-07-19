@@ -1,5 +1,9 @@
 # Changelog
 
+- **Datas distintas no status da licitação**: `DESDE` registra desde quando o item está no status/setor, enquanto `Atualizado em` mostra a última atualização feita no sistema, usando o histórico de status.
+
+- **Data de início do status da licitação**: a aba Licitações agora permite informar a data `DESDE` ao aplicar um status a todos os itens ou individualmente, mantendo o tempo do item no local correto.
+
 - **Exclusão segura de processos**: a aba Licitações agora exibe uma ação de excluir ao lado das ações do processo. A exclusão passa por uma pré-verificação e só é permitida enquanto não houver contrato/ATA ou registros operacionais; itens de emenda são preservados e desvinculados.
 
 - **Divisão como gestora do Portal Unidades**: perfis aprovados definidos com escopo de Divisão passam a ter, somente no Portal Unidades, a mesma visão e as mesmas ações do administrador, sem receber o papel global de admin.
