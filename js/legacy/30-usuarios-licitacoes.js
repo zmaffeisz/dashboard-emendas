@@ -224,6 +224,7 @@ function renderLicitacoes(){
   const _ocultos=incluirContratados?0:ocultos;
   const html=base.map(x=>{
     const p=x.p; mostrados++;
+    const podeExcluir=podeEd && !Number(p.n_contratos||0);
     const items=x.naLic;
     const itensServico=_procServicoMensalItensFromValor(p.servico_mensal_itens);
     const totalItensExibidos=items.length||itensServico.length;
@@ -243,7 +244,7 @@ function renderLicitacoes(){
         </div>
         ${_cpStatusBadge(roll)}
         <button onclick="abrirEditarProcesso(${p.id})" title="Editar processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
-        ${podeEd?`<button onclick="excluirProcesso(${p.id})" title="Excluir processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">🗑️</button>`:''}
+        ${podeExcluir?`<button onclick="excluirProcesso(${p.id})" title="Excluir processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">🗑️</button>`:''}
         ${podeEd?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
       </div>`;
     if(aberto){

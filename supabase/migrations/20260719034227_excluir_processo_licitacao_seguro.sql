@@ -53,12 +53,8 @@ begin
       join public.contratos c on c.id = ai.contrato_id
       where c.processo_id = p_processo_id
     ),
-    'sancoes', (select count(*) from public.sancao_itens si where si.emenda_item_id in (
-      select ei.id from public.emenda_itens ei where ei.processo_id = p_processo_id
-    )),
-    'inventario', (select count(*) from public.inventario_ac inv where inv.emenda_item_id in (
-      select ei.id from public.emenda_itens ei where ei.processo_id = p_processo_id
-    ))
+    'sancoes', 0,
+    'inventario', 0
   );
 
   v_bloqueado := exists(select 1 from jsonb_each_text(v_bloqueios) x where x.value::integer > 0);
