@@ -5,6 +5,9 @@
 
 /* ── LAYOUT GERAL ── */
 :root{--sidebar-expanded:220px;--sidebar-collapsed:58px;--table-min-height:620px;--table-extra-height:140px}
+.lic-process-card{transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease}
+.lic-process-card:hover{border-color:var(--blue)!important;background:var(--blue-bg)!important;box-shadow:0 3px 12px rgba(15,23,42,.16)}
+.lic-process-card:hover>.lic-process-card-header{background:var(--blue-bg)!important}
 .container{max-width:none;margin:0 auto;padding:1.25rem 1.25rem 2.5rem;transition:margin-left .22s ease}
 @media(min-width:769px){.container{margin-left:var(--sidebar-collapsed)}}
 .site-footer{position:fixed;left:0;right:0;bottom:0;z-index:97;text-align:center;padding:.4rem 1rem;font-size:10px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)}
