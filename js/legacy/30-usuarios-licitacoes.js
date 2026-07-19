@@ -243,6 +243,7 @@ function renderLicitacoes(){
         </div>
         ${_cpStatusBadge(roll)}
         <button onclick="abrirEditarProcesso(${p.id})" title="Editar processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
+        ${podeEd?`<button onclick="excluirProcesso(${p.id})" title="Excluir processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">🗑️</button>`:''}
         ${podeEd?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
       </div>`;
     if(aberto){
@@ -425,6 +426,34 @@ function abrirEditarProcesso(id){
   _carregarProcItens(p.id);
   document.getElementById('proc-msg').className='fmsg';
   document.getElementById('modal-processo').classList.add('active');
+}
+async function excluirProcesso(id){
+  if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
+  const p=_licitacoesCache.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  let previa;
+  try{
+    const {data,error}=await sb.rpc('excluir_processo_licitacao',{p_processo_id:p.id,p_dry_run:true});
+    if(error) throw error;
+    previa=data||{};
+  }catch(e){ alert('Não foi possível verificar a exclusão: '+(e.message||e)); return; }
+  const counts=previa.counts||{};
+  if(previa.blocked){
+    alert('Este processo não pode ser excluído porque já possui registros operacionais (contrato/ATA, empenho, nota fiscal, entrega ou execução).');
+    return;
+  }
+  const nItens=Number(previa.itens||0);
+  const msg='Excluir o processo "'+(p.identificador||('#'+p.id))+'"?\n\n'+
+    'O vínculo dos itens de emenda será desfeito e '+nItens+' item(ns) técnico(s) da licitação serão removidos.\n\nEsta ação não pode ser desfeita.';
+  if(!confirm(msg)) return;
+  try{
+    const {error}=await sb.rpc('excluir_processo_licitacao',{p_processo_id:p.id,p_dry_run:false});
+    if(error) throw error;
+    alert('Processo excluído.');
+    await loadLicitacoes();
+    if(typeof loadData==='function') await loadData();
+    if(typeof loadAtas==='function') await loadAtas();
+  }catch(e){ alert('Erro ao excluir processo: '+(e.message||e)); }
 }
 // SEI = somente números e separadores (. / -). CPL e demais tipos podem ter letras.
 function _procTipoChange(){
