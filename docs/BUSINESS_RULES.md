@@ -131,6 +131,8 @@
 
 ## 7. Recebimento de itens / AF
 
+- O encerramento de uma ATA pode ser integral, no contrato, ou seletivo, por item. Encerrar um item atualiza somente `atas_itens.status_contrato`; os demais itens do mesmo contrato permanecem vigentes e podem ser renovados/executados. O encerramento do contrato continua prevalecendo sobre todos os itens.
+
 - Uma solicitação de ATA pode ser excluída antes da AF somente se não houver AF/data/previsão, NF, recebimento, patrimônio, entrega na unidade, termo, unidade física ou sanção. `obs_prazo` isolada, inclusive de importação, é apenas informativa e não bloqueia a exclusão.
 
 - AF de **aquisição** gera `itens_entregas` (autorizada vs. recebida).

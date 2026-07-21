@@ -1,5 +1,7 @@
 # Changelog
 
+- **Encerramento de ATA por item**: encerrar um item de ATA não altera mais o status do contrato inteiro. A ação passa a registrar o status, a data e o motivo no próprio item; os demais itens continuam vigentes para renovação ou execução.
+
 - **Exclusão de solicitação de ATA com observação legada**: observações de prazo, inclusive as importadas de planilhas, não bloqueiam mais a exclusão de uma solicitação sem AF. Continuam bloqueando AF, NF, recebimento, patrimônio, entrega na unidade, termo, unidades físicas e sanção.
 
 - **Downloads no “Ver tudo” dos itens**: o detalhe de cada unidade física agora oferece download da nota fiscal e do termo de entrega quando os respectivos anexos existem. Os links são temporários, inclusive para visitantes anônimos, e liberam somente arquivos vinculados ao fluxo público de Emendas; o clique também passa a abrir exatamente a unidade física selecionada.

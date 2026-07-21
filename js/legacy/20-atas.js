@@ -26,9 +26,12 @@ async function loadAtas(){
     atasItens=(r1.data||[]).map(r=>{
       const contrato=contratoPorId.get(String(r.contrato_id));
       if(!contrato) return null;
-      // contratos.status é a fonte única da verdade; status_contrato em atas_itens é campo
-      // legado nunca sincronizado (sempre 'VIGENTE'), não deve sobrepor o status real.
-      const statusItem=(contrato.status||"VIGENTE").trim();
+      // Um contrato encerrado prevalece para todos os itens. Enquanto estiver vigente,
+      // cada item da ATA controla o seu próprio status de renovação/encerramento.
+      const statusContrato=(contrato.status||"VIGENTE").trim();
+      const statusItem=statusContrato.toUpperCase()==='VIGENTE'
+        ?(r.status_contrato||statusContrato).trim()
+        :statusContrato;
       return {
       id:r.id,
       contrato_id:r.contrato_id,
@@ -382,7 +385,7 @@ function filtrarAtas(){
           {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
           _isAdmin()?{label:'✏️ Editar',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Editar dados do contrato (fiscalização, seção, empresa, objeto...)'}:null,
           podeEditar('contratos')?{label:'🔗 Vinculações',onclick:`_ataAbrirEmailContrato('${r.contrato_id}')`,title:'Configurar e-mail e prefixo de chamado'}:null,
-          {label:'⛔ Encerrar',onclick:`encerrarContrato('${r.contrato_id}')`,title:'Encerrar contrato',danger:true,divider:true}
+          {label:'⛔ Encerrar item',onclick:`encerrarAtaItem('${r.id}')`,title:'Encerrar somente este item da ATA',danger:true,divider:true}
         ])}
         </div>
         `}
@@ -1003,35 +1006,33 @@ async function _ataAbrirEmailContrato(contratoId){
   abrirEmailContrato(contratoId);
 }
 
-// ═══ ENCERRAR CONTRATO ═══
-let _encerrarAtaContratoId=null;
-function encerrarContrato(contratoId){
-  const contrato=atasContratos.find(c=>String(c.id)===String(contratoId));
-  if(!contrato) return;
-  _encerrarAtaContratoId=contrato.id;
-  document.getElementById("enc-info").textContent=`${contrato.cpl||""} · ${contrato.numero_contrato||""} · ${contrato.empresa||""}`;
+// ═══ ENCERRAR ITEM DE ATA ═══
+let _encerrarAtaItemId=null;
+function encerrarAtaItem(ataItemId){
+  if(bloquearSeVisualiz()) return;
+  const ataItem=atasItens.find(r=>String(r.id)===String(ataItemId));
+  if(!ataItem||String(ataItem.status||'').toUpperCase().startsWith('ENCERRADO')) return;
+  _encerrarAtaItemId=ataItem.id;
+  document.getElementById("enc-info").textContent=`${ataItem.cpl||""} · ${ataItem.sim||""} · ${ataItem.item||""}`;
   document.getElementById("enc-motivo").value="";
   document.getElementById("enc-msg").className="fmsg";
   document.getElementById("modal-encerrar").classList.add("active");
 }
 async function confirmarEncerramento(){
   if(bloquearSeVisualiz()) return;
-  if(!_encerrarAtaContratoId) return;
+  if(!_encerrarAtaItemId) return;
   const btn=document.querySelector("#modal-encerrar .btn-primary");
   btn.disabled=true;btn.textContent="Encerrando...";
   const motivo=document.getElementById("enc-motivo").value.trim();
   try{
-    const {error}=await sb.from("contratos").update({status:"ENCERRADO"}).eq("id",_encerrarAtaContratoId);
+    const {error}=await sb.from("atas_itens").update({
+      status_contrato:"ENCERRADO",
+      data_encerramento:new Date().toISOString().slice(0,10),
+      motivo_encerramento:motivo||null
+    }).eq("id",_encerrarAtaItemId);
     if(error) throw error;
-    const {error:histError}=await sb.from("contratos_historico").insert({
-      contrato_id:_encerrarAtaContratoId,
-      tipo:"Encerramento",
-      data_evento:new Date().toISOString().slice(0,10),
-      obs:motivo||"Encerrado pela aba de ATAs"
-    });
-    if(histError) throw histError;
     await Promise.all([loadAtas(),contratosCarregado?loadContratos():Promise.resolve()]);
-    showMsg("enc","✓ Contrato encerrado!","ok");
+    showMsg("enc","✓ Item encerrado!","ok");
     setTimeout(()=>document.getElementById("modal-encerrar").classList.remove("active"),1200);
   }catch(e){
     showMsg("enc","Erro: "+(e.message||e),"err");
