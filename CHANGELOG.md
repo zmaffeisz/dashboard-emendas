@@ -1,5 +1,7 @@
 # Changelog
 
+- **Importação histórica das Atas de Registro de Preços**: foram cadastrados 8 processos CPL, 18 atas (SIAM), 36 itens e 312 execuções da planilha de controle, preservando o estágio real de empenho, AF e recebimento. As 58 execuções de emendas municipais de 2026 foram vinculadas aos itens já existentes, incluindo 110 unidades físicas com patrimônio; atas vencidas permanecem em `VIGENTE` para encerramento pela própria aba de Atas.
+
 - **Downloads no “Ver tudo” dos itens**: o detalhe de cada unidade física agora oferece download da nota fiscal e do termo de entrega quando os respectivos anexos existem. Os links são temporários, inclusive para visitantes anônimos, e liberam somente arquivos vinculados ao fluxo público de Emendas; o clique também passa a abrir exatamente a unidade física selecionada.
 
 - **Campos legíveis no recebimento em lote**: quantidade, patrimônio e número de série agora recebem explicitamente as cores do tema, evitando campos pretos no modo claro.
