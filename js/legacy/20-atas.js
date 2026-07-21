@@ -639,7 +639,7 @@ function _execAtaPodeExcluir(r){
   if(!r) return false;
   return ![
     r.af_numero,r.data_af,r.prev_entrega,r.nf,r.dt_entrega,r.data_entrega_unidade,
-    r.termo_arquivo,r.termo_responsavel,r.termo_cargo,r.confirmacao_obs,r.obs_prazo
+    r.termo_arquivo,r.termo_responsavel,r.termo_cargo,r.confirmacao_obs
   ].some(v=>v!=null&&String(v).trim()!=='') && r.possui_patrimonio==null;
 }
 
