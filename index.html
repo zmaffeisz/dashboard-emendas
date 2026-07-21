@@ -119,6 +119,7 @@
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
           <span class="table-hdr-count" id="table-count">—</span>
           <button onclick="exportarExcel()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:5px">⬇ Exportar Excel</button>
+          <button type="button" id="btn-gerar-licitacao-emendas" onclick="gerarLicitacaoItensSelecionados()" style="display:none;font-size:13px;padding:7px 14px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer;font-weight:600;align-items:center;gap:6px">➕ Gerar licitação</button>
           <div id="editor-btns" style="display:none;gap:8px;flex-wrap:wrap">
             <button onclick="abrirModalEdicao('nova-emenda')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">➕ Nova emenda</button>
             <button onclick="abrirModalEdicao('novo-item')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">📦 Novo item</button>
@@ -140,6 +141,7 @@
         <table>
           <thead>
             <tr>
+              <th id="th-selecionar-licitacao" style="display:none;text-align:center;white-space:nowrap" title="Selecionar os itens visíveis disponíveis"><input type="checkbox" id="em-licitacao-selecionar-visiveis" onchange="emLicitacaoSelecionarVisiveis(this.checked)" style="width:15px;height:15px;accent-color:var(--blue);cursor:pointer"></th>
               <th style="white-space:nowrap">Ações</th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>

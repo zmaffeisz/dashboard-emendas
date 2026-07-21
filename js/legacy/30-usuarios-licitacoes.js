@@ -398,8 +398,9 @@ async function preencherSelectStatusProcesso(){
   const lista=((!error&&data&&data.length)?data.map(s=>s.nome):FALLBACK);
   sel.innerHTML='<option value="">Selecione...</option>'+lista.map(s=>`<option>${_sanEsc(s)}</option>`).join('');
 }
-async function abrirNovoProcesso(){
+async function abrirNovoProcesso(opcoes={}){
   if(!podeEditar('contratos')&&!_isAdmin()){alert('Sem permissão.');return;}
+  const itensEmenda=Array.isArray(opcoes.itensEmenda)?opcoes.itensEmenda:[];
   _procEditId=null;
   document.getElementById('proc-titulo').textContent='➕ Novo processo';
   ['proc-identificador','proc-tipo-outro','proc-sc','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
@@ -407,7 +408,7 @@ async function abrirNovoProcesso(){
   document.getElementById('proc-serv-mensal-itens-lista').innerHTML='';
   document.getElementById('proc-tipo').value='';
   _procTipoChange();
-  document.getElementById('proc-natureza').value='';
+  document.getElementById('proc-natureza').value=opcoes.natureza||'';
   document.getElementById('proc-tipo-servico').value='';
   const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value='';
   await preencherSelectStatusProcesso();
@@ -420,7 +421,14 @@ async function abrirNovoProcesso(){
   const saldoResumo=document.getElementById('proc-emenda-saldo-resumo'); if(saldoResumo){saldoResumo.style.display='none';saldoResumo.innerHTML='';}
   const _impBox=document.getElementById('proc-import-box'); if(_impBox){_impBox.style.display='none';_impBox.innerHTML='';}
   procNaturezaChange();
-  _renderProcItensVazio();
+  if(itensEmenda.length){
+    itensEmenda.forEach(item=>procAddItemRow(item,{adiarAtualizacao:true}));
+    _renderProcItensVazio();
+    _recalcProcValorEstimado();
+    _procAplicarModoAta();
+  }else{
+    _renderProcItensVazio();
+  }
   document.getElementById('proc-msg').className='fmsg';
   document.getElementById('modal-processo').classList.add('active');
 }
@@ -762,7 +770,7 @@ function _procFonteOpts(sel){const fonte=(sel==='sem_emenda'||sel==='municipal')
 function _procEmendaOpts(sel){return '<option value="">Selecione a emenda...</option>'+(cachedEmendas||[]).map(e=>`<option value="${e.id}"${String(sel)===String(e.id)?' selected':''}>${_sanEsc(String(e.emenda))}${e.parlamentar?(' — '+_sanEsc(e.parlamentar)):''}</option>`).join('');}
 function _procUnidadeOpts(sel){return '<option value="">— Unidade destino —</option>'+(cachedUnidades||[]).map(u=>`<option value="${u.id}"${String(sel)===String(u.id)?' selected':''}>${_sanEsc(u.nome)}</option>`).join('');}
 
-function procAddItemRow(data){
+function procAddItemRow(data,opcoes={}){
   data=data||{};
   const locked=!!(data.fromEmenda || data.emenda_item_id); // item vindo da emenda: descrição/qtde/unidade/fonte fixas
   const lista=document.getElementById('proc-itens-lista');
@@ -801,9 +809,11 @@ function procAddItemRow(data){
     </div>`;
   div.querySelector('.pi-emenda-wrap')?.remove();
   lista.appendChild(div);
-  _renderProcItensVazio();
-  _recalcProcValorEstimado();
-  _procAplicarModoAta();
+  if(!opcoes.adiarAtualizacao){
+    _renderProcItensVazio();
+    _recalcProcValorEstimado();
+    _procAplicarModoAta();
+  }
 }
 function procRemoveItemCard(btn){const c=btn.closest('.proc-item-card');if(c)c.remove();_renderProcItensVazio();_recalcProcValorEstimado();}
 

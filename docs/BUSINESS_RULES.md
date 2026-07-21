@@ -55,6 +55,10 @@
   Licitações devem recarregar imediatamente o painel de Emendas.
 - Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
   com espaços.
+- Itens ainda livres podem ser selecionados diretamente na aba **Emendas** para gerar uma
+  licitação. O atalho abre um novo processo com natureza `AQUISIÇÃO`, preserva o vínculo
+  de cada item com sua emenda e revalida antes da abertura se algum deles já foi usado em
+  outro processo ou solicitação de ATA.
 - `status_opcoes` é o catálogo (com `ordem`, `contexto`, `orgao`, `automatico`).
 - **A confirmar:** regra de "auto-trava" de status automáticos (campo `automatico`) e o
   conjunto canônico de status oficiais para "Controle de processos". Ver [DATABASE.md](DATABASE.md#status).

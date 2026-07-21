@@ -24,7 +24,7 @@ async function loadData(){
       if(_isFirstLoad) document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando itens das emendas...';
       const {data,error}=await sb
         .from("emenda_itens")
-        .select("id,emenda_id,unidade_beneficiada,item,qtde,vl_unitario,vl_total,item_cadastrado,qtde_cadastrada,vl_unitario_cadastrado,vl_total_cadastrado,cpl,status,status_id,nota_fiscal,empenho,patrimonio,unidade_entrega,data_entrega,ordem_pagamento,data_atualizacao,emenda, emendas(tipo,emenda,parlamentar,sei_emenda,valor_cedido,unidade,ano,objeto)")
+        .select("id,emenda_id,unidade_beneficiada,unidade_beneficiada_id,item,qtde,vl_unitario,vl_total,item_cadastrado,qtde_cadastrada,vl_unitario_cadastrado,vl_total_cadastrado,cpl,status,status_id,nota_fiscal,empenho,patrimonio,unidade_entrega,data_entrega,ordem_pagamento,data_atualizacao,emenda, emendas(tipo,emenda,parlamentar,sei_emenda,valor_cedido,unidade,ano,objeto)")
         .order("emenda",{ascending:true})
         .range(desde,desde+PAG-1);
       if(error) throw new Error(error.message);
@@ -75,6 +75,7 @@ async function loadData(){
         ano:(e.ano!=null?e.ano:"").toString().trim(),
         objeto:(e.objeto||"").trim(),
         unidade:((i.unidade_beneficiada||e.unidade)||"").toString().trim(),
+        unidade_beneficiada_id:i.unidade_beneficiada_id||null,
         // ── executado ──
         item:(i.item||"").toString().trim(),
         qtde:(i.qtde!=null?i.qtde:"").toString().trim(),
@@ -109,9 +110,11 @@ async function loadData(){
         data_entrega:dataFluxo||(i.data_entrega||"").toString().trim(),
         ordem_pagamento:(i.ordem_pagamento||"").toString().trim(),
         data_atualizacao:dataAtualizacaoFluxo||(i.data_atualizacao||"").toString().trim(),
+        _vinculadoLicitacao:!!f,
       };
       return _expandirLinhaEmendaPorUnidades(base,(f&&f.unidades)||[]);
     }).map(r=>({...r,status_cat:(!r._status_derivado&&r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
+    _emSincronizarSelecaoLicitacao();
     const [{data:eData},uData,{data:pData}]=await Promise.all([
       sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido,unidade,unidade_id").order("emenda",{ascending:true}),
       _getUnidadesAtivasCache(),
@@ -688,6 +691,132 @@ function _emStatusBadge(i){
   const info=STATUS_MAP[c]||{color:'#888'};
   return `<span class="badge" style="background:${info.color}22;color:${info.color}">${_sanEsc(_emStatusLabel(i))}</span>`;
 }
+let _emLicitacaoSelecionados=new Set();
+function _emPodeGerarLicitacao(){
+  return userCanView('licitacoes') && (podeEditar('contratos')||_isAdmin());
+}
+function _emItemDisponivelParaLicitacao(item){
+  return !!item && !item._unidadeFisica && !item._vinculadoLicitacao;
+}
+function _emItemLicitacaoPorId(id){
+  return (allRows||[]).find(item=>String(item._base_id||item.id)===String(id) && !item._unidadeFisica)||null;
+}
+function _emItensLicitacaoSelecionados(){
+  return [..._emLicitacaoSelecionados].map(_emItemLicitacaoPorId).filter(_emItemDisponivelParaLicitacao);
+}
+function _emSincronizarSelecaoLicitacao(){
+  [..._emLicitacaoSelecionados].forEach(id=>{
+    if(!_emItemDisponivelParaLicitacao(_emItemLicitacaoPorId(id))) _emLicitacaoSelecionados.delete(id);
+  });
+  _emAtualizarSelecaoLicitacao();
+}
+function _emCheckboxLicitacao(item){
+  if(!_emPodeGerarLicitacao()) return '';
+  const id=String(item._base_id||item.id);
+  const enc=encodeURIComponent(id);
+  const disponivel=_emItemDisponivelParaLicitacao(item);
+  const checked=_emLicitacaoSelecionados.has(id)?' checked':'';
+  const disabled=disponivel?'':' disabled';
+  const titulo=disponivel?'Selecionar item para gerar licitação':'Item já vinculado a uma licitação, contrato ou ATA';
+  return `<input type="checkbox" class="em-licitacao-checkbox" data-item-id="${_sanEsc(id)}"${checked}${disabled} onchange="emLicitacaoToggle(decodeURIComponent('${enc}'),this)" onclick="event.stopPropagation()" title="${titulo}" style="width:15px;height:15px;accent-color:var(--blue);cursor:${disponivel?'pointer':'not-allowed'}">`;
+}
+function emLicitacaoToggle(id,checkbox){
+  const item=_emItemLicitacaoPorId(id);
+  if(checkbox.checked){
+    if(!_emItemDisponivelParaLicitacao(item)){ checkbox.checked=false; return; }
+    _emLicitacaoSelecionados.add(String(id));
+  }else{
+    _emLicitacaoSelecionados.delete(String(id));
+  }
+  _emAtualizarSelecaoLicitacao();
+}
+function emLicitacaoSelecionarVisiveis(marcar){
+  (filtered||[]).slice(0,500).filter(_emItemDisponivelParaLicitacao).forEach(item=>{
+    const id=String(item._base_id||item.id);
+    if(marcar) _emLicitacaoSelecionados.add(id); else _emLicitacaoSelecionados.delete(id);
+  });
+  _emAtualizarSelecaoLicitacao();
+}
+function emLicitacaoSelecionarGrupo(emendaCodificada,marcar){
+  const emenda=decodeURIComponent(emendaCodificada);
+  (filtered||[]).filter(item=>item.emenda===emenda&&_emItemDisponivelParaLicitacao(item)).forEach(item=>{
+    const id=String(item._base_id||item.id);
+    if(marcar) _emLicitacaoSelecionados.add(id); else _emLicitacaoSelecionados.delete(id);
+  });
+  _emAtualizarSelecaoLicitacao();
+}
+function _emAtualizarSelecaoLicitacao(){
+  const podeGerar=_emPodeGerarLicitacao();
+  const n=_emItensLicitacaoSelecionados().length;
+  const btn=document.getElementById('btn-gerar-licitacao-emendas');
+  if(btn){
+    btn.style.display=podeGerar&&n?'inline-flex':'none';
+    btn.textContent=`➕ Gerar licitação (${n})`;
+  }
+  document.querySelectorAll('.em-licitacao-checkbox').forEach(cb=>{ cb.checked=_emLicitacaoSelecionados.has(String(cb.dataset.itemId)); });
+  document.querySelectorAll('.em-licitacao-grupo').forEach(cb=>{
+    const emenda=decodeURIComponent(cb.dataset.emenda||'');
+    const disponiveis=(filtered||[]).filter(item=>item.emenda===emenda&&_emItemDisponivelParaLicitacao(item));
+    const marcados=disponiveis.filter(item=>_emLicitacaoSelecionados.has(String(item._base_id||item.id))).length;
+    cb.checked=!!disponiveis.length&&marcados===disponiveis.length;
+    cb.indeterminate=marcados>0&&marcados<disponiveis.length;
+  });
+  const visiveis=(filtered||[]).slice(0,500).filter(_emItemDisponivelParaLicitacao);
+  const marcadosVisiveis=visiveis.filter(item=>_emLicitacaoSelecionados.has(String(item._base_id||item.id))).length;
+  const todos=document.getElementById('em-licitacao-selecionar-visiveis');
+  if(todos){
+    todos.checked=!!visiveis.length&&marcadosVisiveis===visiveis.length;
+    todos.indeterminate=marcadosVisiveis>0&&marcadosVisiveis<visiveis.length;
+    todos.disabled=!podeGerar||!visiveis.length;
+  }
+  const th=document.getElementById('th-selecionar-licitacao');
+  if(th) th.style.display=podeGerar?'':'none';
+}
+function _emValorPlanejado(valorPrincipal,valorAlternativo){
+  return valorPrincipal!==null&&valorPrincipal!==undefined&&valorPrincipal!==''?valorPrincipal:(valorAlternativo??'');
+}
+function _emItemParaNovoProcesso(item){
+  let unidadeId=item.unidade_beneficiada_id||'';
+  if(!unidadeId&&item.unidade){
+    const unidade=(cachedUnidades||[]).find(u=>String(u.nome||'').toLowerCase()===String(item.unidade).toLowerCase());
+    if(unidade) unidadeId=unidade.id;
+  }
+  return {
+    descricao:item.item_cadastrado||item.item||'',
+    qtde:_emValorPlanejado(item.qtde_cadastrada,item.qtde),
+    valor_estimado:_emValorPlanejado(item.vl_unitario_cadastrado,item.vl_unitario),
+    unidade_destino_id:unidadeId,
+    fonte_tipo:'emenda',
+    emenda_id:item.emenda_id,
+    emenda_item_id:item._base_id||item.id,
+    emenda_numero:item.emenda||'',
+    fromEmenda:true
+  };
+}
+async function gerarLicitacaoItensSelecionados(){
+  if(!_emPodeGerarLicitacao()){ alert('Sem permissão para gerar licitação.'); return; }
+  let itens=_emItensLicitacaoSelecionados();
+  if(!itens.length){ _emAtualizarSelecaoLicitacao(); return; }
+  const btn=document.getElementById('btn-gerar-licitacao-emendas');
+  if(btn){ btn.disabled=true; btn.textContent='Verificando itens...'; }
+  try{
+    const usados=await _neEmendaItensJaUsados(itens.map(item=>item._base_id||item.id));
+    if(usados.size){
+      usados.forEach(id=>_emLicitacaoSelecionados.delete(String(id)));
+      itens=_emItensLicitacaoSelecionados();
+      alert(`${usados.size} item(ns) já foram vinculados em outro processo ou ATA e saíram da seleção.`);
+      if(!itens.length) return;
+    }
+    showTab('licitacoes');
+    await abrirNovoProcesso({natureza:'AQUISIÇÃO',itensEmenda:itens.map(_emItemParaNovoProcesso)});
+    if(document.getElementById('modal-processo')?.classList.contains('active')) _emLicitacaoSelecionados.clear();
+  }catch(e){
+    alert('Não foi possível preparar a licitação: '+(e.message||e));
+  }finally{
+    if(btn) btn.disabled=false;
+    _emAtualizarSelecaoLicitacao();
+  }
+}
 function emTogglePorEmenda(em){ _emExpand[em]=!_emExpand[em]; renderEmPorEmenda(); }
 function renderEmPorEmenda(){
   const box=document.getElementById('em-view-por-emenda'); if(!box) return;
@@ -705,6 +834,7 @@ function renderEmPorEmenda(){
     const emEnc=encodeURIComponent(em);
     let h=`<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:.85rem;overflow:hidden;background:var(--surface)">
       <div onclick="emTogglePorEmenda(decodeURIComponent('${emEnc}'))" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;background:var(--surface2)">
+        ${_emPodeGerarLicitacao()?`<input type="checkbox" class="em-licitacao-grupo" data-emenda="${emEnc}" onchange="emLicitacaoSelecionarGrupo('${emEnc}',this.checked)" onclick="event.stopPropagation()" title="Selecionar os itens disponíveis desta emenda" style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">`:''}
         <span style="font-size:13px;color:var(--text3);transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
         <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${_sanEsc(r0.objeto||'')}">
@@ -721,9 +851,10 @@ function renderEmPorEmenda(){
         </div>
       </div>`;
     if(aberto){
-      h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1280px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em"><th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
+      h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1280px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em">${_emPodeGerarLicitacao()?'<th style="padding:7px 8px;text-align:center">Selecionar</th>':''}<th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
       items.forEach(i=>{
         h+=`<tr style="border-top:1px solid var(--border)">
+          ${_emPodeGerarLicitacao()?`<td style="padding:8px;text-align:center">${_emCheckboxLicitacao(i)}</td>`:''}
           <td style="padding:8px 14px">${_sanEsc(i.item||'—')}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}</td>
           <td style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}</td>
@@ -747,6 +878,7 @@ function renderEmPorEmenda(){
     h=h.replace(/(?:â€”|—)/g,'-');
     return h;
   }).join('');
+  _emAtualizarSelecaoLicitacao();
 }
 
 // ═══ RENDER ═══
@@ -1153,23 +1285,27 @@ function renderTable(){
   }
   rows=rows.slice(0,500);
   const podeVerSaldo=podeEditar('dashboard');
+  const podeSelecionar=_emPodeGerarLicitacao();
   const thSaldo=document.getElementById('th-saldo-emenda');
   if(thSaldo) thSaldo.style.display=podeVerSaldo?'':'none';
+  const thSelecionar=document.getElementById('th-selecionar-licitacao');
+  if(thSelecionar) thSelecionar.style.display=podeSelecionar?'':'none';
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>{
     const actionId=String(r._base_id||r.id);
     const podeEditarLinha=!r._unidadeFisica;
     return `<tr>
+    ${podeSelecionar?`<td style="text-align:center">${_emCheckboxLicitacao(r)}</td>`:''}
     <td style="white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" title="Ver tudo sobre este item" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">🔎 Ver tudo</button>${_isAdmin()&&podeEditarLinha?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" style="background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">✏️ Editar</button>`:''}${podeEditar('dashboard')&&podeEditarLinha?`<button onclick="excluirEmendaItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" title="Excluir item não executado e limpar vínculos" style="background:var(--surface);color:var(--red);border:1px solid var(--red-bg);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">🗑️ Excluir</button>`:''}</td>
     <td>${tipoBadge(r.tipo)}</td>
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
-    <td style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
+    <td class="em-parlamentar-cell" style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}</td>
     <td class="td-trunc" title="${r.item}">${r.item||"—"}</td>
     <td style="text-align:right">${r.qtde||"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
-    <td style="text-align:right;white-space:nowrap">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
+    <td class="em-vl-unit-exec" style="text-align:right;white-space:nowrap">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${r.cpl||"—"}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>
     <td>${_emStatusBadge(r)}</td>
@@ -1185,7 +1321,7 @@ function renderTable(){
   document.querySelectorAll("#table-body tr").forEach((tr,idx)=>{
     const r=rows[idx];
     const licCell=(value)=>{const td=document.createElement('td');td.style.cssText='text-align:right;white-space:nowrap';td.textContent=Number(value)>0?fmtFull(value):'-';return td;};
-    const ref=tr.cells[9];
+    const ref=tr.querySelector('.em-vl-unit-exec');
     tr.insertBefore(licCell(r?.valor_licitacao_unit),ref);
     tr.insertBefore(licCell(r?.valor_licitacao),ref);
     const td=document.createElement("td");
@@ -1193,8 +1329,9 @@ function renderTable(){
     td.style.color="var(--text3)";
     td.style.whiteSpace="nowrap";
     td.textContent=rows[idx]?.ano||"—";
-    tr.insertBefore(td,tr.children[3]||null);
+    tr.insertBefore(td,tr.querySelector('.em-parlamentar-cell'));
   });
+  _emAtualizarSelecaoLicitacao();
 }
 
 // ═══ SOLICITAÇÃO DE APLICAÇÃO DE SANÇÃO — ITENS DE EMENDAS ═══
