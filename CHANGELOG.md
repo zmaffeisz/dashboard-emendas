@@ -1,5 +1,7 @@
 # Changelog
 
+- **Número da emenda nos itens do contrato**: o modal de geração de contrato agora identifica cada fonte como `Emenda número/ano`, além da unidade beneficiada, facilitando distinguir itens iguais vindos de emendas diferentes.
+
 - **Gerar licitação a partir de Emendas**: itens ainda não vinculados podem ser selecionados em conjunto nas visualizações Emendas e Planilha. A ação abre o modal de novo processo com natureza `AQUISIÇÃO` e os itens de origem já preenchidos, após revalidar vínculos existentes.
 
 - **Datas distintas no status da licitação**: `DESDE` registra desde quando o item está no status/setor, enquanto `Atualizado em` mostra a última atualização feita no sistema, usando o histórico de status.

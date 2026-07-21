@@ -2581,7 +2581,7 @@ async function _ncCarregarItensProcesso(processoId){
   wrap.style.display='block';
   lista.innerHTML='<div style="font-size:12px;color:var(--text3)"><span class="spinner"></span> Carregando itens...</div>';
   const {data,error}=await sb.from('itens')
-    .select('id,descricao,qtde,valor_estimado,valor_contratado,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,grupo_item_id,unidade_destino_id,prazo_entrega_dias,processo_id,origem,marca,modelo,status,contrato_id,unidades(nome)')
+    .select('id,descricao,qtde,valor_estimado,valor_contratado,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,grupo_item_id,unidade_destino_id,prazo_entrega_dias,processo_id,origem,marca,modelo,status,contrato_id,unidades(nome),emendas(emenda,ano)')
     .eq('processo_id',processoId).order('created_at');
   if(error){ lista.innerHTML='<div style="font-size:12px;color:var(--red)">Erro ao carregar itens: '+_sanEsc(error.message)+'</div>'; return; }
   const itens=data||[];
@@ -2615,7 +2615,11 @@ async function _ncCarregarItensProcesso(processoId){
   lista.innerHTML=itens.map(it=>{
     const jaCont=!!it.contrato_id;
     const unid=it.unidades?.nome||'';
-    const fonte=_itemFonteLabel(it.fonte_tipo)+(it.fonte_descricao?(' · '+_sanEsc(it.fonte_descricao)):'');
+    const emendaNumero=String(it.emendas?.emenda||'').trim();
+    const emendaAno=String(it.emendas?.ano||'').trim();
+    const emendaCompleta=emendaNumero&&emendaAno&&!emendaNumero.endsWith('/'+emendaAno)?`${emendaNumero}/${emendaAno}`:emendaNumero;
+    const fonteBase=it.fonte_tipo==='emenda'&&emendaCompleta?`Emenda ${_sanEsc(emendaCompleta)}`:_itemFonteLabel(it.fonte_tipo);
+    const fonte=fonteBase+(it.fonte_descricao?(' · '+_sanEsc(it.fonte_descricao)):'');
     const defVal=(it.valor_estimado!=null)?String(it.valor_estimado).replace('.',',') :'';
     const meta=[
       (it.qtde!=null?('qtde '+it.qtde):null),
