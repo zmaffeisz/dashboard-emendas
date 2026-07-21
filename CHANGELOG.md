@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-21
+
+- Licitações: itens cadastrados em uma ATA de Registro de Preços passam a ser espelhados automaticamente na licitação, já vinculados ao respectivo contrato e item da ATA. Corrigidos os 36 espelhos ausentes de oito processos já contratados.
+
 - **Renovação de ATA preserva histórico**: reiniciar o saldo não exclui mais solicitações, NFs, patrimônios ou termos anteriores. A renovação define um marco de ciclo para todos os itens do contrato, fazendo o executado do novo ciclo começar em zero.
 
 - **Encerramento de ATA por item**: encerrar um item de ATA não altera mais o status do contrato inteiro. A ação passa a registrar o status, a data e o motivo no próprio item; os demais itens continuam vigentes para renovação ou execução.

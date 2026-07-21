@@ -77,6 +77,10 @@
   encerrar/prorrogar/editar feitos em Contratos. **Não é subaba de Contratos.**
 - Ao salvar contrato `tipo=ATA`, os itens são **espelhados** para `atas_itens`
   (idempotente; `itens.ata_item_id` preenchido). Fonte de verdade da execução = aba Atas.
+- Ao cadastrar item diretamente em uma ATA de Registro de Preços, o sistema também cria o
+  espelho em `itens`, vinculado por `ata_item_id`, para a licitação reconhecer que ele já
+  foi contratado. O espelho replica quantidade, valor unitário e prazo; saldo e execuções
+  continuam exclusivamente em `atas_itens` e `atas_execucao`.
 - Em toda criação ou edição administrativa de contrato/ATA, o número do instrumento é
   obrigatório. Ao gerar contrato/ATA a partir de **ATA de Registro de Preços**, também são
   obrigatórios a data de início e a seção; o número do contrato/ATA deve conter somente
