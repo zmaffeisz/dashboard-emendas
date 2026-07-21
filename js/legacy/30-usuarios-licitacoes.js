@@ -527,6 +527,8 @@ async function salvarProcesso(){
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
   if(_procEhServicoDemanda()&&!document.querySelectorAll('#proc-itens-lista .proc-item-card').length){showMsg('proc','Servico por demanda/execucao precisa de pelo menos 1 item cadastrado.','err');return;}
   if(_procEhServicoDemanda()&&servicoDemandaMeses<=0){showMsg('proc','Informe a vigencia em meses do servico por demanda/execucao.','err');return;}
+  const erroPrazo=_procValidarPrazosEntrega(natureza);
+  if(erroPrazo){showMsg('proc',erroPrazo,'err');return;}
   const dados={
     identificador:ident,
     tipo,
@@ -770,6 +772,32 @@ function _procFonteOpts(sel){const fonte=(sel==='sem_emenda'||sel==='municipal')
 function _procEmendaOpts(sel){return '<option value="">Selecione a emenda...</option>'+(cachedEmendas||[]).map(e=>`<option value="${e.id}"${String(sel)===String(e.id)?' selected':''}>${_sanEsc(String(e.emenda))}${e.parlamentar?(' — '+_sanEsc(e.parlamentar)):''}</option>`).join('');}
 function _procUnidadeOpts(sel){return '<option value="">— Unidade destino —</option>'+(cachedUnidades||[]).map(u=>`<option value="${u.id}"${String(sel)===String(u.id)?' selected':''}>${_sanEsc(u.nome)}</option>`).join('');}
 
+function _procPrazoInput(input){
+  if(!input) return;
+  const prazo=Number(input.value);
+  const valido=Number.isInteger(prazo)&&prazo>0;
+  input.style.borderColor=input.value&&!valido?'var(--red)':'';
+  input.setAttribute('aria-invalid',input.value&&!valido?'true':'false');
+}
+function _procValidarPrazosEntrega(natureza){
+  if(natureza!=='AQUISIÇÃO'&&natureza!=='ATA DE RP') return '';
+  const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
+  for(const card of cards){
+    const input=card.querySelector('.pi-prazo');
+    const prazo=Number(input?.value);
+    const valido=Number.isInteger(prazo)&&prazo>0;
+    if(valido){ _procPrazoInput(input); continue; }
+    if(input){
+      input.style.borderColor='var(--red)';
+      input.setAttribute('aria-invalid','true');
+      input.focus();
+    }
+    const descricao=(card.querySelector('.pi-desc')?.value||'item sem descrição').trim();
+    return `Informe o prazo de entrega em dias para o item "${descricao}". O prazo é obrigatório e deve ser maior que zero.`;
+  }
+  return '';
+}
+
 function procAddItemRow(data,opcoes={}){
   data=data||{};
   const locked=!!(data.fromEmenda || data.emenda_item_id); // item vindo da emenda: descrição/qtde/unidade/fonte fixas
@@ -799,7 +827,7 @@ function procAddItemRow(data,opcoes={}){
     <div style="display:grid;grid-template-columns:90px 130px 100px 1fr;gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" style="${inp};${ro}"></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor" placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" style="${inp}"></div>
-      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias)</div><input type="number" class="pi-prazo" placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" style="${inp}"></div>
+      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo" min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
     </div>
     <div class="pi-fonte-row" style="display:grid;grid-template-columns:170px 1fr;gap:8px;margin-top:6px;align-items:end">
@@ -926,6 +954,8 @@ async function _persistProcItens(processoId, natureza){
     const descricao=(g('pi-desc').value||'').trim();
     const qtde=parseFloat(g('pi-qtde').value);
     const fonte_tipo=g('pi-fonte').value;
+    const prazoNumero=Number(g('pi-prazo')?.value);
+    const prazoEntrega=(!ehDemanda&&Number.isInteger(prazoNumero)&&prazoNumero>0)?prazoNumero:null;
     // Item 3: ATA DE RP não exige fonte/emenda/unidade nesta fase (vínculo ocorre na execução da ata)
     if(ehAta||ehDemanda){
       if(!descricao||!qtde) throw new Error(ehDemanda?'Cada item do servico por demanda precisa de descricao e quantidade estimada.':'Cada item da ata precisa de descrição e quantidade.');
@@ -933,6 +963,7 @@ async function _persistProcItens(processoId, natureza){
     }else{
       if(!descricao||!qtde||!fonte_tipo) throw new Error('Cada item precisa de descrição, quantidade e fonte de recurso.');
     }
+    if(!ehDemanda&&!prazoEntrega) throw new Error(`O prazo de entrega do item "${descricao||'sem descrição'}" é obrigatório e deve ser maior que zero.`);
     let emenda_id=null, emenda_item_id=null, fonte_descricao=null;
     if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){
       emenda_id=c.dataset.emendaId||null;
@@ -944,7 +975,7 @@ async function _persistProcItens(processoId, natureza){
       processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
-      prazo_entrega_dias:ehDemanda?null:(parseInt(g('pi-prazo').value)||null),
+      prazo_entrega_dias:ehDemanda?null:prazoEntrega,
       unidade_destino_id:(!ehAta && !ehDemanda && g('pi-unidade').value)?Number(g('pi-unidade').value):null,
       status:'em licitação'
     }});

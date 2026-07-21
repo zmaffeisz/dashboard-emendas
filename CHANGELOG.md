@@ -1,5 +1,9 @@
 # Changelog
 
+- **Contrato/SIM das Bombas de Infusão**: o contrato da Samtronic vinculado aos 11 itens do processo `238/2025` foi corrigido para `174/2026`, mantendo a CPL `238/2025`.
+
+- **Prazo de entrega obrigatório na licitação**: itens de aquisição e de ATA agora exigem prazo inteiro maior que zero antes de qualquer gravação do processo. Os 11 itens de Bomba de Infusão do processo `238/2025` foram regularizados com prazo de 60 dias para permitir a emissão da AF.
+
 - **Número da emenda nos itens do contrato**: o modal de geração de contrato agora identifica cada fonte como `Emenda número/ano`, além da unidade beneficiada, facilitando distinguir itens iguais vindos de emendas diferentes.
 
 - **Gerar licitação a partir de Emendas**: itens ainda não vinculados podem ser selecionados em conjunto nas visualizações Emendas e Planilha. A ação abre o modal de novo processo com natureza `AQUISIÇÃO` e os itens de origem já preenchidos, após revalidar vínculos existentes.

@@ -55,6 +55,9 @@
   Licitações devem recarregar imediatamente o painel de Emendas.
 - Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
   com espaços.
+- Cada item de processo com natureza **Aquisição** ou **ATA de RP** deve possuir prazo de
+  entrega em dias, inteiro e maior que zero. O processo não pode ser gravado enquanto
+  houver item sem prazo válido, pois esse dado define o limite usado na emissão da AF.
 - Itens ainda livres podem ser selecionados diretamente na aba **Emendas** para gerar uma
   licitação. O atalho abre um novo processo com natureza `AQUISIÇÃO`, preserva o vínculo
   de cada item com sua emenda e revalida antes da abertura se algum deles já foi usado em
