@@ -1,6 +1,6 @@
 # Changelog
 
-- **Downloads no “Ver tudo” dos itens**: o detalhe de cada unidade física agora oferece download da nota fiscal e do termo de entrega quando os respectivos anexos existem. Os links são temporários e respeitam o acesso aos buckets privados; o clique também passa a abrir exatamente a unidade física selecionada.
+- **Downloads no “Ver tudo” dos itens**: o detalhe de cada unidade física agora oferece download da nota fiscal e do termo de entrega quando os respectivos anexos existem. Os links são temporários, inclusive para visitantes anônimos, e liberam somente arquivos vinculados ao fluxo público de Emendas; o clique também passa a abrir exatamente a unidade física selecionada.
 
 - **Campos legíveis no recebimento em lote**: quantidade, patrimônio e número de série agora recebem explicitamente as cores do tema, evitando campos pretos no modo claro.
 
