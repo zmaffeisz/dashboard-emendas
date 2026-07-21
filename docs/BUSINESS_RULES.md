@@ -133,6 +133,8 @@
 
 - O encerramento de uma ATA pode ser integral, no contrato, ou seletivo, por item. Encerrar um item atualiza somente `atas_itens.status_contrato`; os demais itens do mesmo contrato permanecem vigentes e podem ser renovados/executados. O encerramento do contrato continua prevalecendo sobre todos os itens.
 
+- Ao renovar uma ATA com **reiniciar saldo**, nenhuma execução histórica é apagada. A renovação grava `atas_itens.saldo_reiniciado_em` para todos os itens do contrato; o saldo do ciclo renovado considera somente solicitações a partir desse marco.
+
 - Uma solicitação de ATA pode ser excluída antes da AF somente se não houver AF/data/previsão, NF, recebimento, patrimônio, entrega na unidade, termo, unidade física ou sanção. `obs_prazo` isolada, inclusive de importação, é apenas informativa e não bloqueia a exclusão.
 
 - AF de **aquisição** gera `itens_entregas` (autorizada vs. recebida).

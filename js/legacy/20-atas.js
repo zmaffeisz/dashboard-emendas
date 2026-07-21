@@ -44,6 +44,7 @@ async function loadAtas(){
       valor_unit:Number(r.valor_unit)||0,
       vencimento:(contrato.vencimento||"").trim(),
       status:statusItem,
+      saldo_reiniciado_em:r.saldo_reiniciado_em||null,
       empresa:contrato.empresa,
       prazo_entrega:parseInt(r.prazo_entrega)||0,
       contrato
@@ -80,6 +81,7 @@ async function loadAtas(){
       termo_cargo:r.termo_cargo||"",
       confirmacao_obs:r.confirmacao_obs||"",
       possui_patrimonio:r.possui_patrimonio,
+      created_at:r.created_at||null,
       empresa:ata.empresa||"",
       cnpj:ata.cnpj_fornecedor||ata.contrato?.cnpj||"",
       contrato:ata.contrato||null
@@ -103,14 +105,21 @@ function _resolverAtaItemRef(cplOuId,sim,item){
 function getSaldo(cpl,sim,item){
   const at=_resolverAtaItemRef(cpl,sim,item);
   if(!at) return 0;
-  const exec=atasExec.filter(r=>String(r.ata_item_id)===String(at.id)).reduce((a,r)=>a+r.qtde,0);
+  const exec=getExecutado(at);
   return at.qtde_contratada-exec;
 }
 
+function _dataExecucaoParaSaldo(exec){
+  return _toISODate(exec?.data_af)||_toISODate(exec?.dt_entrega)||_toISODate(exec?.created_at)||'';
+}
 function getExecutado(cpl,sim,item){
   const at=_resolverAtaItemRef(cpl,sim,item);
   if(!at) return 0;
-  return atasExec.filter(r=>String(r.ata_item_id)===String(at.id)).reduce((a,r)=>a+r.qtde,0);
+  const marco=_toISODate(at.saldo_reiniciado_em);
+  return atasExec
+    .filter(r=>String(r.ata_item_id)===String(at.id))
+    .filter(r=>!marco||_dataExecucaoParaSaldo(r)>=marco)
+    .reduce((a,r)=>a+r.qtde,0);
 }
 
 function diasParaVencer(vencimento){
@@ -834,22 +843,18 @@ async function salvarRenovacao(){
       if(errItem) throw errItem;
     }
     if(reiniciarSaldo){
-      const termosRemovidos=(atasExec||[])
-        .filter(exec=>String(exec.ata_item_id)===String(at.id))
-        .map(exec=>exec.termo_arquivo)
-        .filter(Boolean);
-      const {error:errExec}=await sb.from("atas_execucao").delete().eq("ata_item_id",at.id);
-      if(errExec) throw errExec;
-      if(termosRemovidos.length&&typeof removerTermosEntrega==='function'){
-        try{ await removerTermosEntrega(termosRemovidos); }
-        catch(cleanupError){ console.warn('Execuções removidas, mas termos antigos permaneceram no Storage',cleanupError); }
-      }
+      // A renovação reinicia o saldo de todos os itens do contrato, sem apagar
+      // solicitações, NFs, patrimônios ou termos do ciclo anterior.
+      const {error:errSaldo}=await sb.from("atas_itens")
+        .update({saldo_reiniciado_em:novaData})
+        .eq("contrato_id",at.contrato_id);
+      if(errSaldo) throw errSaldo;
     }
     const {error:errHist}=await sb.from("contratos_historico").insert({
       contrato_id:at.contrato_id,
       tipo:"Prorrogação de ATA",
       data_evento:novaData,
-      obs:`Nova data fim: ${novaFormatada}; saldo ${reiniciarSaldo?"reiniciado":"mantido"}${alterarValor?`; valor unitário: ${novoValor}`:""}`
+      obs:`Nova data fim: ${novaFormatada}; saldo ${reiniciarSaldo?`reiniciado em ${novaData}, com histórico preservado`:"mantido"}${alterarValor?`; valor unitário: ${novoValor}`:""}`
     });
     if(errHist) throw errHist;
     await Promise.all([loadAtas(),contratosCarregado?loadContratos():Promise.resolve()]);
