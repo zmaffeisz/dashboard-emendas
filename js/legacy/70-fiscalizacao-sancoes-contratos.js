@@ -2144,8 +2144,8 @@ async function salvarNovoContrato(){
     :(secSelEarly?.value||'');
   if(!window._gerarContratoProcesso){showMsg("nc","Selecione o processo (licitação) (*).","err");return;}
   if(!cpl){showMsg("nc","Selecione o processo (*)","err");return;}
+  if(!numeroContrato){showMsg("nc","Informe o número do contrato/SIM (*).","err");return;}
   if(tipoInstrumento==="ATA"){
-    if(!numeroContrato){showMsg("nc","Informe o número da ATA/contrato (*).","err");return;}
     if(/[A-Za-zÀ-ÖØ-öø-ÿ]|\s/.test(numeroContrato)){showMsg("nc","Número da ATA/contrato não pode conter letras nem espaços.","err");return;}
     if(!inicioContrato){showMsg("nc","Informe a data de início da ATA/contrato (*).","err");return;}
     if(!secaoEarly){showMsg("nc","Informe a seção da ATA/contrato (*).","err");return;}
@@ -2779,6 +2779,8 @@ function abrirEditarContrato(id){
 }
 async function salvarEdicaoContrato(){
   if(!_isAdmin()||!_ctEdicaoId) return;
+  const numeroContrato=document.getElementById('ec-numero').value.trim();
+  if(!numeroContrato){showMsg('ec','Informe o número do contrato/SIM (*).','err');return;}
   const prefixo=document.getElementById('ec-prefixo').value.trim().toUpperCase();
   if(prefixo&&!/^[A-Z]+$/.test(prefixo)){showMsg('ec','O prefixo deve conter somente letras.','err');return;}
   const dados={};

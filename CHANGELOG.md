@@ -1,5 +1,9 @@
 # Changelog
 
+- **Anexo obrigatório da nota fiscal no recebimento**: o recebimento agora exige PDF ou imagem da NF ao cadastrá-la. NF existente sem anexo também deve receber o arquivo antes de ser vinculada.
+
+- **Número do contrato/SIM obrigatório**: a criação e a edição administrativa de contratos agora exigem o preenchimento do número do contrato/SIM antes de salvar.
+
 - **Contrato/SIM das Bombas de Infusão**: o contrato da Samtronic vinculado aos 11 itens do processo `238/2025` foi corrigido para `174/2026`, mantendo a CPL `238/2025`.
 
 - **Prazo de entrega obrigatório na licitação**: itens de aquisição e de ATA agora exigem prazo inteiro maior que zero antes de qualquer gravação do processo. Os 11 itens de Bomba de Infusão do processo `238/2025` foram regularizados com prazo de 60 dias para permitir a emissão da AF.

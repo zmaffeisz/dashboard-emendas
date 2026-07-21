@@ -1461,6 +1461,11 @@
         <div class="form-group"><div class="form-label">Valor total NF</div><input type="number" id="rec-nf-valor" min="0" step="any"></div>
         <div class="form-group"><div class="form-label">Observacao</div><input type="text" id="rec-nf-obs"></div>
       </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Anexo da nota fiscal *</div>
+        <input type="file" id="rec-nf-arquivo" accept="application/pdf,image/jpeg,image/png,image/webp" required>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Envie a NF em PDF ou imagem (até 10 MB). Para uma NF já anexada, não é necessário reenviar.</div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn-primary" id="rec-salvar" onclick="salvarRecebimento()">Salvar recebimento</button>
@@ -2152,7 +2157,7 @@
     <div class="form-grid" style="grid-template-columns:1fr 1fr">
       <div class="form-group"><div class="form-label">Tipo de instrumento</div><select id="ec-tipo" onchange="ecTipoInstrumentoChange()"><option value="CONTRATO">CONTRATO</option><option value="ATA">ATA</option></select></div>
       <div class="form-group"><div class="form-label">CPL</div><input id="ec-cpl" type="text"></div>
-      <div class="form-group"><div class="form-label">Nº do contrato</div><input id="ec-numero" type="text"></div>
+      <div class="form-group"><div class="form-label">Nº do contrato/SIM *</div><input id="ec-numero" type="text" required></div>
       <div class="form-group full"><div class="form-label">Prestador</div>
         <div class="company-picker-row">
           <div class="company-combobox" id="ec-fornecedor-combobox">
@@ -2214,7 +2219,7 @@
         <input type="hidden" id="nc-cpl">
         <label id="nc-gera-mais-wrap" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:6px;cursor:pointer"><input type="checkbox" id="nc-gera-mais" style="margin:0"> Esta CPL ainda vai gerar mais contratos (continua aparecendo na lista ao gerar contrato)</label>
       </div>
-      <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" placeholder="sem letras ou espaços"></div>
+      <div class="form-group"><div class="form-label">Nº do contrato/SIM *</div><input type="text" id="nc-numero" placeholder="ex: 174/2026" required></div>
       <div class="form-group full"><div class="form-label">Prestador *</div>
         <div class="company-picker-row">
           <div class="company-combobox" id="nc-fornecedor-combobox">

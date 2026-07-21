@@ -77,8 +77,9 @@
   encerrar/prorrogar/editar feitos em Contratos. **Não é subaba de Contratos.**
 - Ao salvar contrato `tipo=ATA`, os itens são **espelhados** para `atas_itens`
   (idempotente; `itens.ata_item_id` preenchido). Fonte de verdade da execução = aba Atas.
-- Ao gerar contrato/ATA a partir de **ATA de Registro de Preços**, número do instrumento,
-  data de início e seção são obrigatórios. O número do contrato/ATA deve conter somente
+- Em toda criação ou edição administrativa de contrato/ATA, o número do instrumento é
+  obrigatório. Ao gerar contrato/ATA a partir de **ATA de Registro de Preços**, também são
+  obrigatórios a data de início e a seção; o número do contrato/ATA deve conter somente
   dígitos, sem letras, barras, símbolos ou espaços.
 - Na solicitação/execução de ATA com origem em **Emenda**, item de emenda já vinculado a
   outro processo/solicitação não pode ser selecionado nem salvo novamente. A lista deve
@@ -102,6 +103,8 @@
   | Valor por item (rateio) | `nota_fiscal_itens.valor_total` / `valor_unitario` |
   | Valor por unidade | **não existe** (proposital — evita soma indevida) |
 - **Preferência:** NF cadastrada **uma única vez** e vinculada a itens/unidades.
+- No recebimento, uma NF nova só pode ser cadastrada com seu arquivo anexado em PDF ou
+  imagem. NF antiga sem anexo deve receber o arquivo antes de ser vinculada.
 
 ## 6. Empenhos
 

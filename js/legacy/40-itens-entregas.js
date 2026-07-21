@@ -1821,7 +1821,7 @@ async function abrirRecebimento(entregaId){
   document.getElementById('rec-data').value=new Date().toISOString().slice(0,10);
   document.getElementById('rec-recebido-por').value=row.recebido_por||'';
   document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'—';
-  ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs','rec-nf-arquivo'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
   _recSetMsg('');
   // offset: unidades já registradas nesta AF (numeração continua em recebimentos parciais)
@@ -1863,7 +1863,7 @@ async function abrirRecebimentoAta(execId){
   document.getElementById('rec-data').value=row.entregaISO||new Date().toISOString().slice(0,10);
   document.getElementById('rec-recebido-por').value=row.recebido_por||'';
   document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'â€”';
-  ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs','rec-nf-arquivo'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
   _recSetMsg('');
   window._recUnidadeOffset=0;
@@ -1882,7 +1882,14 @@ async function _recObterOuCriarEmpenho(row){
 }
 async function _recObterOuCriarNF(row){
   const sel=document.getElementById('rec-nf-select').value;
-  if(sel&&sel!=='__novo') return _recNFsRows.find(n=>String(n.id)===String(sel))||{id:sel,numero:''};
+  const arquivo=document.getElementById('rec-nf-arquivo')?.files?.[0]||null;
+  if(sel&&sel!=='__novo'){
+    const nf=_recNFsRows.find(n=>String(n.id)===String(sel))||{id:sel,numero:''};
+    if(arquivo) return _recAnexarNotaFiscal(nf,arquivo);
+    if(!nf.arquivo_url) throw new Error('A NF selecionada não possui anexo. Anexe o arquivo da nota fiscal para continuar.');
+    return nf;
+  }
+  if(!arquivo) throw new Error('Anexe o arquivo da nota fiscal para continuar.');
   const digitos=document.getElementById('rec-nf-numero').value.trim();
   if(!digitos) throw new Error('Informe o numero da nova NF ou selecione uma existente.');
   const numero='NF '+digitos;
@@ -1903,6 +1910,30 @@ async function _recObterOuCriarNF(row){
   };
   const {data,error}=await sb.from('notas_fiscais').insert(payload).select('*').single();
   if(error) throw error;
+  try{
+    return await _recAnexarNotaFiscal(data,arquivo);
+  }catch(e){
+    await sb.from('notas_fiscais').delete().eq('id',data.id);
+    throw e;
+  }
+}
+function _recValidarArquivoNF(file){
+  const tiposAceitos=['application/pdf','image/jpeg','image/png','image/webp'];
+  if(!file) throw new Error('Anexe o arquivo da nota fiscal para continuar.');
+  if(!tiposAceitos.includes(String(file.type||'').toLowerCase())) throw new Error('Envie a nota fiscal em PDF, JPG, PNG ou WEBP.');
+  if(file.size>10485760) throw new Error('O anexo da nota fiscal deve ter no máximo 10 MB.');
+}
+async function _recAnexarNotaFiscal(nf,file){
+  _recValidarArquivoNF(file);
+  const path=`${nf.id}/${Date.now()}-${_safeFileName(file.name)}`;
+  const {error:uploadError}=await sb.storage.from('notas-fiscais').upload(path,file,{contentType:file.type,upsert:false});
+  if(uploadError) throw uploadError;
+  const {data,error:updateError}=await sb.from('notas_fiscais').update({arquivo_url:path}).eq('id',nf.id).select('*').single();
+  if(updateError){
+    await sb.storage.from('notas-fiscais').remove([path]);
+    throw updateError;
+  }
+  if(nf.arquivo_url&&nf.arquivo_url!==path) await sb.storage.from('notas-fiscais').remove([nf.arquivo_url]);
   return data;
 }
 async function _recGarantirEmpenhoItem(row, empenho, qtde){
