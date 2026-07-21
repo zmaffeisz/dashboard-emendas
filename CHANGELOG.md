@@ -1,5 +1,9 @@
 # Changelog
 
+- **Campos legíveis no recebimento em lote**: quantidade, patrimônio e número de série agora recebem explicitamente as cores do tema, evitando campos pretos no modo claro.
+
+- **Recebimento em lote com uma única nota fiscal**: no Controle de Entregas, vários itens iguais do mesmo contrato, fornecedor e processo podem ser selecionados para registrar um único recebimento. O modal mantém quantidade, unidade, empenho e patrimônios separados por item, enquanto cadastra e anexa a NF somente uma vez.
+
 - **Anexo obrigatório da nota fiscal no recebimento**: o recebimento agora exige PDF ou imagem da NF ao cadastrá-la. NF existente sem anexo também deve receber o arquivo antes de ser vinculada.
 
 - **Número do contrato/SIM obrigatório**: a criação e a edição administrativa de contratos agora exigem o preenchimento do número do contrato/SIM antes de salvar.

@@ -105,6 +105,10 @@
 - **Preferência:** NF cadastrada **uma única vez** e vinculada a itens/unidades.
 - No recebimento, uma NF nova só pode ser cadastrada com seu arquivo anexado em PDF ou
   imagem. NF antiga sem anexo deve receber o arquivo antes de ser vinculada.
+- No recebimento em lote, a NF e seu anexo são gravados uma única vez. Cada item conserva
+  seu vínculo próprio com unidade, AF e empenho em `nota_fiscal_itens`; os itens precisam
+  pertencer ao mesmo contrato, fornecedor e processo e representar o mesmo produto
+  (descrição, marca e modelo). A gravação relacional do lote é atômica.
 
 ## 6. Empenhos
 
@@ -147,6 +151,9 @@
   CNPJ, empenho, item, quantidade, valores, unidade/local de entrega, prazo e responsável.
 - Recebimento por unidade física: `itens_entregas_unidades` (patrimônio/série individuais
   por unidade; `unidade_seq` 1..N).
+- O Controle de Entregas permite selecionar pelo menos dois itens de aquisição compatíveis
+  e abrir um único modal de recebimento. Quantidade e patrimônios permanecem separados por
+  item/unidade; data, responsável e nota fiscal são compartilhados pelo lote.
 - Trigger `_sync_entrega_agregado` mantém `itens_entregas.patrimonio/numero_serie` como
   **agregado legado** (concatenação) — UI antiga continua lendo, sem duplicar a verdade.
 - Gerar AF em lote e PDF: `abrirAFLote` (memória: implementado, aguardando validação).

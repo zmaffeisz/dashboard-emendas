@@ -167,6 +167,20 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-group input,.form-group select{font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)}
 .form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue)}
 .form-group input[readonly]{background:var(--surface2);color:var(--text3)}
+
+/* Recebimento em lote: os campos dinâmicos também precisam de fundo explícito.
+   Sem esta regra, o color-scheme do navegador pode renderizá-los pretos no tema claro. */
+#modal-recebimento-lote .recl-item input,
+#modal-recebimento-lote #recl-patrimonio-auto input{
+  box-sizing:border-box;width:100%;font:inherit;font-size:13px;padding:7px 10px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface);color:var(--text)
+}
+#modal-recebimento-lote .recl-item input:focus,
+#modal-recebimento-lote #recl-patrimonio-auto input:focus{outline:none;border-color:var(--blue)}
+#modal-recebimento-lote #recl-patrimonio-auto input:disabled{
+  background:var(--surface2);color:var(--text2);opacity:1
+}
 .form-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .proc-ident-grid{display:grid;grid-template-columns:minmax(140px,180px) minmax(0,1fr);gap:12px}

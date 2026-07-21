@@ -1475,6 +1475,63 @@
   </div>
 </div>
 
+<!-- Modal Registrar Recebimento em Lote -->
+<div class="modal-overlay" id="modal-recebimento-lote">
+  <div class="modal-box" style="width:920px;max-width:96vw;max-height:94vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📥 Gerar recebimento para vários itens</span>
+      <button onclick="document.getElementById('modal-recebimento-lote').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">×</button>
+    </div>
+    <div id="recl-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">Data do recebimento *</div><input type="date" id="recl-data"></div>
+      <div class="form-group"><div class="form-label">Recebido por</div><input type="text" id="recl-recebido-por" placeholder="nome do responsável"></div>
+      <div class="form-group full">
+        <div class="form-label">Os itens possuem patrimônio? *</div>
+        <select id="recl-possui-patrimonio" onchange="_recLoteTogglePatrimonio()">
+          <option value="">Selecione...</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="recl-patrimonio-auto" style="display:none;background:var(--surface2);padding:8px;border-radius:var(--radius-sm);margin:.25rem 0 .75rem">
+      <div class="form-label">Preenchimento automático de patrimônio</div>
+      <div style="display:grid;grid-template-columns:1fr 120px 150px;gap:8px;align-items:end">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Patrimônio inicial</div><input type="text" id="recl-pat-inicial" inputmode="numeric" placeholder="ex: 1000"></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Quantidade</div><input type="text" id="recl-pat-quantidade" disabled></div>
+        <button type="button" class="btn-secondary" onclick="_recLoteGerarSequencia()">Gerar sequência</button>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;margin:.75rem 0 .4rem">Itens deste recebimento</div>
+    <div id="recl-itens" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding-right:3px"></div>
+
+    <div style="font-size:13px;font-weight:700;margin:1rem 0 .4rem;border-top:1px solid var(--border);padding-top:.85rem">Nota fiscal única para todos os itens</div>
+    <div class="form-grid" style="grid-template-columns:1fr 160px">
+      <div class="form-group">
+        <div class="form-label">Número da NF *</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-weight:600;color:var(--text2)">NF</span><input type="text" id="recl-nf-numero" inputmode="numeric" placeholder="12345" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+      </div>
+      <div class="form-group"><div class="form-label">Data de emissão *</div><input type="date" id="recl-nf-data"></div>
+      <div class="form-group"><div class="form-label">Valor total da NF</div><input type="number" id="recl-nf-valor" min="0" step="any"></div>
+      <div class="form-group"><div class="form-label">Observação</div><input type="text" id="recl-nf-obs"></div>
+      <div class="form-group full">
+        <div class="form-label">Anexo da nota fiscal *</div>
+        <input type="file" id="recl-nf-arquivo" accept="application/pdf,image/jpeg,image/png,image/webp" required>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Um único PDF ou imagem para todos os itens (até 10 MB).</div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="recl-salvar" onclick="salvarRecebimentoLote()">Salvar recebimento</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-recebimento-lote').classList.remove('active')">Cancelar</button>
+      <span id="recl-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Confirmar Entrega na Unidade (Fase 7) -->
 <div class="modal-overlay" id="modal-confirmacao-unidade">
   <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">

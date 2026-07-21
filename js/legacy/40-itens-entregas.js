@@ -1273,7 +1273,7 @@ function renderItensEntregas(){
   if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item encontrado. Itens aguardando AF e itens com AF emitida (aguardando recebimento) aparecem aqui. Após o recebimento total, passam para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
   wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px;width:28px" title="Selecionar para advertência">⚖️</th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
+      <th style="padding:7px 8px;width:28px" title="Selecionar para ações em lote">☑</th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
       const dias=_diasRestantes(r.limiteISO);
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
@@ -1406,7 +1406,7 @@ function _ceAdvCheckbox(r){
   if(!_ceAdvElegivel(r)||!podeEditar('itens')) return '';
   const key=_ceRowKey(r), checked=_ceAdvSel.has(key);
   const disabled=_ceAdvLock && _ceAdvLockKey(r)!==_ceAdvLock && !checked;
-  return `<input type="checkbox" class="ce-adv-chk" ${checked?'checked':''} ${disabled?'disabled':''} onchange="_ceAdvToggle('${key}',this)" title="${disabled?('Seleção limitada ao contrato '+_sanEsc(_ceAdvLock)):'Selecionar para advertência'}" style="accent-color:#EF9F27;cursor:${disabled?'not-allowed':'pointer'}">`;
+  return `<input type="checkbox" class="ce-adv-chk" ${checked?'checked':''} ${disabled?'disabled':''} onchange="_ceAdvToggle('${key}',this)" title="${disabled?('Seleção limitada ao contrato '+_sanEsc(_ceAdvLock)):'Selecionar para ações em lote'}" style="accent-color:#EF9F27;cursor:${disabled?'not-allowed':'pointer'}">`;
 }
 function _ceAdvToggle(key,cb){
   const r=entregasRows.find(x=>_ceRowKey(x)===key); if(!r){cb.checked=false;return;}
@@ -1416,13 +1416,28 @@ function _ceAdvToggle(key,cb){
 }
 function _ceAdvLimpar(){ _ceAdvSel.clear(); _ceAdvLock=''; renderItensEntregas(); }
 function _ceSelRows(){ return entregasRows.filter(r=>_ceAdvSel.has(_ceRowKey(r))); }
+function _ceRecLoteElegivel(r){
+  return r.tipo==='Aquisição'&&!r._pendente&&!r.cancelado&&!!r.entrega_id&&!!r.item_id&&Number(r.saldo_af)>0&&!!(r.empenho_id||r.empenho)&&!r.nota_fiscal_id&&!String(r.nota_fiscal||'').trim();
+}
+function _ceRecLoteSelecionadas(){
+  const rows=_ceSelRows();
+  if(rows.length<2||rows.some(r=>!_ceRecLoteElegivel(r))) return [];
+  const contratos=new Set(rows.map(r=>String(r.contrato_id||r.contrato||'')));
+  const fornecedores=new Set(rows.map(r=>String(r.fornecedor_id||r.empresa||'')));
+  const processos=new Set(rows.map(r=>String(r.processo_id||r.processo||'')));
+  const itens=new Set(rows.map(r=>[r.item,r.marca,r.modelo].map(v=>String(v||'').trim().toLowerCase()).join('|')));
+  return contratos.size===1&&fornecedores.size===1&&processos.size===1&&itens.size===1?rows:[];
+}
 function _ceAdvBar(){
   const n=_ceAdvSel.size; if(!n) return '';
   const pendentesAF=_ceSelRows().filter(r=>r._pendente && r.tipo==='Aquisição');
   const afBtn=pendentesAF.length?`<button onclick="abrirAFLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar AF (${pendentesAF.length})</button>`:'';
+  const recebiveis=_ceRecLoteSelecionadas();
+  const recBtn=recebiveis.length?`<button onclick="abrirRecebimentoLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer;font-weight:600">📥 Gerar recebimento (${recebiveis.length})</button>`:'';
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-bg,#fff7e6);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:10px">
     <span style="font-size:12px;color:var(--text2)">${n} item(ns) · contrato <b>${_sanEsc(_ceAdvLock||'—')}</b></span>
     ${afBtn}
+    ${recBtn}
     <button onclick="abrirAdvertenciaCE()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar advertência</button>
     <button onclick="_ceAdvLimpar()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Limpar seleção</button>
   </div>`;
@@ -2120,9 +2135,205 @@ async function salvarRecebimento(){
     btn.disabled=false; btn.textContent=label;
   }
 }
+
+// Recebimento em lote de aquisições: uma NF/anexo, mantendo empenho e unidade por item.
+let _recLoteRows=[];
+function _recLoteSetMsg(txt,tipo){
+  const el=document.getElementById('recl-msg'); if(!el) return;
+  el.textContent=txt||''; el.className='fmsg '+(tipo||'');
+}
+async function abrirRecebimentoLote(){
+  if(bloquearSeVisualiz('itens')) return;
+  const selecionadas=_ceRecLoteSelecionadas();
+  if(!selecionadas.length){
+    if(window.toast) toast('Selecione pelo menos dois itens iguais, do mesmo contrato e fornecedor, com AF, saldo e empenho vinculados.','error');
+    return;
+  }
+  const itemIds=[...new Set(selecionadas.map(r=>r.item_id).filter(Boolean))];
+  const idsDiretos=[...new Set(selecionadas.map(r=>r.empenho_id).filter(Boolean))];
+  const consultas=[sb.from('empenho_itens').select('item_id,empenho_id,empenhos(id,numero,ano)').in('item_id',itemIds)];
+  if(idsDiretos.length) consultas.push(sb.from('empenhos').select('id,numero,ano').in('id',idsDiretos));
+  const respostas=await Promise.all(consultas);
+  if(respostas[0].error){ if(window.toast) toast('Erro ao carregar os empenhos: '+respostas[0].error.message,'error'); return; }
+  if(respostas[1]?.error){ if(window.toast) toast('Erro ao carregar os empenhos: '+respostas[1].error.message,'error'); return; }
+  const porItem={};
+  (respostas[0].data||[]).forEach(v=>{
+    const emp=v.empenhos;
+    if(!v.item_id||!emp?.id) return;
+    (porItem[String(v.item_id)]=porItem[String(v.item_id)]||[]).push({id:emp.id,numero:emp.numero,ano:emp.ano});
+  });
+  const diretos=Object.fromEntries((respostas[1]?.data||[]).map(e=>[String(e.id),e]));
+  _recLoteRows=[];
+  for(const row of selecionadas){
+    const opcoes=porItem[String(row.item_id)]||[];
+    let empenho=row.empenho_id?(diretos[String(row.empenho_id)]||opcoes.find(e=>String(e.id)===String(row.empenho_id))):null;
+    if(!empenho&&opcoes.length===1) empenho=opcoes[0];
+    if(!empenho&&opcoes.length>1){
+      empenho=opcoes.find(e=>String(row.empenho||'').includes(String(e.numero||'')))||null;
+    }
+    if(!empenho){
+      if(window.toast) toast(`Não foi possível identificar um único empenho para ${row.unidade||row.item}.`,'error');
+      _recLoteRows=[]; return;
+    }
+    _recLoteRows.push({...row,_loteEmpenho:empenho});
+  }
+  const primeira=_recLoteRows[0];
+  document.getElementById('recl-info').innerHTML=`<b>${_sanEsc(primeira.item||'Item')}</b> · ${_recLoteRows.length} itens selecionados<br>Contrato ${_sanEsc(primeira.contrato||'—')} · Fornecedor ${_sanEsc(primeira.empresa||'—')}`;
+  const hoje=new Date().toISOString().slice(0,10);
+  document.getElementById('recl-data').value=hoje;
+  document.getElementById('recl-recebido-por').value='';
+  document.getElementById('recl-nf-data').value=hoje;
+  ['recl-nf-numero','recl-nf-valor','recl-nf-obs','recl-nf-arquivo','recl-pat-inicial'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const conhecidos=[...new Set(_recLoteRows.map(r=>r.possui_patrimonio==null?'':(r.possui_patrimonio?'sim':'nao')).filter(Boolean))];
+  document.getElementById('recl-possui-patrimonio').value=conhecidos.length===1?conhecidos[0]:'';
+  _recLoteSetMsg('');
+  _recLoteRenderItens();
+  _recLoteTogglePatrimonio();
+  document.getElementById('modal-recebimento-lote').classList.add('active');
+}
+function _recLoteRenderItens(){
+  const wrap=document.getElementById('recl-itens'); if(!wrap) return;
+  wrap.innerHTML=_recLoteRows.map(row=>{
+    const emp=row._loteEmpenho||{};
+    const saldo=Number(row.saldo_af)||0;
+    const empLabel=`${emp.numero||row.empenho||'—'}${emp.ano?(' / '+emp.ano):''}`;
+    return `<div class="recl-item" data-entrega-id="${_sanEsc(row.entrega_id)}" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px;background:var(--surface2)">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:end">
+        <div><div style="font-size:12px;font-weight:700">${_sanEsc(row.item||'Item')} · ${_sanEsc(row.unidade||'—')}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">AF ${_sanEsc(row.af_numero||'—')} · Empenho ${_sanEsc(empLabel)} · saldo ${saldo}</div></div>
+        <div><div class="form-label">Qtde recebida agora *</div><input class="recl-qtde" type="number" min="0.0001" max="${saldo}" step="any" value="${saldo}" oninput="_recLoteAtualizarUnidades('${_sanEsc(row.entrega_id)}')"></div>
+      </div>
+      <div class="recl-unidades" style="display:none;margin-top:8px"></div>
+    </div>`;
+  }).join('');
+}
+function _recLoteCard(entregaId){
+  return [...document.querySelectorAll('#recl-itens .recl-item')].find(el=>String(el.dataset.entregaId)===String(entregaId))||null;
+}
+function _recLoteAtualizarUnidades(entregaId){
+  const card=_recLoteCard(entregaId); if(!card) return;
+  const wrap=card.querySelector('.recl-unidades'); if(!wrap) return;
+  const possui=document.getElementById('recl-possui-patrimonio').value==='sim';
+  const antigos=[...wrap.querySelectorAll('.recl-u-row')].map(r=>({patrimonio:r.querySelector('.recl-u-patr')?.value||'',serie:r.querySelector('.recl-u-serie')?.value||''}));
+  if(!possui){wrap.style.display='none';wrap.innerHTML='';_recLoteAtualizarTotalUnidades();return;}
+  const qtd=Number(card.querySelector('.recl-qtde')?.value)||0;
+  const n=Number.isInteger(qtd)&&qtd>0?qtd:0;
+  wrap.style.display='block';
+  wrap.innerHTML=n?`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Patrimônio e série de cada unidade física</div>${Array.from({length:n},(_,i)=>`<div class="recl-u-row" style="display:grid;grid-template-columns:38px 1fr 1fr;gap:7px;align-items:center;margin-bottom:5px"><span style="font-size:11px;color:var(--text3);text-align:right">#${i+1}</span><input class="recl-u-patr" type="text" placeholder="patrimônio" value="${_sanEsc(antigos[i]?.patrimonio||'')}"><input class="recl-u-serie" type="text" placeholder="nº de série" value="${_sanEsc(antigos[i]?.serie||'')}"></div>`).join('')}`:'<div style="font-size:11px;color:var(--red)">Para itens com patrimônio, informe uma quantidade inteira.</div>';
+  _recLoteAtualizarTotalUnidades();
+}
+function _recLoteAtualizarTotalUnidades(){
+  const total=document.querySelectorAll('#recl-itens .recl-u-row').length;
+  const el=document.getElementById('recl-pat-quantidade'); if(el) el.value=total||'';
+}
+function _recLoteTogglePatrimonio(){
+  const sim=document.getElementById('recl-possui-patrimonio').value==='sim';
+  const auto=document.getElementById('recl-patrimonio-auto'); if(auto) auto.style.display=sim?'block':'none';
+  _recLoteRows.forEach(r=>_recLoteAtualizarUnidades(r.entrega_id));
+}
+async function _recLoteGerarSequencia(){
+  const raw=document.getElementById('recl-pat-inicial').value.trim();
+  if(!/^\d+$/.test(raw)||Number(raw)<=0){if(window.toast)toast('Informe um patrimônio inicial inteiro e positivo.','error');return;}
+  const campos=[...document.querySelectorAll('#recl-itens .recl-u-patr')];
+  if(!campos.length){if(window.toast)toast('Nenhuma unidade física foi gerada.','error');return;}
+  const inicio=Number(raw), fim=inicio+campos.length-1;
+  if(!await uiConfirm(`Preencher ${campos.length} patrimônios, de ${inicio} até ${fim}?`)) return;
+  campos.forEach((el,i)=>{el.value=String(inicio+i);});
+}
+async function _recLoteValidarPatrimonios(itens){
+  const valores=itens.flatMap(i=>i.unidades||[]).map(u=>String(u.patrimonio||'').trim()).filter(Boolean);
+  const contagem={}; valores.forEach(v=>{contagem[v]=(contagem[v]||0)+1;});
+  const repetidos=Object.keys(contagem).filter(v=>contagem[v]>1);
+  if(repetidos.length) return 'Patrimônio(s) repetido(s) no lote: '+repetidos.join(', ');
+  if(!valores.length) return null;
+  const [{data:aquis,error:e1},{data:atas,error:e2}]=await Promise.all([
+    sb.from('itens_entregas_unidades').select('patrimonio').in('patrimonio',valores),
+    sb.from('atas_execucao_unidades').select('patrimonio').in('patrimonio',valores)
+  ]);
+  if(e1) throw e1; if(e2) throw e2;
+  const existentes=[...new Set([...(aquis||[]),...(atas||[])].map(r=>r.patrimonio).filter(Boolean))];
+  return existentes.length?'Patrimônio(s) já cadastrado(s): '+existentes.join(', '):null;
+}
+function _recLoteColetarItens(){
+  const possui=document.getElementById('recl-possui-patrimonio').value;
+  if(!possui) throw new Error('Informe se os itens possuem patrimônio.');
+  return _recLoteRows.map(row=>{
+    const card=_recLoteCard(row.entrega_id);
+    const qtd=Number(card?.querySelector('.recl-qtde')?.value)||0;
+    const saldo=Number(row.saldo_af)||0;
+    if(qtd<=0) throw new Error(`Informe a quantidade recebida para ${row.unidade||row.item}.`);
+    if(qtd>saldo) throw new Error(`A quantidade de ${row.unidade||row.item} excede o saldo da AF (${saldo}).`);
+    if(possui==='sim'&&!Number.isInteger(qtd)) throw new Error(`A quantidade de ${row.unidade||row.item} deve ser inteira para informar os patrimônios.`);
+    const unidades=possui==='sim'?[...card.querySelectorAll('.recl-u-row')].map((el,i)=>({
+      patrimonio:(el.querySelector('.recl-u-patr')?.value||'').trim(),
+      numero_serie:(el.querySelector('.recl-u-serie')?.value||'').trim()||null,
+      ordem:i+1
+    })):[];
+    if(possui==='sim'&&unidades.length!==qtd) throw new Error(`Preencha as ${qtd} unidades físicas de ${row.unidade||row.item}.`);
+    const faltantes=unidades.filter(u=>!u.patrimonio).length;
+    if(faltantes) throw new Error(`Informe todos os patrimônios de ${row.unidade||row.item}.`);
+    return {entrega_id:row.entrega_id,empenho_id:row._loteEmpenho.id,quantidade:qtd,possui_patrimonio:possui==='sim',unidades};
+  });
+}
+async function salvarRecebimentoLote(){
+  if(bloquearSeVisualiz('itens')) return;
+  if(!_recLoteRows.length){_recLoteSetMsg('Nenhum item selecionado.','err');return;}
+  const dataRecebimento=document.getElementById('recl-data').value;
+  const dataEmissao=document.getElementById('recl-nf-data').value;
+  const digitos=document.getElementById('recl-nf-numero').value.trim();
+  const arquivo=document.getElementById('recl-nf-arquivo')?.files?.[0]||null;
+  if(!dataRecebimento){_recLoteSetMsg('Informe a data do recebimento.','err');return;}
+  if(!digitos){_recLoteSetMsg('Informe o número da nota fiscal.','err');return;}
+  if(!dataEmissao){_recLoteSetMsg('Informe a data de emissão da nota fiscal.','err');return;}
+  try{_recValidarArquivoNF(arquivo);}catch(e){_recLoteSetMsg(e.message,'err');return;}
+  let itens;
+  try{
+    itens=_recLoteColetarItens();
+    const erroPat=await _recLoteValidarPatrimonios(itens);
+    if(erroPat) throw new Error(erroPat);
+  }catch(e){_recLoteSetMsg(e.message||String(e),'err');return;}
+  const primeira=_recLoteRows[0];
+  const nfId=crypto.randomUUID();
+  const numero=`NF ${digitos}`;
+  const path=`${nfId}/${Date.now()}-${_safeFileName(arquivo.name)}`;
+  const btn=document.getElementById('recl-salvar'), label=btn.textContent;
+  btn.disabled=true;btn.textContent='Salvando...';_recLoteSetMsg('Enviando a nota fiscal...');
+  let enviado=false;
+  try{
+    const {error:upErr}=await sb.storage.from('notas-fiscais').upload(path,arquivo,{contentType:arquivo.type,upsert:false});
+    if(upErr) throw upErr;
+    enviado=true;
+    _recLoteSetMsg('Registrando os recebimentos...');
+    const nota={
+      id:nfId,numero,numero_normalizado:normalizarNumeroDocumento(numero),arquivo_url:path,
+      data_emissao:dataEmissao,data_recebimento:dataRecebimento,
+      valor_total:_recNum('recl-nf-valor'),observacoes:document.getElementById('recl-nf-obs').value.trim()||null,
+      recebido_por:document.getElementById('recl-recebido-por').value.trim()||null,
+      contrato_id:primeira.contrato_id,fornecedor_id:primeira.fornecedor_id,processo_id:primeira.processo_id
+    };
+    const {data,error}=await sb.rpc('registrar_recebimento_aquisicao_lote',{p_nota:nota,p_itens:itens});
+    if(error) throw error;
+    document.getElementById('modal-recebimento-lote').classList.remove('active');
+    _ceAdvSel.clear();_ceAdvLock='';_recLoteRows=[];
+    if(window.toast) toast(`${data?.itens_registrados||itens.length} recebimento(s) registrado(s) com a mesma NF.`,'success');
+    itensEntregasCarregado=false;confirmacoesCarregado=false;
+    await loadItensEntregas();await loadConfirmacoes();await loadItens();
+    if(primeira.emenda_item_id) loadData();
+    if(primeira.contrato_id) _ctRecarregarAposEntrega();
+  }catch(e){
+    if(enviado) await sb.storage.from('notas-fiscais').remove([path]);
+    _recLoteSetMsg('Erro: '+(e.message||e),'err');
+  }finally{
+    btn.disabled=false;btn.textContent=label;
+  }
+}
 window.abrirRecebimento=abrirRecebimento;
 window.abrirRecebimentoAta=abrirRecebimentoAta;
 window.salvarRecebimento=salvarRecebimento;
+window.abrirRecebimentoLote=abrirRecebimentoLote;
+window.salvarRecebimentoLote=salvarRecebimentoLote;
+window._recLoteTogglePatrimonio=_recLoteTogglePatrimonio;
+window._recLoteAtualizarUnidades=_recLoteAtualizarUnidades;
+window._recLoteGerarSequencia=_recLoteGerarSequencia;
 window._recTogglePatrimonio=_recTogglePatrimonio;
 window._recToggleNovoDoc=_recToggleNovoDoc;
 window.normalizarNumeroDocumento=normalizarNumeroDocumento;
