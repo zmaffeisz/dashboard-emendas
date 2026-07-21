@@ -1,5 +1,7 @@
 # Changelog
 
+- **Downloads no “Ver tudo” dos itens**: o detalhe de cada unidade física agora oferece download da nota fiscal e do termo de entrega quando os respectivos anexos existem. Os links são temporários e respeitam o acesso aos buckets privados; o clique também passa a abrir exatamente a unidade física selecionada.
+
 - **Campos legíveis no recebimento em lote**: quantidade, patrimônio e número de série agora recebem explicitamente as cores do tema, evitando campos pretos no modo claro.
 
 - **Recebimento em lote com uma única nota fiscal**: no Controle de Entregas, vários itens iguais do mesmo contrato, fornecedor e processo podem ser selecionados para registrar um único recebimento. O modal mantém quantidade, unidade, empenho e patrimônios separados por item, enquanto cadastra e anexa a NF somente uma vez.

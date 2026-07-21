@@ -867,7 +867,7 @@ function renderEmPorEmenda(){
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.patrimonio||'â€”')}</td>
           <td style="padding:8px;white-space:nowrap">${_emStatusChip(i)}</td>
           <td style="padding:8px;color:var(--text3);font-size:11px;white-space:nowrap">${_sanEsc(i.cpl||'â€”')}</td>
-          <td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i.id))}'))" style="font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">🔎 Ver tudo</button></td>
+          <td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" style="font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">🔎 Ver tudo</button></td>
         </tr>`;
       });
       h+=`</tbody></table></div>`;
@@ -1292,7 +1292,7 @@ function renderTable(){
   if(thSelecionar) thSelecionar.style.display=podeSelecionar?'':'none';
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>{
-    const actionId=String(r._base_id||r.id);
+    const actionId=String(r._unidade_row_id||r.id);
     const podeEditarLinha=!r._unidadeFisica;
     return `<tr>
     ${podeSelecionar?`<td style="text-align:center">${_emCheckboxLicitacao(r)}</td>`:''}

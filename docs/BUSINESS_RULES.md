@@ -105,6 +105,9 @@
 - **Preferência:** NF cadastrada **uma única vez** e vinculada a itens/unidades.
 - No recebimento, uma NF nova só pode ser cadastrada com seu arquivo anexado em PDF ou
   imagem. NF antiga sem anexo deve receber o arquivo antes de ser vinculada.
+- No detalhe **Ver tudo** de uma unidade física, os anexos existentes da NF e do termo de
+  entrega ficam disponíveis para download por link temporário, sem tornar públicos os
+  buckets de documentos.
 - No recebimento em lote, a NF e seu anexo são gravados uma única vez. Cada item conserva
   seu vínculo próprio com unidade, AF e empenho em `nota_fiscal_itens`; os itens precisam
   pertencer ao mesmo contrato, fornecedor e processo e representar o mesmo produto

@@ -628,7 +628,7 @@ function verTudoUnidadeExecAta(execId,unidadeId){
   ].filter(([,v])=>v!=null&&String(v).trim()!=='');
   const modal=document.getElementById('modal-inv-detalhe');
   document.body.appendChild(modal);
-  document.getElementById('inv-detalhe-content').innerHTML=`<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(exec.item||'Item')} · Patrimônio ${_sanEsc(u.patrimonio||'—')}</div><div>${campos.map(([l,v])=>_invField(_sanEsc(l),_sanEsc(String(v)))).join('')}</div>`;
+  document.getElementById('inv-detalhe-content').innerHTML=`<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(exec.item||'Item')} · Patrimônio ${_sanEsc(u.patrimonio||'—')}</div><div>${campos.map(([l,v])=>_invField(_sanEsc(l),_sanEsc(String(v)))).join('')}</div>${_invDocumentoAcoes(nf.arquivo_url,exec.termo_arquivo)}`;
   modal.classList.add('active');
 }
 

@@ -81,7 +81,7 @@ async function loadInventario(){
   try{
     const [{data:aq,error:e1},{data:at,error:e2}]=await Promise.all([
       sb.from('itens_entregas')
-        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,emenda_item_id, processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
+        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total,arquivo_url), itens(id,descricao,emenda_item_id, processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
         .or('data_entrega_unidade.not.is.null,data_recebimento.not.is.null')
         .order('data_entrega_unidade',{ascending:false}),
       sb.from('atas_execucao')
@@ -96,7 +96,7 @@ async function loadInventario(){
     const aqEntregaIds=[...new Set((aq||[]).map(r=>r.id).filter(Boolean))];
     for(const ids of _chunkArray(aqEntregaIds,200)){
       const {data:uns}=await sb.from('itens_entregas_unidades')
-        .select('id,entrega_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total)')
+        .select('id,entrega_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
         .in('entrega_id',ids)
         .order('unidade_seq',{ascending:true});
       (uns||[]).forEach(u=>{ (aqUnidadesPorEntrega[String(u.entrega_id)]=aqUnidadesPorEntrega[String(u.entrega_id)]||[]).push(u); });
@@ -122,6 +122,7 @@ async function loadInventario(){
         valor_empenhado:r.empenhos?.valor_empenhado||null,
         empenho_data:_toISODate(r.empenhos?.data_emissao),
         nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
+        nota_fiscal_arquivo:r.notas_fiscais?.arquivo_url||'',
         nf_data:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data),
         nf_valor:r.notas_fiscais?.valor_total||null,
         data_recebimento:_toISODate(r.data_recebimento),
@@ -151,6 +152,7 @@ async function loadInventario(){
           patrimonio:u.patrimonio||'',
           numero_serie:u.numero_serie||'',
           nota_fiscal:u.notas_fiscais?.numero||base.nota_fiscal,
+          nota_fiscal_arquivo:u.notas_fiscais?.arquivo_url||base.nota_fiscal_arquivo,
           nf_data:_toISODate(u.notas_fiscais?.data_emissao)||base.nf_data,
           nf_valor:u.notas_fiscais?.valor_total||base.nf_valor,
           data_recebimento:_toISODate(u.recebido_em)||base.data_recebimento,
@@ -180,7 +182,7 @@ async function loadInventario(){
     const ataExecIds=[...new Set((at||[]).map(r=>r.id).filter(Boolean))];
     for(const ids of _chunkArray(ataExecIds,200)){
       const {data:uns}=await sb.from('atas_execucao_unidades')
-        .select('id,exec_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total)')
+        .select('id,exec_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
         .in('exec_id',ids)
         .order('unidade_seq',{ascending:true});
       (uns||[]).forEach(u=>{ (ataUnidadesPorExec[String(u.exec_id)]=ataUnidadesPorExec[String(u.exec_id)]||[]).push(u); });
@@ -211,6 +213,7 @@ async function loadInventario(){
         empenho:r.empenho||emInfo.empenho||'',
         valor_empenhado:null, empenho_data:null,
         nota_fiscal:nf,
+        nota_fiscal_arquivo:'',
         nf_data:null, nf_valor:null,
         data_recebimento:_toISODate(r.dt_entrega),
         data_entrega_unidade:_toISODate(r.data_entrega_unidade),
@@ -234,6 +237,7 @@ async function loadInventario(){
           patrimonio:u.patrimonio||'',
           numero_serie:u.numero_serie||'',
           nota_fiscal:u.notas_fiscais?.numero||base.nota_fiscal,
+          nota_fiscal_arquivo:u.notas_fiscais?.arquivo_url||base.nota_fiscal_arquivo,
           nf_data:_toISODate(u.notas_fiscais?.data_emissao)||base.nf_data,
           nf_valor:u.notas_fiscais?.valor_total||base.nf_valor,
           data_recebimento:_toISODate(u.recebido_em)||base.data_recebimento,
@@ -720,6 +724,26 @@ function _invField(label,val){
 }
 function _fmtBRL(v){if(!v&&v!==0)return null;return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
+async function baixarArquivoStoragePrivado(bucket,encodedPath){
+  const path=decodeURIComponent(encodedPath||'');
+  if(!bucket||!path) return;
+  const {data,error}=await sb.storage.from(bucket).createSignedUrl(path,60,{download:true});
+  if(error||!data?.signedUrl){
+    const msg='Não foi possível preparar o download do arquivo.'+(error?.message?(' '+error.message):'');
+    if(window.toast) toast(msg,'error'); else alert(msg);
+    return;
+  }
+  const link=document.createElement('a');
+  link.href=data.signedUrl; link.rel='noopener'; link.style.display='none';
+  document.body.appendChild(link); link.click(); link.remove();
+}
+function _invDocumentoAcoes(nfArquivo,termoArquivo){
+  const botoes=[];
+  if(nfArquivo) botoes.push(`<button type="button" class="btn-secondary" onclick="baixarArquivoStoragePrivado('notas-fiscais','${encodeURIComponent(nfArquivo)}')" style="font-size:12px;padding:6px 12px">⬇ Baixar nota fiscal</button>`);
+  if(termoArquivo) botoes.push(`<button type="button" class="btn-secondary" onclick="baixarArquivoStoragePrivado('termos-entrega','${encodeURIComponent(termoArquivo)}')" style="font-size:12px;padding:6px 12px">⬇ Baixar termo de entrega</button>`);
+  return botoes.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">${botoes.join('')}</div>`:'';
+}
+
 function abrirDetalheInv(idx){
   const r=_invFiltered[idx];if(!r)return;
   abrirDetalheInvRow(r);
@@ -731,10 +755,20 @@ async function verInvDeEmendaItem(emendaItemId){
   if(!r){ alert('Este item ainda não foi confirmado no inventário (entrega na unidade).'); return; }
   abrirDetalheInvRow(r);
 }
-function verTudoEmendaItem(id){
-  const r=(allRows||[]).find(x=>String(x.id)===String(id));
+async function verTudoEmendaItem(id){
+  const ref=String(id);
+  const r=(allRows||[]).find(x=>String(x._unidade_row_id||'')===ref)
+    ||(allRows||[]).find(x=>!x._unidadeFisica&&String(x.id)===ref)
+    ||(allRows||[]).find(x=>String(x.id)===ref);
   if(!r){ alert('Item não encontrado.'); return; }
-  const inv=(inventarioRows||[]).find(x=>String(x.emenda_item_id||'')===String(id));
+  if(!inventarioCarregado){
+    try{ await loadInventario(); }
+    catch(e){ console.warn('Inventário não carregado no detalhe da Emenda',e); }
+  }
+  const baseId=String(r._base_id||r.id);
+  const inv=r._unidade_id
+    ?(inventarioRows||[]).find(x=>String(x.id)===String(r._unidade_id))
+    :(inventarioRows||[]).find(x=>String(x.emenda_item_id||'')===baseId);
   const campos=[
     ['Item', r.item],
     ['Emenda', (r.emenda||'')+(r.tipo?(' · '+r.tipo):'')],
@@ -775,7 +809,8 @@ function verTudoEmendaItem(id){
   document.getElementById('inv-detalhe-content').innerHTML=`
     <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(r.item||'Item')}</div>
     ${inv?'':'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Item ainda não confirmado na unidade — mostrando tudo que já há registrado.</div>'}
-    <div>${filt.map(([l,v])=>_invField(l,v)).join('')}</div>`;
+    <div>${filt.map(([l,v])=>_invField(l,v)).join('')}</div>
+    ${_invDocumentoAcoes(inv?.nota_fiscal_arquivo,inv?.termo_arquivo)}`;
   modal.classList.add('active');
 }
 function abrirDetalheInvRow(r){
@@ -860,7 +895,7 @@ function abrirDetalheInvRow(r){
     <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(r.item||'Item')}</div>
     ${!em&&r.emenda_item_id?'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">ℹ️ Aba Emendas ainda não carregada — mostrando dados do inventário. Acesse a aba Emendas primeiro para ver os dados completos.</div>':''}
     <div>${filtrados.map(([l,v])=>_invField(l,v)).join('')}</div>
-    ${r.termo_arquivo?`<div style="margin-top:12px"><button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:12px;padding:5px 14px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);cursor:pointer">📄 Abrir Termo de Entrega</button></div>`:''}
+    ${_invDocumentoAcoes(r.nota_fiscal_arquivo,r.termo_arquivo)}
   `;
   document.getElementById('modal-inv-detalhe').classList.add('active');
 }
@@ -868,3 +903,4 @@ window.loadInventario=loadInventario;
 window.filtrarInventario=filtrarInventario;
 window.clearAllInv=clearAllInv;
 window.abrirDetalheInv=abrirDetalheInv;
+window.baixarArquivoStoragePrivado=baixarArquivoStoragePrivado;

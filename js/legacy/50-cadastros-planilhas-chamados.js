@@ -1190,6 +1190,7 @@ function _expandirLinhaEmendaPorUnidades(base, unidades){
     ...base,
     id:base.id,
     _unidade_row_id:`${base.id}::uf::${u.id||idx+1}`,
+    _unidade_id:u.id||null,
     _base_id:base.id,
     _unidadeFisica:true,
     _origem_unidade:u.origem||'',
