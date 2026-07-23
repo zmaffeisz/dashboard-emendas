@@ -4,6 +4,8 @@
 
 - **Controle de Entregas:** observações livres são temporárias e são apagadas automaticamente quando o recebimento do item é registrado.
 
+- **Recebimento de ATA:** corrigido o bloqueio ao salvar o recebimento causado pela regra de limpeza da anotação temporária.
+
 - **Observações no Controle de Entregas**: cada linha agora oferece o botão compacto `Obs` para registrar uma anotação livre de acompanhamento. O conteúdo é persistido no registro correspondente e fica visível ao passar o mouse sobre o botão.
 
 - **SUEQ - EQUIP como gestora do Portal Unidades**: todos os perfis aprovados vinculados à SUEQ - EQUIP têm automaticamente a mesma visão global e as mesmas ações administrativas já concedidas à Chefia de Divisão no Portal Unidades, inclusive novos cadastros aprovados no futuro. Os perfis permanecem como usuários comuns no dashboard principal.
