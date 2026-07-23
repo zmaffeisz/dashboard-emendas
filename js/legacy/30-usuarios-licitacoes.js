@@ -207,9 +207,10 @@ function renderLicitacoes(){
   // por processo: itens que ainda estão na licitação = NÃO executados (entregue/execução/executado saem da aba)
   const info=_licitacoesCache.map(p=>{
     const todosItens=porProc[p.id]||[];
+    const itensServico=_procServicoMensalItensFromValor(p.servico_mensal_itens);
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));            // pendentes + já contratados
     const pendentes=naLic.filter(i=>!_licItemContratado(i));            // ainda nem viraram contrato
-    return {p, naLic, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:todosItens.length>0 && naLic.length===0};
+    return {p, naLic, itensServico, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:todosItens.length>0 && naLic.length===0};
   });
   const ocultos=info.filter(x=>x.fullyContratado).length;
   const base=info.filter(x=>{
@@ -217,7 +218,7 @@ function renderLicitacoes(){
     if(x.fullyContratado && !incluirContratados) return false; // 100% virou contrato → some por padrão
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
-    if(fOrg){ const orgs=x.naLic.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
+    if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
     if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.map(i=>i.descricao)).concat(_procServicoMensalItensFromValor(p.servico_mensal_itens).map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
@@ -226,13 +227,13 @@ function renderLicitacoes(){
     const p=x.p; mostrados++;
     const podeExcluir=podeEd && !Number(p.n_contratos||0);
     const items=x.naLic;
-    const itensServico=_procServicoMensalItensFromValor(p.servico_mensal_itens);
+    const itensServico=x.itensServico;
     const totalItensExibidos=items.length||itensServico.length;
     // Nesta aba, o contrato vinculado prevalece apenas na apresentação do processo.
     // O status original continua intacto no banco e nas demais telas/fluxos.
     const roll=x.fullyContratado
       ? {nome:'CONTRATADO',orgao:null,auto:false,contratado:true}
-      : (items.length?_cpRollup(items):(itensServico.length?{nome:'Serviço mensal',orgao:null,auto:false}:{nome:'sem itens',orgao:null,auto:false}));
+      : ((items.length||itensServico.length)?_cpRollup(items.length?items:itensServico):{nome:'sem itens',orgao:null,auto:false});
     const aberto=!!_cpExpanded[p.id];
     const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
     let bloco=`<div class="lic-process-card" style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
@@ -248,26 +249,36 @@ function renderLicitacoes(){
         ${podeEd?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
       </div>`;
     if(aberto){
-      if(podeEd&&items.length){
+      if(podeEd&&(items.length||(!items.length&&itensServico.length))){
         const opts=manuais.map(s=>`<option value="${s.id}">${_sanEsc(s.nome)}</option>`).join('');
+        const bulkFn=items.length?'cpBulkApply':'cpBulkApplyServicoMensal';
         bloco+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;background:rgba(55,138,221,.08);border-top:1px solid var(--border)">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap">Aplicar a todos:</span>
           <select id="cp-bulk-${p.id}" style="flex:1;max-width:340px;font-size:12px;padding:5px 8px"><option value="">selecione um status manual...</option>${opts}</select>
           <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);white-space:nowrap">DESDE <input id="cp-bulk-desde-${p.id}" type="date" value="${_cpDataInput(new Date().toISOString())}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"></label>
-          <button onclick="cpBulkApply(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
+          <button onclick="${bulkFn}(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
         </div>`;
       }
       bloco+=`<table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>`;
       if(!items.length&&itensServico.length){
-        itensServico.forEach(it=>{
+        itensServico.forEach((it,idx)=>{
           const qtd=Number(it.quantidade||0);
           const unit=Number(it.valor_unitario||0);
           const mensal=Number(it.valor_mensal||(qtd*unit)||0);
+          const cur=_cpStatusById[it.status_lic_id];
+          let ctrl;
+          if(cur&&cur.automatico){
+            ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
+          }else if(podeEd){
+            ctrl=`<select onchange="cpSetServicoMensalItemStatus(${p.id},${idx},this.value,document.getElementById('cp-serv-desde-${p.id}-${idx}')?.value)" style="font-size:11px;padding:4px 6px;max-width:330px"><option value="">— indefinido —</option>${manuais.map(s=>`<option value="${s.id}"${String(it.status_lic_id)===String(s.id)?' selected':''}>${_sanEsc(s.nome)}</option>`).join('')}</select>`;
+          }else{
+            ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
+          }
           bloco+=`<tr style="border-top:1px solid var(--border)">
             <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço mensal</span></td>
             <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${qtd||''}</td>
-            <td style="padding:8px 8px;color:var(--text3)">Unit. ${unit?fmtFull(unit):'—'} · Mensal ${mensal?fmtFull(mensal):'—'}</td>
-            <td style="padding:8px 13px;color:var(--text3);width:70px;text-align:right;white-space:nowrap">—</td>
+            <td style="padding:8px 8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Unit. ${unit?fmtFull(unit):'—'} · Mensal ${mensal?fmtFull(mensal):'—'}</div>${ctrl}</td>
+            <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-serv-desde-${p.id}-${idx}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetServicoMensalItemDesde(${p.id},${idx},this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
           </tr>`;
         });
       }
@@ -386,6 +397,56 @@ async function cpBulkApply(pid){
   if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" desde ${desde.split('-').reverse().join('/')} a ${alvos.length} item(ns)?`)) return;
   try{
     for(const it of alvos){ await _cpGravarStatus(it.id, statusId, desde); }
+    renderLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){ alert('Erro: '+(e.message||e)); renderLicitacoes(); }
+}
+async function _cpGravarStatusServicoMensal(pid, indice, statusId, desde){
+  const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
+  if(!processo) throw new Error('Processo não encontrado.');
+  const itens=_procServicoMensalItensFromValor(processo.servico_mensal_itens).map(it=>({...it}));
+  const item=itens[indice];
+  if(!item) throw new Error('Item de serviço não encontrado.');
+  const agora=desde?new Date(desde+'T12:00:00').toISOString():new Date().toISOString();
+  item.status_lic_id=statusId||null;
+  item.status_lic_desde=agora;
+  item.status_lic_atualizado_em=new Date().toISOString();
+  const {error}=await sb.from('processos').update({servico_mensal_itens:itens}).eq('id',pid);
+  if(error) throw error;
+  processo.servico_mensal_itens=itens;
+}
+async function cpSetServicoMensalItemStatus(pid, indice, val, desde){
+  if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
+  try{
+    await _cpGravarStatusServicoMensal(pid, Number(indice), val?Number(val):null, desde||null);
+    renderLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){ alert('Erro ao salvar: '+(e.message||e)); renderLicitacoes(); }
+}
+async function cpSetServicoMensalItemDesde(pid, indice, desde){
+  if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
+  const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
+  const item=_procServicoMensalItensFromValor(processo?.servico_mensal_itens)[Number(indice)];
+  if(!item) return;
+  try{
+    await _cpGravarStatusServicoMensal(pid, Number(indice), item.status_lic_id?Number(item.status_lic_id):null, desde||null);
+    renderLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){ alert('Erro ao salvar a data: '+(e.message||e)); renderLicitacoes(); }
+}
+async function cpBulkApplyServicoMensal(pid){
+  if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
+  const sel=document.getElementById('cp-bulk-'+pid); const val=sel?.value;
+  if(!val){ alert('Selecione um status para aplicar.'); return; }
+  const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
+  if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
+  const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
+  const itens=_procServicoMensalItensFromValor(processo?.servico_mensal_itens);
+  if(!itens.length){ alert('Nenhum item de serviço encontrado neste processo.'); return; }
+  if(!confirm(`Aplicar "${_cpStatusById[Number(val)]?.nome}" desde ${desde.split('-').reverse().join('/')} a ${itens.length} item(ns) de serviço?`)) return;
+  try{
+    const statusId=Number(val);
+    for(let indice=0;indice<itens.length;indice++) await _cpGravarStatusServicoMensal(pid, indice, statusId, desde);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro: '+(e.message||e)); renderLicitacoes(); }
@@ -625,6 +686,9 @@ function procAddServicoMensalItemRow(item={}){
   if(!lista) return;
   const row=document.createElement('div');
   row.className='proc-serv-mensal-item';
+  if(item.status_lic_id!==undefined&&item.status_lic_id!==null) row.dataset.statusLicId=String(item.status_lic_id);
+  if(item.status_lic_desde) row.dataset.statusLicDesde=String(item.status_lic_desde);
+  if(item.status_lic_atualizado_em) row.dataset.statusLicAtualizadoEm=String(item.status_lic_atualizado_em);
   row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);min-width:0;max-width:100%;box-sizing:border-box;width:100%';
   row.innerHTML=`<div><div class="form-label">Item *</div><input type="text" class="smi-desc" placeholder="Descreva o item" value="${_sanEsc(String(item.descricao||'')).replace(/"/g,'&quot;')}" oninput="procRecalcServicoMensal()"></div>
     <div><div class="form-label">Quantidade *</div><input type="number" class="smi-qtd" min="0" step="1" placeholder="ex: 2" value="${item.quantidade??''}" oninput="procRecalcServicoMensal()"></div>
@@ -645,12 +709,18 @@ function _procLerServicoMensal(){
   const itens=[...document.querySelectorAll('#proc-serv-mensal-itens-lista .proc-serv-mensal-item')].map(row=>{
     const quantidade=Number(row.querySelector('.smi-qtd')?.value||0);
     const valorUnitario=Number(row.querySelector('.smi-valor')?.value||0);
-    return {
+    const item={
       descricao:(row.querySelector('.smi-desc')?.value||'').trim(),
       quantidade:quantidade||null,
       valor_unitario:valorUnitario||null,
       valor_mensal:(quantidade&&valorUnitario)?quantidade*valorUnitario:null
     };
+    if(row.dataset.statusLicId){
+      item.status_lic_id=Number(row.dataset.statusLicId);
+      item.status_lic_desde=row.dataset.statusLicDesde||null;
+      item.status_lic_atualizado_em=row.dataset.statusLicAtualizadoEm||null;
+    }
+    return item;
   });
   const meses=Number(document.getElementById('proc-serv-mensal-meses')?.value||0);
   const mensal=itens.reduce((s,item)=>s+(item.valor_mensal||0),0);
