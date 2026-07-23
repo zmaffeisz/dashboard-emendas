@@ -1000,7 +1000,7 @@ async function loadItensEntregas(){
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
   const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs')
     .order('af_data',{ascending:false});
   if(e1b) console.warn('AF base:',e1b.message);
   const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
@@ -1051,7 +1051,7 @@ async function loadItensEntregas(){
       recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenhos?.numero||r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
       nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
-      nf_dataISO:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data),
+      nf_dataISO:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data), controle_obs:r.controle_obs||'',
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0,
       status:_prazoStatus(limiteISO,recebido,cancelado)
     });
@@ -1110,7 +1110,7 @@ async function loadItensEntregas(){
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
       valor_item:(Number(r.valor)&&Number(r.qtde))?(Number(r.valor)/Number(r.qtde)):(Number(ai.valor_unit)||0),
-      nota_fiscal:r.nf||emInfo.nota_fiscal||'', possui_patrimonio:r.possui_patrimonio, patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta,
+      nota_fiscal:r.nf||emInfo.nota_fiscal||'', possui_patrimonio:r.possui_patrimonio, patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta, controle_obs:r.controle_obs||'',
       empenho_vinculado:!!empAta,
       _ataPendenteAF:pendenteAF,
       status:pendenteAF?'aguardando AF':_prazoStatus(limiteISO,recebido,false)
@@ -1118,7 +1118,7 @@ async function loadItensEntregas(){
   });
   // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando AF)
   const {data:itc,error:e3}=await sb.from('itens')
-    .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,status,processos(identificador),contratos(cpl,numero_contrato,tipo_instrumento),fornecedores(razao_social),unidades(nome)')
+    .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,status,controle_obs,processos(identificador),contratos(cpl,numero_contrato,tipo_instrumento),fornecedores(razao_social),unidades(nome)')
     .eq('origem','aquisicao').not('contrato_id','is',null);
   let itemPorId={};
 	  if(!e3){
@@ -1197,7 +1197,7 @@ async function loadItensEntregas(){
         empresa:it.fornecedores?.razao_social||'', item:it.descricao||'',
         marca:it.marca||'', modelo:it.modelo||'', unidade:it.unidades?.nome||'',
         af_numero:'', af_dataISO:'', qtde:saldoAut, prazo_entrega_dias:it.prazo_entrega_dias,
-        empenho_vinculado:emps.length>0, empenho:emps.filter(Boolean).join(', '),
+        empenho_vinculado:emps.length>0, empenho:emps.filter(Boolean).join(', '), controle_obs:it.controle_obs||'',
         limiteISO:'', recebido:false, cancelado:false, status:'aguardando AF'
       });
     });
@@ -1217,13 +1217,13 @@ async function loadItensEntregas(){
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
-      valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
+      controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   // RESGATE FINAL: query direta sem joins. Se RLS bloqueou o SELECT com joins
   // aninhados mas o INSERT passou, esta query resgata os registros órfãos.
   const _outIds2=new Set(out.map(r=>r.entrega_id).filter(Boolean));
   const {data:_resgate}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,possui_patrimonio,patrimonio,numero_serie')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,possui_patrimonio,patrimonio,numero_serie,controle_obs')
     .not('af_numero','is',null).neq('status','cancelada').order('af_data',{ascending:false});
   if(_resgate) _resgate.forEach(r=>{
     if(_outIds2.has(String(r.id))) return;
@@ -1237,7 +1237,7 @@ async function loadItensEntregas(){
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
-      valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
+      controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   entregasRows=out;
   itensEntregasCarregado=true;
@@ -1310,6 +1310,9 @@ function renderItensEntregas(){
           ?`${r.qtde_recebida||0}<br><span style="color:var(--text3)">saldo AF ${r.saldo_af}</span><br><span style="color:var(--text3)">saldo item ${r.saldo_item}</span>`
           :(r.recebido?'sim':'—');
       }
+      const obs=(r.controle_obs||'').trim();
+      const obsBtn=pode?`<button onclick="abrirObservacaoEntrega('${_ceRowKey(r)}')" title="${_sanEsc(obs||'Adicionar observação')}" aria-label="Observação" style="width:28px;height:28px;padding:0;border-radius:6px;border:1px solid ${obs?'var(--blue)':'var(--border)'};background:${obs?'var(--blue-bg)':'var(--surface)'};color:${obs?'var(--blue)':'var(--text2)'};cursor:pointer;font-size:10px;font-weight:700">Obs</button>`:'';
+      if(obsBtn) acoes=acoes==='—'?`<div style="display:flex;gap:4px;flex-wrap:wrap">${obsBtn}</div>`:acoes.replace('</div>',obsBtn+'</div>');
       return `<tr style="border-bottom:1px solid var(--border)${rowBg}">
       <td style="padding:6px 8px;text-align:center">${_ceAdvCheckbox(r)}</td>
       <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
@@ -1328,6 +1331,42 @@ function renderItensEntregas(){
       <td style="padding:6px 8px">${acoes}</td>
     </tr>`;}).join('')}</tbody></table>`;
 }
+
+let _ceObsRowKey='';
+function abrirObservacaoEntrega(rowKey){
+  if(bloquearSeVisualiz('itens')) return;
+  const row=entregasRows.find(r=>_ceRowKey(r)===rowKey);
+  if(!row) return;
+  _ceObsRowKey=rowKey;
+  document.getElementById('ceobs-info').textContent=`${row.item||'Item'} · ${row.unidade||'—'}`;
+  document.getElementById('ceobs-texto').value=row.controle_obs||'';
+  document.getElementById('ceobs-msg').textContent='';
+  document.getElementById('ceobs-msg').className='fmsg';
+  document.getElementById('modal-observacao-entrega').classList.add('active');
+}
+async function salvarObservacaoEntrega(){
+  if(bloquearSeVisualiz('itens')) return;
+  const row=entregasRows.find(r=>_ceRowKey(r)===_ceObsRowKey);
+  if(!row) return;
+  const texto=document.getElementById('ceobs-texto').value.trim()||null;
+  const alvo=row.tipo==='ATA'
+    ?{tabela:'atas_execucao',id:row.exec_id}
+    :row.entrega_id
+      ?{tabela:'itens_entregas',id:row.entrega_id}
+      :{tabela:'itens',id:row.item_id};
+  const btn=document.getElementById('ceobs-salvar'); const msg=document.getElementById('ceobs-msg');
+  btn.disabled=true; btn.textContent='Salvando...';
+  const {data,error}=await sb.from(alvo.tabela).update({controle_obs:texto}).eq('id',alvo.id).select('id,controle_obs');
+  btn.disabled=false; btn.textContent='Salvar observação';
+  if(error){ msg.textContent='Erro: '+error.message; msg.className='fmsg err'; return; }
+  if(!data?.length){ msg.textContent='A observação não foi salva. Verifique sua permissão.'; msg.className='fmsg err'; return; }
+  row.controle_obs=texto||'';
+  renderItensEntregas();
+  msg.textContent='✓ Observação salva.'; msg.className='fmsg ok';
+  setTimeout(()=>document.getElementById('modal-observacao-entrega').classList.remove('active'),650);
+}
+window.abrirObservacaoEntrega=abrirObservacaoEntrega;
+window.salvarObservacaoEntrega=salvarObservacaoEntrega;
 
 // ── Advertência multi-item no Controle de Entregas (mesmo contrato) ──
 let _ceAdvSel=new Set(), _ceAdvLock='', _ceAdvAtivo=false, _ceAdvRows=[], _ceAdvContrato=null;

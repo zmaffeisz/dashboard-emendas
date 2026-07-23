@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-23
+
+- **Controle de Entregas:** observações livres são temporárias e são apagadas automaticamente quando o recebimento do item é registrado.
+
+- **Observações no Controle de Entregas**: cada linha agora oferece o botão compacto `Obs` para registrar uma anotação livre de acompanhamento. O conteúdo é persistido no registro correspondente e fica visível ao passar o mouse sobre o botão.
+
+- **SUEQ - EQUIP como gestora do Portal Unidades**: todos os perfis aprovados vinculados à SUEQ - EQUIP têm automaticamente a mesma visão global e as mesmas ações administrativas já concedidas à Chefia de Divisão no Portal Unidades, inclusive novos cadastros aprovados no futuro. Os perfis permanecem como usuários comuns no dashboard principal.
+
 - **Importação histórica das Atas de Registro de Preços**: foram cadastrados 8 processos CPL, 18 atas (SIAM), 36 itens e 312 execuções da planilha de controle, preservando o estágio real de empenho, AF e recebimento. As 58 execuções de emendas municipais de 2026 foram vinculadas aos itens já existentes, incluindo 110 unidades físicas com patrimônio; atas vencidas permanecem em `VIGENTE` para encerramento pela própria aba de Atas.
 
 - **Downloads no “Ver tudo” dos itens**: o detalhe de cada unidade física agora oferece download da nota fiscal e do termo de entrega quando os respectivos anexos existem. Os links são temporários, inclusive para visitantes anônimos, e liberam somente arquivos vinculados ao fluxo público de Emendas; o clique também passa a abrir exatamente a unidade física selecionada.
