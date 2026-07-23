@@ -1612,7 +1612,7 @@
       <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
-      <div class="form-group" id="proc-tipo-servico-wrap" style="display:none"><div class="form-label">Tipo do serviço *</div><select id="proc-tipo-servico" onchange="procTipoServicoChange()"><option value="">Selecione...</option><option>Serviço mensal valor fixo</option><option>Serviço por demanda/execução</option><option>Serviço por escopo fechado</option><option>Locação de bem móvel</option><option>Mão de obra com dedicação exclusiva</option><option>Credenciamento</option></select></div>
+      <div class="form-group" id="proc-tipo-servico-wrap" style="display:none"><div class="form-label">Tipo do serviço *</div><select id="proc-tipo-servico" onchange="procTipoServicoChange()"><option value="">Selecione...</option><option>Serviço mensal valor fixo</option><option>Serviço trimestral valor fixo</option><option>Serviço por demanda/execução</option><option>Serviço por escopo fechado</option><option>Locação de bem móvel</option><option>Mão de obra com dedicação exclusiva</option><option>Credenciamento</option></select></div>
       <div class="form-group"><div class="form-label">Seção *</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
       <div class="form-group" id="proc-serv-demanda-meses-wrap" style="display:none"><div class="form-label">Vigência em meses *</div><input type="number" id="proc-serv-demanda-meses" min="1" step="1" placeholder="ex: 12"></div>
       <div class="form-group full" id="proc-servico-mensal-wrap" style="display:none;min-width:0;max-width:100%;box-sizing:border-box">
@@ -1622,8 +1622,9 @@
         </div>
         <div id="proc-serv-mensal-itens-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;min-width:0;max-width:100%"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
-          <div class="form-group"><div class="form-label">Quantidade de meses do contrato *</div><input type="number" id="proc-serv-mensal-meses" min="1" step="1" placeholder="ex: 12" oninput="procRecalcServicoMensal()"></div>
-          <div class="form-group"><div class="form-label">Valor Estimado Mensal *</div><input type="number" id="proc-serv-mensal-valor-mensal" step="0.01" readonly placeholder="calculado automaticamente" style="background:var(--surface2);opacity:.85"></div>
+          <div class="form-group"><div class="form-label">Vigência do contrato em meses *</div><input type="number" id="proc-serv-mensal-meses" min="1" step="1" placeholder="ex: 24" oninput="procRecalcServicoMensal()"></div>
+          <div class="form-group" id="proc-serv-trimestral-ciclos-wrap" style="display:none"><div class="form-label">Ciclos trimestrais previstos</div><input type="number" id="proc-serv-trimestral-ciclos" readonly style="background:var(--surface2);opacity:.85"></div>
+          <div class="form-group"><div class="form-label" id="proc-serv-periodico-valor-label">Valor Estimado Mensal *</div><input type="number" id="proc-serv-mensal-valor-mensal" step="0.01" readonly placeholder="calculado automaticamente" style="background:var(--surface2);opacity:.85"></div>
           <div class="form-group"><div class="form-label">Valor Estimado Global *</div><input type="number" id="proc-serv-mensal-valor-global" step="0.01" readonly placeholder="calculado automaticamente" style="background:var(--surface2);opacity:.85"></div>
         </div>
       </div>
@@ -2260,7 +2261,7 @@
       <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
       <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01" disabled title="Valor original preservado. Use reajuste, aditivo ou supressão para alterar valores de gestão."></div>
       <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01" disabled title="Valor de gestão preservado. Use eventos formalizados para alterar o valor atual."></div>
-      <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
+      <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label" id="ec-valor-periodico-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
       <div class="form-group"><div class="form-label">Fiscalização</div><select id="ec-fiscalizacao"><option value="">Selecione...</option></select></div>
       <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
@@ -2326,7 +2327,7 @@
       <div class="form-group" id="nc-vigencia-wrap"><div class="form-label">Vigência atual</div><input type="text" id="nc-vigencia" placeholder="ex: 12 meses"></div>
       <div class="form-group" id="nc-vencimento-wrap"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
       <div class="form-group" id="nc-valor-wrap"><div class="form-label">Valor Global (R$)</div><input type="text" id="nc-valor-inicial" placeholder="soma dos itens" title="Soma dos valores dos itens marcados para este contrato"></div>
-      <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
+      <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label" id="nc-valor-periodico-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
       <div class="form-group" id="nc-fonte-wrap"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
       <div class="form-group full" id="nc-fiscalizacao-wrap"><div class="form-label">Fiscalização * <span style="font-weight:400;color:var(--text3)">(pesquise e clique p/ escolher vários)</span></div>
         <select id="nc-fiscalizacao" multiple size="4" style="min-height:88px"></select>
@@ -2461,11 +2462,12 @@
     <div class="modal-title">Medição do contrato</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctmed-info"></div>
     <div class="form-grid">
-      <div class="form-group"><div class="form-label">Competência *</div><input type="month" id="ctmed-competencia"></div>
+      <div class="form-group"><div class="form-label" id="ctmed-competencia-label">Competência *</div><input type="month" id="ctmed-competencia"></div>
       <div class="form-group"><div class="form-label">Data da medição *</div><input type="date" id="ctmed-data"></div>
       <div class="form-group"><div class="form-label">Tipo *</div>
         <select id="ctmed-tipo">
           <option value="competencia">Competência</option>
+          <option value="competencia_trimestral">Preventiva/calibração trimestral</option>
           <option value="entrega_parcelada">Entrega parcelada</option>
           <option value="demanda">Demanda / OS</option>
           <option value="recebimento">Recebimento / aceite</option>
@@ -2477,6 +2479,9 @@
           <option value="configuravel">Configurável</option>
         </select>
       </div>
+      <div class="form-group" id="ctmed-trimestre-wrap" style="display:none"><div class="form-label">Ciclo contratual *</div><select id="ctmed-ciclo" onchange="ctAtualizarCicloTrimestralMedicao()"></select></div>
+      <div class="form-group" id="ctmed-execucao-preventiva-wrap" style="display:none"><div class="form-label">Data da preventiva/calibração *</div><input type="date" id="ctmed-execucao-preventiva"></div>
+      <div class="form-group full" id="ctmed-relatorio-wrap" style="display:none"><div class="form-label">Relatório de serviço *</div><input type="text" id="ctmed-relatorio" placeholder="Número, nome do arquivo, link ou referência no SEI"></div>
       <div class="form-group"><div class="form-label">Status *</div>
         <select id="ctmed-status">
           <option value="registrada">Registrada</option>
@@ -2515,7 +2520,7 @@
     <div class="modal-title">Nota fiscal vinculada à medição</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctnf-info"></div>
     <div class="form-grid">
-      <div class="form-group full"><div class="form-label">Medição vinculada *</div><select id="ctnf-medicao"></select></div>
+      <div class="form-group full"><div class="form-label">Medição vinculada *</div><select id="ctnf-medicao" onchange="ctPreencherValoresNFPorMedicao()"></select></div>
       <div class="form-group"><div class="form-label">Número da NF *</div><input type="text" id="ctnf-numero"></div>
       <div class="form-group"><div class="form-label">Série</div><input type="text" id="ctnf-serie"></div>
       <div class="form-group"><div class="form-label">Data de emissão</div><input type="date" id="ctnf-emissao"></div>
@@ -2553,7 +2558,7 @@
       <div class="form-group"><div class="form-label">Nova vigência início *</div><input type="date" id="ctr-inicio"></div>
       <div class="form-group"><div class="form-label">Nova vigência fim *</div><input type="date" id="ctr-fim"></div>
       <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="ctr-valor" placeholder="0,00" step="0.01" min="0"></div>
-      <div class="form-group" id="ctr-valor-mensal-wrap"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="ctr-valor-mensal" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group" id="ctr-valor-mensal-wrap"><div class="form-label" id="ctr-valor-periodico-label">Novo valor mensal (R$)</div><input type="number" id="ctr-valor-mensal" placeholder="0,00" step="0.01" min="0"></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctr-obs" placeholder="ex: Renovado conforme parecer jurídico..."></div>
     </div>
     <div class="form-actions">
@@ -2574,7 +2579,7 @@
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="cie-info"></div>
     <div class="form-grid" style="margin-bottom:.75rem">
       <div class="form-group"><div class="form-label">Data de início do efeito *</div><input type="date" id="cie-data" onchange="_cieRecalcularMeses()"></div>
-      <div class="form-group" id="cie-meses-wrap"><div class="form-label">Fim da vigência / meses considerados</div><div style="display:flex;gap:6px;align-items:center"><input type="text" id="cie-vigencia-fim" disabled style="width:110px"><input type="number" id="cie-meses" step="1" min="0" title="Meses restantes considerados no cálculo (editável se precisar ajustar)" oninput="_cieAtualizarTotais()" style="width:70px"></div></div>
+      <div class="form-group" id="cie-meses-wrap"><div class="form-label" id="cie-periodos-label">Fim da vigência / meses considerados</div><div style="display:flex;gap:6px;align-items:center"><input type="text" id="cie-vigencia-fim" disabled style="width:110px"><input type="number" id="cie-meses" step="1" min="0" title="Períodos restantes considerados no cálculo (editável se precisar ajustar)" oninput="_cieAtualizarTotais()" style="width:70px"></div></div>
       <div class="form-group full"><div class="form-label">Observação (aplicada a todos os itens marcados)</div><input type="text" id="cie-obs" placeholder="ex: Acréscimo de escopo aprovado em..."></div>
     </div>
     <div id="cie-tabela-wrap" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:auto;max-height:50vh">
@@ -2598,9 +2603,9 @@
     <div id="cie-comparativo" style="border:1px solid var(--blue);border-radius:var(--radius-sm);padding:.625rem .75rem;margin-top:.75rem;background:var(--surface2)">
       <div id="cie-meses-info" style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:.5rem">—</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.375rem 1.25rem;font-size:12px;color:var(--text2)">
-        <span>Valor mensal atual: <strong id="cie-mensal-antes">—</strong></span>
-        <span>Novo valor mensal após ajuste: <strong id="cie-mensal-depois">—</strong></span>
-        <span>Diferença mensal: <strong id="cie-dif-mensal">—</strong></span>
+        <span id="cie-valor-periodico-atual-label">Valor mensal atual: <strong id="cie-mensal-antes">—</strong></span>
+        <span id="cie-valor-periodico-novo-label">Novo valor mensal após ajuste: <strong id="cie-mensal-depois">—</strong></span>
+        <span id="cie-diferenca-periodica-label">Diferença mensal: <strong id="cie-dif-mensal">—</strong></span>
         <span>Total restante sem ajuste: <strong id="cie-total-sem">—</strong></span>
         <span>Total restante com ajuste: <strong id="cie-total-com">—</strong></span>
         <span>Impacto total até o fim da vigência: <strong id="cie-impacto-total">—</strong></span>

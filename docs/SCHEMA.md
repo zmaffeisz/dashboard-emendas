@@ -60,7 +60,7 @@ que o licita). Campos monetários "cadastrado" (planejado) vs. corrente (executa
 > derivados do ciclo real em `itens`, `itens_entregas`, `itens_entregas_unidades`,
 > `empenho_itens` e `nota_fiscal_itens`.
 
-### `processos` (12 colunas)
+### `processos`
 A licitação / processo de contratação.
 
 | Campo | Tipo | Observação |
@@ -69,8 +69,11 @@ A licitação / processo de contratação.
 | `status` | text | |
 | `valor_estimado` | numeric | **valor monetário** |
 | `natureza` | — | (ver migration `add_natureza_e_status_processo`) |
+| `servico_trimestral_itens` | jsonb | itens e valores periódicos do serviço trimestral |
+| `servico_trimestral_meses` / `servico_trimestral_ciclos` | integer | vigência e quantidade esperada de ciclos |
+| `servico_trimestral_valor_trimestral` / `servico_trimestral_valor_global` | numeric | valores trimestral e global |
 
-### `contratos` (34 colunas) — **MATRIZ PRINCIPAL DOS CONTRATOS**
+### `contratos` — **MATRIZ PRINCIPAL DOS CONTRATOS**
 Tabela-matriz de todo instrumento contratual. `tipo_instrumento` distingue **Contrato**
 de **ATA** (a aba "Atas Rp" é uma visão filtrada desta matriz — ver [MODULES.md](MODULES.md)).
 
@@ -84,12 +87,24 @@ de **ATA** (a aba "Atas Rp" é uma visão filtrada desta matriz — ver [MODULES
 | `numero_contrato` | text | |
 | `valor_inicial` / `valor_atual` / `valor_mensal` | text | legado (texto) |
 | `valor_inicial_num` / `valor_atual_num` / `valor_mensal_num` | numeric | **valores monetários normalizados** |
+| `periodicidade_pagamento` | text | `MENSAL` ou `TRIMESTRAL` nos serviços fixos |
+| `valor_periodico_num` | numeric | valor do período de pagamento, sem depender do nome legado mensal |
+| `modelo_execucao` | text | identifica o fluxo operacional do contrato |
 | `fonte` | text | fonte de recurso |
 | `vigencia_atual`, `vencimento`, `total_periodos_vigencia` | — | vigência |
 | `prefixo_chamado` | text | liga contrato ↔ chamados |
 
 > **Atenção:** existem campos monetários duplicados em texto (`valor_*`) e numéricos
 > (`valor_*_num`). Os numéricos são a referência para cálculos. Ver [BUSINESS_RULES.md](BUSINESS_RULES.md).
+
+### Medições e histórico dos serviços periódicos
+
+- `contratos_medicoes` registra `ciclo_numero`, `ciclo_inicio`, `ciclo_fim`,
+  `data_execucao_preventiva` e `relatorio_servico_referencia` para preservar a execução
+  trimestral que deu origem à medição e à NF.
+- `contratos_historico` registra a periodicidade, os períodos considerados, a quantidade
+  alterada e o valor unitário do período nos reajustes, aditivos e supressões.
+- `contratos_vigencias` preserva a periodicidade e o valor periódico de cada vigência.
 
 ### `atas_itens` (13 colunas)
 Itens de uma ATA de registro de preços (fonte de verdade da execução das atas).

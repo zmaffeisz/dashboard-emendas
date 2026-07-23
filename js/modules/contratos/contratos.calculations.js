@@ -106,11 +106,66 @@ export function calculateRemainingMonths(contractEndDate, additiveStartDate) {
   return Math.max(months, 0);
 }
 
+export function buildContractPeriods(contractStartDate, contractEndDate, periodMonths = 3) {
+  const start = parseDate(contractStartDate);
+  const end = parseDate(contractEndDate);
+  const size = Math.max(Math.trunc(toContractNumber(periodMonths)), 1);
+  if (!start || !end || start > end) return [];
+  const periods = [];
+  let index = 1;
+  let periodStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  while (periodStart <= end && index <= 1000) {
+    const nextStart = addCalendarMonths(start, size * index);
+    const periodEnd = new Date(nextStart);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+    periods.push({
+      number: index,
+      startDate: formatISODate(periodStart),
+      endDate: formatISODate(periodEnd > end ? end : periodEnd)
+    });
+    periodStart = nextStart;
+    index += 1;
+  }
+  return periods;
+}
+
+export function calculateRemainingPeriods(contractStartDate, contractEndDate, effectiveDate, periodMonths = 3) {
+  const effective = parseDate(effectiveDate);
+  if (!effective) return 0;
+  return buildContractPeriods(contractStartDate, contractEndDate, periodMonths)
+    .filter((period) => {
+      const start = parseDate(period.startDate);
+      return start && start >= effective;
+    }).length;
+}
+
+export function calculateNextPeriodStart(contractStartDate, contractEndDate, referenceDate, periodMonths = 3) {
+  const reference = parseDate(referenceDate);
+  if (!reference) return "";
+  const next = buildContractPeriods(contractStartDate, contractEndDate, periodMonths)
+    .find((period) => {
+      const start = parseDate(period.startDate);
+      return start && start > reference;
+    });
+  return next?.startDate || "";
+}
+
 export function calculateAdditiveImpact(contract = {}, item = {}, additiveData = {}) {
   const quantity = toContractNumber(additiveData.quantityChange ?? additiveData.quantityAdded ?? additiveData.quantidade);
   const unitValue = toContractNumber(additiveData.unitValue ?? item.currentUnitValue ?? item.valor_unitario_atual ?? item.valor_unit);
   const monthlyUnitValue = toContractNumber(additiveData.monthlyUnitValue ?? item.monthlyUnitValue ?? unitValue);
   const usesRemainingMonths = additiveData.usesRemainingMonths ?? contract.usesRemainingMonths ?? isMonthlyContract(contract);
+  const frequency = String(additiveData.paymentFrequency ?? contract.paymentFrequency ?? contract.periodicidade_pagamento ?? "").toUpperCase();
+
+  if (frequency === "TRIMESTRAL" || additiveData.usesRemainingPeriods === true || contract.usesRemainingPeriods === true) {
+    const periods = additiveData.periodsConsidered ?? calculateRemainingPeriods(
+      additiveData.contractStartDate ?? contract.startDate ?? contract.data_inicio,
+      additiveData.contractEndDate ?? contract.endDate ?? contract.vencimento,
+      additiveData.startDate ?? additiveData.effectiveDate,
+      additiveData.periodMonths ?? 3
+    );
+    return roundMoney(quantity * monthlyUnitValue * toContractNumber(periods));
+  }
 
   if (usesRemainingMonths) {
     const months = additiveData.monthsConsidered ?? calculateRemainingMonths(
@@ -240,6 +295,19 @@ export function calculateContractFinancialSummary(contract = {}, items = [], eve
   };
 }
 
+function addCalendarMonths(anchor, months) {
+  const first = new Date(anchor.getFullYear(), anchor.getMonth() + months, 1);
+  const lastDay = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  return new Date(first.getFullYear(), first.getMonth(), Math.min(anchor.getDate(), lastDay));
+}
+
+function formatISODate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function calculateEventImpactValue(event = {}) {
   if (event.impactValue != null && event.impactValue !== "") return toContractNumber(event.impactValue);
   return (event.items || []).reduce((total, item) => total + toContractNumber(item.impactValue ?? item.valor_impacto), 0);
@@ -249,6 +317,8 @@ function isMonthlyContract(contract = {}) {
   const paymentModel = String(
     contract.executionPaymentModel ??
     contract.forma_execucao_pagamento ??
+    contract.paymentFrequency ??
+    contract.periodicidade_pagamento ??
     contract.paymentModel ??
     contract.formaPagamento ??
     ""

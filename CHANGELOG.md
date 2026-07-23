@@ -2,6 +2,13 @@
 
 ## 2026-07-23
 
+- **Serviço trimestral de valor fixo:** processos e contratos agora podem usar ciclos de
+  três meses contados desde o início da vigência. O contrato mantém cobertura contínua
+  para chamados corretivos, enquanto cada medição trimestral registra a
+  preventiva/calibração e a referência do relatório de serviço antes da vinculação da
+  nota fiscal. Reajustes, aditivos, supressões, saldo e valor global passam a considerar
+  os ciclos trimestrais restantes, sem alterar o fluxo mensal já existente.
+
 - **Controle de Entregas:** observações livres são temporárias e são apagadas automaticamente quando o recebimento do item é registrado.
 
 - **Recebimento de ATA:** corrigido o bloqueio ao salvar o recebimento causado pela regra de limpeza da anotação temporária.

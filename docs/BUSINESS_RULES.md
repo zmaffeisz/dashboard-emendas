@@ -72,6 +72,21 @@
 - **Valores monetários**: usar sempre os campos numéricos `valor_inicial_num`,
   `valor_atual_num`, `valor_mensal_num` para cálculo. Os campos texto (`valor_inicial`,
   `valor_atual`, `valor_mensal`) são legado de exibição.
+- **Serviço trimestral de valor fixo**:
+  - o contrato permanece vigente e disponível para chamados corretivos durante toda a
+    vigência; chamados são ilimitados, não consomem saldo e não geram cobrança individual;
+  - os ciclos de pagamento têm três meses e são contados desde a data inicial do contrato,
+    independentemente dos trimestres do calendário;
+  - o valor global é o valor trimestral multiplicado pela quantidade esperada de ciclos
+    da vigência (por exemplo, 24 meses = 8 ciclos);
+  - a execução, medição e NF podem ocorrer antes ou depois da data esperada, mas devem
+    indicar o ciclo contratual correspondente;
+  - a medição trimestral exige a data da preventiva/calibração e a referência do relatório
+    de serviço; somente medição aprovada pela fiscalização pode receber NF;
+  - reajustes, aditivos e supressões passam a valer, em regra, no próximo ciclo e seus
+    impactos usam a quantidade de ciclos trimestrais restantes;
+  - uma medição/NF por ciclo é o comportamento esperado, sem bloqueio rígido de exceções
+    justificadas.
 - **Edição completa de contrato é exclusiva de admin.**
 - A aba **Atas Rp** é visão derivada da matriz; recarrega sempre (`loadAtas`) para refletir
   encerrar/prorrogar/editar feitos em Contratos. **Não é subaba de Contratos.**

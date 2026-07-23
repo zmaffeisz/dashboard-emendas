@@ -44,6 +44,7 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260626224200 | `recebimento_por_unidade` |
 | 20260626224428 | `recebimento_por_unidade_search_path` |
 | 20260628141120 | `atas_execucao_af_numero` — coluna `af_numero` em `atas_execucao` (Emitir AF de ATA) |
+| 20260723192606 | `servico_trimestral_fixo` — periodicidade trimestral em processos, contratos, vigências, histórico e medições |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de

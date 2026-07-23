@@ -207,7 +207,7 @@ function renderLicitacoes(){
   // por processo: itens que ainda estão na licitação = NÃO executados (entregue/execução/executado saem da aba)
   const info=_licitacoesCache.map(p=>{
     const todosItens=porProc[p.id]||[];
-    const itensServico=_procServicoMensalItensFromValor(p.servico_mensal_itens);
+    const itensServico=_procServicoPeriodicoItens(p);
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));            // pendentes + já contratados
     const pendentes=naLic.filter(i=>!_licItemContratado(i));            // ainda nem viraram contrato
     return {p, naLic, itensServico, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:todosItens.length>0 && naLic.length===0};
@@ -219,7 +219,7 @@ function renderLicitacoes(){
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.map(i=>i.descricao)).concat(_procServicoMensalItensFromValor(p.servico_mensal_itens).map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.map(i=>i.descricao)).concat(_procServicoPeriodicoItens(p).map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
   const _ocultos=incluirContratados?0:ocultos;
@@ -264,7 +264,9 @@ function renderLicitacoes(){
         itensServico.forEach((it,idx)=>{
           const qtd=Number(it.quantidade||0);
           const unit=Number(it.valor_unitario||0);
-          const mensal=Number(it.valor_mensal||(qtd*unit)||0);
+          const trimestral=_procProcessoEhTrimestral(p);
+          const valorPeriodo=Number(it.valor_trimestral||it.valor_mensal||(qtd*unit)||0);
+          const periodoLabel=trimestral?'trimestral':'mensal';
           const cur=_cpStatusById[it.status_lic_id];
           let ctrl;
           if(cur&&cur.automatico){
@@ -275,9 +277,9 @@ function renderLicitacoes(){
             ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
           }
           bloco+=`<tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço mensal</span></td>
+            <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço ${periodoLabel}</span></td>
             <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${qtd||''}</td>
-            <td style="padding:8px 8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Unit. ${unit?fmtFull(unit):'—'} · Mensal ${mensal?fmtFull(mensal):'—'}</div>${ctrl}</td>
+            <td style="padding:8px 8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Unit. ${unit?fmtFull(unit):'—'} · ${trimestral?'Trimestral':'Mensal'} ${valorPeriodo?fmtFull(valorPeriodo):'—'}</div>${ctrl}</td>
             <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-serv-desde-${p.id}-${idx}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetServicoMensalItemDesde(${p.id},${idx},this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
           </tr>`;
         });
@@ -404,16 +406,18 @@ async function cpBulkApply(pid){
 async function _cpGravarStatusServicoMensal(pid, indice, statusId, desde){
   const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
   if(!processo) throw new Error('Processo não encontrado.');
-  const itens=_procServicoMensalItensFromValor(processo.servico_mensal_itens).map(it=>({...it}));
+  const trimestral=_procProcessoEhTrimestral(processo);
+  const coluna=trimestral?'servico_trimestral_itens':'servico_mensal_itens';
+  const itens=_procServicoMensalItensFromValor(processo[coluna]).map(it=>({...it}));
   const item=itens[indice];
   if(!item) throw new Error('Item de serviço não encontrado.');
   const agora=desde?new Date(desde+'T12:00:00').toISOString():new Date().toISOString();
   item.status_lic_id=statusId||null;
   item.status_lic_desde=agora;
   item.status_lic_atualizado_em=new Date().toISOString();
-  const {error}=await sb.from('processos').update({servico_mensal_itens:itens}).eq('id',pid);
+  const {error}=await sb.from('processos').update({[coluna]:itens}).eq('id',pid);
   if(error) throw error;
-  processo.servico_mensal_itens=itens;
+  processo[coluna]=itens;
 }
 async function cpSetServicoMensalItemStatus(pid, indice, val, desde){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
@@ -426,7 +430,7 @@ async function cpSetServicoMensalItemStatus(pid, indice, val, desde){
 async function cpSetServicoMensalItemDesde(pid, indice, desde){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
   const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
-  const item=_procServicoMensalItensFromValor(processo?.servico_mensal_itens)[Number(indice)];
+  const item=_procServicoPeriodicoItens(processo)[Number(indice)];
   if(!item) return;
   try{
     await _cpGravarStatusServicoMensal(pid, Number(indice), item.status_lic_id?Number(item.status_lic_id):null, desde||null);
@@ -441,7 +445,7 @@ async function cpBulkApplyServicoMensal(pid){
   const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
   if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
   const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
-  const itens=_procServicoMensalItensFromValor(processo?.servico_mensal_itens);
+  const itens=_procServicoPeriodicoItens(processo);
   if(!itens.length){ alert('Nenhum item de serviço encontrado neste processo.'); return; }
   if(!confirm(`Aplicar "${_cpStatusById[Number(val)]?.nome}" desde ${desde.split('-').reverse().join('/')} a ${itens.length} item(ns) de serviço?`)) return;
   try{
@@ -466,6 +470,7 @@ async function abrirNovoProcesso(opcoes={}){
   document.getElementById('proc-titulo').textContent='➕ Novo processo';
   ['proc-identificador','proc-tipo-outro','proc-sc','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
   _procServicoMensalIds().forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const ciclosEl=document.getElementById('proc-serv-trimestral-ciclos'); if(ciclosEl) ciclosEl.value='';
   document.getElementById('proc-serv-mensal-itens-lista').innerHTML='';
   document.getElementById('proc-tipo').value='';
   _procTipoChange();
@@ -508,9 +513,11 @@ function abrirEditarProcesso(id){
   document.getElementById('proc-natureza').value=p.natureza||'';
   document.getElementById('proc-tipo-servico').value=p.tipo_servico||'';
   _procCarregarServicoMensalItens(p);
-  document.getElementById('proc-serv-mensal-meses').value=p.servico_mensal_meses??'';
-  document.getElementById('proc-serv-mensal-valor-mensal').value=p.servico_mensal_valor_mensal??'';
-  document.getElementById('proc-serv-mensal-valor-global').value=p.servico_mensal_valor_global??'';
+  const trimestral=_procProcessoEhTrimestral(p);
+  document.getElementById('proc-serv-mensal-meses').value=trimestral?(p.servico_trimestral_meses??''):(p.servico_mensal_meses??'');
+  document.getElementById('proc-serv-mensal-valor-mensal').value=trimestral?(p.servico_trimestral_valor_trimestral??''):(p.servico_mensal_valor_mensal??'');
+  document.getElementById('proc-serv-mensal-valor-global').value=trimestral?(p.servico_trimestral_valor_global??''):(p.servico_mensal_valor_global??'');
+  const ciclosEl=document.getElementById('proc-serv-trimestral-ciclos'); if(ciclosEl) ciclosEl.value=trimestral?(p.servico_trimestral_ciclos??''):'';
   const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value=p.servico_demanda_meses??'';
   document.getElementById('proc-objeto').value=p.objeto||'';
   document.getElementById('proc-modalidade').value=p.modalidade||'';
@@ -584,7 +591,7 @@ async function salvarProcesso(){
   const objeto=document.getElementById('proc-objeto').value.trim();
   if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
   if(natureza==='SERVIÇO'&&!tipoServico){showMsg('proc','Preencha o campo obrigatório (*): Tipo do serviço.','err');return;}
-  if(_procEhServicoMensalFixo()&&!_procServicoMensalValido(servicoMensal)){showMsg('proc','Preencha todos os campos obrigatórios do Serviço mensal valor fixo.','err');return;}
+  if(_procEhServicoPeriodicoFixo()&&!_procServicoMensalValido(servicoMensal)){showMsg('proc',`Preencha todos os campos obrigatórios do Serviço ${_procEhServicoTrimestralFixo()?'trimestral':'mensal'} valor fixo.`,'err');return;}
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
   if(_procEhServicoDemanda()&&!document.querySelectorAll('#proc-itens-lista .proc-item-card').length){showMsg('proc','Servico por demanda/execucao precisa de pelo menos 1 item cadastrado.','err');return;}
   if(_procEhServicoDemanda()&&servicoDemandaMeses<=0){showMsg('proc','Informe a vigencia em meses do servico por demanda/execucao.','err');return;}
@@ -601,11 +608,16 @@ async function salvarProcesso(){
     status,
     secao,
     secao_id:secaoId,
-    valor_estimado:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_global:(document.getElementById('proc-valor').value?Number(document.getElementById('proc-valor').value):null),
+    valor_estimado:_procEhServicoPeriodicoFixo()?servicoMensal.servico_mensal_valor_global:(document.getElementById('proc-valor').value?Number(document.getElementById('proc-valor').value):null),
     servico_mensal_itens:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_itens:null,
     servico_mensal_meses:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_meses:null,
     servico_mensal_valor_mensal:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_mensal:null,
     servico_mensal_valor_global:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_global:null,
+    servico_trimestral_itens:_procEhServicoTrimestralFixo()?servicoMensal.servico_mensal_itens:null,
+    servico_trimestral_meses:_procEhServicoTrimestralFixo()?servicoMensal.servico_mensal_meses:null,
+    servico_trimestral_ciclos:_procEhServicoTrimestralFixo()?servicoMensal.servico_trimestral_ciclos:null,
+    servico_trimestral_valor_trimestral:_procEhServicoTrimestralFixo()?servicoMensal.servico_mensal_valor_mensal:null,
+    servico_trimestral_valor_global:_procEhServicoTrimestralFixo()?servicoMensal.servico_mensal_valor_global:null,
     servico_demanda_meses:_procEhServicoDemanda()?servicoDemandaMeses:null,
     observacao:document.getElementById('proc-obs').value.trim()||null,
   };
@@ -629,11 +641,24 @@ let _procItensLoaded=[];
 const PROC_TIPO_SERVICO_DEMANDA_NORM='servico por demanda/execucao';
 const PROC_FONTES=[['emenda','Emenda'],['recurso_proprio','Recurso próprio'],['outra','Outro']];
 const PROC_TIPO_SERVICO_MENSAL_FIXO='Serviço mensal valor fixo';
+const PROC_TIPO_SERVICO_TRIMESTRAL_FIXO='Serviço trimestral valor fixo';
 function _procServicoMensalIds(){
   return ['proc-serv-mensal-meses','proc-serv-mensal-valor-mensal','proc-serv-mensal-valor-global'];
 }
 function _procEhServicoMensalFixo(){
   return document.getElementById('proc-natureza')?.value==='SERVIÇO' && document.getElementById('proc-tipo-servico')?.value===PROC_TIPO_SERVICO_MENSAL_FIXO;
+}
+function _procEhServicoTrimestralFixo(){
+  return document.getElementById('proc-natureza')?.value==='SERVIÇO' && document.getElementById('proc-tipo-servico')?.value===PROC_TIPO_SERVICO_TRIMESTRAL_FIXO;
+}
+function _procEhServicoPeriodicoFixo(){
+  return _procEhServicoMensalFixo()||_procEhServicoTrimestralFixo();
+}
+function _procProcessoEhTrimestral(p){
+  return String(p?.tipo_servico||'')===PROC_TIPO_SERVICO_TRIMESTRAL_FIXO;
+}
+function _procServicoPeriodicoItens(p){
+  return _procServicoMensalItensFromValor(_procProcessoEhTrimestral(p)?p?.servico_trimestral_itens:p?.servico_mensal_itens);
 }
 function _procEhServicoDemanda(){
   const tipo=String(document.getElementById('proc-tipo-servico')?.value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -644,7 +669,7 @@ function _procSetValorEstimadoServicoMensal(readOnly){
   if(!valEl) return;
   if(readOnly){
     valEl.readOnly=true;
-    valEl.placeholder='calculado pelo serviço mensal';
+    valEl.placeholder=`calculado pelo serviço ${_procEhServicoTrimestralFixo()?'trimestral':'mensal'}`;
     valEl.style.background='var(--surface2)';
     valEl.style.opacity='.85';
   }else{
@@ -670,7 +695,7 @@ function _procCarregarServicoMensalItens(p){
   const lista=document.getElementById('proc-serv-mensal-itens-lista');
   if(!lista) return;
   lista.innerHTML='';
-  const itens=_procServicoMensalItensFromValor(p.servico_mensal_itens);
+  const itens=_procServicoPeriodicoItens(p);
   if(itens.length){
     itens.forEach(item=>procAddServicoMensalItemRow({
       descricao:item.descricao||item.item||'',
@@ -706,6 +731,7 @@ function _procEnsureServicoMensalItemRow(){
   if(lista&&!lista.querySelector('.proc-serv-mensal-item')) procAddServicoMensalItemRow();
 }
 function _procLerServicoMensal(){
+  const trimestral=_procEhServicoTrimestralFixo();
   const itens=[...document.querySelectorAll('#proc-serv-mensal-itens-lista .proc-serv-mensal-item')].map(row=>{
     const quantidade=Number(row.querySelector('.smi-qtd')?.value||0);
     const valorUnitario=Number(row.querySelector('.smi-valor')?.value||0);
@@ -715,6 +741,10 @@ function _procLerServicoMensal(){
       valor_unitario:valorUnitario||null,
       valor_mensal:(quantidade&&valorUnitario)?quantidade*valorUnitario:null
     };
+    if(trimestral){
+      item.valor_trimestral=item.valor_mensal;
+      delete item.valor_mensal;
+    }
     if(row.dataset.statusLicId){
       item.status_lic_id=Number(row.dataset.statusLicId);
       item.status_lic_desde=row.dataset.statusLicDesde||null;
@@ -723,34 +753,44 @@ function _procLerServicoMensal(){
     return item;
   });
   const meses=Number(document.getElementById('proc-serv-mensal-meses')?.value||0);
-  const mensal=itens.reduce((s,item)=>s+(item.valor_mensal||0),0);
-  const global=mensal*meses;
+  const ciclos=trimestral&&meses>0?Math.ceil(meses/3):meses;
+  const mensal=itens.reduce((s,item)=>s+(item.valor_trimestral||item.valor_mensal||0),0);
+  const global=mensal*ciclos;
   return {
     servico_mensal_itens:itens,
     servico_mensal_meses:meses||null,
+    servico_trimestral_ciclos:trimestral?(ciclos||null):null,
     servico_mensal_valor_mensal:mensal||null,
     servico_mensal_valor_global:global||null
   };
 }
 function _procServicoMensalValido(d){
-  return !!(d.servico_mensal_itens.length && d.servico_mensal_itens.every(item=>item.descricao && item.quantidade>0 && item.valor_unitario>0 && item.valor_mensal>0) && d.servico_mensal_meses>0 && d.servico_mensal_valor_mensal>0 && d.servico_mensal_valor_global>0);
+  return !!(d.servico_mensal_itens.length && d.servico_mensal_itens.every(item=>item.descricao && item.quantidade>0 && item.valor_unitario>0 && (item.valor_mensal>0||item.valor_trimestral>0)) && d.servico_mensal_meses>0 && d.servico_mensal_valor_mensal>0 && d.servico_mensal_valor_global>0);
 }
 function procRecalcServicoMensal(){
   const d=_procLerServicoMensal();
   const mensalEl=document.getElementById('proc-serv-mensal-valor-mensal');
   const globalEl=document.getElementById('proc-serv-mensal-valor-global');
+  const ciclosEl=document.getElementById('proc-serv-trimestral-ciclos');
   if(mensalEl) mensalEl.value=d.servico_mensal_valor_mensal?d.servico_mensal_valor_mensal.toFixed(2):'';
   if(globalEl) globalEl.value=d.servico_mensal_valor_global?d.servico_mensal_valor_global.toFixed(2):'';
-  if(_procEhServicoMensalFixo()){
+  if(ciclosEl) ciclosEl.value=_procEhServicoTrimestralFixo()?(d.servico_trimestral_ciclos||''):'';
+  if(_procEhServicoPeriodicoFixo()){
     const valEl=document.getElementById('proc-valor');
     if(valEl) valEl.value=d.servico_mensal_valor_global?d.servico_mensal_valor_global.toFixed(2):'';
   }
 }
 function procTipoServicoChange(){
-  const mensal=_procEhServicoMensalFixo();
+  const mensal=_procEhServicoPeriodicoFixo();
+  const trimestral=_procEhServicoTrimestralFixo();
   const demanda=_procEhServicoDemanda();
   const wrap=document.getElementById('proc-servico-mensal-wrap');
   if(wrap) wrap.style.display=mensal?'block':'none';
+  const ciclosWrap=document.getElementById('proc-serv-trimestral-ciclos-wrap');
+  if(ciclosWrap) ciclosWrap.style.display=trimestral?'flex':'none';
+  const ciclosEl=document.getElementById('proc-serv-trimestral-ciclos'); if(ciclosEl&&!trimestral) ciclosEl.value='';
+  const valorLabel=document.getElementById('proc-serv-periodico-valor-label');
+  if(valorLabel) valorLabel.textContent=trimestral?'Valor Estimado Trimestral *':'Valor Estimado Mensal *';
   const demandaWrap=document.getElementById('proc-serv-demanda-meses-wrap');
   if(demandaWrap) demandaWrap.style.display=demanda?'block':'none';
   const demandaMeses=document.getElementById('proc-serv-demanda-meses');

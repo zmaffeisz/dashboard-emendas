@@ -2680,7 +2680,7 @@ function _ncFixarProcessoContrato(proc){
 async function preencherSelectProcessos(currentId){
   const sel=document.getElementById('nc-processo'); if(!sel) return;
   const {data,error}=await sb.from('vw_processos_resumo')
-    .select('id,identificador,objeto,natureza,secao,secao_id,n_contratos,gera_mais_contratos,tipo_servico,servico_mensal_itens,servico_mensal_meses,servico_mensal_valor_mensal,servico_mensal_valor_global,servico_demanda_meses')
+    .select('id,identificador,objeto,natureza,secao,secao_id,n_contratos,gera_mais_contratos,tipo_servico,servico_mensal_itens,servico_mensal_meses,servico_mensal_valor_mensal,servico_mensal_valor_global,servico_trimestral_itens,servico_trimestral_meses,servico_trimestral_ciclos,servico_trimestral_valor_trimestral,servico_trimestral_valor_global,servico_demanda_meses')
     .order('identificador');
   if(error){ sel.innerHTML='<option value="">Erro ao carregar processos</option>'; return; }
   let lista=(data||[]).filter(p=>Number(p.n_contratos||0)===0 || p.gera_mais_contratos);
@@ -2746,6 +2746,14 @@ function _ncServicoMensalFixo(proc){
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return tipo==='servico mensal valor fixo';
 }
+function _ncServicoTrimestralFixo(proc){
+  const tipo=String(proc?.tipo_servico||'').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return tipo==='servico trimestral valor fixo';
+}
+function _ncServicoPeriodicoFixo(proc){
+  return _ncServicoMensalFixo(proc)||_ncServicoTrimestralFixo(proc);
+}
 function _ncServicoDemanda(proc){
   const tipo=String(proc?.tipo_servico||'').trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -2755,7 +2763,8 @@ function _ncShow(id,on){ const el=document.getElementById(id); if(el) el.style.d
 function _ncAplicarModo(natureza){
   const modo=_ncModo(natureza);
   const ata=modo==='ata', aq=modo==='aquisicao';
-  const servMensal=_ncServicoMensalFixo(window._gerarContratoProcesso);
+  const servMensal=_ncServicoPeriodicoFixo(window._gerarContratoProcesso);
+  const servTrimestral=_ncServicoTrimestralFixo(window._gerarContratoProcesso);
   const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
   // valor mensal e fonte: só contratos comuns (outro)
   _ncShow('nc-valor-mensal-wrap', modo==='outro'&&!servDemanda);
@@ -2777,6 +2786,8 @@ function _ncAplicarModo(natureza){
     mensalInp.readOnly=servMensal;
     mensalInp.placeholder=servMensal?'calculado pelos itens marcados':'ex: 10000,00';
   }
+  const periodoLabel=document.getElementById('nc-valor-periodico-label');
+  if(periodoLabel) periodoLabel.textContent=servTrimestral?'Valor trimestral (R$)':'Valor mensal (R$)';
   ['nc-vigencia','nc-vencimento'].forEach(id=>{const el=document.getElementById(id); if(el) el.readOnly=(ata||servMensal||servDemanda);});
   // status
   const stSel=document.getElementById('nc-status'), stAuto=document.getElementById('nc-status-auto');
@@ -2808,12 +2819,13 @@ function _ncAddMonthsMinusOneDay(iso, meses){
 function _ncRecalcVigencia(){
   const proc=window._gerarContratoProcesso||{};
   const ata=_ncModo(proc.natureza)==='ata';
-  const servMensal=_ncServicoMensalFixo(proc);
+  const servMensal=_ncServicoPeriodicoFixo(proc);
+  const servTrimestral=_ncServicoTrimestralFixo(proc);
   const servDemanda=_ncServicoDemanda(proc);
   if(!ata&&!servMensal&&!servDemanda) return;
   const ini=document.getElementById('nc-inicio')?.value;
   const asn=document.getElementById('nc-assinatura'); if(asn) asn.value=ini||'';
-  const meses=servMensal?Number(proc.servico_mensal_meses||0):(servDemanda?Number(proc.servico_demanda_meses||0):12);
+  const meses=servMensal?Number(servTrimestral?proc.servico_trimestral_meses:proc.servico_mensal_meses||0):(servDemanda?Number(proc.servico_demanda_meses||0):12);
   const vig=document.getElementById('nc-vigencia'); if(vig) vig.value=meses?`${meses} meses`:'';
   const venc=document.getElementById('nc-vencimento');
   if(venc) venc.value=(ini&&meses)?_ncAddMonthsMinusOneDay(ini,meses):'';
@@ -2837,7 +2849,8 @@ function _ncUpdateItemTotal(el){
 // Fase 10: Valor Global = soma dos valores dos itens marcados (qtde x valor unitário)
 function _ncRecalcValorGlobal(){
   const modo=_ncModo(window._gerarContratoProcesso?.natureza);
-  const servMensal=_ncServicoMensalFixo(window._gerarContratoProcesso);
+  const servMensal=_ncServicoPeriodicoFixo(window._gerarContratoProcesso);
+  const servTrimestral=_ncServicoTrimestralFixo(window._gerarContratoProcesso);
   const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
   if(modo!=='ata' && modo!=='aquisicao' && !servMensal && !servDemanda) return;
   const lista=document.getElementById('nc-itens-lista'); if(!lista) return;
@@ -2848,8 +2861,9 @@ function _ncRecalcValorGlobal(){
     const unit=parseFloat(raw)||0; const qtde=_ncQtdeEfetivaRow(r)||0;
     tot+=unit*qtde;
   });
-  const meses=Number(window._gerarContratoProcesso?.servico_mensal_meses||0);
-  const valorGlobal=servMensal?tot*meses:tot;
+  const proc=window._gerarContratoProcesso||{};
+  const periodos=servTrimestral?Number(proc.servico_trimestral_ciclos||Math.ceil(Number(proc.servico_trimestral_meses||0)/3)):Number(proc.servico_mensal_meses||0);
+  const valorGlobal=servMensal?tot*periodos:tot;
   const el=document.getElementById('nc-valor-inicial'); if(el) el.value=valorGlobal?valorGlobal.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
   const mensalEl=document.getElementById('nc-valor-mensal');
   if(servMensal&&mensalEl) mensalEl.value=tot?tot.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
@@ -2867,20 +2881,21 @@ async function _ncCarregarItensProcesso(processoId){
   if(error){ lista.innerHTML='<div style="font-size:12px;color:var(--red)">Erro ao carregar itens: '+_sanEsc(error.message)+'</div>'; return; }
   const itens=data||[];
   const procAtual=window._gerarContratoProcesso||{};
-  const itensServico=(typeof _procServicoMensalItensFromValor==='function')?_procServicoMensalItensFromValor(procAtual.servico_mensal_itens):[];
+  const servTrimestral=_ncServicoTrimestralFixo(procAtual);
+  const itensServico=(typeof _procServicoMensalItensFromValor==='function')?_procServicoMensalItensFromValor(servTrimestral?procAtual.servico_trimestral_itens:procAtual.servico_mensal_itens):[];
   if(!itens.length&&itensServico.length){
     window._ncItensCache={};
     const inp='font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
     lista.innerHTML=itensServico.map((it,idx)=>{
       const qtd=Number(it.quantidade||0);
       const unit=Number(it.valor_unitario||0);
-      const mensal=Number(it.valor_mensal||(qtd*unit)||0);
+      const mensal=Number(it.valor_trimestral||it.valor_mensal||(qtd*unit)||0);
       const id='svc-'+idx;
       return `<div class="nc-item-row" data-id="${id}" data-service-json="1" data-service-index="${idx}" data-jacont="0" data-qtde="${qtd||''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border)">
         <input type="checkbox" class="nci-chk" onchange="_ncItemChkChange(this)" style="margin-top:3px">
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600">${_sanEsc(it.descricao||'(sem descrição)')}</div>
-          <div style="font-size:11px;color:var(--text3)">serviço mensal · qtde ${qtd||'—'} · un. ${unit?fmtFull(unit):'—'} · mensal ${mensal?fmtFull(mensal):'—'} · ${procAtual.servico_mensal_meses||'—'} meses</div>
+          <div style="font-size:11px;color:var(--text3)">serviço ${servTrimestral?'trimestral':'mensal'} · qtde ${qtd||'—'} · un. ${unit?fmtFull(unit):'—'} · ${servTrimestral?'trimestral':'mensal'} ${mensal?fmtFull(mensal):'—'} · ${servTrimestral?(procAtual.servico_trimestral_ciclos||'—')+' ciclos':(procAtual.servico_mensal_meses||'—')+' meses'}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
           <input type="text" class="nci-valor" value="${unit?String(unit).replace('.',','):''}" oninput="_ncUpdateItemTotal(this)" placeholder="vl. unit. contratado" title="Valor UNITÁRIO contratado por item" style="width:110px;${inp}">
@@ -2937,7 +2952,7 @@ async function _ncVincularItens(contratoId, fornecedorId){
   const rows=[...lista.querySelectorAll('.nc-item-row')];
   const cache=window._ncItensCache||{};
   window._ncVincularItensMap={};
-  // Itens de serviço mensal ainda vivem só como JSON no processo até o 1º contrato.
+  // Itens de serviço periódico ainda vivem só como JSON no processo até o 1º contrato.
   // Materializa TODOS aqui (marcados e não marcados) como linhas reais em `itens`,
   // para que os não selecionados sobrem com contrato_id=null e continuem disponíveis
   // para um próximo contrato, em vez de desaparecerem.
@@ -2950,13 +2965,14 @@ async function _ncVincularItens(contratoId, fornecedorId){
     const raw=(vt?.value||'').trim().replace(/\./g,'').replace(',','.');
     const valor=raw?(parseFloat(raw)||null):null;
     const procAtual=window._gerarContratoProcesso||{};
-    const itensServico=(typeof _procServicoMensalItensFromValor==='function')?_procServicoMensalItensFromValor(procAtual.servico_mensal_itens):[];
+    const servTrimestral=_ncServicoTrimestralFixo(procAtual);
+    const itensServico=(typeof _procServicoMensalItensFromValor==='function')?_procServicoMensalItensFromValor(servTrimestral?procAtual.servico_trimestral_itens:procAtual.servico_mensal_itens):[];
     const svc=itensServico[Number(r.dataset.serviceIndex)]||{};
     const qtd=Number(svc.quantidade||r.dataset.qtde||0)||null;
     const unit=valor||(Number(svc.valor_unitario||0)||null);
     const insert={
       processo_id:procAtual.id||null,
-      origem:'servico_mensal',
+      origem:servTrimestral?'servico_trimestral':'servico_mensal',
       descricao:svc.descricao||'(sem descrição)',
       qtde:qtd,
       valor_estimado:unit,
