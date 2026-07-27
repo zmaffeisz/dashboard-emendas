@@ -1098,7 +1098,9 @@ async function loadItensEntregas(){
     const temAF=!!(r.data_af && String(r.data_af).trim());
     const pendenteAF=!temAF && !recebido;
     const ai=_ataItemPorId[String(r.ata_item_id)]||{};
-    if(String(ai.status||'').toUpperCase().startsWith('ENCERRAD')) return;
+    // A vigência encerrada impede novas solicitações, mas uma execução já existente
+    // permanece no Controle de Entregas até o recebimento. O render abaixo já oculta,
+    // por padrão, somente o que foi efetivamente recebido.
     const emInfo=_emendaInfoPorId[String(r.emenda_item_id||'')]||{};
     const empAta=(r.empenho&&String(r.empenho).trim())||_empAtaPorEmendaItem[String(r.emenda_item_id||'')]||emInfo.empenho||'';
     const unidadesAta=_ataUnidadesPorExec[String(r.id)]||[];

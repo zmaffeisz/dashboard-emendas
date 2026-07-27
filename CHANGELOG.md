@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-27
+
+- **Execuções pendentes de ATA encerrada permanecem em acompanhamento:** o encerramento
+  administrativo da ATA ou de um de seus itens continua impedindo novas solicitações,
+  mas não encerra automaticamente execuções já emitidas. Enquanto `dt_entrega` estiver
+  vazia, a execução aparece nos filtros `VIGENTE` e `Todos` de Atas Rp e permanece no
+  Controle de Entregas/Prazos, inclusive com indicação de atraso. Somente execuções
+  efetivamente recebidas acompanham a ATA no filtro `ENCERRADO`.
+
 ## 2026-07-23
 
 - **Serviço trimestral de valor fixo:** processos e contratos agora podem usar ciclos de

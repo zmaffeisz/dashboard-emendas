@@ -69,7 +69,8 @@ Acompanhamento/fiscalização de chamados e contratos: histórico
 Ciclo de vida do item após a contratação:
 - **Controle de Entregas / Prazos**: lista aquisições que ainda possuem saldo aguardando
   AF e execuções de ATA pendentes/prazos. Ao emitir AF de aquisição que cubra a quantidade,
-  o item deixa esta subaba.
+  o item deixa esta subaba. Execuções de ATA sem recebimento continuam nesta subaba mesmo
+  se a ATA ou o item de origem tiver sido encerrado.
 - **Confirmação de Entrega na Unidade**: lista aquisições com `af_numero` e execuções de
   ATA para confirmar a entrega real na unidade, termo e responsável. A confirmação alimenta
   a aba Emendas.
@@ -106,6 +107,10 @@ execução em `atas_execucao`.
 > - É uma **visualização/gestão específica das atas, sincronizada com a matriz de contratos**.
 > - Por isso `showTab('atas')` chama `loadAtas()` **a cada visita**, refletindo
 >   automaticamente alterações feitas na aba Contratos (encerrar/prorrogar/editar).
+> - O encerramento da ATA/item controla a disponibilidade para **novas solicitações**.
+>   Execuções já existentes têm acompanhamento operacional próprio: enquanto
+>   `dt_entrega` estiver vazia, aparecem como `VIGENTE` e continuam no Controle de
+>   Entregas; depois do recebimento podem acompanhar a origem em `ENCERRADO`.
 > - Ao cadastrar um contrato do tipo ATA, os itens selecionados são **espelhados** para
 >   `atas_itens` (`abrirModalNovoContrato` → espelhamento; a fonte de verdade da execução
 >   permanece na aba Atas).

@@ -1,4 +1,19 @@
 // ═══ ATAS ═══
+function _ataStatusEncerrado(status){
+  return String(status||"").trim().toUpperCase().startsWith("ENCERRAD");
+}
+
+function _ataExecRecebida(exec){
+  return !!String(exec?.dt_entrega||"").trim();
+}
+
+function _ataStatusOperacionalExec(exec,statusAta){
+  const status=String(statusAta||"VIGENTE").trim()||"VIGENTE";
+  // Encerrar a vigência impede novas solicitações, mas não encerra uma entrega já
+  // solicitada. A execução só acompanha o encerramento depois do recebimento.
+  return _ataStatusEncerrado(status)&&!_ataExecRecebida(exec)?"VIGENTE":status;
+}
+
 async function loadAtas(){
   document.getElementById("atas-loading").style.display="block";
   document.getElementById("atas-main").style.display="none";
@@ -58,7 +73,8 @@ async function loadAtas(){
       _sancao_id:r.id,
       ata_item_id:r.ata_item_id,
       contrato_id:ata.contrato_id,
-      status:ata.status,
+      status:_ataStatusOperacionalExec(r,ata.status),
+      status_ata:ata.status,
       cpl:ata.cpl,
       sim:ata.sim,
       item:ata.item,
@@ -283,7 +299,7 @@ function popularFiltrosAtas(){
   sel("fat-sim",[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort());
   sel("fat-empresa",[...new Set(atasItens.map(r=>r.empresa).filter(Boolean))].sort());
   // Agrupar encerrados num único filtro
-  const statusUnicos=[...new Set(atasItens.map(r=>{
+  const statusUnicos=[...new Set([...atasItens,...atasExec].map(r=>{
     if(r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return "ENCERRADO";
     return r.status;
   }).filter(Boolean))].sort();
@@ -412,7 +428,8 @@ function filtrarAtas(){
       const val=String(cfg.get(r)??'');
       if(!sel.includes(val)) return false;
     }
-    // Segue o mesmo filtro de status do contrato/ata: "Todos" mostra vigentes e encerrados
+    // Execuções pendentes continuam operacionais mesmo após o encerramento da ata/item.
+    // "Todos" mostra ambas; "ENCERRADO" recebe apenas execuções já entregues.
     const rEncerrado=r.status&&r.status.toUpperCase().startsWith("ENCERRADO");
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
@@ -474,7 +491,7 @@ function filtrarExecs(){
       const val=String(cfg.get(r)??'');
       if(!sel.includes(val)) return false;
     }
-    // Segue o mesmo filtro de status do contrato/ata: "Todos" mostra vigentes e encerrados
+    // O status da execução considera o recebimento, sem reabrir a ata para novas solicitações.
     const rEncerrado=r.status&&r.status.toUpperCase().startsWith("ENCERRADO");
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
