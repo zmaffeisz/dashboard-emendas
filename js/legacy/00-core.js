@@ -502,9 +502,10 @@ async function exportarExcel(){
 const _libUrls={
   xlsx:"https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   html2pdf:"https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",
+  jspdf:"https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
   papa:"https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
 };
-const _libCheck={xlsx:()=>window.XLSX,html2pdf:()=>window.html2pdf,papa:()=>window.Papa};
+const _libCheck={xlsx:()=>window.XLSX,html2pdf:()=>window.html2pdf,jspdf:()=>window.jspdf?.jsPDF,papa:()=>window.Papa};
 const _libPromise={};
 function ensureLib(name){
   if(_libCheck[name] && _libCheck[name]()) return Promise.resolve();

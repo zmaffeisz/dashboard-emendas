@@ -54,6 +54,21 @@ function renderItensAtas(){
       <td style="padding:6px 8px;color:var(--text3);white-space:nowrap">na aba <b>ATAs</b></td>
     </tr>`;}).join('')}</tbody></table>`;
 }
+function _ceCompactarAcoes(wrap){
+  if(typeof kebabMenuHtml!=='function') return;
+  wrap.querySelectorAll('tbody tr').forEach(tr=>{
+    const celula=tr.lastElementChild, grupo=celula?.querySelector(':scope > div');
+    if(!grupo||grupo.dataset.compacto==='1') return;
+    const botoes=[...grupo.querySelectorAll('button')];
+    if(botoes.length<2) return;
+    const principal=botoes.find(btn=>/Receber item|Ver recebimento|Receber|Emitir AF/i.test(btn.textContent||''));
+    if(!principal) return;
+    const itens=botoes.filter(btn=>btn!==principal).map(btn=>({label:(btn.textContent||'Ação').trim(),onclick:btn.getAttribute('onclick')||'',title:btn.getAttribute('title')||''})).filter(item=>item.onclick);
+    if(!itens.length) return;
+    grupo.dataset.compacto='1'; grupo.style.flexWrap='nowrap'; grupo.style.alignItems='center';
+    grupo.innerHTML=principal.outerHTML+kebabMenuHtml(itens);
+  });
+}
 function _itemFonteLabel(ft){const m=Object.fromEntries(PROC_FONTES);return m[ft]||ft||'—';}
 function _itemStatusBadge(s){ s=s||'—'; const cor=(s==='em licitação')?'#EF9F27':(s==='contratado')?'#378ADD':'#888780'; return `<span class="badge" style="background:${cor}22;color:${cor};white-space:nowrap">${_sanEsc(s)}</span>`; }
 
@@ -996,7 +1011,7 @@ async function loadItensEntregas(){
   const out=[];
   // Aquisições: itens_entregas + item + processo/contrato/fornecedor/unidade/documentos
   const {data:aq,error:e1}=await sb.from('itens_entregas')
-    .select('*, empenhos(numero), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
+    .select('*, empenhos(numero,ano), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
   const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
@@ -1049,7 +1064,8 @@ async function loadItensEntregas(){
       saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
       data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
       recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
-      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenhos?.numero||r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,
+      empenho:r.empenhos?.numero?`${r.empenhos.numero}${r.empenhos.ano?('/'+r.empenhos.ano):''}`:(r.empenho||empAqPorItem[String(r.item_id)]?.label||''),
       nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
       nf_dataISO:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data), controle_obs:r.controle_obs||'',
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0,
@@ -1294,7 +1310,7 @@ function renderItensEntregas(){
         const saldoAF=Number(r.saldo_af)||0;
         const totalmenteRecebido=r.tipo==='Aquisição' && saldoAF<=0 && (Number(r.qtde_recebida)||0)>0;
         const podeRec=r.tipo==='Aquisição'&&!r.cancelado&&pode&&saldoAF>0;
-        const recBtn=podeRec?`<button onclick="abrirRecebimento('${r.entrega_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">Receber item</button>`:'';
+        const recBtn=podeRec?`<button onclick="abrirRecebimento('${r.entrega_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">📥 Receber</button>`:'';
         const verBtn=totalmenteRecebido?`<button onclick="verRecebimento('${r.entrega_id}')" title="Item totalmente recebido — visualizar dados do recebimento" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;white-space:nowrap">✓ Ver recebimento</button>`:'';
         const aqPrazoBtn=(r.tipo==='Aquisição'&&!r.recebido&&!r.cancelado&&pode)?`<button onclick="abrirModalProrrogarPrazoAquisicao('${r.entrega_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         // ATA aguardando AF: só "Emitir AF" (define data AF + prazo). Após emitir, libera Receber/Prazo.
@@ -1304,7 +1320,8 @@ function renderItensEntregas(){
         const ataPrazoBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirRecebimentoAta('${r.exec_id}')" title="Registrar recebimento administrativo" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver recebimento':'📥 Receber'}</button>`:'';
         const pdfBtn=r.af_numero?`<button onclick="baixarAFPDF('${_ceRowKey(r)}')" title="Baixar AF em PDF" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--surface);color:var(--blue);cursor:pointer;white-space:nowrap">Baixar AF em PDF</button>`:'';
-        acoes=(recBtn||verBtn||aqPrazoBtn||ataVincBtn||ataAFBtn||ataPrazoBtn||ataRecBtn||pdfBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataVincBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}${pdfBtn}</div>`:'—';
+        const emailBtn=r.af_numero?`<button onclick="abrirEmailAF('${_ceRowKey(r)}')" title="Preparar e-mail para a empresa" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid #7c3aed;background:#f5f3ff;color:#6d28d9;cursor:pointer;white-space:nowrap">✉ E-mail</button>`:'';
+        acoes=(recBtn||verBtn||aqPrazoBtn||ataVincBtn||ataAFBtn||ataPrazoBtn||ataRecBtn||pdfBtn||emailBtn)?`<div style="display:flex;gap:4px;flex-wrap:wrap">${recBtn}${verBtn}${ataVincBtn}${ataAFBtn}${ataRecBtn}${aqPrazoBtn}${ataPrazoBtn}${pdfBtn}${emailBtn}</div>`:'—';
         docs=r.tipo==='Aquisição'
           ?`<div>Emp: ${_sanEsc(r.empenho||'—')}</div><div>NF: ${_sanEsc(r.nota_fiscal||'—')}${r.nf_dataISO?(' · '+fmtDate(r.nf_dataISO)):''}</div>${r.patrimonio?('<div>Pat: '+_sanEsc(r.patrimonio)+'</div>'):''}${r.numero_serie?('<div>Série: '+_sanEsc(r.numero_serie)+'</div>'):''}${marcaMod?('<div>'+_sanEsc(marcaMod)+'</div>'):''}`
           :`<div>Emp: ${r.empenho?_sanEsc(r.empenho):'<span style="color:var(--red)">não vinculado</span>'}</div><div>NF: ${_sanEsc(r.nota_fiscal||'—')}</div>${r.patrimonio?('<div>Pat: '+_sanEsc(r.patrimonio)+'</div>'):''}`;
@@ -1332,6 +1349,7 @@ function renderItensEntregas(){
       <td style="padding:6px 8px">${_prazoBadge(r.status,dias)}</td>
       <td style="padding:6px 8px">${acoes}</td>
     </tr>`;}).join('')}</tbody></table>`;
+  _ceCompactarAcoes(wrap);
 }
 
 let _ceObsRowKey='';
@@ -1373,11 +1391,50 @@ window.salvarObservacaoEntrega=salvarObservacaoEntrega;
 // ── Advertência multi-item no Controle de Entregas (mesmo contrato) ──
 let _ceAdvSel=new Set(), _ceAdvLock='', _ceAdvAtivo=false, _ceAdvRows=[], _ceAdvContrato=null;
 function _ceRowKey(r){ return r.entrega_id?('a'+r.entrega_id):(r.exec_id?('t'+r.exec_id):('i'+(r.item_id||r.item||''))); }
-function _ceAdvLockKey(r){ return String(r.contrato||r.processo||''); }
-async function baixarAFPDF(key){
+function _ceAdvLockKey(r){
+  if(r?.contrato_id!=null&&String(r.contrato_id).trim()!=='') return `id:${r.contrato_id}`;
+  const numero=String(r?.contrato||'').trim();
+  return numero?`numero:${numero}`:'';
+}
+async function abrirEmailAF(key){
+  const row=entregasRows.find(r=>_ceRowKey(r)===key);
+  if(!row?.af_numero||!row.contrato_id){ if(window.toast) toast('AF ou contrato não encontrado.','error'); return; }
+  const {data:c,error}=await sb.from('contratos').select('cpl,numero_contrato,prestador,email_empresa').eq('id',row.contrato_id).maybeSingle();
+  const para=String(c?.email_empresa||'').split(',').map(x=>x.trim()).filter(Boolean);
+  if(error||!para.length){ if(window.toast) toast('Cadastre o e-mail da empresa no contrato antes de preparar o e-mail.','error'); return; }
+  const qtd=Number(row.qtde)||0, valor=Number(row.valor_item)||0, total=qtd&&valor?qtd*valor:0;
+  const contrato=c?.numero_contrato||row.contrato||'—', cpl=row.processo||c?.cpl||'—', empresa=c?.prestador||row.empresa||'—';
+  const assunto=`Autorização de Fornecimento – AF ${row.af_numero} – CPL ${cpl}`;
+  const corpo=['Prezado(a),','',`Encaminhamos, em anexo, a Autorização de Fornecimento nº ${row.af_numero}, referente ao CPL ${cpl} e ao Contrato SIAM nº ${contrato}.`,'','Resumo do pedido:','',`Fornecedor: ${empresa}`,`Empenho: ${row.empenho||'—'}`,'','Itens autorizados:',`• ${row.item||'Item'} — Quantidade: ${qtd||'—'} | Valor: ${total?fmtFull(total):'—'} | Empenho: ${row.empenho||'—'}`,'',`Valor total: ${total?fmtFull(total):'—'}`,`Data limite para entrega: ${row.limiteISO?fmtDate(row.limiteISO):'—'}`,'','A entrega deverá ser realizada exclusivamente mediante agendamento prévio com o Almoxarifado de Bens (Patrimônio), pelo e-mail patrimonio@sorocaba.sp.gov.br ou telefone (15) 3333-1974.','','Não realizar a entrega sem agendamento prévio.','',`Lembramos que a nota fiscal deverá informar o CPL ${cpl}, o Contrato SIAM nº ${contrato}, o empenho e os dados bancários para pagamento.`,'','Atenciosamente,','','Secretaria da Saúde','Prefeitura de Sorocaba'].join('\r\n');
+  window.location.href=`mailto:${encodeURIComponent(para.join(','))}?cc=${encodeURIComponent('sueq.equipamentos@sorocaba.sp.gov.br,patrimonio@sorocaba.sp.gov.br')}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  if(window.toast) toast('E-mail preparado. Anexe o PDF da AF antes de enviar.','success');
+}
+async function abrirEmailAFsLote(){
+  const rows=_ceSelRows().filter(r=>r.af_numero&&!r.cancelado);
+  if(!rows.length){ if(window.toast) toast('Selecione ao menos uma AF emitida.','error'); return; }
+  const afs=new Set(rows.map(r=>String(r.af_numero).trim()));
+  if(afs.size!==1){ if(window.toast) toast('Selecione itens da mesma AF para preparar um único e-mail.','error'); return; }
+  const primeiro=rows[0];
+  if(rows.length===1) return abrirEmailAF(_ceRowKey(primeiro));
+  const {data:c,error}=await sb.from('contratos').select('cpl,numero_contrato,prestador,email_empresa').eq('id',primeiro.contrato_id).maybeSingle();
+  const para=String(c?.email_empresa||'').split(',').map(x=>x.trim()).filter(Boolean);
+  if(error||!para.length){ if(window.toast) toast('Cadastre o e-mail da empresa no contrato antes de preparar o e-mail.','error'); return; }
+  const cpl=primeiro.processo||c?.cpl||'—', contrato=c?.numero_contrato||primeiro.contrato||'—';
+  const itens=rows.map(r=>{const q=Number(r.qtde)||0,v=Number(r.valor_item)||0,t=q&&v?q*v:0;return `• ${r.item||'Item'} — Quantidade: ${q||'—'} | Valor: ${t?fmtFull(t):'—'} | Empenho: ${r.empenho||'—'}`;});
+  const empenhos=[...new Set(rows.map(r=>r.empenho).filter(Boolean))], total=rows.reduce((s,r)=>s+(Number(r.qtde)||0)*(Number(r.valor_item)||0),0);
+  const corpo=['Prezado(a),','',`Encaminhamos, em anexo, a Autorização de Fornecimento nº ${primeiro.af_numero}, referente ao CPL ${cpl} e ao Contrato SIAM nº ${contrato}.`,'','Resumo do pedido:','',`Fornecedor: ${c?.prestador||primeiro.empresa||'—'}`,`Empenhos: ${empenhos.join(', ')}`,'','Itens autorizados:',...itens,'',`Valor total: ${total?fmtFull(total):'—'}`,`Data limite para entrega: ${primeiro.limiteISO?fmtDate(primeiro.limiteISO):'—'}`,'','A entrega deverá ser realizada exclusivamente mediante agendamento prévio com o Almoxarifado de Bens (Patrimônio), pelo e-mail patrimonio@sorocaba.sp.gov.br ou telefone (15) 3333-1974.','','Não realizar a entrega sem agendamento prévio.','',`Lembramos que a nota fiscal deverá informar o CPL ${cpl}, o Contrato SIAM nº ${contrato}, os respectivos empenhos e os dados bancários para pagamento.`,'','Atenciosamente,','','Secretaria da Saúde','Prefeitura de Sorocaba'].join('\r\n');
+  const assunto=`Autorização de Fornecimento – AF ${primeiro.af_numero} – CPL ${cpl}`;
+  window.location.href=`mailto:${encodeURIComponent(para.join(','))}?cc=${encodeURIComponent('sueq.equipamentos@sorocaba.sp.gov.br,patrimonio@sorocaba.sp.gov.br')}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  if(window.toast) toast('E-mail preparado. Anexe o PDF da AF antes de enviar.','success');
+}
+window.abrirEmailAF=abrirEmailAF;
+window.abrirEmailAFsLote=abrirEmailAFsLote;
+async function baixarAFPDF(key,opcoes={}){
   const row=entregasRows.find(r=>_ceRowKey(r)===key);
   if(!row){ if(window.toast) toast('Registro da AF não encontrado.','error'); return; }
   if(!row.af_numero){ if(window.toast) toast('Este item ainda não tem AF emitida.','error'); return; }
+  // A AF individual usa o mesmo renderizador consolidado do download em lote.
+  return baixarAFsLote([row],{single:true});
   let c={};
   if(row.contrato_id){
     const {data}=await sb.from('contratos').select('id,cpl,numero_contrato,prestador,cnpj,objeto,secao').eq('id',row.contrato_id).maybeSingle();
@@ -1389,10 +1446,15 @@ async function baixarAFPDF(key){
   const unit=Number(row.valor_item)||0;
   const total=unit&&qtde?unit*qtde:0;
   const empresa=c.prestador||row.empresa||'—';
-  const contrato=c.numero_contrato||row.contrato||'—';
+  let contrato=c.numero_contrato||row.contrato||'—';
+  if(!c.numero_contrato&&String(contrato).includes('·')) contrato=String(contrato).split('·').pop().trim();
+  contrato=String(contrato).replace(/^(?:contrato\s*)?(?:siam\s*)?(?:n[º°o.]?\s*)/i,'').trim()||'—';
+  const cplRaw=String(row.processo||c.cpl||'—').trim();
+  const cplNumero=cplRaw.replace(/^cpl\s*[:nº°o.-]*\s*/i,'').trim()||'—';
+  const cplTexto=cplNumero==='—'?'CPL —':`CPL ${cplNumero}`;
   const cnpj=c.cnpj||'—';
   const objeto=c.objeto||row.item||'—';
-  const responsavel=currentProfile?.nome||currentProfile?.email||'Responsável';
+  const responsavel=currentProfile?.nome||currentUser?.email||currentProfile?.email||'Responsável';
   let empPDF=row.empenho||'';
   if(row.tipo==='ATA'&&row.exec_id){
     const {data:ex}=await sb.from('atas_execucao').select('id,empenho,emenda_item_id').eq('id',row.exec_id).maybeSingle();
@@ -1401,48 +1463,386 @@ async function baixarAFPDF(key){
     empPDF=await _itemEmpenhoVinculado(row)||empPDF;
   }
   if(empPDF) row.empenho=empPDF;
-  const pdfCell='border:1px solid #777!important;padding:5px!important;background:#fff!important;color:#111!important';
-  const pdfLabel=pdfCell+';width:30%;font-weight:700!important';
-  const pdfHead='border:1px solid #777!important;padding:5px!important;background:#eee!important;color:#111!important;font-weight:700!important';
-  const pdfRight=pdfCell+';text-align:right!important';
-  const html=document.createElement('div');
-  html.style.cssText='width:190mm;min-height:267mm;padding:12mm;background:#fff!important;color:#111!important;font-family:Arial,sans-serif;font-size:10pt;color-scheme:light';
-  html.innerHTML=`<div style="background:#fff!important;color:#111!important">
-  <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:8mm;margin-bottom:8mm;background:#fff!important;color:#111!important">
-    <div style="font-weight:700;font-size:11pt;background:#fff!important;color:#111!important">PREFEITURA DE SOROCABA - SECRETARIA DA SAÚDE</div>
-    <div>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde</div>
-    <h1 style="font-size:15pt;margin:7mm 0 1mm;background:#fff!important;color:#111!important">AUTORIZAÇÃO DE FORNECIMENTO</h1>
-    <div style="font-size:12pt;font-weight:700;background:#fff!important;color:#111!important">AF nº ${_sanEsc(row.af_numero)}</div>
-  </div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:7mm;background:#fff!important;color:#111!important">
-    <tbody>
-      <tr><td style="${pdfLabel}">Data da AF</td><td style="${pdfCell}">${afData}</td></tr>
-      <tr><td style="${pdfLabel}">Processo/CPL</td><td style="${pdfCell}">${_sanEsc(row.processo||c.cpl||'—')}</td></tr>
-      <tr><td style="${pdfLabel}">Contrato/ATA</td><td style="${pdfCell}">${_sanEsc(contrato)}</td></tr>
-      <tr><td style="${pdfLabel}">Fornecedor</td><td style="${pdfCell}">${_sanEsc(empresa)}</td></tr>
-      <tr><td style="${pdfLabel}">CNPJ</td><td style="${pdfCell}">${_sanEsc(cnpj)}</td></tr>
-      <tr><td style="${pdfLabel}">Empenho</td><td style="${pdfCell}">${_sanEsc(empPDF||'—')}</td></tr>
-      <tr><td style="${pdfLabel}">Local de entrega</td><td style="${pdfCell}">${_sanEsc(row.unidade||'—')}</td></tr>
-      <tr><td style="${pdfLabel}">Prazo/data limite</td><td style="${pdfCell}">${limite}</td></tr>
-      <tr><td style="${pdfLabel}">Objeto</td><td style="${pdfCell}">${_sanEsc(objeto)}</td></tr>
-    </tbody>
-  </table>
-  <table style="width:100%;border-collapse:collapse;background:#fff!important;color:#111!important">
-    <thead><tr><th style="${pdfHead}">Item</th><th style="${pdfHead}">Unidade</th><th style="${pdfHead};text-align:right!important">Qtde</th><th style="${pdfHead};text-align:right!important">Valor unitário</th><th style="${pdfHead};text-align:right!important">Valor total</th></tr></thead>
-    <tbody><tr><td style="${pdfCell}">${_sanEsc(row.item||'—')}</td><td style="${pdfCell}">${_sanEsc(row.unidade||'—')}</td><td style="${pdfRight}">${qtde||'—'}</td><td style="${pdfRight}">${unit?fmtFull(unit):'—'}</td><td style="${pdfRight}">${total?fmtFull(total):'—'}</td></tr></tbody>
-  </table>
-  <p style="margin-top:8mm;text-align:justify;background:#fff!important;color:#111!important">Autorizamos o fornecimento do item acima, conforme condições pactuadas no contrato/ata e documentos vinculados.</p>
-  <div style="margin-top:28mm;text-align:center;background:#fff!important;color:#111!important"><div style="border-top:1px solid #111;width:80mm;margin:0 auto 2mm;background:#fff!important;color:#111!important"></div><strong>${_sanEsc(responsavel)}</strong><br>Responsável pela emissão</div>
-  </div>`;
-  document.body.appendChild(html);
-  try{
-    await ensureLib('html2pdf');
-    await html2pdf().set({margin:[8,8,8,8],filename:`AF-${_safeFileName(row.af_numero)}.pdf`,html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(html).save();
-  }finally{
-    html.remove();
+  let prazoDias=Number(row.prazo_entrega_dias)||0;
+  if(!prazoDias&&row.af_dataISO&&row.limiteISO){
+    const inicio=new Date(`${row.af_dataISO}T12:00:00`);
+    const fim=new Date(`${row.limiteISO}T12:00:00`);
+    const calculado=Math.round((fim-inicio)/86400000);
+    if(Number.isFinite(calculado)&&calculado>0) prazoDias=calculado;
   }
+  const prazoTexto=prazoDias?`${prazoDias} dias`:(row.limiteISO?`até ${limite}`:'—');
+  await ensureLib('jspdf');
+  const {jsPDF}=window.jspdf;
+  const pdf=opcoes.pdf||new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  if(opcoes.adicionarPagina) pdf.addPage();
+  const x=18, pageWidth=210, contentWidth=174;
+  let y=17;
+  const setText=(size=9,style='normal',color=[17,17,17])=>{
+    pdf.setFont('helvetica',style);
+    pdf.setFontSize(size);
+    pdf.setTextColor(...color);
+  };
+  const wrapped=(text,maxWidth=contentWidth)=>{
+    const value=String(text??'—');
+    return pdf.splitTextToSize(value,maxWidth);
+  };
+  const writeWrapped=(text,{size=9,style='normal',gap=2,maxWidth=contentWidth,indent=0}={})=>{
+    setText(size,style);
+    const lines=wrapped(text,maxWidth-indent);
+    pdf.text(lines,x+indent,y);
+    y+=lines.length*(size*0.36)+gap;
+  };
+  const ensureSpace=(height)=>{
+    if(y+height<=280) return;
+    pdf.addPage();
+    y=18;
+  };
+  const drawInfoRow=(label,value)=>{
+    const labelWidth=48;
+    setText(8.5,'normal');
+    const valueLines=wrapped(value,contentWidth-labelWidth-4);
+    const h=Math.max(7,valueLines.length*3.5+3);
+    ensureSpace(h);
+    pdf.setDrawColor(120);
+    pdf.rect(x,y,labelWidth,h);
+    pdf.rect(x+labelWidth,y,contentWidth-labelWidth,h);
+    setText(8.5,'bold');
+    pdf.text(label,x+2,y+4.7);
+    setText(8.5,'normal');
+    pdf.text(valueLines,x+labelWidth+2,y+4.7);
+    y+=h;
+  };
+  setText(11,'bold');
+  pdf.text('PREFEITURA DE SOROCABA - SECRETARIA DA SAÚDE',pageWidth/2,y,{align:'center'});
+  y+=8;
+  setText(15,'bold');
+  pdf.text('AUTORIZAÇÃO DE FORNECIMENTO',pageWidth/2,y,{align:'center'});
+  y+=6;
+  setText(10.5,'bold');
+  pdf.text(`AF nº ${row.af_numero} - ${afData}`,pageWidth/2,y,{align:'center'});
+  y+=5;
+  pdf.setDrawColor(17);
+  pdf.setLineWidth(.6);
+  pdf.line(x,y,x+contentWidth,y);
+  y+=8;
+  writeWrapped(`Autoriza-se o fornecimento referente ao ${cplTexto}, Contrato SIAM Nº ${contrato}, conforme item relacionado abaixo:`,{size:9.5,gap:4});
+  writeWrapped(`- Empenho: ${empPDF||'—'}`,{size:9.5,style:'bold',gap:4});
+  writeWrapped('Lembrando que a entrega deverá ser realizada no endereço abaixo mediante agendamento prévio através de e-mail ou telefone nos contatos:',{size:9.5,style:'bold',gap:1});
+  writeWrapped('patrimonio@sorocaba.sp.gov.br e telefone (15) 3333-1974:',{size:9.5,style:'bold',gap:4});
+  const addressLines=wrapped('Rua Comandante Salgado, 2443 - Vila Hortência - BLOCO 5/6 - CEP: 18020-264',contentWidth-10);
+  const addressHeight=16+addressLines.length*3.5;
+  ensureSpace(addressHeight);
+  pdf.setFillColor(245,245,245);
+  pdf.rect(x,y,contentWidth,addressHeight,'F');
+  pdf.setDrawColor(17);
+  pdf.setLineWidth(1);
+  pdf.line(x,y,x,y+addressHeight);
+  setText(9.5,'bold');
+  pdf.text('Almoxarifado de Bens (Patrimônio)',x+5,y+5);
+  setText(9.2,'normal');
+  pdf.text(addressLines,x+5,y+10);
+  setText(9.2,'bold');
+  pdf.text(`Prazo de entrega: ${prazoTexto}`,x+5,y+14+addressLines.length*3.5);
+  y+=addressHeight+5;
+  setText(9.5,'bold');
+  pdf.text('Dados do fornecimento',x,y);
+  y+=3;
+  drawInfoRow('Processo/CPL',cplTexto);
+  drawInfoRow('Contrato SIAM',contrato);
+  drawInfoRow('Fornecedor',empresa);
+  drawInfoRow('CNPJ',cnpj);
+  drawInfoRow('Empenho',empPDF||'—');
+  drawInfoRow('Objeto',objeto);
+  drawInfoRow('Data limite',limite);
+  y+=5;
+  const columns=[62,43,13,28,28];
+  const headers=['Item','Unidade destinatária','Qtde','Valor unitário','Valor total'];
+  const values=[row.item||'—',row.unidade||'—',qtde||'—',unit?fmtFull(unit):'—',total?fmtFull(total):'—'];
+  const itemLines=wrapped(values[0],columns[0]-4);
+  const unitLines=wrapped(values[1],columns[1]-4);
+  const rowHeight=Math.max(7,itemLines.length*3.5+3,unitLines.length*3.5+3);
+  ensureSpace(7+rowHeight);
+  let cx=x;
+  headers.forEach((header,i)=>{
+    pdf.setFillColor(238,238,238);
+    pdf.setDrawColor(120);
+    pdf.rect(cx,y,columns[i],7,'FD');
+    setText(7.8,'bold');
+    pdf.text(wrapped(header,columns[i]-3),cx+columns[i]/2,y+4.5,{align:'center'});
+    cx+=columns[i];
+  });
+  y+=7;
+  cx=x;
+  values.forEach((value,i)=>{
+    pdf.setDrawColor(120);
+    pdf.rect(cx,y,columns[i],rowHeight);
+    setText(7.8,'normal');
+    const lines=i===0?itemLines:(i===1?unitLines:wrapped(value,columns[i]-3));
+    pdf.text(lines,i>=2?cx+columns[i]-2:cx+2,y+4.5,{align:i>=2?'right':'left'});
+    cx+=columns[i];
+  });
+  y+=rowHeight+6;
+  ensureSpace(42);
+  writeWrapped('Observações:',{size:9.5,style:'bold',gap:2});
+  writeWrapped(`- Deverá constar no documento fiscal o nº da CPL: ${cplNumero}   Contrato: ${contrato}, e o nº de Empenho.`,{size:8.8,style:'bold',gap:2});
+  writeWrapped(`- Empenho: ${empPDF||'—'}`,{size:8.8,style:'bold',gap:2});
+  writeWrapped('Bem como os dados bancários para pagamento.',{size:8.8,style:'bold',gap:10});
+  pdf.setDrawColor(17);
+  pdf.setLineWidth(.3);
+  pdf.line(63,y,147,y);
+  y+=5;
+  setText(9.2,'bold');
+  pdf.text(String(responsavel),pageWidth/2,y,{align:'center'});
+  y+=4;
+  setText(8.8,'normal');
+  pdf.text('Secretaria da Saúde - Prefeitura de Sorocaba',pageWidth/2,y,{align:'center'});
+  if(opcoes.salvar!==false) pdf.save(`AF-${_safeFileName(row.af_numero)}.pdf`);
+  return pdf;
 }
-function _ceAdvElegivel(r){ return !r.recebido && !r.cancelado && !!(r.contrato||r.processo); }
+async function baixarAFsLote(rowsSelecionadas=null,opcoes={}){
+  const rows=(Array.isArray(rowsSelecionadas)?rowsSelecionadas:_ceSelRows()).filter(r=>!!r.af_numero&&!r.cancelado);
+  const minimo=opcoes.single?1:2;
+  if(rows.length<minimo){ if(window.toast) toast(opcoes.single?'Este item ainda não tem AF disponível para download.':'Selecione pelo menos duas AFs emitidas do mesmo contrato.','error'); return; }
+  const contratos=new Set(rows.map(_ceAdvLockKey).filter(Boolean));
+  if(contratos.size!==1){ if(window.toast) toast('As AFs selecionadas precisam pertencer exatamente ao mesmo contrato.','error'); return; }
+  const numerosAF=new Set(rows.map(r=>String(r.af_numero||'').trim().toLowerCase()));
+  const datasAF=new Set(rows.map(r=>String(r.af_dataISO||'').trim()));
+  if(numerosAF.size!==1||datasAF.size!==1){
+    if(window.toast) toast('Para consolidar, os itens precisam ter o mesmo número e a mesma data de AF.','error');
+    return;
+  }
+  let c={};
+  const contratoId=rows.find(r=>r.contrato_id)?.contrato_id;
+  if(contratoId){
+    const {data,error}=await sb.from('contratos').select('id,cpl,numero_contrato,prestador,cnpj,objeto,secao').eq('id',contratoId).maybeSingle();
+    if(error){ if(window.toast) toast('Não foi possível consultar os dados do contrato.','error'); return; }
+    c=data||{};
+  }
+  const itens=[];
+  for(const row of rows){
+    let empenho=row.empenho||'';
+    if(row.tipo==='ATA'&&row.exec_id){
+      const {data:ex}=await sb.from('atas_execucao').select('id,empenho,emenda_item_id').eq('id',row.exec_id).maybeSingle();
+      empenho=await _ataExecEmpenhoVinculado({...row,...(ex||{})})||empenho;
+    }else{
+      empenho=await _itemEmpenhoVinculado(row)||empenho;
+    }
+    if(empenho) row.empenho=empenho;
+    const qtde=Number(row.qtde)||0;
+    const unit=Number(row.valor_item)||0;
+    itens.push({
+      empenho:empenho||'—',
+      item:row.item||'—',
+      unidade:row.unidade||'—',
+      qtde:qtde||'—',
+      unit,
+      total:unit&&qtde?unit*qtde:0,
+      limite:row.limiteISO?fmtDate(row.limiteISO):'—'
+    });
+  }
+  await ensureLib('jspdf');
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  const x=18, pageWidth=210, contentWidth=174;
+  const afNumero=String(rows[0].af_numero).trim();
+  const afData=rows[0].af_dataISO?fmtDate(rows[0].af_dataISO):'—';
+  const empresa=c.prestador||rows[0].empresa||'—';
+  let contrato=c.numero_contrato||rows[0].contrato||'—';
+  if(!c.numero_contrato&&String(contrato).includes('·')) contrato=String(contrato).split('·').pop().trim();
+  contrato=String(contrato).replace(/^(?:contrato\s*)?(?:siam\s*)?(?:n[º°o.]?\s*)/i,'').trim()||'—';
+  const cplRaw=String(rows[0].processo||c.cpl||'—').trim();
+  const cplNumero=cplRaw.replace(/^cpl\s*[:nº°o.-]*\s*/i,'').trim()||'—';
+  const cplTexto=cplNumero==='—'?'CPL —':`CPL ${cplNumero}`;
+  const responsavel=currentProfile?.nome||currentUser?.email||currentProfile?.email||'Responsável';
+  const empenhos=[...new Set(itens.map(item=>item.empenho).filter(v=>v&&v!=='—'))];
+  const totalGeral=itens.reduce((s,item)=>s+item.total,0);
+  const limites=[...new Set(itens.map(item=>item.limite).filter(v=>v&&v!=='—'))];
+  let y=17;
+  const setText=(size=9,style='normal',color=[17,17,17])=>{
+    pdf.setFont('helvetica',style);
+    pdf.setFontSize(size);
+    pdf.setTextColor(...color);
+  };
+  const wrapped=(text,maxWidth=contentWidth)=>pdf.splitTextToSize(String(text??'—'),maxWidth);
+  const writeWrapped=(text,{size=9,style='normal',gap=2,maxWidth=contentWidth,indent=0}={})=>{
+    setText(size,style);
+    const lines=wrapped(text,maxWidth-indent);
+    pdf.text(lines,x+indent,y);
+    y+=lines.length*(size*.36)+gap;
+  };
+  const drawPageHeader=(continuacao=false)=>{
+    setText(11,'bold');
+    pdf.text('PREFEITURA DE SOROCABA - SECRETARIA DA SAÚDE',pageWidth/2,y,{align:'center'});
+    y+=continuacao?7:8;
+    setText(continuacao?12:15,'bold');
+    pdf.text(continuacao?'AUTORIZAÇÃO DE FORNECIMENTO - CONTINUAÇÃO':'AUTORIZAÇÃO DE FORNECIMENTO',pageWidth/2,y,{align:'center'});
+    y+=6;
+    setText(10.5,'bold');
+    pdf.text(`AF nº ${afNumero} - ${afData}`,pageWidth/2,y,{align:'center'});
+    y+=5;
+    pdf.setDrawColor(17);
+    pdf.setLineWidth(.6);
+    pdf.line(x,y,x+contentWidth,y);
+    y+=continuacao?6:8;
+  };
+  const columns=[46,29,39,10,24,26];
+  const headers=['Item','Empenho','Unidade destinatária','Qtde','Valor unit.','Valor total'];
+  const drawTableHeader=()=>{
+    let cx=x;
+    headers.forEach((header,i)=>{
+      pdf.setFillColor(238,238,238);
+      pdf.setDrawColor(120);
+      pdf.rect(cx,y,columns[i],8,'FD');
+      setText(7.3,'bold');
+      const lines=wrapped(header,columns[i]-3);
+      pdf.text(lines,cx+columns[i]/2,y+3.5,{align:'center'});
+      cx+=columns[i];
+    });
+    y+=8;
+  };
+  const addContinuationPage=()=>{
+    pdf.addPage();
+    y=17;
+    drawPageHeader(true);
+    drawTableHeader();
+  };
+  const drawSummary=()=>{
+    const supplierLines=wrapped(empresa,108);
+    const supplierHeight=Math.max(12,supplierLines.length*3.2+5);
+    const empenhoLines=wrapped(empenhos.length?empenhos.join(', '):'—',contentWidth-8);
+    const empenhoHeight=Math.max(11,empenhoLines.length*3.2+5);
+    const summaryHeight=13+supplierHeight+empenhoHeight;
+    pdf.setFillColor(245,248,252);
+    pdf.setDrawColor(195,207,220);
+    pdf.roundedRect(x,y,contentWidth,summaryHeight,1.5,1.5,'FD');
+    pdf.setDrawColor(43,99,151);
+    pdf.setLineWidth(1.2);
+    pdf.line(x+1,y+1,x+1,y+summaryHeight-1);
+    setText(7.1,'bold',[73,91,110]);
+    pdf.text('PROCESSO / CPL',x+6,y+4.5);
+    pdf.text('CONTRATO SIAM',x+93,y+4.5);
+    setText(9.5,'bold');
+    pdf.text(cplTexto,x+6,y+9.5);
+    pdf.text(contrato,x+93,y+9.5);
+    const supplierY=y+13;
+    setText(7.1,'bold',[73,91,110]);
+    pdf.text('FORNECEDOR',x+6,supplierY+4.2);
+    pdf.text('CNPJ',x+126,supplierY+4.2);
+    setText(9,'bold');
+    pdf.text(supplierLines,x+6,supplierY+8.8);
+    setText(9,'normal');
+    pdf.text(c.cnpj||'—',x+126,supplierY+8.8);
+    const empenhoY=supplierY+supplierHeight;
+    pdf.setDrawColor(215,222,230);
+    pdf.setLineWidth(.2);
+    pdf.line(x+5,empenhoY,x+contentWidth-5,empenhoY);
+    setText(7.1,'bold',[73,91,110]);
+    pdf.text('EMPENHOS VINCULADOS',x+6,empenhoY+4.2);
+    setText(8.7,'bold');
+    pdf.text(empenhoLines,x+6,empenhoY+8.6);
+    y+=summaryHeight+5;
+  };
+  drawPageHeader();
+  drawSummary();
+  writeWrapped('Fica autorizado o fornecimento dos itens abaixo, observadas as condições do instrumento contratual.',{size:9.2,style:'italic',gap:4});
+  const endereco='Rua Comandante Salgado, 2443 - Vila Hortência - BLOCO 5/6 - CEP: 18020-264';
+  const addressLines=wrapped(endereco,contentWidth-10);
+  const addressHeight=27+addressLines.length*3.5+(limites.length===1?5:0);
+  pdf.setFillColor(247,248,250);
+  pdf.setDrawColor(195,207,220);
+  pdf.roundedRect(x,y,contentWidth,addressHeight,1.5,1.5,'FD');
+  pdf.setFillColor(43,99,151);
+  pdf.roundedRect(x,y,contentWidth,6,1.5,1.5,'F');
+  pdf.rect(x,y+3,contentWidth,3,'F');
+  setText(7.5,'bold',[255,255,255]);
+  pdf.text('ENTREGA MEDIANTE AGENDAMENTO OBRIGATÓRIO',x+5,y+4.1);
+  pdf.setFillColor(255,242,229);
+  pdf.rect(x+1,y+7,contentWidth-2,5,'F');
+  setText(8.1,'bold',[145,76,20]);
+  pdf.text('Não realizar a entrega sem agendamento prévio.',x+5,y+10.5);
+  setText(9.5,'bold');
+  pdf.text('Almoxarifado de Bens (Patrimônio)',x+5,y+17);
+  setText(9.1,'normal');
+  pdf.text(addressLines,x+5,y+21.5);
+  setText(8.4,'normal',[48,65,82]);
+  pdf.text('Agendar pelo e-mail patrimonio@sorocaba.sp.gov.br  |  telefone (15) 3333-1974',x+5,y+21.5+addressLines.length*3.5);
+  if(limites.length===1){
+    setText(8.7,'bold');
+    pdf.text(`Data limite de entrega: ${limites[0]}`,x+5,y+26+addressLines.length*3.5);
+  }
+  y+=addressHeight+5;
+  setText(9.5,'bold');
+  pdf.text('Itens autorizados',x,y);
+  y+=3;
+  drawTableHeader();
+  itens.forEach(item=>{
+    const values=[
+      item.item,
+      item.empenho,
+      item.unidade,
+      String(item.qtde),
+      item.unit?fmtFull(item.unit):'—',
+      item.total?fmtFull(item.total):'—'
+    ];
+    const lines=values.map((value,i)=>wrapped(value,columns[i]-4));
+    const rowHeight=Math.max(7,...lines.map(ls=>ls.length*3.2+3));
+    if(y+rowHeight>267) addContinuationPage();
+    let cx=x;
+    lines.forEach((cellLines,i)=>{
+      pdf.setDrawColor(120);
+      pdf.rect(cx,y,columns[i],rowHeight);
+      setText(7.4,'normal');
+      const numeric=i>=3;
+      pdf.text(cellLines,numeric?cx+columns[i]-2:cx+2,y+4.2,{align:numeric?'right':'left'});
+      cx+=columns[i];
+    });
+    y+=rowHeight;
+  });
+  if(y+8>267) addContinuationPage();
+  pdf.setFillColor(245,245,245);
+  pdf.setDrawColor(120);
+  pdf.rect(x,y,contentWidth,8,'FD');
+  setText(8.5,'bold');
+  pdf.text('TOTAL GERAL',x+contentWidth-27,y+5.2,{align:'right'});
+  pdf.text(totalGeral?fmtFull(totalGeral):'—',x+contentWidth-2,y+5.2,{align:'right'});
+  y+=14;
+  const fiscalTexto=`1. No documento fiscal, informar obrigatoriamente: CPL ${cplNumero}; Contrato SIAM ${contrato}; Empenho(s): ${empenhos.length?empenhos.join(', '):'—'}.`;
+  const pagamentoTexto='2. Os dados bancários também devem constar na nota fiscal para viabilizar o pagamento.';
+  const fiscalLines=wrapped(fiscalTexto,contentWidth-10);
+  const pagamentoLines=wrapped(pagamentoTexto,contentWidth-10);
+  const instrucoesHeight=11+fiscalLines.length*3.5+pagamentoLines.length*3.5;
+  if(y+instrucoesHeight+24>280){
+    pdf.addPage();
+    y=17;
+    drawPageHeader(true);
+  }
+  pdf.setFillColor(255,249,235);
+  pdf.setDrawColor(224,183,94);
+  pdf.roundedRect(x,y,contentWidth,instrucoesHeight,1.5,1.5,'FD');
+  pdf.setFillColor(166,104,0);
+  pdf.roundedRect(x,y,contentWidth,6,1.5,1.5,'F');
+  pdf.rect(x,y+3,contentWidth,3,'F');
+  setText(7.6,'bold',[255,255,255]);
+  pdf.text('INSTRUÇÕES OBRIGATÓRIAS PARA FATURAMENTO',x+5,y+4.1);
+  setText(8.8,'bold',[63,48,20]);
+  pdf.text(fiscalLines,x+5,y+10);
+  setText(8.8,'normal',[63,48,20]);
+  pdf.text(pagamentoLines,x+5,y+10+fiscalLines.length*3.5);
+  y+=instrucoesHeight+10;
+  pdf.setDrawColor(17);
+  pdf.setLineWidth(.3);
+  pdf.line(63,y,147,y);
+  y+=5;
+  setText(9.2,'bold');
+  pdf.text(String(responsavel),pageWidth/2,y,{align:'center'});
+  y+=4;
+  setText(8.8,'normal');
+  pdf.text('Secretaria da Saúde - Prefeitura de Sorocaba',pageWidth/2,y,{align:'center'});
+  const arquivo=opcoes.single?`AF-${_safeFileName(afNumero)}.pdf`:`AF-${_safeFileName(afNumero)}-${_safeFileName(contrato)}.pdf`;
+  pdf.save(arquivo);
+  return pdf;
+}
+function _ceAdvElegivel(r){ return !r.recebido && !r.cancelado && !!_ceAdvLockKey(r); }
 function _ceAdvCheckbox(r){
   if(!_ceAdvElegivel(r)||!podeEditar('itens')) return '';
   const key=_ceRowKey(r), checked=_ceAdvSel.has(key);
@@ -1471,13 +1871,20 @@ function _ceRecLoteSelecionadas(){
 }
 function _ceAdvBar(){
   const n=_ceAdvSel.size; if(!n) return '';
-  const pendentesAF=_ceSelRows().filter(r=>r._pendente && r.tipo==='Aquisição');
+  const selecionadas=_ceSelRows();
+  const pendentesAF=selecionadas.filter(r=>r._pendente && r.tipo==='Aquisição');
   const afBtn=pendentesAF.length?`<button onclick="abrirAFLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar AF (${pendentesAF.length})</button>`:'';
+  const afsEmitidas=selecionadas.filter(r=>!!r.af_numero&&!r.cancelado);
+  const baixarAfsBtn=afsEmitidas.length>=2?`<button onclick="baixarAFsLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--surface);color:var(--blue);cursor:pointer;font-weight:600">⬇ Baixar AFs (${afsEmitidas.length})</button>`:'';
+  const emailAfsBtn=afsEmitidas.length?`<button onclick="abrirEmailAFsLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid #7c3aed;background:#f5f3ff;color:#6d28d9;cursor:pointer;font-weight:600">✉ Preparar e-mail (${afsEmitidas.length})</button>`:'';
   const recebiveis=_ceRecLoteSelecionadas();
   const recBtn=recebiveis.length?`<button onclick="abrirRecebimentoLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer;font-weight:600">📥 Gerar recebimento (${recebiveis.length})</button>`:'';
+  const contratoLabel=selecionadas[0]?.contrato||'—';
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-bg,#fff7e6);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:10px">
-    <span style="font-size:12px;color:var(--text2)">${n} item(ns) · contrato <b>${_sanEsc(_ceAdvLock||'—')}</b></span>
+    <span style="font-size:12px;color:var(--text2)">${n} item(ns) · contrato <b>${_sanEsc(contratoLabel)}</b></span>
     ${afBtn}
+    ${baixarAfsBtn}
+    ${emailAfsBtn}
     ${recBtn}
     <button onclick="abrirAdvertenciaCE()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar advertência</button>
     <button onclick="_ceAdvLimpar()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Limpar seleção</button>

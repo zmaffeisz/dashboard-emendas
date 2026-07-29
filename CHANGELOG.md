@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-07-29
+
+- **Download de AFs em lote por contrato:** a seleção do Controle de Entregas agora oferece
+  `Baixar AFs (N)` quando houver duas ou mais AFs já emitidas. Quando número e data da AF
+  são iguais, o download gera uma autorização consolidada: dados do contrato, endereço,
+  observações e assinatura aparecem uma única vez, enquanto itens e empenhos são reunidos
+  em uma tabela com total geral. Lotes extensos podem continuar em páginas adicionais,
+  mantendo uma única assinatura ao final. A seleção permanece travada pelo `contrato_id`,
+  sem usar apenas a CPL como fallback.
+
+- **Apresentação da AF consolidada:** a abertura deixou de usar saudação e texto de e-mail.
+  Processo, contrato, fornecedor e empenhos passaram a compor um quadro de identificação,
+  enquanto local, contatos e prazo aparecem em um bloco próprio de entrega e agendamento.
+  O botão de download da AF em uma linha também passou a usar esse mesmo modelo visual.
+  A entrega agora evidencia que o agendamento prévio é obrigatório, e as instruções de
+  faturamento e pagamento passaram a aparecer em quadro destacado.
+
+- **PDF da Autorização de Fornecimento:** o download individual da AF no Controle de
+  Entregas agora inclui o texto de orientação ao fornecedor, CPL, contrato SIAM, empenho,
+  prazo, endereço e contatos fixos do Almoxarifado de Bens (Patrimônio), observações para
+  o documento fiscal e assinatura com o nome da pessoa logada, sem exibir cargo. A
+  geração passou a usar instruções vetoriais do jsPDF, sem captura de tela, eliminando os
+  PDFs em branco observados em alguns navegadores. Os assets receberam versionamento para
+  impedir o reaproveitamento do gerador anterior em cache.
+
 ## 2026-07-27
 
 - **Execuções pendentes de ATA encerrada permanecem em acompanhamento:** o encerramento
