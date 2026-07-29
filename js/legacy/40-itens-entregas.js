@@ -1280,7 +1280,7 @@ function renderItensEntregas(){
     if(entregue && fP!=='recebido') return false;
     if(fT && r.tipo!==fT) return false;
     if(fP && r.status!==fP) return false;
-    if(q){ const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    if(q){ const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade,r.empenho,r.af_dataISO,r.af_dataISO?fmtDate(r.af_dataISO):'',r.nota_fiscal,r.marca,r.modelo,r.patrimonio,r.numero_serie].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
     return true;
   }).sort((a,b)=>{ // atrasados primeiro, depois por dias restantes
     const ord={'atrasado':0,'aguardando AF':1,'vence hoje':2,'no prazo':3,'sem prazo':4,'recebido':5,'cancelado':6};
