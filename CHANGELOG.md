@@ -2,6 +2,8 @@
 
 ## 2026-07-30
 
+- **Busca geral de Emendas:** a busca da visualização por emenda agora também encontra o
+  objeto da emenda, além dos demais dados do item e do fluxo.
 - **Itens agrupados ao gerar contrato:** itens disponíveis com a mesma descrição agora
   aparecem em um único card, com quantidade total fixa e preenchimento compartilhado de
   marca, modelo e valor unitário. Cada origem continua sendo gravada separadamente e pode
