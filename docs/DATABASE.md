@@ -47,6 +47,7 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260723192606 | `servico_trimestral_fixo` — periodicidade trimestral em processos, contratos, vigências, histórico e medições |
 | 20260730211951 | `ata_reajustes_e_data_base` — data-base dos contratos, histórico de preço e pagamento complementar por execução de ATA |
 | 20260730212030 | `indexar_fks_ata_reajustes` — índices das relações organizacionais e de emenda dos reajustes |
+| 20260730220523 | `criar_empenho_obrigatorio_reajuste_ata` — exige novo empenho e NF, cria o empenho e vincula integralmente a diferença |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de

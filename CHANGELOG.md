@@ -10,7 +10,9 @@
   fluxo preserva o preço original, registra versões de preço com vigência e mostra AFs,
   NFs posteriores e AFs ainda não recebidas como candidatas. Cada execução pode receber
   separadamente apenas a diferença do reajuste, por recurso próprio ou por uma nova linha
-  rastreável na emenda selecionada.
+  rastreável na emenda selecionada. O pagamento exige um novo empenho e uma NF informados
+  no ato; o empenho é criado, totalmente vinculado à diferença e mostrado no histórico
+  discreto da execução e do “Ver tudo”.
 - **Prorrogação separada de reajuste:** a prorrogação de ATA deixou de alterar diretamente
   o valor unitário. Mudanças de preço passam exclusivamente pelo fluxo de reajuste, com
   data, percentual informado e histórico.

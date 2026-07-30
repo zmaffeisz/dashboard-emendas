@@ -659,6 +659,27 @@ function _ataDetalheCampo(label,valor){
   return `<div class="ata-exec-detail-field"><span>${_sanEsc(label)}</span><strong>${_sanEsc(String(valor))}</strong></div>`;
 }
 
+function _renderHistoricoReajustesExecAta(execId){
+  const registros=atasExecReajustes
+    .filter(r=>r.status==='ATIVO'&&String(r.ata_execucao_id)===String(execId))
+    .sort((a,b)=>String(b.criado_em||'').localeCompare(String(a.criado_em||'')));
+  if(!registros.length) return '';
+  return `<div style="margin-top:12px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+    <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Histórico de reajustes</div>
+    ${registros.map(r=>{
+      const regra=atasReajustes.find(x=>String(x.id)===String(r.ata_reajuste_id))||{};
+      return `<div style="font-size:11px;color:var(--text2);line-height:1.55">
+        <strong style="color:var(--text)">Reajuste ${regra.data_vigencia?`desde ${fmtDate(regra.data_vigencia)}`:''}</strong>
+        · ${r.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'}
+        · diferença ${fmtFull(r.valor_reajuste_total)}
+        · empenho ${_sanEsc(r.empenho||'—')}
+        · NF ${_sanEsc(r.nota_fiscal||'—')}
+        ${r.criado_em?`· registrado em ${fmtDate(_toISODate(r.criado_em))}`:''}
+      </div>`;
+    }).join('<div style="height:1px;background:var(--border);margin:5px 0"></div>')}
+  </div>`;
+}
+
 function _renderDetalheExecAta(exec){
   const detalhe=_atasExecDetalhes.get(String(exec.id));
   if(!detalhe) return `<tr class="ata-exec-detail-row"><td colspan="14"><div class="ata-exec-detail-loading"><span class="spinner"></span> Carregando patrimônios e informações completas...</div></td></tr>`;
@@ -685,7 +706,7 @@ function _renderDetalheExecAta(exec){
   }).join('');
   const unidadesHtml=detalhe.unidades.length?`<div class="ata-exec-units-wrap"><table class="ata-exec-units-table"><thead><tr><th>#</th><th>Patrimônio</th><th>Nº de série</th><th>NF</th><th>Recebido em</th><th>Recebido por</th></tr></thead><tbody>${linhas}</tbody></table></div>`:`<div class="ata-exec-consolidated">${exec.possui_patrimonio===false?'Item sem patrimônio: quantidade mantida consolidada.':'Nenhuma unidade física/patrimônio registrado nesta execução.'}</div>`;
   return `<tr class="ata-exec-detail-row"><td colspan="14"><div class="ata-exec-detail-panel">
-    <div class="ata-exec-detail-title"><span>Patrimônios e unidades recebidas</span><span>${detalhe.unidades.length} unidade(s) física(s)</span></div>${unidadesHtml}
+    <div class="ata-exec-detail-title"><span>Patrimônios e unidades recebidas</span><span>${detalhe.unidades.length} unidade(s) física(s)</span></div>${unidadesHtml}${_renderHistoricoReajustesExecAta(exec.id)}
   </div></td></tr>`;
 }
 
@@ -708,7 +729,7 @@ function verTudoUnidadeExecAta(execId,unidadeId){
   ].filter(([,v])=>v!=null&&String(v).trim()!=='');
   const modal=document.getElementById('modal-inv-detalhe');
   document.body.appendChild(modal);
-  document.getElementById('inv-detalhe-content').innerHTML=`<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(exec.item||'Item')} · Patrimônio ${_sanEsc(u.patrimonio||'—')}</div><div>${campos.map(([l,v])=>_invField(_sanEsc(l),_sanEsc(String(v)))).join('')}</div>${_invDocumentoAcoes(nf.arquivo_url,exec.termo_arquivo)}`;
+  document.getElementById('inv-detalhe-content').innerHTML=`<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(exec.item||'Item')} · Patrimônio ${_sanEsc(u.patrimonio||'—')}</div><div>${campos.map(([l,v])=>_invField(_sanEsc(l),_sanEsc(String(v)))).join('')}</div>${_renderHistoricoReajustesExecAta(exec.id)}${_invDocumentoAcoes(nf.arquivo_url,exec.termo_arquivo)}`;
   modal.classList.add('active');
 }
 
@@ -1008,8 +1029,8 @@ async function abrirReajusteExecucaoAta(execId){
   document.getElementById('aer-valor-anterior').value=anterior.toFixed(2);
   document.getElementById('aer-valor-novo').value=reajuste?.valor_unitario_novo??'';
   document.getElementById('aer-quantidade').value=exec.qtde||'';
-  document.getElementById('aer-empenho').value=exec.empenho||'';
-  document.getElementById('aer-nf').value=exec.nf||'';
+  document.getElementById('aer-empenho').value='';
+  document.getElementById('aer-nf').value='';
   ['aer-data-vigencia','aer-percentual','aer-valor-novo'].forEach(id=>document.getElementById(id).readOnly=!!reajuste);
   if(reajuste){
     info.style.display='block';
@@ -1042,9 +1063,14 @@ async function salvarReajusteExecucaoAta(){
   const novo=Number(document.getElementById('aer-valor-novo').value);
   const quantidade=Number(exec.qtde)||0;
   const anterior=Number(document.getElementById('aer-valor-anterior').value)||0;
+  const empenho=document.getElementById('aer-empenho').value.trim();
+  const notaFiscal=document.getElementById('aer-nf').value.trim();
   if(!data||document.getElementById('aer-percentual').value===''||!novo){showMsg('aer','Informe data, porcentagem e novo valor (*).','err');return;}
   if(novo<=anterior){showMsg('aer','O valor reajustado deve ser maior que o valor original desta execução.','err');return;}
   if(!quantidade){showMsg('aer','A execução precisa ter quantidade válida para receber o reajuste.','err');return;}
+  if(!empenho){showMsg('aer','Informe o número do novo empenho específico do reajuste (*).','err');return;}
+  if(!notaFiscal){showMsg('aer','Informe o número da nota fiscal do reajuste (*).','err');return;}
+  if(!podeEditar('empenhos')){showMsg('aer','Seu usuário precisa de permissão para editar Empenhos, pois este reajuste criará um novo empenho.','err');return;}
   if(origem==='emenda'&&!emendaId){showMsg('aer','Selecione a emenda que pagará o reajuste (*).','err');return;}
   if(origem==='emenda'&&!podeEditar('dashboard')){showMsg('aer','Para criar a linha na emenda, seu usuário também precisa de permissão para editar Emendas.','err');return;}
   const btn=document.getElementById('aer-salvar');btn.disabled=true;btn.textContent='Registrando...';
@@ -1062,12 +1088,11 @@ async function salvarReajusteExecucaoAta(){
   const {error}=await sb.rpc('registrar_reajuste_execucao_ata',{
     p_ata_reajuste_id:reajusteId,p_ata_execucao_id:exec.id,
     p_origem_recurso:origem,p_emenda_id:emendaId,p_quantidade:quantidade,
-    p_empenho:document.getElementById('aer-empenho').value.trim()||null,
-    p_nota_fiscal:document.getElementById('aer-nf').value.trim()||null
+    p_empenho:empenho,p_nota_fiscal:notaFiscal
   });
   btn.disabled=false;btn.textContent='Registrar pagamento do reajuste';
   if(error){showMsg('aer','Erro: '+error.message,'err');return;}
-  showMsg('aer',origem==='emenda'?'✓ Reajuste registrado e linha criada na emenda.':'✓ Reajuste registrado com recurso próprio.','ok');
+  showMsg('aer',origem==='emenda'?'✓ Reajuste, novo empenho e linha da emenda registrados.':'✓ Reajuste e novo empenho registrados com recurso próprio.','ok');
   await loadAtas();
   if(origem==='emenda'&&typeof loadData==='function'){try{await loadData();}catch(e){console.error(e);}}
   setTimeout(()=>document.getElementById('modal-ata-exec-reajuste').classList.remove('active'),900);

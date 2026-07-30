@@ -1882,8 +1882,8 @@
           <div class="form-group"><div class="form-label">Valor unitário reajustado *</div><input type="number" id="aer-valor-novo" step="0.01" oninput="atualizarTotalExecReajusteAta()"></div>
           <div class="form-group"><div class="form-label">Quantidade da execução</div><input type="number" id="aer-quantidade" step="0.0001" min="0" readonly></div>
           <div class="form-group"><div class="form-label">Diferença a pagar</div><input type="text" id="aer-total" readonly></div>
-          <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="aer-empenho"></div>
-          <div class="form-group"><div class="form-label">Nota fiscal</div><input type="text" id="aer-nf"></div>
+          <div class="form-group"><div class="form-label">Novo empenho do reajuste *</div><input type="text" id="aer-empenho" autocomplete="off" placeholder="Informe o novo empenho" required></div>
+          <div class="form-group"><div class="form-label">Nota fiscal do reajuste *</div><input type="text" id="aer-nf" autocomplete="off" placeholder="Informe o número da NF" required></div>
           <div class="form-group full">
             <div class="form-label">Fonte do pagamento *</div>
             <div style="display:flex;gap:18px;flex-wrap:wrap">
@@ -1893,7 +1893,7 @@
           </div>
           <div class="form-group full" id="aer-emenda-wrap" style="display:none"><div class="form-label">Emenda que pagará o reajuste *</div><select id="aer-emenda"><option value="">Selecione a emenda...</option></select></div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:.25rem">Quando a fonte for Emenda, será criada uma linha separada na emenda com somente a diferença do reajuste. A execução e a nota fiscal originais não serão modificadas.</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:.25rem">Será criado um empenho exclusivo pelo valor da diferença. Quando a fonte for Emenda, também será criada uma linha separada na emenda. A execução, o empenho e a nota fiscal originais não serão modificados.</div>
         <div class="form-actions">
           <button class="btn-primary" id="aer-salvar" onclick="salvarReajusteExecucaoAta()">Registrar pagamento do reajuste</button>
           <button class="btn-secondary" onclick="document.getElementById('modal-ata-exec-reajuste').classList.remove('active')">Cancelar</button>
@@ -2951,7 +2951,7 @@
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260729-af-pdf-3"></script>
 <script src="js/legacy/10-chamados-inventario.js"></script>
-<script src="js/legacy/20-atas.js?v=20260730-ata-reajustes-2"></script>
+<script src="js/legacy/20-atas.js?v=20260730-ata-reajustes-3"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260730-status-flow"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260730-contract-item-groups-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260730-status-flow"></script>

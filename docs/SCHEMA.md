@@ -144,7 +144,8 @@ sobrescreve o valor original em `atas_itens`.
 
 Pagamento complementar de uma execução específica. Guarda a quantidade integral da
 execução, os valores anterior e reajustado, a diferença unitária e total, a origem do
-recurso e os vínculos opcionais com
+recurso, o número obrigatório da NF e o vínculo obrigatório `empenho_id` com o novo
+empenho criado para a diferença. Quando aplicável, guarda também os vínculos com
 `emendas`/`emenda_itens`. Cancelamentos são preservados por status, sem apagar a execução
 ou os documentos financeiros originais.
 
