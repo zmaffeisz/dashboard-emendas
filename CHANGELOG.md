@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-30
+
+- **Status da Emenda acompanha automaticamente o contrato:** enquanto o item ainda está
+  em licitação, a aba Emendas exibe o status manual definido em **Licitações em
+  andamento**. A partir do vínculo com um contrato, o status manual deixa de prevalecer
+  e a tela passa a refletir empenho, AF, recebimento e confirmação na unidade a partir
+  do Controle de Entregas.
+- **AF parcial refletida no andamento:** quando apenas parte da quantidade contratada
+  estiver autorizada, o item passa a indicar **AF parcial — saldo aguardando AF**, sem
+  aparentar que toda a quantidade já avançou para entrega ou recebimento.
+- **Licitação contratada sem edição residual:** itens que já viraram contrato continuam
+  travados para alteração manual e também deixam de oferecer a edição da data
+  **Desde** ou a barra de aplicação em massa quando não houver item licitatório
+  editável no processo.
+
 ## 2026-07-29
 
 - **Download de AFs em lote por contrato:** a seleção do Controle de Entregas agora oferece

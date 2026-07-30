@@ -95,14 +95,14 @@ async function loadData(){
         contrato_sim:(f?f.sim:"")||"",
         fornecedor_fluxo:(f?f.fornecedor:"")||"",
         status_raw:statusFinal,
-        // O status detalhado da licitação é uma informação própria do item.
-        // Não o descarte só porque o status operacional derivado mudou
-        // (por exemplo, ao vincular contrato ou iniciar a execução): a aba
-        // Emendas deve continuar exibindo o mesmo status escolhido em
-        // Licitações enquanto ele existir no item.
+        // O status manual da licitação vale somente até o item virar contrato.
+        // Depois disso, a aba Emendas exibe o andamento operacional derivado
+        // de empenhos, AFs, recebimentos e confirmações na unidade.
         status_licitacao:statusLicitacao||"",
         status_id:(i.status_id!=null?i.status_id:null),
         _status_derivado:!!statusFlow,
+        _temContrato:!!(f&&f.temContrato),
+        _temProcesso:!!(f&&f.temProcesso),
         nota_fiscal:nfFlow||(i.nota_fiscal||"").toString().trim(),
         empenho:empenhoFlow||(i.empenho||"").toString().trim(),
         patrimonio:patrimonioFlow||(i.patrimonio||"").toString().trim(),
@@ -680,7 +680,11 @@ function renderEmPorParlamentar(){
     </div>`;
   }).join('');
 }
-function _emStatusLabel(i){ return i.status_licitacao||i.status_cat||'—'; }
+function _emStatusLabel(i){
+  if(!i) return '—';
+  if(i._temContrato) return i.status_raw||i.status_cat||'—';
+  return i.status_licitacao||i.status_raw||i.status_cat||'—';
+}
 function _emStatusChip(i){
   const c=i.status_cat||'';
   const cor=/ENTREGUE/i.test(c)?'var(--green)':(/(FRACASS|CANCEL|SUSPEN)/i.test(c)?'var(--red)':'var(--text2)');

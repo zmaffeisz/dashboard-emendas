@@ -50,9 +50,18 @@
 ## 3. Licitação / status por item
 
 - O **status detalhado da licitação viaja por item** (`itens.status_lic_id`), não pela
-  emenda. `emenda_itens.status_id` permanece como categoria/fallback do cadastro; no painel,
-  a Emenda apenas **lê e exibe** o status real do item da licitação. Alterações feitas em
-  Licitações devem recarregar imediatamente o painel de Emendas.
+  emenda. `emenda_itens.status_id` permanece como categoria/fallback do cadastro.
+  Enquanto o item ainda não possui contrato, a aba **Emendas** exibe o status manual
+  definido em **Licitações em andamento**, e alterações feitas ali devem recarregar
+  imediatamente o painel.
+- A partir do vínculo do item com um contrato, o status manual da licitação deixa de
+  prevalecer na aba **Emendas**. O andamento passa a ser derivado automaticamente do
+  fluxo real: contrato, empenho, AF, recebimento e confirmação na unidade. O
+  `status_lic_id` anterior pode permanecer armazenado como histórico, mas não deve
+  substituir o status operacional.
+- Quando a soma autorizada em AF for menor que a quantidade contratada, o andamento
+  deve indicar **AF parcial — saldo aguardando AF**. Recebimento e confirmação também
+  só são considerados totais quando alcançam a quantidade completa do item.
 - Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
   com espaços.
 - Cada item de processo com natureza **Aquisição** ou **ATA de RP** deve possuir prazo de

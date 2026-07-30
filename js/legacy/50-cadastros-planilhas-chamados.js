@@ -1170,12 +1170,13 @@ function _flowStatusLicitacaoFromFlow(f){
 function _flowStatusFromFlow(f){
   if(!f) return "";
   const aut=Number(f.af.aut)||0, rec=Number(f.af.rec)||0, conf=Number(f.af.conf)||0, qtde=Number(f.qtde)||0;
-  const totalEsperado=aut||qtde||0;
+  const totalEsperado=qtde||aut||0;
   if(conf>0 && (!totalEsperado || conf>=totalEsperado)) return "ADQUIRIDO/ENTREGUE NA UNIDADE";
   if(conf>0) return "ENTREGA PARCIAL CONFIRMADA NA UNIDADE";
-  if(rec>0 && (!aut || rec>=aut)) return "RECEBIDO - AGUARDANDO CONFIRMACAO NA UNIDADE";
+  if(rec>0 && (!totalEsperado || rec>=totalEsperado)) return "RECEBIDO - AGUARDANDO CONFIRMACAO NA UNIDADE";
   if(rec>0) return "RECEBIDO PARCIAL - AGUARDANDO CONFIRMACAO NA UNIDADE";
-  if(aut>0) return "AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO";
+  if(aut>0 && (!totalEsperado || aut>=totalEsperado)) return "AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO";
+  if(aut>0) return "AF PARCIAL - SALDO AGUARDANDO AF";
   if(f._ataSolicitada) return "AGUARDANDO AF";
   if(f.temContrato) return f.empenhos&&f.empenhos.size?"AGUARDANDO AF":"CONTRATADO - AGUARDANDO EMPENHO/AF";
   if(f.temProcesso) return _flowStatusLicitacaoFromFlow(f)||"EM LICITAÇÃO";

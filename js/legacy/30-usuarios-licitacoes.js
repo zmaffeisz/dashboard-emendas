@@ -227,6 +227,7 @@ function renderLicitacoes(){
     const p=x.p; mostrados++;
     const podeExcluir=podeEd && !Number(p.n_contratos||0);
     const items=x.naLic;
+    const itensEditaveis=items.filter(i=>!_licItemExecutado(i)&&!_licItemContratado(i));
     const itensServico=x.itensServico;
     const totalItensExibidos=items.length||itensServico.length;
     // Nesta aba, o contrato vinculado prevalece apenas na apresentação do processo.
@@ -249,7 +250,7 @@ function renderLicitacoes(){
         ${podeEd?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
       </div>`;
     if(aberto){
-      if(podeEd&&(items.length||(!items.length&&itensServico.length))){
+      if(podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))){
         const opts=manuais.map(s=>`<option value="${s.id}">${_sanEsc(s.nome)}</option>`).join('');
         const bulkFn=items.length?'cpBulkApply':'cpBulkApplyServicoMensal';
         bloco+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;background:rgba(55,138,221,.08);border-top:1px solid var(--border)">
@@ -304,7 +305,7 @@ function renderLicitacoes(){
           <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}</td>
           <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
           <td style="padding:8px 8px">${ctrl}</td>
-          <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
+          <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
         </tr>`;
       });
       bloco+=`</tbody></table>`;
