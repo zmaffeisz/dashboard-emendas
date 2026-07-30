@@ -2,6 +2,8 @@
 
 ## 2026-07-30
 
+- **Itens de contratos de aquisição:** a visualização expandida agora mostra patrimônio,
+  número de série e empenho por item, além de oferecer **Ver tudo** para abrir os detalhes do contrato.
 - **Situação manual nas Licitações:** o antigo status manual fixo foi substituído por uma
   secretaria escolhida no cadastro institucional e uma situação livre de até 55 caracteres.
   O campo **Desde** e os estados automáticos continuam preservados.

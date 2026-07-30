@@ -2789,6 +2789,7 @@ function _ctCardItensHtml(contratoId){
   const mensal=itens.every(i=>i.origem==='servico_mensal'||i.origem==='servico_trimestral');
   const trimestral=itens.every(i=>i.origem==='servico_trimestral');
   const porDemanda=itens.every(i=>i.origem==='servico_demanda');
+  const temAquisicao=itens.some(i=>i.origem==='aquisicao');
   const linhas=itens.map(i=>{
     const valorUnit=_ctNum(i.valor_contratado??i.valor_estimado);
     const qtde=Number(i.qtde)||0;
@@ -2803,13 +2804,17 @@ function _ctCardItensHtml(contratoId){
     const saldo=qtde-executado;
     const valorTotal=valorUnit*qtde;
     const valorSaldo=Math.max(saldo,0)*valorUnit;
-    return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${executado}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorTotal?_ctMoney(valorTotal):'-'}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--text)'}">${_ctMoney(valorSaldo)}</td></tr>`;
+    const patrimonio=(i._patrimonios||[]).join(', ')||'—';
+    const serie=(i._series||[]).join(', ')||'—';
+    const empenho=(i._empenhos||[]).join(', ')||'—';
+    const dadosAquisicao=temAquisicao?`<td style="padding:7px 10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(patrimonio)}">${_sanEsc(patrimonio)}</td><td style="padding:7px 10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(serie)}">${_sanEsc(serie)}</td><td style="padding:7px 10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_sanEsc(empenho)}">${_sanEsc(empenho)}</td>`:'';
+    return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${executado}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorTotal?_ctMoney(valorTotal):'-'}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--text)'}">${_ctMoney(valorSaldo)}</td>${dadosAquisicao}<td style="padding:7px 10px;text-align:right"><button onclick="event.stopPropagation();verTudoContratoItem('${contratoId}','${i.id}')" style="font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">🔎 Ver tudo</button></td></tr>`;
   }).join('');
   const header=mensal
     ?`<th style="padding:7px 10px">Item</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor ${trimestral?'trimestral':'mensal'}</th>`
-    :`<th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Marca/Modelo</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">${porDemanda?'Executado':'Recebido'}</th><th style="padding:7px 10px;text-align:right">Saldo</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor total</th><th style="padding:7px 10px;text-align:right">Valor do saldo</th>`;
+    :`<th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Marca/Modelo</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">${porDemanda?'Executado':'Recebido'}</th><th style="padding:7px 10px;text-align:right">Saldo</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor total</th><th style="padding:7px 10px;text-align:right">Valor do saldo</th>${temAquisicao?'<th style="padding:7px 10px">Patrimônio</th><th style="padding:7px 10px">Nº de série</th><th style="padding:7px 10px">Empenho</th>':''}<th style="padding:7px 10px;text-align:right">Ações</th>`;
   return `<div class="ct-contract-items-table${mensal?' is-monthly':''}">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:${mensal?'620px':'860px'}">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:${mensal?'620px':(temAquisicao?'1180px':'940px')}">
       <thead><tr style="background:var(--blue-bg);color:var(--blue-text);text-align:left">${header}</tr></thead>
       <tbody>${linhas}</tbody>
     </table>
@@ -2863,6 +2868,15 @@ function _ctLinhaItensHtml(contratoId){
   </td></tr>`;
 }
 // Itens de serviço mensal fixo: sem marca/modelo, recebido, saldo ou AF — só qtde contratada e valor mensal.
+function verTudoContratoItem(contratoId,itemId){
+  const item=(ctItensPorContrato[contratoId]||[]).find(i=>String(i.id)===String(itemId));
+  if(!item) return;
+  if(item.emenda_item_id && typeof verTudoEmendaItem==='function'){
+    verTudoEmendaItem(String(item.emenda_item_id));
+    return;
+  }
+  alert('Este item não possui vínculo com uma emenda para abrir os Detalhes do Item.');
+}
 function _ctLinhaItensServicoMensalHtml(itens,eventos=[],trimestral=false){
   const linhas=itens.map(i=>{
     const qtde=Number(i.qtde)||0;
@@ -2895,7 +2909,7 @@ async function ctToggleExpand(id){
   if(ctExpandido[id] && !ctItensPorContrato[id]){
     renderTabelaContratos();
     const [itensRes,medicoesRes]=await Promise.all([
-      sb.from('itens').select('id,descricao,qtde,marca,modelo,origem,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)').eq('contrato_id',id).in('origem',['aquisicao','servico_mensal','servico_trimestral','servico_demanda']).order('created_at'),
+      sb.from('itens').select('id,emenda_item_id,descricao,qtde,marca,modelo,origem,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status,empenho)').eq('contrato_id',id).in('origem',['aquisicao','servico_mensal','servico_trimestral','servico_demanda']).order('created_at'),
       sb.from('contratos_medicoes').select('status,contratos_medicao_itens(item_id,quantidade_executada,quantidade_aceita)').eq('contrato_id',id)
     ]);
     const statusQueExecuta=new Set(['aprovada','aprovada_pelo_fiscal','aprovada_com_glosa','validada','encaminhada']);
@@ -2906,7 +2920,21 @@ async function ctToggleExpand(id){
         if(itemId) medidoPorItem.set(itemId,(medidoPorItem.get(itemId)||0)+_ctNum(mi.quantidade_aceita??mi.quantidade_executada));
       });
     });
-    ctItensPorContrato[id]=itensRes.error?[]:(itensRes.data||[]).map(item=>({...item,_qtdeMedida:medidoPorItem.get(String(item.id))||0}));
+    const itensBase=itensRes.error?[]:(itensRes.data||[]);
+    const itemIds=itensBase.map(i=>i.id).filter(Boolean);
+    const [unidadesRes,empenhosRes]=itemIds.length?await Promise.all([
+      sb.from('itens_entregas_unidades').select('item_id,patrimonio,numero_serie').in('item_id',itemIds),
+      sb.from('empenho_itens').select('item_id,empenhos(numero)').in('item_id',itemIds)
+    ]):[{data:[]},{data:[]}];
+    const unidadesPorItem={},empenhosPorItem={};
+    (unidadesRes.data||[]).forEach(u=>{ const k=String(u.item_id); const r=unidadesPorItem[k]||(unidadesPorItem[k]={patrimonios:new Set(),series:new Set()}); if(u.patrimonio)r.patrimonios.add(u.patrimonio); if(u.numero_serie)r.series.add(u.numero_serie); });
+    (empenhosRes.data||[]).forEach(e=>{ const k=String(e.item_id); const s=empenhosPorItem[k]||(empenhosPorItem[k]=new Set()); if(e.empenhos?.numero)s.add(e.empenhos.numero); });
+    ctItensPorContrato[id]=itensBase.map(item=>{
+      const un=unidadesPorItem[String(item.id)]||{patrimonios:new Set(),series:new Set()};
+      const emps=empenhosPorItem[String(item.id)]||new Set();
+      (item.itens_entregas||[]).forEach(e=>{if(e.empenho)emps.add(e.empenho);});
+      return {...item,_qtdeMedida:medidoPorItem.get(String(item.id))||0,_patrimonios:[...un.patrimonios],_series:[...un.series],_empenhos:[...emps]};
+    });
   }
   renderTabelaContratos();
 }
