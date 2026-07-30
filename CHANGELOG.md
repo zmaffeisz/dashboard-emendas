@@ -2,6 +2,9 @@
 
 ## 2026-07-30
 
+- **Execuções de ATA:** ao expandir uma execução, a tela mostra somente as unidades
+  físicas/patrimônios recebidos. Cada linha abre seus detalhes completos por clique, sem
+  botão ou painel-resumo duplicado.
 - **Data-base e reajustes de itens de ATA:** contratos de qualquer natureza agora podem
   registrar uma data-base de reajuste para consulta. Nos itens vigentes das ATAs, o novo
   fluxo preserva o preço original, registra versões de preço com vigência e mostra AFs,

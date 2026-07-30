@@ -678,17 +678,14 @@ function _renderDetalheExecAta(exec){
   ];
   const linhas=detalhe.unidades.map((u,i)=>{
     const nf=detalhe.notas.get(String(u.nota_fiscal_id))||{};
-    return `<tr>
+    return `<tr onclick="verTudoUnidadeExecAta('${_sanEsc(exec.id)}','${_sanEsc(u.id)}')" title="Clique para ver os detalhes desta unidade" style="cursor:pointer">
       <td>${u.unidade_seq||i+1}</td><td><strong>${_sanEsc(u.patrimonio||'—')}</strong></td><td>${_sanEsc(u.numero_serie||'—')}</td>
       <td>${_sanEsc(nf.numero||exec.nf||'—')}</td><td>${u.recebido_em?fmtDate(u.recebido_em):'—'}</td><td>${_sanEsc(u.recebido_por||'—')}</td>
-      <td><button type="button" class="btn-secondary" onclick="event.stopPropagation();verTudoUnidadeExecAta('${_sanEsc(exec.id)}','${_sanEsc(u.id)}')" style="font-size:11px;padding:3px 9px">🔎 Ver tudo</button></td>
     </tr>`;
   }).join('');
-  const unidadesHtml=detalhe.unidades.length?`<div class="ata-exec-units-wrap"><table class="ata-exec-units-table"><thead><tr><th>#</th><th>Patrimônio</th><th>Nº de série</th><th>NF</th><th>Recebido em</th><th>Recebido por</th><th>Ações</th></tr></thead><tbody>${linhas}</tbody></table></div>`:`<div class="ata-exec-consolidated">${exec.possui_patrimonio===false?'Item sem patrimônio: quantidade mantida consolidada.':'Nenhuma unidade física/patrimônio registrado nesta execução.'}</div>`;
+  const unidadesHtml=detalhe.unidades.length?`<div class="ata-exec-units-wrap"><table class="ata-exec-units-table"><thead><tr><th>#</th><th>Patrimônio</th><th>Nº de série</th><th>NF</th><th>Recebido em</th><th>Recebido por</th></tr></thead><tbody>${linhas}</tbody></table></div>`:`<div class="ata-exec-consolidated">${exec.possui_patrimonio===false?'Item sem patrimônio: quantidade mantida consolidada.':'Nenhuma unidade física/patrimônio registrado nesta execução.'}</div>`;
   return `<tr class="ata-exec-detail-row"><td colspan="14"><div class="ata-exec-detail-panel">
-    <div class="ata-exec-detail-title"><span>Detalhes completos da execução</span><span>${detalhe.unidades.length} unidade(s) física(s)</span></div>
-    <div class="ata-exec-detail-grid">${resumo.map(([l,v])=>_ataDetalheCampo(l,v)).join('')}</div>
-    <div class="ata-exec-units-title">Patrimônios e unidades recebidas</div>${unidadesHtml}
+    <div class="ata-exec-detail-title"><span>Patrimônios e unidades recebidas</span><span>${detalhe.unidades.length} unidade(s) física(s)</span></div>${unidadesHtml}
   </div></td></tr>`;
 }
 
