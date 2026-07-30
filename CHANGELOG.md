@@ -2,6 +2,13 @@
 
 ## 2026-07-30
 
+- **Situação manual nas Licitações:** o antigo status manual fixo foi substituído por uma
+  secretaria escolhida no cadastro institucional e uma situação livre de até 55 caracteres.
+  O campo **Desde** e os estados automáticos continuam preservados.
+- **Cadastro de Secretarias:** a aba Cadastros passou a oferecer uma categoria própria para
+  secretarias, já preenchida com as 32 siglas e nomes institucionais informados.
+- **Tema inicial claro:** visitantes sem uma preferência previamente salva agora abrem o
+  sistema, login e cadastro no tema claro. A escolha individual continua armazenada no navegador.
 - **Busca geral de Emendas:** a busca da visualização por emenda agora também encontra o
   objeto da emenda, além dos demais dados do item e do fluxo.
 - **Itens agrupados ao gerar contrato:** itens disponíveis com a mesma descrição agora

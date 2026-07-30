@@ -137,7 +137,11 @@ de emenda. Geração de documento (`abrirModalSolicitacaoSancao`,
 
 ## 13. Cadastros (admin)
 Cadastros-mestre: `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `secoes`,
-`pessoas`. Inclui fila de **revisão/moderação/dedup** de cadastros criados inline
+`secretarias`, `pessoas`. Inclui fila de **revisão/moderação/dedup** de cadastros criados inline
+
+Na aba **Licitações**, o acompanhamento manual do item combina uma secretaria do cadastro
+institucional e um texto livre de situação (máximo de 55 caracteres); os estados automáticos
+continuam sob controle do sistema e a data **Desde** é mantida.
 (`carregarRevisao`). Apenas admin.
 
 ## 14. Usuários (admin)

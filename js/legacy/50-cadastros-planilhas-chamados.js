@@ -2,6 +2,7 @@
 const CADASTRO_DEFS = {
   pessoas:       {tabela:'pessoas',       titulo:'👤 Pessoas',       temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'cargo',l:'Cargo'},{c:'orgao',l:'Órgão/Seção'},{c:'email',l:'E-mail'},{c:'telefone',l:'Telefone'}]},
   parlamentares: {tabela:'parlamentares', titulo:'🏛️ Parlamentares', temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true}]},
+  secretarias:   {tabela:'secretarias',   titulo:'🏛️ Secretarias',  temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo',req:true}]},
   secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'}]},
   unidades:      {tabela:'unidades',      titulo:'🏥 Unidades',      temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'endereco',l:'Endereço'},{c:'telefone',l:'Telefone'}]},
   fornecedores:  {tabela:'fornecedores',  titulo:'🏭 Empresas',      temAtivo:false, ordem:'razao_social', campos:[{c:'razao_social',l:'Razão social',req:true},{c:'cnpj_normalizado',l:'CNPJ (só dígitos)'},{c:'nome_fantasia',l:'Nome fantasia'}]},
@@ -974,7 +975,7 @@ async function _fetchItensFlowData(eiIds){
   const [itemChunks,{data:statusLicRows}]=await Promise.all([
     Promise.all(_chunkArray(eiIds,200).map(slice=>
       sb.from("itens")
-        .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,processo_id,contrato_id,status_lic_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome)")
+        .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,processo_id,contrato_id,status_lic_id,status_lic_secretaria_id,status_lic_texto,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome),secretarias(sigla)")
         .in("emenda_item_id",slice)
     )),
     sb.from("status_opcoes").select("id,nome,ordem,orgao,automatico").eq("contexto","licitacao")
@@ -1119,7 +1120,10 @@ async function _carregarFluxoEmendaItens(eiIds){
     const eid=it.emenda_item_id; if(!eid) return;
     const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),statusLicitacao:new Map(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
     const statusLic=statusLicById[String(it.status_lic_id||"")];
-    if(statusLic&&statusLic.nome) f.statusLicitacao.set(String(statusLic.id),statusLic);
+    const secretaria=it.secretarias?.sigla||"";
+    const texto=String(it.status_lic_texto||"").trim();
+    if(secretaria&&texto) f.statusLicitacao.set(`manual:${it.id}`,{id:`manual:${it.id}`,nome:`${secretaria} – ${texto}`,ordem:0});
+    else if(statusLic&&statusLic.nome) f.statusLicitacao.set(String(statusLic.id),statusLic);
     if(!f.cpl) f.cpl=it.contratos?.cpl||it.processos?.identificador||"";
     if(!f.sim && it.contratos?.numero_contrato) f.sim=it.contratos.numero_contrato;
     if(!f.fornecedor && it.fornecedores?.razao_social) f.fornecedor=it.fornecedores.razao_social;

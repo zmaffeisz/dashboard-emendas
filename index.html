@@ -1586,10 +1586,10 @@
     <div class="filters" style="margin-bottom:1rem">
       <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="lic-busca" placeholder="identificador, objeto, item..." oninput="filtrarLicitacoes()"></div>
       <div class="fg"><div class="fg-label">Tipo</div><select id="lic-f-tipo" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
-      <div class="fg"><div class="fg-label">Órgão (bola)</div><select id="lic-f-orgao" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>SES</option><option>SEAD</option><option>CONTROLADORIA</option></select></div>
+      <div class="fg"><div class="fg-label">Secretaria</div><select id="lic-f-orgao" onchange="filtrarLicitacoes()"><option value="">Todas</option></select></div>
       <div class="fg"><div class="fg-label">&nbsp;</div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="lic-f-contratados" onchange="filtrarLicitacoes()" style="cursor:pointer">incluir já contratadas</label></div>
     </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Clique numa licitação para abrir os itens e definir o status de cada um. &nbsp; <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span> automático (o sistema controla 🔒)</span></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Clique numa licitação para definir a secretaria e escrever a situação de cada item (até 55 caracteres). &nbsp; <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span> automático (o sistema controla 🔒)</span></div>
     <div id="lic-lista"></div>
   </div>
 </div>

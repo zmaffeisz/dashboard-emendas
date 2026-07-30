@@ -235,7 +235,7 @@ Três tabelas separam claramente os níveis de valor:
 | `status_opcoes` (8) | catálogo de status (`contexto`, `nome`, `ordem`, `ativo`, `orgao`, `automatico`). Ver [DATABASE.md](DATABASE.md#status). |
 | `profiles` (6) | perfil do usuário: `papel`, `aprovado`. |
 | `user_tab_permissions` (6) | permissões por aba (`tab_key`, `can_view`, `can_edit`). |
-| `pessoas` (10), `secoes` (6) | cadastros auxiliares. |
+| `pessoas` (10), `secoes` (6), `secretarias` | cadastros auxiliares e institucionais. |
 | `inventario_ac` (17) | inventário; FK `emenda_item_id`, `unidade_id`. |
 
 ## 8. Views

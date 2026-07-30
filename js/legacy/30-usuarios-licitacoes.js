@@ -180,13 +180,17 @@ async function loadLicitacoes(){
   const box=document.getElementById('lic-lista');
   if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
   try{
-    const [proc,so,itens]=await Promise.all([
+    const [proc,so,itens,secretarias]=await Promise.all([
       sb.from('vw_processos_resumo').select('*').order('identificador'),
       sb.from('status_opcoes').select('id,nome,ordem,orgao,automatico').eq('contexto','licitacao').eq('ativo',true).order('ordem'),
-      _cpFetchAllItens()
+      _cpFetchAllItens(),
+      sb.from('secretarias').select('id,sigla,nome').eq('ativo',true).order('sigla')
     ]);
     _licitacoesCache=proc.data||[];
     _cpStatusOpts=so.data||[]; _cpStatusById={}; _cpStatusOpts.forEach(s=>_cpStatusById[s.id]=s);
+    _cpSecretarias=secretarias.data||[]; _cpSecretariaById={}; _cpSecretarias.forEach(s=>_cpSecretariaById[s.id]=s);
+    const filtro=document.getElementById('lic-f-orgao');
+    if(filtro) filtro.innerHTML='<option value="">Todas</option>'+_cpSecretarias.map(s=>`<option value="${s.sigla}">${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join('');
     _cpItens=itens||[];
   }catch(e){ if(box) box.innerHTML='<div style="padding:1rem;color:var(--red)">Erro: '+_sanEsc(e.message||e)+'</div>'; return; }
   renderLicitacoes();
@@ -202,7 +206,6 @@ function renderLicitacoes(){
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
   const podeEd=podeEditar('contratos');
   const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
-  const manuais=_cpStatusOpts.filter(s=>!s.automatico);
   let mostrados=0;
   // por processo: itens que ainda estão na licitação = NÃO executados (entregue/execução/executado saem da aba)
   const info=_licitacoesCache.map(p=>{
@@ -218,7 +221,7 @@ function renderLicitacoes(){
     if(x.fullyContratado && !incluirContratados) return false; // 100% virou contrato → some por padrão
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
-    if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
+    if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
     if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.map(i=>i.descricao)).concat(_procServicoPeriodicoItens(p).map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
@@ -251,11 +254,11 @@ function renderLicitacoes(){
       </div>`;
     if(aberto){
       if(podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))){
-        const opts=manuais.map(s=>`<option value="${s.id}">${_sanEsc(s.nome)}</option>`).join('');
         const bulkFn=items.length?'cpBulkApply':'cpBulkApplyServicoMensal';
         bloco+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;background:rgba(55,138,221,.08);border-top:1px solid var(--border)">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap">Aplicar a todos:</span>
-          <select id="cp-bulk-${p.id}" style="flex:1;max-width:340px;font-size:12px;padding:5px 8px"><option value="">selecione um status manual...</option>${opts}</select>
+          <select id="cp-bulk-secretaria-${p.id}" data-search="off" style="width:165px;flex:0 0 165px;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"><option value="">Secretaria...</option>${_cpSecretariaOptions()}</select>
+          <input id="cp-bulk-texto-${p.id}" type="text" maxlength="55" placeholder="Situação (até 55 caracteres)" style="flex:1 1 260px;min-width:220px;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)">
           <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);white-space:nowrap">DESDE <input id="cp-bulk-desde-${p.id}" type="date" value="${_cpDataInput(new Date().toISOString())}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"></label>
           <button onclick="${bulkFn}(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
         </div>`;
@@ -273,7 +276,7 @@ function renderLicitacoes(){
           if(cur&&cur.automatico){
             ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
           }else if(podeEd){
-            ctrl=`<select onchange="cpSetServicoMensalItemStatus(${p.id},${idx},this.value,document.getElementById('cp-serv-desde-${p.id}-${idx}')?.value)" style="font-size:11px;padding:4px 6px;max-width:330px"><option value="">— indefinido —</option>${manuais.map(s=>`<option value="${s.id}"${String(it.status_lic_id)===String(s.id)?' selected':''}>${_sanEsc(s.nome)}</option>`).join('')}</select>`;
+            ctrl=_cpSituacaoEditor(`cp-serv-secretaria-${p.id}-${idx}`,`cp-serv-texto-${p.id}-${idx}`,it,`cpSalvarSituacaoServicoMensal(${p.id},${idx})`);
           }else{
             ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
           }
@@ -294,10 +297,7 @@ function renderLicitacoes(){
         } else if(cur&&cur.automatico){
           ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
         } else if(podeEd){
-          ctrl=`<select onchange="cpSetItemStatus('${it.id}', this.value, document.getElementById('cp-desde-${it.id}')?.value)" style="font-size:11px;padding:4px 6px;max-width:330px">
-            <option value="">— indefinido —</option>
-            ${manuais.map(s=>`<option value="${s.id}"${String(it.status_lic_id)===String(s.id)?' selected':''}>${_sanEsc(s.nome)}</option>`).join('')}
-          </select>`;
+          ctrl=_cpSituacaoEditor(`cp-secretaria-${it.id}`,`cp-texto-${it.id}`,it,`cpSalvarSituacaoItem('${it.id}')`);
         } else {
           ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
         }
@@ -319,13 +319,13 @@ function renderLicitacoes(){
 }
 
 // ═══ CONTROLE DE PROCESSOS (gestão de status por item) ═══
-let _cpProcessos=[], _cpItens=[], _cpStatusOpts=[], _cpStatusById={}, _cpExpanded={};
+let _cpProcessos=[], _cpItens=[], _cpStatusOpts=[], _cpStatusById={}, _cpSecretarias=[], _cpSecretariaById={}, _cpExpanded={};
 function _cpOrgaoCor(o){ return o==='SEAD'?'#d8a730':(o==='CONTROLADORIA'?'#7c5cd6':'var(--blue)'); }
 async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
   while(true){
     const {data,error}=await sb.from('itens')
-      .select('id,processo_id,descricao,qtde,status,status_lic_id,status_lic_desde,contrato_id')
+      .select('id,processo_id,descricao,qtde,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla)')
       .not('processo_id','is',null).order('processo_id').range(from,from+size-1);
     if(error) throw error;
     all=all.concat(data||[]);
@@ -347,7 +347,23 @@ async function _cpFetchAllItens(){
   all.forEach(it=>{ it.status_lic_atualizado_em=atualizadoPorItem[it.id]||null; });
   return all;
 }
+function _cpSecretariaOptions(selecionada=''){ return _cpSecretarias.map(s=>`<option value="${s.id}"${String(s.id)===String(selecionada)?' selected':''}>${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join(''); }
+function _cpSituacao(item){
+  const auto=_cpStatusById[item?.status_lic_id];
+  if(auto&&auto.automatico) return {nome:auto.nome,orgao:auto.orgao,auto:true};
+  const sec=_cpSecretariaById[item?.status_lic_secretaria_id]||item?.secretarias;
+  const texto=String(item?.status_lic_texto||'').trim();
+  if(sec&&texto) return {nome:`${sec.sigla} – ${texto}`,orgao:sec.sigla,auto:false};
+  return auto?{nome:auto.nome,orgao:auto.orgao,auto:false}:{nome:'Indefinido',orgao:null,auto:false};
+}
+function _cpSituacaoEditor(secretariaId,textoId,item,acao){
+  const sec=item?.status_lic_secretaria_id||'';
+  const texto=_sanEsc(String(item?.status_lic_texto||'')).replace(/"/g,'&quot;');
+  return `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select id="${secretariaId}" data-search="off" style="width:165px;flex:0 0 165px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"><option value="">Secretaria...</option>${_cpSecretariaOptions(sec)}</select><input id="${textoId}" type="text" maxlength="55" value="${texto}" placeholder="Situação (até 55 caracteres)" style="flex:1 1 250px;min-width:220px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"><button onclick="${acao}" style="font-size:11px;padding:4px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">Salvar</button></div>`;
+}
 function _cpRollup(items){
+  const situacoes=[...new Set(items.map(i=>_cpSituacao(i).nome))];
+  if(situacoes.length===1) return _cpSituacao(items[0]);
   const ids=[...new Set(items.map(i=>i.status_lic_id))];
   if(ids.length===1){ const s=_cpStatusById[ids[0]]; return s?{nome:s.nome,orgao:s.orgao,auto:s.automatico}:{nome:'Indefinido',orgao:null,auto:false}; }
   return {nome:'Vários', orgao:null, auto:false};
@@ -361,19 +377,30 @@ function _cpDesde(d){ if(!d) return ''; const dias=Math.floor((Date.now()-new Da
 function _cpDataInput(d){ return d?String(d).slice(0,10):''; }
 function _cpDataCurta(d){ return d?new Date(d).toLocaleDateString('pt-BR'):''; }
 function cpToggle(pid){ _cpExpanded[pid]=!_cpExpanded[pid]; renderLicitacoes(); }
-async function _cpGravarStatus(itemId, statusId, desde){
-  const so=statusId?_cpStatusById[statusId]:null;
+async function _cpGravarStatus(itemId, secretariaId, texto, desde){
+  const secretaria=_cpSecretariaById[secretariaId];
+  const situacao=String(texto||'').trim();
+  if(!secretaria||!situacao) throw new Error('Informe a secretaria e a situação.');
+  if(situacao.length>55) throw new Error('A situação pode ter no máximo 55 caracteres.');
   const agora=desde?new Date(desde+'T12:00:00').toISOString():new Date().toISOString();
-  const {error}=await sb.from('itens').update({status_lic_id:statusId||null, status_lic_desde:agora}).eq('id',itemId);
+  const {error}=await sb.from('itens').update({status_lic_id:null,status_lic_secretaria_id:Number(secretariaId),status_lic_texto:situacao,status_lic_desde:agora}).eq('id',itemId);
   if(error) throw error;
-  try{ await sb.from('itens_status_historico').insert({item_id:itemId, status_id:statusId||null, status_nome:so?so.nome:null, mudado_por:currentUser?.id||null, origem:'manual'}); }catch(_){}
-  const local=_cpItens.find(i=>String(i.id)===String(itemId)); if(local){ local.status_lic_id=statusId||null; local.status_lic_desde=agora; local.status_lic_atualizado_em=new Date().toISOString(); }
+  try{ await sb.from('itens_status_historico').insert({item_id:itemId, status_id:null, status_nome:`${secretaria.sigla} – ${situacao}`, mudado_por:currentUser?.id||null, origem:'manual'}); }catch(_){}
+  const local=_cpItens.find(i=>String(i.id)===String(itemId)); if(local){ local.status_lic_id=null; local.status_lic_secretaria_id=Number(secretariaId); local.secretarias={sigla:secretaria.sigla}; local.status_lic_texto=situacao; local.status_lic_desde=agora; local.status_lic_atualizado_em=new Date().toISOString(); }
+}
+async function cpSalvarSituacaoItem(itemId){
+  if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
+  const secretariaId=document.getElementById(`cp-secretaria-${itemId}`)?.value||'';
+  const texto=document.getElementById(`cp-texto-${itemId}`)?.value||'';
+  const desde=document.getElementById(`cp-desde-${itemId}`)?.value||'';
+  try{ await _cpGravarStatus(itemId,secretariaId,texto,desde||null); renderLicitacoes(); if(typeof loadData==='function') await loadData(); }
+  catch(e){ alert('Erro ao salvar: '+(e.message||e)); }
 }
 async function cpSetItemStatus(itemId, val, desde){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
   const statusId=val?Number(val):null;
   try{
-    await _cpGravarStatus(itemId, statusId, desde||null);
+    await _cpGravarStatus(itemId, statusId, '', desde||null);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro ao salvar: '+(e.message||e)); renderLicitacoes(); }
@@ -383,28 +410,30 @@ async function cpSetItemDesde(itemId, val){
   const item=_cpItens.find(i=>String(i.id)===String(itemId));
   if(!item) return;
   try{
-    await _cpGravarStatus(itemId, item.status_lic_id?Number(item.status_lic_id):null, val||null);
+    await _cpGravarStatus(itemId, item.status_lic_secretaria_id, item.status_lic_texto, val||null);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro ao salvar a data: '+(e.message||e)); renderLicitacoes(); }
 }
 async function cpBulkApply(pid){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
-  const sel=document.getElementById('cp-bulk-'+pid); const val=sel?.value;
-  if(!val){ alert('Selecione um status para aplicar.'); return; }
+  const secretariaId=document.getElementById('cp-bulk-secretaria-'+pid)?.value||'';
+  const texto=document.getElementById('cp-bulk-texto-'+pid)?.value||'';
+  const val=''; // compatibilidade com a mensagem de confirmação legada abaixo
+  if(!secretariaId||!String(texto).trim()){ alert('Informe a secretaria e a situação para aplicar.'); return; }
+  if(String(texto).trim().length>55){ alert('A situação pode ter no máximo 55 caracteres.'); return; }
   const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
   if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
-  const statusId=Number(val);
   const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i));
   if(!alvos.length){ alert('Nenhum item editável neste processo (os já contratados/executados são controlados em outras abas).'); return; }
-  if(!confirm(`Aplicar "${_cpStatusById[statusId]?.nome}" desde ${desde.split('-').reverse().join('/')} a ${alvos.length} item(ns)?`)) return;
+  if(!confirm(`Aplicar "${_cpSecretariaById[secretariaId]?.sigla} – ${String(texto).trim()}" desde ${desde.split('-').reverse().join('/')} a ${alvos.length} item(ns)?`)) return;
   try{
-    for(const it of alvos){ await _cpGravarStatus(it.id, statusId, desde); }
+    for(const it of alvos){ await _cpGravarStatus(it.id, secretariaId, texto, desde); }
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro: '+(e.message||e)); renderLicitacoes(); }
 }
-async function _cpGravarStatusServicoMensal(pid, indice, statusId, desde){
+async function _cpGravarStatusServicoMensal(pid, indice, secretariaId, texto, desde){
   const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
   if(!processo) throw new Error('Processo não encontrado.');
   const trimestral=_procProcessoEhTrimestral(processo);
@@ -413,17 +442,31 @@ async function _cpGravarStatusServicoMensal(pid, indice, statusId, desde){
   const item=itens[indice];
   if(!item) throw new Error('Item de serviço não encontrado.');
   const agora=desde?new Date(desde+'T12:00:00').toISOString():new Date().toISOString();
-  item.status_lic_id=statusId||null;
+  const secretaria=_cpSecretariaById[secretariaId];
+  const situacao=String(texto||'').trim();
+  if(!secretaria||!situacao) throw new Error('Informe a secretaria e a situação.');
+  if(situacao.length>55) throw new Error('A situação pode ter no máximo 55 caracteres.');
+  item.status_lic_id=null;
+  item.status_lic_secretaria_id=Number(secretariaId);
+  item.status_lic_texto=situacao;
   item.status_lic_desde=agora;
   item.status_lic_atualizado_em=new Date().toISOString();
   const {error}=await sb.from('processos').update({[coluna]:itens}).eq('id',pid);
   if(error) throw error;
   processo[coluna]=itens;
 }
+async function cpSalvarSituacaoServicoMensal(pid, indice){
+  if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
+  const secretariaId=document.getElementById(`cp-serv-secretaria-${pid}-${indice}`)?.value||'';
+  const texto=document.getElementById(`cp-serv-texto-${pid}-${indice}`)?.value||'';
+  const desde=document.getElementById(`cp-serv-desde-${pid}-${indice}`)?.value||'';
+  try{ await _cpGravarStatusServicoMensal(pid,Number(indice),secretariaId,texto,desde||null); renderLicitacoes(); if(typeof loadData==='function') await loadData(); }
+  catch(e){ alert('Erro ao salvar: '+(e.message||e)); }
+}
 async function cpSetServicoMensalItemStatus(pid, indice, val, desde){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
   try{
-    await _cpGravarStatusServicoMensal(pid, Number(indice), val?Number(val):null, desde||null);
+    await _cpGravarStatusServicoMensal(pid, Number(indice), val?Number(val):null, '', desde||null);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro ao salvar: '+(e.message||e)); renderLicitacoes(); }
@@ -434,15 +477,18 @@ async function cpSetServicoMensalItemDesde(pid, indice, desde){
   const item=_procServicoPeriodicoItens(processo)[Number(indice)];
   if(!item) return;
   try{
-    await _cpGravarStatusServicoMensal(pid, Number(indice), item.status_lic_id?Number(item.status_lic_id):null, desde||null);
+    await _cpGravarStatusServicoMensal(pid, Number(indice), item.status_lic_secretaria_id, item.status_lic_texto, desde||null);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro ao salvar a data: '+(e.message||e)); renderLicitacoes(); }
 }
 async function cpBulkApplyServicoMensal(pid){
   if(!podeEditar('contratos')){ alert('Sem permissão.'); return; }
-  const sel=document.getElementById('cp-bulk-'+pid); const val=sel?.value;
-  if(!val){ alert('Selecione um status para aplicar.'); return; }
+  const secretariaId=document.getElementById('cp-bulk-secretaria-'+pid)?.value||'';
+  const texto=document.getElementById('cp-bulk-texto-'+pid)?.value||'';
+  const val=''; // compatibilidade com a mensagem de confirmação legada abaixo
+  if(!secretariaId||!String(texto).trim()){ alert('Informe a secretaria e a situação para aplicar.'); return; }
+  if(String(texto).trim().length>55){ alert('A situação pode ter no máximo 55 caracteres.'); return; }
   const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
   if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
   const processo=_licitacoesCache.find(p=>String(p.id)===String(pid));
@@ -450,8 +496,7 @@ async function cpBulkApplyServicoMensal(pid){
   if(!itens.length){ alert('Nenhum item de serviço encontrado neste processo.'); return; }
   if(!confirm(`Aplicar "${_cpStatusById[Number(val)]?.nome}" desde ${desde.split('-').reverse().join('/')} a ${itens.length} item(ns) de serviço?`)) return;
   try{
-    const statusId=Number(val);
-    for(let indice=0;indice<itens.length;indice++) await _cpGravarStatusServicoMensal(pid, indice, statusId, desde);
+    for(let indice=0;indice<itens.length;indice++) await _cpGravarStatusServicoMensal(pid, indice, secretariaId, texto, desde);
     renderLicitacoes();
     if(typeof loadData==='function') await loadData();
   }catch(e){ alert('Erro: '+(e.message||e)); renderLicitacoes(); }
@@ -713,6 +758,8 @@ function procAddServicoMensalItemRow(item={}){
   const row=document.createElement('div');
   row.className='proc-serv-mensal-item';
   if(item.status_lic_id!==undefined&&item.status_lic_id!==null) row.dataset.statusLicId=String(item.status_lic_id);
+  if(item.status_lic_secretaria_id!==undefined&&item.status_lic_secretaria_id!==null) row.dataset.statusLicSecretariaId=String(item.status_lic_secretaria_id);
+  if(item.status_lic_texto) row.dataset.statusLicTexto=String(item.status_lic_texto);
   if(item.status_lic_desde) row.dataset.statusLicDesde=String(item.status_lic_desde);
   if(item.status_lic_atualizado_em) row.dataset.statusLicAtualizadoEm=String(item.status_lic_atualizado_em);
   row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);min-width:0;max-width:100%;box-sizing:border-box;width:100%';
@@ -748,6 +795,12 @@ function _procLerServicoMensal(){
     }
     if(row.dataset.statusLicId){
       item.status_lic_id=Number(row.dataset.statusLicId);
+      item.status_lic_desde=row.dataset.statusLicDesde||null;
+      item.status_lic_atualizado_em=row.dataset.statusLicAtualizadoEm||null;
+    }
+    if(row.dataset.statusLicSecretariaId){
+      item.status_lic_secretaria_id=Number(row.dataset.statusLicSecretariaId);
+      item.status_lic_texto=row.dataset.statusLicTexto||'';
       item.status_lic_desde=row.dataset.statusLicDesde||null;
       item.status_lic_atualizado_em=row.dataset.statusLicAtualizadoEm||null;
     }
