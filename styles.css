@@ -239,10 +239,10 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .badge .tabular-nums,.badge-num{font-variant-numeric:tabular-nums}
 
 /* Contratos: visão resumida e detalhes apenas após abrir o cartão. */
-.ct-contract-card{position:relative;width:100%;min-height:88px;box-sizing:border-box;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.10);transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
-.ct-contract-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(15,23,42,.18);transform:translateY(-1px)}
+.ct-contract-card{position:relative;width:100%;min-height:88px;box-sizing:border-box;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:default;box-shadow:0 2px 8px rgba(0,0,0,.10);transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.ct-contract-card:has(.ct-contract-summary:hover){border-color:var(--blue);box-shadow:0 4px 16px rgba(15,23,42,.18);transform:translateY(-1px)}
 .ct-contract-card.is-expanded{border-color:var(--blue);box-shadow:0 5px 18px rgba(15,23,42,.20)}
-.ct-contract-summary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;padding:14px 20px 12px}
+.ct-contract-summary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;padding:14px 20px 12px;cursor:pointer}
 .ct-contract-summary.has-status{grid-template-columns:auto minmax(0,1fr) 220px}
 .ct-contract-summary>.ct-contract-status{align-self:center}
 .ct-contract-summary:not(.has-status) .ct-contract-status{display:none}
@@ -262,6 +262,8 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .ct-contract-details{padding:16px 20px 18px;background:var(--surface)}
 .ct-contract-items-table{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
 .ct-contract-items-table table{min-width:0!important;table-layout:fixed}.ct-contract-items-table th,.ct-contract-items-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct-contract-items-table tbody tr[onclick] td{transition:background-color .12s ease}
+.ct-contract-items-table tbody tr[onclick]:hover td{background:var(--blue-bg)!important}
 /* Confirmação de Entrega: a grade se adapta ao painel em vez de criar rolagem lateral. */
 #confirmacao-wrap{overflow-x:hidden!important}
 #confirmacao-wrap table{table-layout:fixed}
