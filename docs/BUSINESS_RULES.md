@@ -112,6 +112,24 @@
 - Na solicitação/execução de ATA com origem em **Emenda**, item de emenda já vinculado a
   outro processo/solicitação não pode ser selecionado nem salvo novamente. A lista deve
   mostrar item, quantidade e unidade para evitar vínculo errado.
+- `contratos.data_base_reajuste` é uma informação contratual opcional para todos os tipos
+  de instrumento. Ela é exibida nos detalhes e, nas ATAs, também na lista de itens, mas
+  não cria reajuste automaticamente.
+- O reajuste de um item de ATA é versionado em `atas_item_reajustes`. O valor original de
+  `atas_itens.valor_unit` é preservado; novas solicitações usam o último valor reajustado
+  cuja vigência já tenha começado.
+- Ao registrar um reajuste, a consulta de candidatas inclui AF posterior à vigência, NF
+  emitida após a vigência e AF anterior ainda não recebida. A decisão de pagar a diferença
+  permanece manual e pode ser feita depois, diretamente na execução.
+- O pagamento complementar é gravado em `atas_execucao_reajustes`, sem alterar a AF, a NF
+  ou o valor original de `atas_execucao`. A diferença é calculada por
+  `(valor reajustado − valor unitário original da execução) × quantidade da execução`.
+  O botão pertence à linha inteira: não há fracionamento do reajuste dentro da mesma
+  execução.
+- Quando a fonte for **Emenda**, uma linha separada é criada em `emenda_itens`, com item,
+  ATA/processo, empenho e NF identificados. Quando a fonte for **Recurso próprio**, não é
+  criada linha em emenda. A mesma execução não pode receber duas vezes o mesmo reajuste.
+- Prorrogar uma ATA não altera mais seu preço; reajuste e prorrogação são fluxos distintos.
 
 ## 5. Notas Fiscais (anti-duplicidade) {#notas-fiscais}
 

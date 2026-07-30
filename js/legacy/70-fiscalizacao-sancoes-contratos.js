@@ -2264,7 +2264,7 @@ async function obterOuCriarFornecedor(nome, cnpjRaw){
 async function abrirModalNovoContrato(){
   if(!podeEditar('contratos')){alert("Sem permissão para cadastrar contratos.");return;}
   window._gerarContratoProcesso=null;
-  ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["nc-cpl","nc-numero","nc-prestador","nc-objeto","nc-cnpj","nc-email","nc-secao","nc-vigencia","nc-vencimento","nc-valor-inicial","nc-valor-mensal","nc-fonte","nc-fiscalizacao","nc-contato","nc-obs","nc-inicio","nc-assinatura","nc-data-base-reajuste"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   _ncMostrarProcessoManual();
   await preencherSelectProcessos();
   const _np=document.getElementById("nc-processo"); if(_np) _np.value="";
@@ -2388,6 +2388,7 @@ async function salvarNovoContrato(){
     status:document.getElementById("nc-status").value,
     data_inicio:inicioContrato,
     data_assinatura:document.getElementById("nc-assinatura").value||null,
+    data_base_reajuste:document.getElementById("nc-data-base-reajuste").value||null,
     vigencia_atual:_mn("nc-vigencia"),
     vencimento:_mn("nc-vencimento"),
     valor_inicial:_mn("nc-valor-inicial"),
@@ -2976,7 +2977,7 @@ async function manterStatusContratos(){
 
 let _ctEdicaoId=null;
 const CT_EDIT_FIELDS={
-  'ec-tipo':'tipo_instrumento','ec-cpl':'cpl','ec-numero':'numero_contrato','ec-objeto':'objeto','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
+  'ec-tipo':'tipo_instrumento','ec-cpl':'cpl','ec-numero':'numero_contrato','ec-objeto':'objeto','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-data-base-reajuste':'data_base_reajuste','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
 };
 function abrirEditarContrato(id){
   if(!_isAdmin()){alert('A edição completa de contratos é exclusiva para administradores.');return;}
@@ -3155,6 +3156,7 @@ async function abrirDetalheContratoLegado(id){
   const campos=[
     ["Tipo",c.tipo_instrumento||"CONTRATO"],["CPL",c.cpl],["Nº do contrato",c.numero_contrato],["Prestador",c.prestador],
     ["E-mail da empresa",c.email_empresa||"—"],["Prefixo de chamado",c.prefixo_chamado||"—"],["Objeto",c.objeto],["Seção",c.secao],
+    ["Data-base do reajuste",c.data_base_reajuste?fmtDate(c.data_base_reajuste):"—"],
     ["Vigência atual",c.vigencia_atual||"—"],["Vencimento",`<span style="color:${cor};font-weight:600">${c.vencimento||"—"}</span>`],
     ["Status",badgeStatusContrato(c.status,(()=>{const d=diasContratoVencer(c.vencimento);return d!==null&&d<0;})())],["Valor total",(c.valor_atual??c.valor_inicial)!=null?`R$ ${Number(c.valor_atual??c.valor_inicial).toLocaleString("pt-BR",{minimumFractionDigits:2})}`:"—"],
     ["Fiscalização",c.fiscalizacao||"—"],["Obs",c.obs]
@@ -3477,6 +3479,7 @@ async function abrirDetalheContrato(id){
       <div class="ficha-field"><div class="ficha-field-label">Modelo</div><div class="ficha-field-value">${_sanEsc(_ctModeloLabel(c))}</div></div>
       <div class="ficha-field"><div class="ficha-field-label">Origem</div><div class="ficha-field-value">${_sanEsc(_ctHumanize(_ctOrigemKey(c)))}</div></div>
       <div class="ficha-field"><div class="ficha-field-label">Forma</div><div class="ficha-field-value">${_sanEsc(_ctHumanize(_ctFormaKey(c)))}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Data-base do reajuste</div><div class="ficha-field-value">${c.data_base_reajuste?fmtDate(c.data_base_reajuste):'—'}</div></div>
     </div>
 
     <div style="display:${alertas.length?'flex':'none'};gap:6px;flex-wrap:wrap;margin-bottom:1rem">
@@ -3511,6 +3514,7 @@ async function abrirDetalheContrato(id){
         <div class="ficha-field"><div class="ficha-field-label">CPL / Processo</div><div class="ficha-field-value">${_sanEsc(c.cpl||'—')}</div></div>
         <div class="ficha-field"><div class="ficha-field-label">E-mail da empresa</div><div class="ficha-field-value">${_sanEsc(c.email_empresa||'—')}</div></div>
         <div class="ficha-field"><div class="ficha-field-label">Prefixo chamado</div><div class="ficha-field-value">${_sanEsc(c.prefixo_chamado||'—')}</div></div>
+        <div class="ficha-field"><div class="ficha-field-label">Data-base do reajuste</div><div class="ficha-field-value">${c.data_base_reajuste?fmtDate(c.data_base_reajuste):'—'}</div></div>
         <div class="ficha-field"><div class="ficha-field-label">Observações</div><div class="ficha-field-value">${_sanEsc(c.obs||'—')}</div></div>
       </div>
       <div style="margin-top:1rem"><div class="card-title" style="font-size:11px;text-transform:uppercase;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem">Fiscalizadores</div>

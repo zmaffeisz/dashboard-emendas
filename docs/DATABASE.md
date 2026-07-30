@@ -45,6 +45,8 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260626224428 | `recebimento_por_unidade_search_path` |
 | 20260628141120 | `atas_execucao_af_numero` — coluna `af_numero` em `atas_execucao` (Emitir AF de ATA) |
 | 20260723192606 | `servico_trimestral_fixo` — periodicidade trimestral em processos, contratos, vigências, histórico e medições |
+| 20260730211951 | `ata_reajustes_e_data_base` — data-base dos contratos, histórico de preço e pagamento complementar por execução de ATA |
+| 20260730212030 | `indexar_fks_ata_reajustes` — índices das relações organizacionais e de emenda dos reajustes |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -91,6 +93,8 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `admin_delete_user(p_user_id uuid)` | | Exclusão de usuário (admin). |
 | `fill_chamado_id_by_protocolo()` | | Preenche `chamado_id` a partir do `protocolo`. |
 | `rls_auto_enable()` | | Habilita RLS automaticamente (hardening). |
+| `registrar_reajuste_item_ata(...)` | item, vigência, percentual, novo valor e observação | Registra uma versão de preço do item sem sobrescrever o valor original. |
+| `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
 | `_sync_entrega_agregado()` | trigger | Mantém `itens_entregas.patrimonio/numero_serie` agregados a partir de `itens_entregas_unidades`. |
 | `_unidade_key(p text)` | | Normalização de chave de unidade. |
 

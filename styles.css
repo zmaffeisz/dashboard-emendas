@@ -155,6 +155,7 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 
 /* Compacto: ações dentro de linha de tabela */
 .btn-compact{height:28px;padding:0 10px;font-size:var(--text-xs)}
+.btn-action-square{width:28px;min-width:28px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 
 /* Ícone-only (fechar modal, etc.) */
 .btn-icon{width:32px;height:32px;padding:0;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s}

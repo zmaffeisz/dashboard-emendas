@@ -1,4 +1,26 @@
 // ═══ ATAS ═══
+let atasReajustes=[];
+let atasExecReajustes=[];
+
+function _ataHojeISO(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function _ataReajustesDoItem(itemId){
+  return atasReajustes
+    .filter(r=>String(r.ata_item_id)===String(itemId)&&r.status==='ATIVO')
+    .sort((a,b)=>String(a.data_vigencia).localeCompare(String(b.data_vigencia)));
+}
+
+function _ataValorUnitarioEm(item,dataISO=_ataHojeISO()){
+  if(!item) return 0;
+  const aplicavel=_ataReajustesDoItem(item.id)
+    .filter(r=>String(r.data_vigencia)<=String(dataISO))
+    .at(-1);
+  return Number(aplicavel?.valor_unitario_novo??item.valor_unit_original??item.valor_unit)||0;
+}
+
 function _ataStatusEncerrado(status){
   return String(status||"").trim().toUpperCase().startsWith("ENCERRAD");
 }
@@ -18,16 +40,22 @@ async function loadAtas(){
   document.getElementById("atas-loading").style.display="block";
   document.getElementById("atas-main").style.display="none";
   try{
-    const [r1,r2,r3,r4]=await Promise.all([
+    const [r1,r2,r3,r4,r5,r6]=await Promise.all([
       sb.from("atas_itens").select("*").order("created_at"),
       sb.from("atas_execucao").select("*").order("created_at",{ascending:false}),
       sb.from("contratos").select("*").eq("tipo_instrumento","ATA"),
-      sb.from("fornecedores").select("id,razao_social,cnpj_normalizado")
+      sb.from("fornecedores").select("id,razao_social,cnpj_normalizado"),
+      sb.from("atas_item_reajustes").select("*").order("data_vigencia"),
+      sb.from("atas_execucao_reajustes").select("*").eq("status","ATIVO").order("criado_em",{ascending:false})
     ]);
     if(r1.error) throw r1.error;
     if(r2.error) throw r2.error;
     if(r3.error) throw r3.error;
     if(r4.error) throw r4.error;
+    if(r5.error) throw r5.error;
+    if(r6.error) throw r6.error;
+    atasReajustes=r5.data||[];
+    atasExecReajustes=r6.data||[];
     const fornecedorPorId=new Map((r4.data||[]).map(f=>[String(f.id),f]));
     atasContratos=(r3.data||[])
       .map(c=>{
@@ -47,7 +75,7 @@ async function loadAtas(){
       const statusItem=statusContrato.toUpperCase()==='VIGENTE'
         ?(r.status_contrato||statusContrato).trim()
         :statusContrato;
-      return {
+      const itemBase={
       id:r.id,
       contrato_id:r.contrato_id,
       fornecedor_id:contrato.fornecedor_id,
@@ -56,14 +84,19 @@ async function loadAtas(){
       item:(r.item||"").trim(),
       marca:(r.marca_modelo||"").trim(),
       qtde_contratada:Number(r.qtde_contratada)||0,
+      valor_unit_original:Number(r.valor_unit)||0,
       valor_unit:Number(r.valor_unit)||0,
+      data_base_reajuste:contrato.data_base_reajuste||null,
       vencimento:(contrato.vencimento||"").trim(),
       status:statusItem,
       saldo_reiniciado_em:r.saldo_reiniciado_em||null,
       empresa:contrato.empresa,
       prazo_entrega:parseInt(r.prazo_entrega)||0,
       contrato
-    };}).filter(Boolean);
+      };
+      itemBase.valor_unit=_ataValorUnitarioEm(itemBase);
+      return itemBase;
+    }).filter(Boolean);
     const itemPorId=new Map(atasItens.map(i=>[String(i.id),i]));
     atasExec=(r2.data||[]).map(r=>{
       const ata=itemPorId.get(String(r.ata_item_id));
@@ -176,6 +209,7 @@ const ATA_FILTER_COLS = {
   exec:{get:r=>getExecutado(r.cpl,r.sim,r.item),disp:v=>v!==''?v:'(vazio)'},
   saldo:{get:r=>getSaldo(r.cpl,r.sim,r.item),disp:v=>v!==''?v:'(vazio)'},
   valor_unit:{get:r=>r.valor_unit||'',disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
+  data_base_reajuste:{get:r=>r.data_base_reajuste||'',disp:v=>v?fmtDate(v):'(vazio)'},
   vencimento:{get:r=>r.vencimento||'',disp:v=>v||'(vazio)'},
   status:{get:r=>r.status||'',disp:v=>v||'(vazio)'},
   empresa:{get:r=>r.empresa||'',disp:v=>v||'(vazio)'},
@@ -355,7 +389,7 @@ function filtrarAtas(){
       else{va=a[_sortAtasCol]||"";vb=b[_sortAtasCol]||"";}
       if(typeof va==="number"&&typeof vb==="number") return _sortAtasAsc?va-vb:vb-va;
       // Ordenação de datas no formato DD/MM/YYYY
-      if(_sortAtasCol==="vencimento"){
+      if(["vencimento","data_base_reajuste"].includes(_sortAtasCol)){
         const da=parseDataBR(va),db=parseDataBR(vb);
         if(da&&db) return _sortAtasAsc?da-db:db-da;
       }
@@ -396,6 +430,7 @@ function filtrarAtas(){
       </td>
       <td style="text-align:right;font-weight:500;color:${saldo<=0?'var(--red)':saldo<=5?'var(--amber)':'var(--text)'}">${saldo}</td>
       <td style="text-align:right;font-size:11px">${r.valor_unit?fmtFull(r.valor_unit):"—"}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.data_base_reajuste?fmtDate(r.data_base_reajuste):"—"}</td>
       <td style="font-size:11px;color:${vcor};font-weight:500">${r.vencimento||"—"}${dias<=90&&dias>0?` (${dias}d)`:''}${dias<=0?' ⛔':''}</td>
       <td><span class="badge" style="background:${stColor}22;color:${stColor}">${r.status}</span></td>
       <td style="font-size:11px">${r.empresa||"—"}</td>
@@ -406,6 +441,7 @@ function filtrarAtas(){
         <div style="display:flex;align-items:center;gap:6px">
         <button onclick="abrirModalEditAta('${r.id}')" class="btn-secondary btn-compact" title="Adicionar solicitação">✏️ Solicitação</button>
         ${kebabMenuHtml([
+          podeEditar('atas')?{label:'📈 Reajustar',onclick:`abrirReajusteItemAta('${r.id}')`,title:'Registrar novo valor para este item a partir de uma data'}:null,
           {label:'🔄 Prorrogar',onclick:`renovarAta('${r.id}')`,title:'Prorrogar vigência do contrato'},
           {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
           _isAdmin()?{label:'✏️ Editar',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Editar dados do contrato (fiscalização, seção, empresa, objeto...)'}:null,
@@ -416,7 +452,7 @@ function filtrarAtas(){
         `}
       </td>
     </tr>`;
-  }).join("")||`<tr><td colspan="12"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item de ata encontrado</div></td></tr>`;
+  }).join("")||`<tr><td colspan="13"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item de ata encontrado</div></td></tr>`;
 
   // Tabela de execuções filtradas
   let execRows=atasExec.filter(r=>{
@@ -521,6 +557,17 @@ function filtrarExecs(){
 const _atasExecExpandidas=new Set();
 const _atasExecDetalhes=new Map();
 
+function _ataReajustePendenteExec(exec){
+  const aplicaveis=_ataReajustesDoItem(exec?.ata_item_id)
+    .filter(r=>String(r.data_vigencia)<=_ataHojeISO())
+    .sort((a,b)=>String(b.data_vigencia).localeCompare(String(a.data_vigencia)));
+  return aplicaveis.find(r=>!atasExecReajustes.some(er=>
+    er.status==='ATIVO'
+    && String(er.ata_reajuste_id)===String(r.id)
+    && String(er.ata_execucao_id)===String(exec.id)
+  ))||null;
+}
+
 function _renderExecRows(execRows){
   document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
   document.getElementById("exec-body").innerHTML=execRows.map(r=>{
@@ -534,7 +581,14 @@ function _renderExecRows(execRows){
     else prazoCel=`<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
     const aberta=_atasExecExpandidas.has(String(r.id));
     const detalhe=aberta?_renderDetalheExecAta(r):'';
-    const excluirBtn=_execAtaPodeExcluir(r)?`<button onclick="event.stopPropagation();excluirExec('${_sanEsc(r.id)}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação ainda sem AF">🗑️ Excluir</button>`:'';
+    const excluirBtn=_execAtaPodeExcluir(r)?`<button type="button" onclick="event.stopPropagation();excluirExec('${_sanEsc(r.id)}')" class="btn-compact btn-action-square" style="border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação ainda sem AF" aria-label="Excluir solicitação ainda sem AF">🗑️</button>`:'';
+    const temReajuste=atasExecReajustes.some(er=>er.status==='ATIVO'&&String(er.ata_execucao_id)===String(r.id));
+    const reajustePendente=_ataReajustePendenteExec(r);
+    const reajusteBtn=podeEditar('atas')
+      ?(temReajuste&&!reajustePendente
+        ?`<button type="button" class="btn-secondary btn-compact btn-action-square" disabled title="Esta execução já recebeu o reajuste aplicável" aria-label="Execução reajustada">✓</button>`
+        :`<button type="button" class="btn-secondary btn-compact btn-action-square" onclick="event.stopPropagation();abrirReajusteExecucaoAta('${_sanEsc(r.id)}')" title="Reajustar esta execução" aria-label="Reajustar esta execução">📈</button>`)
+      :'';
     return `<tr class="ata-exec-row${aberta?' ata-exec-row-open':''}" data-exec-id="${_sanEsc(r.id)}" onclick="toggleDetalheExecAta('${_sanEsc(r.id)}',event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDetalheExecAta('${_sanEsc(r.id)}',event)}" role="button" tabindex="0" aria-expanded="${aberta?'true':'false'}" title="Clique para ${aberta?'recolher':'ver todos os detalhes'}">
     ${_renderSancaoExecCheckbox(r)}
     <td style="font-size:11px">${_sanEsc(r.cpl)}</td>
@@ -549,7 +603,7 @@ function _renderExecRows(execRows){
     <td style="font-size:11px;white-space:nowrap">${r.dt_entrega?_sanEsc(r.dt_entrega):'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
     ${prazoCel}
     <td style="font-size:11px">${_sanEsc(r.nf||"—")}</td>
-    <td style="white-space:nowrap">${excluirBtn}</td>
+    <td style="white-space:nowrap"><div style="display:flex;gap:4px;align-items:center">${reajusteBtn}${excluirBtn}</div></td>
   </tr>${detalhe}`;
   }).join("");
   window._execRowsFiltered=execRows;
@@ -787,11 +841,249 @@ async function gerarSolicitacaoSancaoAta(){
 }
 
 
-function toggleNovoValor(){
-  const alterar=document.getElementById("rv-valor-alterar").checked;
-  document.getElementById("rv-novo-valor-wrap").style.display=alterar?"block":"none";
-  if(alterar) document.getElementById("rv-novo-valor").focus();
+let _arItemId=null;
+let _arCargaSeq=0;
+let _aerExecId=null;
+let _aerReajusteId=null;
+let _aerEmendasCache=[];
+
+function _ataValorAntesDaVigencia(item,dataISO){
+  const anterior=_ataReajustesDoItem(item?.id)
+    .filter(r=>String(r.data_vigencia)<String(dataISO))
+    .at(-1);
+  return Number(anterior?.valor_unitario_novo??item?.valor_unit_original??item?.valor_unit)||0;
 }
+
+function _ataProximaVigenciaSugerida(item){
+  const base=item?.data_base_reajuste;
+  if(!base) return '';
+  const anteriores=_ataReajustesDoItem(item.id);
+  const ano=anteriores.length
+    ?Number(String(anteriores.at(-1).data_vigencia).slice(0,4))+1
+    :new Date().getFullYear();
+  return `${ano}-${String(base).slice(5,10)}`;
+}
+
+async function abrirReajusteItemAta(itemId){
+  if(bloquearSeVisualiz('atas')) return;
+  const item=_resolverAtaItemRef(itemId);
+  if(!item) return;
+  _arItemId=item.id;
+  document.getElementById('ar-info').textContent=`${item.cpl} · ${item.sim} · ${item.item}`;
+  document.getElementById('ar-data-base').value=item.data_base_reajuste?fmtDate(item.data_base_reajuste):'Não informada — preencha a vigência manualmente';
+  document.getElementById('ar-data-vigencia').value=_ataProximaVigenciaSugerida(item);
+  document.getElementById('ar-percentual').value='';
+  document.getElementById('ar-valor-novo').value='';
+  document.getElementById('ar-observacoes').value='';
+  document.getElementById('ar-msg').className='fmsg';
+  atualizarResumoReajusteAta();
+  document.getElementById('modal-ata-reajuste').classList.add('active');
+  await carregarCandidatosReajusteAta();
+}
+
+function atualizarResumoReajusteAta(){
+  const item=_resolverAtaItemRef(_arItemId);
+  const data=document.getElementById('ar-data-vigencia')?.value||_ataHojeISO();
+  const anterior=_ataValorAntesDaVigencia(item,data);
+  const novo=Number(document.getElementById('ar-valor-novo')?.value)||0;
+  const antEl=document.getElementById('ar-valor-anterior');
+  const difEl=document.getElementById('ar-diferenca');
+  if(antEl) antEl.value=anterior?anterior.toFixed(2):'';
+  if(difEl) difEl.value=novo>anterior?fmtFull(novo-anterior):'—';
+}
+
+function _ataNormNumero(v){
+  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/gi,'').toUpperCase();
+}
+
+async function carregarCandidatosReajusteAta(){
+  atualizarResumoReajusteAta();
+  const item=_resolverAtaItemRef(_arItemId);
+  const vigencia=document.getElementById('ar-data-vigencia')?.value||'';
+  const wrap=document.getElementById('ar-candidatos');
+  if(!item||!vigencia){
+    wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px">Informe a vigência para consultar as execuções.</div>';
+    return;
+  }
+  const seq=++_arCargaSeq;
+  wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px"><span class="spinner"></span> Consultando AFs, recebimentos e notas fiscais...</div>';
+  const execs=atasExec.filter(e=>String(e.ata_item_id)===String(item.id));
+  if(!execs.length){
+    wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px">Este item ainda não possui execuções.</div>';
+    return;
+  }
+  const [unRes,nfRes]=await Promise.all([
+    sb.from('atas_execucao_unidades').select('exec_id,recebido_em,nota_fiscal_id').eq('ata_item_id',item.id),
+    sb.from('notas_fiscais').select('id,numero,data_emissao,data_recebimento').eq('contrato_id',item.contrato_id)
+  ]);
+  if(seq!==_arCargaSeq) return;
+  if(unRes.error||nfRes.error){
+    wrap.innerHTML=`<div style="padding:1rem;color:var(--red);font-size:12px">Não foi possível consultar as execuções: ${_sanEsc((unRes.error||nfRes.error).message)}</div>`;
+    return;
+  }
+  const notas=nfRes.data||[];
+  const notaPorId=new Map(notas.map(n=>[String(n.id),n]));
+  const unidadesPorExec=new Map();
+  (unRes.data||[]).forEach(u=>{
+    const key=String(u.exec_id);
+    if(!unidadesPorExec.has(key)) unidadesPorExec.set(key,[]);
+    unidadesPorExec.get(key).push(u);
+  });
+  const candidatos=execs.map(exec=>{
+    const unidades=unidadesPorExec.get(String(exec.id))||[];
+    const notasExec=unidades.map(u=>notaPorId.get(String(u.nota_fiscal_id))).filter(Boolean);
+    const nfTexto=_ataNormNumero(exec.nf);
+    if(nfTexto){
+      notas.filter(n=>_ataNormNumero(n.numero)===nfTexto).forEach(n=>{
+        if(!notasExec.some(x=>String(x.id)===String(n.id))) notasExec.push(n);
+      });
+    }
+    const afISO=_toISODate(exec.data_af);
+    const nfPosterior=notasExec.some(n=>String(n.data_emissao||'')>=vigencia);
+    const afPosterior=!!afISO&&afISO>=vigencia;
+    const pendenteComAF=!exec.dt_entrega&&!!(exec.af_numero||afISO)&&_ataHojeISO()>=vigencia;
+    const motivos=[
+      afPosterior?'AF posterior à vigência':'',
+      nfPosterior?'NF emitida após a vigência':'',
+      pendenteComAF?'AF emitida e ainda não recebida':''
+    ].filter(Boolean);
+    return {exec,notasExec,motivos};
+  }).filter(x=>x.motivos.length);
+  if(!candidatos.length){
+    wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px">Nenhuma execução atende aos critérios nesta data.</div>';
+    return;
+  }
+  wrap.innerHTML=`<table style="width:100%;font-size:11px"><thead><tr><th>AF / data</th><th>Unidade</th><th>Qtde</th><th>NF / emissão</th><th>Motivo</th><th>Situação</th></tr></thead><tbody>${candidatos.map(({exec,notasExec,motivos})=>{
+    const pago=atasExecReajustes.some(er=>er.status==='ATIVO'&&String(er.ata_execucao_id)===String(exec.id));
+    const nfs=notasExec.map(n=>`${_sanEsc(n.numero||'—')} · ${n.data_emissao?fmtDate(n.data_emissao):'sem data'}`).join('<br>')||_sanEsc(exec.nf||'—');
+    return `<tr><td>${_sanEsc(exec.af_numero||'—')}<br>${_sanEsc(exec.data_af||'—')}</td><td>${_sanEsc(exec.unidade||'—')}</td><td style="text-align:right">${exec.qtde}</td><td>${nfs}</td><td>${motivos.map(m=>`<div>• ${_sanEsc(m)}</div>`).join('')}</td><td>${pago?'<span class="badge" style="background:var(--green-bg);color:var(--green-text)">Reajuste registrado</span>':'<span class="badge" style="background:var(--amber-bg);color:var(--amber-text)">Disponível na execução</span>'}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function salvarReajusteItemAta(){
+  if(bloquearSeVisualiz('atas')) return;
+  const item=_resolverAtaItemRef(_arItemId);
+  const data=document.getElementById('ar-data-vigencia').value;
+  const percentual=Number(document.getElementById('ar-percentual').value);
+  const novo=Number(document.getElementById('ar-valor-novo').value);
+  const obs=document.getElementById('ar-observacoes').value.trim();
+  const anterior=_ataValorAntesDaVigencia(item,data);
+  if(!item||!data){showMsg('ar','Informe a vigência do reajuste (*).','err');return;}
+  if(document.getElementById('ar-percentual').value===''){showMsg('ar','Informe manualmente a porcentagem (*).','err');return;}
+  if(!novo||novo<=anterior){showMsg('ar','O novo valor deve ser maior que o valor vigente.','err');return;}
+  const btn=document.getElementById('ar-salvar');btn.disabled=true;btn.textContent='Salvando...';
+  const {error}=await sb.rpc('registrar_reajuste_item_ata',{
+    p_ata_item_id:item.id,p_data_vigencia:data,p_percentual:percentual,
+    p_valor_unitario_novo:novo,p_observacoes:obs||null
+  });
+  btn.disabled=false;btn.textContent='Salvar reajuste';
+  if(error){showMsg('ar','Erro: '+error.message,'err');return;}
+  showMsg('ar','✓ Reajuste registrado. Novas solicitações usarão o valor conforme a vigência.','ok');
+  await loadAtas();
+  setTimeout(()=>document.getElementById('modal-ata-reajuste').classList.remove('active'),900);
+}
+
+function aerOrigemChange(){
+  const origem=document.querySelector('input[name="aer-origem"]:checked')?.value||'recurso_proprio';
+  document.getElementById('aer-emenda-wrap').style.display=origem==='emenda'?'':'none';
+}
+
+function atualizarTotalExecReajusteAta(){
+  const anterior=Number(document.getElementById('aer-valor-anterior')?.value)||0;
+  const novo=Number(document.getElementById('aer-valor-novo')?.value)||0;
+  const qtde=Number(document.getElementById('aer-quantidade')?.value)||0;
+  document.getElementById('aer-total').value=novo>anterior&&qtde>0?fmtFull((novo-anterior)*qtde):'—';
+}
+
+async function abrirReajusteExecucaoAta(execId){
+  if(bloquearSeVisualiz('atas')) return;
+  const exec=atasExec.find(e=>String(e.id)===String(execId));
+  const item=_resolverAtaItemRef(exec?.ata_item_id);
+  if(!exec||!item) return;
+  _aerExecId=exec.id;
+  const reajuste=_ataReajustePendenteExec(exec);
+  _aerReajusteId=reajuste?.id||null;
+  const anterior=exec.qtde?Number(exec.valor||0)/Number(exec.qtde):Number(item.valor_unit_original)||0;
+  const info=document.getElementById('aer-reajuste-existente');
+  document.getElementById('aer-info').textContent=`${item.cpl} · ${item.sim} · ${item.item} · ${exec.unidade||'sem unidade'} · AF ${exec.af_numero||'não informada'}`;
+  document.getElementById('aer-data-vigencia').value=reajuste?.data_vigencia||_ataProximaVigenciaSugerida(item)||'';
+  document.getElementById('aer-percentual').value=reajuste?.percentual??'';
+  document.getElementById('aer-valor-anterior').value=anterior.toFixed(2);
+  document.getElementById('aer-valor-novo').value=reajuste?.valor_unitario_novo??'';
+  document.getElementById('aer-quantidade').value=exec.qtde||'';
+  document.getElementById('aer-empenho').value=exec.empenho||'';
+  document.getElementById('aer-nf').value=exec.nf||'';
+  ['aer-data-vigencia','aer-percentual','aer-valor-novo'].forEach(id=>document.getElementById(id).readOnly=!!reajuste);
+  if(reajuste){
+    info.style.display='block';
+    info.innerHTML=`Reajuste já cadastrado para o item: vigência <strong>${fmtDate(reajuste.data_vigencia)}</strong>, percentual informado <strong>${_sanEsc(reajuste.percentual)}%</strong> e novo valor <strong>${fmtFull(reajuste.valor_unitario_novo)}</strong>.`;
+  }else{
+    info.style.display='block';
+    info.textContent='Nenhum reajuste pendente foi encontrado para esta execução. Informe os dados abaixo; o reajuste do item será cadastrado junto com o pagamento complementar.';
+  }
+  if(!_aerEmendasCache.length){
+    const {data,error}=await sb.from('emendas').select('id,emenda,ano,parlamentar,valor_cedido').order('ano',{ascending:false});
+    if(!error) _aerEmendasCache=data||[];
+  }
+  document.getElementById('aer-emenda').innerHTML='<option value="">Selecione a emenda...</option>'+_aerEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||e.id)}${e.ano?'/'+e.ano:''}${e.parlamentar?' · '+_sanEsc(e.parlamentar):''}</option>`).join('');
+  const rp=document.querySelector('input[name="aer-origem"][value="recurso_proprio"]');if(rp)rp.checked=true;
+  aerOrigemChange();
+  atualizarTotalExecReajusteAta();
+  document.getElementById('aer-msg').className='fmsg';
+  document.getElementById('modal-ata-exec-reajuste').classList.add('active');
+}
+
+async function salvarReajusteExecucaoAta(){
+  if(bloquearSeVisualiz('atas')) return;
+  const exec=atasExec.find(e=>String(e.id)===String(_aerExecId));
+  const item=_resolverAtaItemRef(exec?.ata_item_id);
+  if(!exec||!item) return;
+  const origem=document.querySelector('input[name="aer-origem"]:checked')?.value||'recurso_proprio';
+  const emendaId=origem==='emenda'?(document.getElementById('aer-emenda').value||null):null;
+  const data=document.getElementById('aer-data-vigencia').value;
+  const percentual=Number(document.getElementById('aer-percentual').value);
+  const novo=Number(document.getElementById('aer-valor-novo').value);
+  const quantidade=Number(exec.qtde)||0;
+  const anterior=Number(document.getElementById('aer-valor-anterior').value)||0;
+  if(!data||document.getElementById('aer-percentual').value===''||!novo){showMsg('aer','Informe data, porcentagem e novo valor (*).','err');return;}
+  if(novo<=anterior){showMsg('aer','O valor reajustado deve ser maior que o valor original desta execução.','err');return;}
+  if(!quantidade){showMsg('aer','A execução precisa ter quantidade válida para receber o reajuste.','err');return;}
+  if(origem==='emenda'&&!emendaId){showMsg('aer','Selecione a emenda que pagará o reajuste (*).','err');return;}
+  if(origem==='emenda'&&!podeEditar('dashboard')){showMsg('aer','Para criar a linha na emenda, seu usuário também precisa de permissão para editar Emendas.','err');return;}
+  const btn=document.getElementById('aer-salvar');btn.disabled=true;btn.textContent='Registrando...';
+  let reajusteId=_aerReajusteId;
+  if(!reajusteId){
+    const {data:novoReajuste,error}=await sb.rpc('registrar_reajuste_item_ata',{
+      p_ata_item_id:item.id,p_data_vigencia:data,p_percentual:percentual,
+      p_valor_unitario_novo:novo,p_observacoes:'Cadastrado a partir da execução '+exec.id
+    });
+    if(error){btn.disabled=false;btn.textContent='Registrar pagamento do reajuste';showMsg('aer','Erro ao cadastrar o reajuste do item: '+error.message,'err');return;}
+    const registroReajuste=Array.isArray(novoReajuste)?novoReajuste[0]:novoReajuste;
+    reajusteId=registroReajuste?.id;
+    if(!reajusteId){btn.disabled=false;btn.textContent='Registrar pagamento do reajuste';showMsg('aer','O reajuste do item não retornou um identificador válido.','err');return;}
+  }
+  const {error}=await sb.rpc('registrar_reajuste_execucao_ata',{
+    p_ata_reajuste_id:reajusteId,p_ata_execucao_id:exec.id,
+    p_origem_recurso:origem,p_emenda_id:emendaId,p_quantidade:quantidade,
+    p_empenho:document.getElementById('aer-empenho').value.trim()||null,
+    p_nota_fiscal:document.getElementById('aer-nf').value.trim()||null
+  });
+  btn.disabled=false;btn.textContent='Registrar pagamento do reajuste';
+  if(error){showMsg('aer','Erro: '+error.message,'err');return;}
+  showMsg('aer',origem==='emenda'?'✓ Reajuste registrado e linha criada na emenda.':'✓ Reajuste registrado com recurso próprio.','ok');
+  await loadAtas();
+  if(origem==='emenda'&&typeof loadData==='function'){try{await loadData();}catch(e){console.error(e);}}
+  setTimeout(()=>document.getElementById('modal-ata-exec-reajuste').classList.remove('active'),900);
+}
+
+window.abrirReajusteItemAta=abrirReajusteItemAta;
+window.carregarCandidatosReajusteAta=carregarCandidatosReajusteAta;
+window.atualizarResumoReajusteAta=atualizarResumoReajusteAta;
+window.salvarReajusteItemAta=salvarReajusteItemAta;
+window.abrirReajusteExecucaoAta=abrirReajusteExecucaoAta;
+window.aerOrigemChange=aerOrigemChange;
+window.atualizarTotalExecReajusteAta=atualizarTotalExecReajusteAta;
+window.salvarReajusteExecucaoAta=salvarReajusteExecucaoAta;
 
 let _renovarItemId=null;
 function renovarAta(itemId){
@@ -826,10 +1118,6 @@ function renovarAta(itemId){
   }catch(e){}
   document.getElementById("rv-nova").value=novaData;
   document.getElementById("rv-status").value="VIGENTE";
-  document.getElementById("rv-valor-atual-label").textContent=at?.valor_unit?at.valor_unit.toFixed(2):"—";
-  document.getElementById("rv-valor-manter").checked=true;
-  document.getElementById("rv-novo-valor-wrap").style.display="none";
-  document.getElementById("rv-novo-valor").value="";
   document.getElementById("rv-msg").className="fmsg";
   document.getElementById("modal-renovar").classList.add("active");
 }
@@ -847,18 +1135,11 @@ async function salvarRenovacao(){
   const btn=document.querySelector("#modal-renovar .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
   const reiniciarSaldo=document.getElementById("rv-reiniciar").checked;
-  const alterarValor=document.getElementById("rv-valor-alterar").checked;
-  const novoValor=alterarValor?parseFloat(document.getElementById("rv-novo-valor").value)||0:0;
-  if(alterarValor&&!novoValor){showMsg("rv","Informe o novo valor unitário","err");btn.disabled=false;btn.textContent="Salvar renovação";return;}
   try{
     const {error:errContrato}=await sb.from("contratos")
       .update({vencimento:novaFormatada,status:novoStatus})
       .eq("id",at.contrato_id);
     if(errContrato) throw errContrato;
-    if(alterarValor){
-      const {error:errItem}=await sb.from("atas_itens").update({valor_unit:novoValor}).eq("id",at.id);
-      if(errItem) throw errItem;
-    }
     if(reiniciarSaldo){
       // A renovação reinicia o saldo de todos os itens do contrato, sem apagar
       // solicitações, NFs, patrimônios ou termos do ciclo anterior.
@@ -1213,7 +1494,8 @@ function popularItensExec(){
 function calcValorExec(){
   const atItem=_resolverAtaItemRef(document.getElementById("ne2-item").value)||{};
   const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
-  if(atItem&&atItem.valor_unit&&qtde) document.getElementById("ne2-valor").value=(atItem.valor_unit*qtde).toFixed(2);
+  const valorUnitario=_ataValorUnitarioEm(atItem,_ataHojeISO());
+  if(atItem&&valorUnitario&&qtde) document.getElementById("ne2-valor").value=(valorUnitario*qtde).toFixed(2);
 }
 
 async function abrirModalNovaExec(){

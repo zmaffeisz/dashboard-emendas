@@ -1,7 +1,7 @@
 # Esquema do Banco de Dados — dashboard-emendas
 
 > Banco: PostgreSQL 17 no Supabase de produção (nuvem, projeto `qpvgpfwuurqcqprnpxua`, `contratos-dag`), schema `public`.
-> 37 tabelas base + 2 views. Levantado diretamente do banco em produção.
+> 49 tabelas base + 3 views. Levantado diretamente do banco em produção.
 > Detalhes de migrations, funções, RLS e triggers em [DATABASE.md](DATABASE.md).
 
 ## 1. Mapa de domínios
@@ -11,7 +11,7 @@
 | **Emendas** | `emendas`, `emenda_itens`, `parlamentares`, `unidades` |
 | **Licitação / Processos** | `processos`, `status_opcoes` |
 | **Contratos (matriz)** | `contratos`, `contratos_vigencias`, `contratos_historico`, `contratos_fiscalizadores`, `fornecedores`, `fornecedor_contatos` |
-| **Atas de Registro de Preços** | `atas_itens`, `atas_execucao` |
+| **Atas de Registro de Preços** | `atas_itens`, `atas_execucao`, `atas_item_reajustes`, `atas_execucao_reajustes` |
 | **Itens (ciclo de vida)** | `itens`, `itens_entregas`, `itens_entregas_unidades`, `itens_status_historico` |
 | **Empenhos** | `empenhos`, `empenho_itens` |
 | **Notas Fiscais** | `notas_fiscais`, `nota_fiscal_itens` |
@@ -90,6 +90,7 @@ de **ATA** (a aba "Atas Rp" é uma visão filtrada desta matriz — ver [MODULES
 | `periodicidade_pagamento` | text | `MENSAL` ou `TRIMESTRAL` nos serviços fixos |
 | `valor_periodico_num` | numeric | valor do período de pagamento, sem depender do nome legado mensal |
 | `modelo_execucao` | text | identifica o fluxo operacional do contrato |
+| `data_base_reajuste` | date | referência contratual opcional para consulta e reajustes |
 | `fonte` | text | fonte de recurso |
 | `vigencia_atual`, `vencimento`, `total_periodos_vigencia` | — | vigência |
 | `prefixo_chamado` | text | liga contrato ↔ chamados |
@@ -132,6 +133,20 @@ Execução/entrega por item de ata, por unidade (AF, NF, datas, termo).
 | `empenho`, `nf` | text | nº de empenho / nota fiscal |
 | `origem_recurso` | text | |
 | `termo_arquivo` | text | arquivo de termo (Storage) |
+
+### `atas_item_reajustes`
+
+Versões de preço de cada item de ATA, com `data_vigencia`, `percentual` informado,
+`valor_unitario_anterior`, `valor_unitario_novo`, status e autoria. O registro não
+sobrescreve o valor original em `atas_itens`.
+
+### `atas_execucao_reajustes`
+
+Pagamento complementar de uma execução específica. Guarda a quantidade integral da
+execução, os valores anterior e reajustado, a diferença unitária e total, a origem do
+recurso e os vínculos opcionais com
+`emendas`/`emenda_itens`. Cancelamentos são preservados por status, sem apagar a execução
+ou os documentos financeiros originais.
 
 ### `itens` (25 colunas) — ciclo de vida do item
 Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → entrega).

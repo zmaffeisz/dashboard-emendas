@@ -2,6 +2,15 @@
 
 ## 2026-07-30
 
+- **Data-base e reajustes de itens de ATA:** contratos de qualquer natureza agora podem
+  registrar uma data-base de reajuste para consulta. Nos itens vigentes das ATAs, o novo
+  fluxo preserva o preço original, registra versões de preço com vigência e mostra AFs,
+  NFs posteriores e AFs ainda não recebidas como candidatas. Cada execução pode receber
+  separadamente apenas a diferença do reajuste, por recurso próprio ou por uma nova linha
+  rastreável na emenda selecionada.
+- **Prorrogação separada de reajuste:** a prorrogação de ATA deixou de alterar diretamente
+  o valor unitário. Mudanças de preço passam exclusivamente pelo fluxo de reajuste, com
+  data, percentual informado e histórico.
 - **Itens de contratos de aquisição:** a visualização expandida agora mostra patrimônio,
   número de série e empenho por item, além de oferecer **Ver tudo** para abrir os detalhes do contrato.
 - **Situação manual nas Licitações:** o antigo status manual fixo foi substituído por uma

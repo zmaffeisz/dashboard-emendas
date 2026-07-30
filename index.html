@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
 <link rel="stylesheet" href="dashboard.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
@@ -1718,6 +1718,7 @@
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('exec')" class="th-sort-label">Executado <span id="sort-atas-exec"></span></span><span class="hdr-filter-btn" id="hfa-exec" onclick="openAtaFilter(event,'exec')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('saldo')" class="th-sort-label">Saldo <span id="sort-atas-saldo"></span></span><span class="hdr-filter-btn" id="hfa-saldo" onclick="openAtaFilter(event,'saldo')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('valor_unit')" class="th-sort-label">Valor unit. <span id="sort-atas-valor_unit"></span></span><span class="hdr-filter-btn" id="hfa-valor_unit" onclick="openAtaFilter(event,'valor_unit')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('data_base_reajuste')" class="th-sort-label">Base reajuste <span id="sort-atas-data_base_reajuste"></span></span><span class="hdr-filter-btn" id="hfa-data_base_reajuste" onclick="openAtaFilter(event,'data_base_reajuste')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('vencimento')" class="th-sort-label">Vencimento <span id="sort-atas-vencimento"></span></span><span class="hdr-filter-btn" id="hfa-vencimento" onclick="openAtaFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('status')" class="th-sort-label">Status <span id="sort-atas-status"></span></span><span class="hdr-filter-btn" id="hfa-status" onclick="openAtaFilter(event,'status')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('empresa')" class="th-sort-label">Empresa <span id="sort-atas-empresa"></span></span><span class="hdr-filter-btn" id="hfa-empresa" onclick="openAtaFilter(event,'empresa')" title="Filtrar">▾</span></span></th>
@@ -1828,7 +1829,7 @@
           </div>
           <div class="form-group full"><div class="form-label">Unidade *</div><input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU"><div id="ne2-unidade-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Preenchida automaticamente pela emenda.</div></div>
           <div class="form-group"><div class="form-label">Qtde *</div><input type="number" id="ne2-qtde" placeholder="ex: 2" oninput="calcValorExec()"></div>
-          <div class="form-group"><div class="form-label">Valor total (R$)</div><input type="number" id="ne2-valor" placeholder="Calculado auto" step="0.01"></div>
+          <div class="form-group"><div class="form-label">Valor total (R$)</div><input type="number" id="ne2-valor" placeholder="Calculado automaticamente" step="0.01" readonly title="Calculado pelo valor vigente do item na data da solicitação"></div>
           <input type="hidden" id="ne2-data-af">
           <input type="hidden" id="ne2-dt-entrega">
         </div>
@@ -1837,6 +1838,66 @@
           <button class="btn-primary" onclick="salvarNovaExec()">Salvar</button>
           <button class="btn-secondary" onclick="document.getElementById('modal-nova-exec').classList.remove('active')">Cancelar</button>
           <span id="ne2-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de reajuste do item da ATA -->
+    <div class="modal-overlay" id="modal-ata-reajuste">
+      <div class="modal-box" style="width:min(920px,96vw);max-height:92vh;overflow-y:auto">
+        <div class="modal-title">📈 Reajustar item da ATA</div>
+        <div id="ar-info" style="font-size:12px;color:var(--text2);margin:.5rem 0 .875rem"></div>
+        <div class="form-grid">
+          <div class="form-group"><div class="form-label">Data-base do contrato</div><input type="text" id="ar-data-base" readonly></div>
+          <div class="form-group"><div class="form-label">Vigência do reajuste *</div><input type="date" id="ar-data-vigencia" onchange="carregarCandidatosReajusteAta()"></div>
+          <div class="form-group"><div class="form-label">Valor unitário vigente</div><input type="number" id="ar-valor-anterior" readonly step="0.01"></div>
+          <div class="form-group"><div class="form-label">Novo valor unitário *</div><input type="number" id="ar-valor-novo" step="0.01" min="0" oninput="atualizarResumoReajusteAta()"></div>
+          <div class="form-group"><div class="form-label">Porcentagem informada *</div><input type="number" id="ar-percentual" step="0.0001" oninput="atualizarResumoReajusteAta()"></div>
+          <div class="form-group"><div class="form-label">Diferença unitária</div><input type="text" id="ar-diferenca" readonly></div>
+          <div class="form-group full"><div class="form-label">Observações</div><textarea id="ar-observacoes" rows="2"></textarea></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin:.25rem 0 .75rem">A porcentagem e o novo valor são informados manualmente. O sistema não altera AFs, notas fiscais ou execuções já cadastradas.</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:.5rem">Execuções potencialmente alcançadas</div>
+        <div id="ar-candidatos" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:auto;max-height:280px">
+          <div style="padding:1rem;color:var(--text3);font-size:12px">Informe a vigência para consultar as execuções.</div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" id="ar-salvar" onclick="salvarReajusteItemAta()">Salvar reajuste</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-ata-reajuste').classList.remove('active')">Cancelar</button>
+          <span id="ar-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de pagamento complementar do reajuste por execução -->
+    <div class="modal-overlay" id="modal-ata-exec-reajuste">
+      <div class="modal-box" style="width:min(680px,96vw);max-height:92vh;overflow-y:auto">
+        <div class="modal-title">💰 Aplicar reajuste à execução</div>
+        <div id="aer-info" style="font-size:12px;color:var(--text2);margin:.5rem 0 .875rem"></div>
+        <div id="aer-reajuste-existente" style="display:none;background:var(--blue-bg);color:var(--blue-text);padding:.75rem;border-radius:var(--radius-sm);font-size:12px;margin-bottom:.75rem"></div>
+        <div class="form-grid">
+          <div class="form-group"><div class="form-label">Vigência do reajuste *</div><input type="date" id="aer-data-vigencia"></div>
+          <div class="form-group"><div class="form-label">Porcentagem informada *</div><input type="number" id="aer-percentual" step="0.0001"></div>
+          <div class="form-group"><div class="form-label">Valor unitário original</div><input type="number" id="aer-valor-anterior" readonly step="0.01"></div>
+          <div class="form-group"><div class="form-label">Valor unitário reajustado *</div><input type="number" id="aer-valor-novo" step="0.01" oninput="atualizarTotalExecReajusteAta()"></div>
+          <div class="form-group"><div class="form-label">Quantidade da execução</div><input type="number" id="aer-quantidade" step="0.0001" min="0" readonly></div>
+          <div class="form-group"><div class="form-label">Diferença a pagar</div><input type="text" id="aer-total" readonly></div>
+          <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="aer-empenho"></div>
+          <div class="form-group"><div class="form-label">Nota fiscal</div><input type="text" id="aer-nf"></div>
+          <div class="form-group full">
+            <div class="form-label">Fonte do pagamento *</div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap">
+              <label><input type="radio" name="aer-origem" value="recurso_proprio" checked onchange="aerOrigemChange()"> Recurso próprio</label>
+              <label><input type="radio" name="aer-origem" value="emenda" onchange="aerOrigemChange()"> Emenda parlamentar</label>
+            </div>
+          </div>
+          <div class="form-group full" id="aer-emenda-wrap" style="display:none"><div class="form-label">Emenda que pagará o reajuste *</div><select id="aer-emenda"><option value="">Selecione a emenda...</option></select></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:.25rem">Quando a fonte for Emenda, será criada uma linha separada na emenda com somente a diferença do reajuste. A execução e a nota fiscal originais não serão modificadas.</div>
+        <div class="form-actions">
+          <button class="btn-primary" id="aer-salvar" onclick="salvarReajusteExecucaoAta()">Registrar pagamento do reajuste</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-ata-exec-reajuste').classList.remove('active')">Cancelar</button>
+          <span id="aer-msg" class="fmsg"></span>
         </div>
       </div>
     </div>
@@ -1879,30 +1940,6 @@
               <div>
                 <div style="font-size:13px;font-weight:500">Manter saldo atual</div>
                 <div style="font-size:11px;color:var(--text2)">Continua com o saldo restante (<span id="rv-saldo-label">—</span> unidades)</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <!-- Opção de valor unitário -->
-        <div style="background:var(--green-bg);border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem">
-          <div style="font-size:13px;font-weight:500;color:var(--green-text);margin-bottom:.625rem">O valor unitário será alterado?</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <input type="radio" name="rv-valor-opt" value="manter" id="rv-valor-manter" checked onchange="toggleNovoValor()" style="accent-color:var(--green)">
-              <div>
-                <span style="font-size:13px;font-weight:500">Manter valor atual</span>
-                <span style="font-size:11px;color:var(--text2);margin-left:6px">R$ <span id="rv-valor-atual-label">—</span></span>
-              </div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-              <input type="radio" name="rv-valor-opt" value="alterar" id="rv-valor-alterar" onchange="toggleNovoValor()" style="margin-top:2px;accent-color:var(--green)">
-              <div style="flex:1">
-                <div style="font-size:13px;font-weight:500">Reajustar valor</div>
-                <div id="rv-novo-valor-wrap" style="display:none;margin-top:6px">
-                  <input type="number" id="rv-novo-valor" placeholder="Novo valor unitário (R$)" step="0.01"
-                    style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:220px;background:var(--surface);color:var(--text)">
-                </div>
               </div>
             </label>
           </div>
@@ -2257,6 +2294,7 @@
       <div class="form-group"><div class="form-label">Status</div><select id="ec-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="CONCLUIDO">CONCLUIDO</option><option value="ENCERRADO">ENCERRADO</option></select></div>
       <div class="form-group"><div class="form-label">Data de início</div><input id="ec-inicio" type="date"></div>
       <div class="form-group"><div class="form-label">Data de assinatura</div><input id="ec-assinatura" type="date"></div>
+      <div class="form-group"><div class="form-label">Data-base do reajuste</div><input id="ec-data-base-reajuste" type="date"></div>
       <div class="form-group"><div class="form-label">Vigência atual</div><input id="ec-vigencia" type="text"></div>
       <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
       <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01" disabled title="Valor original preservado. Use reajuste, aditivo ou supressão para alterar valores de gestão."></div>
@@ -2324,6 +2362,7 @@
       </div>
       <div class="form-group" id="nc-inicio-wrap"><div class="form-label">Data de início</div><input type="date" id="nc-inicio" onchange="_ncRecalcVigencia()"></div>
       <div class="form-group" id="nc-assinatura-wrap"><div class="form-label">Data de assinatura</div><input type="date" id="nc-assinatura"></div>
+      <div class="form-group"><div class="form-label">Data-base do reajuste</div><input type="date" id="nc-data-base-reajuste"><div style="font-size:11px;color:var(--text3);margin-top:4px">Informação contratual para consulta e referência de reajustes.</div></div>
       <div class="form-group" id="nc-vigencia-wrap"><div class="form-label">Vigência atual</div><input type="text" id="nc-vigencia" placeholder="ex: 12 meses"></div>
       <div class="form-group" id="nc-vencimento-wrap"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
       <div class="form-group" id="nc-valor-wrap"><div class="form-label">Valor Global (R$)</div><input type="text" id="nc-valor-inicial" placeholder="soma dos itens" title="Soma dos valores dos itens marcados para este contrato"></div>
@@ -2912,12 +2951,12 @@
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260729-af-pdf-3"></script>
 <script src="js/legacy/10-chamados-inventario.js"></script>
-<script src="js/legacy/20-atas.js"></script>
+<script src="js/legacy/20-atas.js?v=20260730-ata-reajustes-2"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260730-status-flow"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260730-contract-item-groups-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260730-status-flow"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260730-status-flow"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260730-contract-item-groups-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260730-ata-reajustes-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>
 <script type="module" src="js/app.js"></script>
