@@ -1934,6 +1934,154 @@ function _ncEmpItemHtml(sid){
   </div>`;
 }
 
+function _ncEmpGrupoHtml(gid){
+  const inp='font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
+  return `<div class="ncg-emp-tools" style="margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2)">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <button type="button" onclick="_ncEmpGrupoSelecionar('${gid}','sem')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Selecionar sem empenho</button>
+      <button type="button" onclick="_ncEmpGrupoSelecionar('${gid}','todos')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Selecionar todos</button>
+      <button type="button" onclick="_ncEmpGrupoSelecionar('${gid}','nenhum')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Limpar seleção</button>
+      <button type="button" onclick="_ncAbrirPickerEmpGrupo('${gid}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:none;background:var(--blue);color:#fff;cursor:pointer">+ Vincular empenho aos selecionados</button>
+      <span id="nci-emp-count-${gid}" style="font-size:11px;color:var(--text3)">0 selecionados</span>
+    </div>
+    <div id="nci-emp-picker-${gid}" style="display:none;margin-top:8px;padding:8px;border:1px solid var(--blue);border-radius:4px;background:var(--surface)">
+      <select id="nci-emp-sel-${gid}" onchange="_ncEmpSelChange('${gid}')" style="width:100%;margin-bottom:6px;${inp}"><option value="">Selecione...</option></select>
+      <div id="nci-emp-form-novo-${gid}" style="display:none;margin-bottom:6px;padding:6px;border:1px dashed var(--border);border-radius:4px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:4px">Novo empenho</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <input type="text" id="nci-emp-nro-${gid}" placeholder="Número *" style="flex:1;min-width:100px;${inp}">
+          <input type="number" id="nci-emp-ano-${gid}" placeholder="Ano" style="width:65px;${inp}">
+          <input type="number" id="nci-emp-vlnovo-${gid}" placeholder="Valor R$ *" step="any" style="width:110px;${inp}">
+          <input type="text" id="nci-emp-desp-${gid}" placeholder="Nº Despesa" style="width:100px;${inp}">
+          <input type="date" id="nci-emp-dat-${gid}" style="width:130px;${inp}">
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">
+          <select id="nci-emp-fonte-${gid}" title="Fonte" style="width:140px;${inp}"></select>
+          <input type="text" id="nci-emp-fontedesc-${gid}" placeholder="Detalhe da fonte" style="flex:1;min-width:120px;${inp}">
+          <select id="nci-emp-emenda-${gid}" title="Emenda (opcional)" style="flex:1;min-width:160px;${inp}"></select>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">A quantidade e o valor ainda não vinculados serão calculados separadamente para cada item selecionado.</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button type="button" onclick="_ncVinculEmpGrupo('${gid}')" style="font-size:11px;padding:4px 12px;border-radius:4px;border:none;background:var(--blue);color:#fff;cursor:pointer">Vincular aos selecionados</button>
+        <button type="button" onclick="_ncFecharPickerEmp('${gid}')" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Cancelar</button>
+        <span id="nci-emp-msg-${gid}" style="font-size:11px;color:var(--red)"></span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function _ncEmpGrupoRows(gid, somenteSelecionados){
+  const grupo=document.querySelector(`.nc-item-group[data-group-id="${gid}"]`);
+  if(!grupo) return [];
+  return [...grupo.querySelectorAll('.nc-item-row')].filter(row=>{
+    if(row.dataset.jacont==='1') return false;
+    const contratoChk=row.querySelector('.nci-chk');
+    if(!contratoChk?.checked) return false;
+    return !somenteSelecionados||row.querySelector('.nci-emp-bulk-chk')?.checked;
+  });
+}
+
+function _ncEmpGrupoAtualizarContagem(gid){
+  const total=_ncEmpGrupoRows(gid,true).length;
+  const el=document.getElementById('nci-emp-count-'+gid);
+  if(el) el.textContent=`${total} selecionado${total===1?'':'s'}`;
+}
+
+function _ncEmpGrupoSelecionar(gid,modo){
+  const rows=_ncEmpGrupoRows(gid,false);
+  rows.forEach(row=>{
+    const chk=row.querySelector('.nci-emp-bulk-chk');
+    if(!chk) return;
+    const sid=row.dataset.id;
+    const semEmp=!((window._ncEmpItens||{})[sid]||[]).length;
+    chk.checked=modo==='todos'||(modo==='sem'&&semEmp);
+  });
+  _ncEmpGrupoAtualizarContagem(gid);
+}
+
+async function _ncAbrirPickerEmpGrupo(gid){
+  const rows=_ncEmpGrupoRows(gid,true);
+  const msgEl=document.getElementById('nci-emp-msg-'+gid);
+  if(!rows.length){
+    const grupo=document.querySelector(`.nc-item-group[data-group-id="${gid}"]`);
+    const marcado=grupo?.querySelector('.ncg-chk')?.checked;
+    if(window.toast) toast(marcado?'Selecione ao menos um item interno.':'Marque o card do grupo antes de vincular empenhos.','warning');
+    return;
+  }
+  if(msgEl) msgEl.textContent='';
+  await _ncAbrirPickerEmp(gid);
+}
+
+async function _ncVinculEmpGrupo(gid){
+  const msgEl=document.getElementById('nci-emp-msg-'+gid); if(msgEl) msgEl.textContent='';
+  const rows=_ncEmpGrupoRows(gid,true);
+  if(!rows.length){ if(msgEl) msgEl.textContent='Selecione ao menos um item.'; return; }
+  const sel=document.getElementById('nci-emp-sel-'+gid); if(!sel) return;
+  const val=sel.value;
+  if(!val){ if(msgEl) msgEl.textContent='Selecione o empenho.'; return; }
+  let baseLink;
+  if(val==='__novo__'){
+    const numero=(document.getElementById('nci-emp-nro-'+gid)?.value||'').trim();
+    const valor=parseFloat((document.getElementById('nci-emp-vlnovo-'+gid)?.value||'').replace(',','.'));
+    if(!numero){ if(msgEl) msgEl.textContent='Informe o número do empenho.'; return; }
+    if(!valor||isNaN(valor)){ if(msgEl) msgEl.textContent='Informe o valor.'; return; }
+    const tmpId='tmp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const emp={
+      numero, numero_normalizado:(typeof normalizarNumeroDocumento==='function'?normalizarNumeroDocumento(numero):numero),
+      ano:parseInt(document.getElementById('nci-emp-ano-'+gid)?.value)||null,
+      valor_empenhado:valor, saldo_empenho:valor,
+      numero_despesa:(document.getElementById('nci-emp-desp-'+gid)?.value||'').trim()||null,
+      fonte_tipo:(document.getElementById('nci-emp-fonte-'+gid)?.value||null),
+      fonte_descricao:(document.getElementById('nci-emp-fontedesc-'+gid)?.value||'').trim()||null,
+      emenda_id:(document.getElementById('nci-emp-emenda-'+gid)?.value||null),
+      data_emissao:(document.getElementById('nci-emp-dat-'+gid)?.value||null),
+      updated_at:new Date().toISOString()
+    };
+    window._ncEmpBuffer=window._ncEmpBuffer||{};
+    window._ncEmpBuffer[tmpId]=emp;
+    baseLink={tmpId,isNew:true,numero,ano:emp.ano};
+  }else if(val.startsWith('__tmp__')){
+    const tmpId=val.slice(7);
+    const emp=(window._ncEmpBuffer||{})[tmpId];
+    if(!emp){ if(msgEl) msgEl.textContent='Empenho não encontrado.'; return; }
+    baseLink={tmpId,isNew:true,numero:emp.numero,ano:emp.ano};
+  }else{
+    const empData=(window._ncEmpFree||[]).find(e=>String(e.id)===String(val));
+    baseLink={empId:val,isNew:false,numero:empData?.numero||val,ano:empData?.ano};
+  }
+  window._ncEmpItens=window._ncEmpItens||{};
+  let aplicados=0, ignorados=0;
+  rows.forEach(row=>{
+    const sid=String(row.dataset.id||''); if(!sid) return;
+    const links=window._ncEmpItens[sid]||(window._ncEmpItens[sid]=[]);
+    const repetido=links.some(lk=>baseLink.isNew
+      ?lk.isNew&&lk.tmpId===baseLink.tmpId
+      :!lk.isNew&&String(lk.empId)===String(baseLink.empId));
+    if(repetido){ ignorados++; return; }
+    const qtdeTotal=_ncQtdeEfetivaRow(row);
+    const raw=(row.querySelector('.nci-valor')?.value||'').trim().replace(/\./g,'').replace(',','.');
+    const unit=parseFloat(raw)||0;
+    const totalValor=(qtdeTotal!=null&&unit)?qtdeTotal*unit:null;
+    const qtdeUsada=links.reduce((s,lk)=>s+(Number(lk.qtde_vinculada)||0),0);
+    const valorUsado=links.reduce((s,lk)=>s+(Number(lk.val_vinculado)||0),0);
+    const qtdeRestante=qtdeTotal!=null?Math.max(0,qtdeTotal-qtdeUsada):null;
+    const valorRestante=totalValor!=null?Math.max(0,totalValor-valorUsado):null;
+    if(qtdeRestante===0&&valorRestante===0){ ignorados++; return; }
+    links.push({...baseLink,qtde_vinculada:qtdeRestante,val_vinculado:valorRestante});
+    _ncRenderEmpLista(sid);
+    const chk=row.querySelector('.nci-emp-bulk-chk'); if(chk) chk.checked=false;
+    aplicados++;
+  });
+  if(!aplicados&&baseLink.isNew&&baseLink.tmpId) delete window._ncEmpBuffer[baseLink.tmpId];
+  _ncEmpGrupoAtualizarContagem(gid);
+  _ncFecharPickerEmp(gid);
+  if(window.toast){
+    const extra=ignorados?` ${ignorados} já estava(m) totalmente vinculado(s) ou com este empenho.`:'';
+    toast(`Empenho vinculado a ${aplicados} item(ns).${extra}`,aplicados?'success':'warning');
+  }
+}
+
 function _ncItemChkChange(chk){
   _ncRecalcValorGlobal();
   if((window._ncModoAtual||'')!=='aquisicao') return;
@@ -2066,14 +2214,22 @@ async function _ncSalvarEmpItens(contratoId){
   const buf=window._ncEmpBuffer||{};
   const empItensMap=window._ncEmpItens||{};
   const tmpToReal={};
+  const itensSelecionados=new Set(Object.keys(idMap).map(String));
+  const tmpUsados=new Set();
+  for(const [origId,links] of Object.entries(empItensMap)){
+    if(!itensSelecionados.has(String(origId))) continue;
+    links.forEach(lk=>{ if(lk.isNew&&lk.tmpId) tmpUsados.add(lk.tmpId); });
+  }
   for(const [tmpId,emp] of Object.entries(buf)){
+    if(!tmpUsados.has(tmpId)) continue;
     const reg={...emp,contrato_id:contratoId};
     const {data,error}=await sb.from('empenhos').insert(reg).select('id').single();
     if(error) throw error;
     tmpToReal[tmpId]=String(data.id);
   }
   const existingIds=[];
-  for(const links of Object.values(empItensMap)){
+  for(const [origId,links] of Object.entries(empItensMap)){
+    if(!itensSelecionados.has(String(origId))) continue;
     for(const lk of links){
       if(!lk.isNew&&lk.empId&&!existingIds.includes(String(lk.empId))) existingIds.push(String(lk.empId));
     }
@@ -2081,7 +2237,8 @@ async function _ncSalvarEmpItens(contratoId){
   if(existingIds.length) await sb.from('empenhos').update({contrato_id:contratoId}).in('id',existingIds);
   const toInsert=[];
   for(const [origId,links] of Object.entries(empItensMap)){
-    const contractItemId=idMap[String(origId)]||String(origId);
+    const contractItemId=idMap[String(origId)];
+    if(!contractItemId) continue;
     for(const lk of links){
       const empId=lk.isNew?tmpToReal[lk.tmpId]:String(lk.empId||'');
       if(!empId) continue;

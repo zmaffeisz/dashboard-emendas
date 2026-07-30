@@ -156,6 +156,16 @@
   o saldo dos empenhos afetados recalculado.
 - No "gerar contrato" o empenho considera **fonte + emenda** (memória do projeto, lote
   27/06). **A confirmar** comportamento exato.
+- No modal de gerar contrato, itens disponíveis cuja descrição seja equivalente
+  (ignorando caixa, acentuação e espaços excedentes) são agrupados apenas na interface.
+  A quantidade do card é a soma fixa das origens; marca, modelo e valor unitário são
+  replicados para cada registro original no salvamento. Uma origem pode ser
+  **desvinculada** do card para voltar à edição individual, inclusive para divisão parcial.
+- O empenho permanece sempre vinculado ao item original. Em um card agrupado, o mesmo
+  empenho pode ser aplicado somente às origens internas selecionadas; a ação coletiva
+  cria um vínculo individual em `empenho_itens` para cada seleção e usa apenas a quantidade
+  e o valor ainda não vinculados daquele item. Origens não selecionadas preservam seus
+  próprios empenhos ou podem receber outro posteriormente.
 
 ## 7. Recebimento de itens / AF
 

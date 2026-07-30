@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste — agrupamento de itens no novo contrato</title>
+  <style>
+    :root{--border:#ccd3df;--surface:#fff;--surface2:#f4f6fa;--text:#172033;--text2:#526078;--text3:#7c899e;--blue:#2867d8;--red:#b42318}
+    body{font-family:Arial,sans-serif;margin:20px;color:var(--text)}
+    #resultado{white-space:pre-wrap;padding:12px;border:1px solid var(--border);border-radius:6px}
+  </style>
+</head>
+<body>
+  <input id="nc-valor-inicial">
+  <input id="nc-valor-mensal">
+  <div id="nc-itens-lista"></div>
+  <pre id="resultado">Executando…</pre>
+  <script>
+    window._ncModoAtual='aquisicao';
+    window._gerarContratoProcesso={natureza:'AQUISIÇÃO'};
+    window._ncEmpItens={};
+    window._ncEmpBuffer={};
+    window._ncEmpFree=[{id:900,numero:'2026NE001',ano:2026,valor_empenhado:10000}];
+    window._ncVincularItensMap={};
+    window._testOps=[];
+    window.PROC_FONTES=[];
+    window.toast=()=>{};
+    window.normalizarNumeroDocumento=v=>v;
+    window._sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    window.fmtFull=v=>Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    window._itemFonteLabel=v=>v||'';
+    window._ncModo=()=> 'aquisicao';
+    window._ncServicoMensalFixo=()=>false;
+    window._ncServicoTrimestralFixo=()=>false;
+    window._ncServicoPeriodicoFixo=()=>false;
+    window._ncServicoDemanda=()=>false;
+    window.setHeaderH=()=>{};
+    window.addEventListener=window.addEventListener.bind(window);
+    function query(table,action,payload){
+      const state={table,action,payload,filters:[]};
+      const api={
+        select(){return api},eq(k,v){state.filters.push([k,v]);return api},is(k,v){state.filters.push([k,v]);return api},
+        in(k,v){state.filters.push([k,v]);return api},order(){return api},limit(){return api},single(){return api},
+        then(resolve){
+          window._testOps.push({...state});
+          if(action==='insert'&&table==='empenhos') resolve({data:{id:901},error:null});
+          else resolve({data:action==='select'?[]:null,error:null});
+        }
+      };
+      return api;
+    }
+    window.sb={from(table){return{
+      select(){return query(table,'select',null)},
+      update(payload){return query(table,'update',payload)},
+      insert(payload){return query(table,'insert',payload)}
+    }}};
+  </script>
+  <script src="../js/legacy/40-itens-entregas.js"></script>
+  <script src="../js/legacy/70-fiscalizacao-sancoes-contratos.js"></script>
+  <script>
+    (async()=>{
+      const checks=[];
+      const ok=(cond,msg)=>{if(!cond) throw new Error(msg);checks.push('✓ '+msg)};
+      const itens=[
+        {id:1,descricao:'Bisturi Elétrico',qtde:1,valor_estimado:100,fonte_tipo:'emenda',fonte_descricao:'Emenda A',unidades:{nome:'UBS A'},emendas:{emenda:'1',ano:'2026'},status:'em licitação',origem:'aquisicao',processo_id:10},
+        {id:2,descricao:' bisturi elétrico ',qtde:2,valor_estimado:100,fonte_tipo:'emenda',fonte_descricao:'Emenda B',unidades:{nome:'UBS B'},emendas:{emenda:'2',ano:'2026'},status:'em licitação',origem:'aquisicao',processo_id:10},
+        {id:3,descricao:'BISTURI ELETRICO',qtde:3,valor_estimado:100,fonte_tipo:'emenda',fonte_descricao:'Emenda C',unidades:{nome:'UBS C'},emendas:{emenda:'3',ano:'2026'},status:'em licitação',origem:'aquisicao',processo_id:10},
+        {id:4,descricao:'Dinâmometro',qtde:1,valor_estimado:50,fonte_tipo:'recurso',unidades:{nome:'UBS D'},status:'em licitação',origem:'aquisicao',processo_id:10}
+      ];
+      window._ncItensCache=Object.fromEntries(itens.map(i=>[String(i.id),i]));
+      const lista=document.getElementById('nc-itens-lista');
+      _ncRenderItensAgrupados(itens,lista);
+      const grupo=lista.querySelector('.nc-item-group');
+      ok(lista.querySelectorAll('.nc-item-group').length===1,'nomes equivalentes formam um único card');
+      ok(grupo.querySelectorAll('.nc-item-row').length===3,'o card preserva as três linhas de origem');
+      ok(Number(grupo.querySelector('.ncg-qtde').value)===6,'a quantidade fixa é a soma das origens');
+      grupo.querySelector('.ncg-marca').value='Marca X';
+      grupo.querySelector('.ncg-modelo').value='Modelo Y';
+      grupo.querySelector('.ncg-valor').value='100,00';
+      _ncGrupoCamposChange(grupo.querySelector('.ncg-valor'));
+      ok([...grupo.querySelectorAll('.nci-marca')].every(el=>el.value==='Marca X'),'a marca do grupo é aplicada a cada registro');
+      ok([...grupo.querySelectorAll('.nci-modelo')].every(el=>el.value==='Modelo Y'),'o modelo do grupo é aplicado a cada registro');
+      const groupChk=grupo.querySelector('.ncg-chk'); groupChk.checked=true; _ncGrupoChkChange(groupChk);
+      ok([...grupo.querySelectorAll('.nci-chk')].every(el=>el.checked),'marcar o card seleciona todas as origens');
+      grupo.querySelector('.nc-item-row[data-id="1"] .nci-emp-bulk-chk').checked=true;
+      grupo.querySelector('.nc-item-row[data-id="3"] .nci-emp-bulk-chk').checked=true;
+      const sel=grupo.querySelector('#nci-emp-sel-grp-0');
+      sel.innerHTML+='<option value="900">2026NE001</option>'; sel.value='900';
+      await _ncVinculEmpGrupo('grp-0');
+      ok((_ncEmpItens['1']||[]).length===1&&(_ncEmpItens['3']||[]).length===1&&!(_ncEmpItens['2']||[]).length,'o empenho coletivo alcança somente os itens selecionados');
+      ok(_ncEmpItens['1'][0].qtde_vinculada===1&&_ncEmpItens['3'][0].qtde_vinculada===3,'cada vínculo mantém a quantidade da própria origem');
+      _ncDesvincularItemGrupo(grupo.querySelector('.nc-item-row[data-id="2"] .nci-detach'));
+      const grupoRestante=lista.querySelector('.nc-item-group');
+      const solto=lista.querySelector('.nc-item-row[data-id="2"]');
+      ok(solto.dataset.grouped==='0'&&solto.closest('.nc-item-group')===null,'desvincular transforma somente a origem escolhida em item solto');
+      ok(Number(grupoRestante.querySelector('.ncg-qtde').value)===4,'o card recalcula a quantidade após desvincular');
+      window._testOps=[];
+      await _ncVincularItens(77,88);
+      const updates=_testOps.filter(op=>op.table==='itens'&&op.action==='update');
+      ok(updates.length===3,'o salvamento continua atualizando cada item original separadamente');
+      ok(updates.every(op=>op.payload.marca==='Marca X'&&op.payload.modelo==='Modelo Y'&&op.payload.valor_contratado===100),'marca, modelo e valor compartilhados chegam a todos os registros');
+      window._testOps=[];
+      await _ncSalvarEmpItens(77);
+      const links=_testOps.find(op=>op.table==='empenho_itens'&&op.action==='insert')?.payload||[];
+      ok(links.length===2&&links.some(l=>String(l.item_id)==='1')&&links.some(l=>String(l.item_id)==='3'),'os empenhos são gravados como vínculos individuais somente nos itens escolhidos');
+      document.getElementById('resultado').textContent=checks.join('\n')+'\n\nTODOS OS TESTES PASSARAM';
+      document.body.dataset.testStatus='passed';
+    })().catch(error=>{
+      document.getElementById('resultado').textContent='FALHA: '+error.stack;
+      document.body.dataset.testStatus='failed';
+      console.error(error);
+    });
+  </script>
+</body>
+</html>

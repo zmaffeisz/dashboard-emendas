@@ -2,6 +2,14 @@
 
 ## 2026-07-30
 
+- **Itens agrupados ao gerar contrato:** itens disponíveis com a mesma descrição agora
+  aparecem em um único card, com quantidade total fixa e preenchimento compartilhado de
+  marca, modelo e valor unitário. Cada origem continua sendo gravada separadamente e pode
+  ser desvinculada do card para recuperar a edição individual e a divisão parcial.
+- **Empenhos coletivos com seleção parcial:** nos cards agrupados de aquisição, é possível
+  escolher somente algumas origens e aplicar o mesmo empenho a elas. Os vínculos continuam
+  individuais em `empenho_itens`, respeitam o saldo de quantidade/valor de cada item e não
+  são gravados para itens retirados da seleção do contrato.
 - **Status da Emenda acompanha automaticamente o contrato:** enquanto o item ainda está
   em licitação, a aba Emendas exibe o status manual definido em **Licitações em
   andamento**. A partir do vínculo com um contrato, o status manual deixa de prevalecer

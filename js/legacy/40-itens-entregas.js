@@ -3247,6 +3247,90 @@ function _ncQtdeEfetivaRow(r){
   return (Number.isFinite(qc)&&qc>0)?qc:(Number.isFinite(full)?full:null);
 }
 // Atualiza o total exibido ao lado do valor contratado do item.
+function _ncNomeGrupo(valor){
+  return String(valor||'').trim().replace(/\s+/g,' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+function _ncValorInputNumero(valor){
+  const raw=String(valor??'').trim().replace(/\./g,'').replace(',','.');
+  const numero=parseFloat(raw);
+  return Number.isFinite(numero)?numero:0;
+}
+function _ncAtualizarTotalRow(row){
+  if(!row) return;
+  const totEl=row.querySelector('.nci-total'); if(!totEl) return;
+  const unit=_ncValorInputNumero(row.querySelector('.nci-valor')?.value);
+  const qtde=_ncQtdeEfetivaRow(row);
+  totEl.textContent=(unit&&qtde)?('Total: '+fmtFull(unit*qtde)):'Total: —';
+}
+function _ncGrupoSyncCampos(grupo){
+  if(!grupo) return;
+  const marca=grupo.querySelector('.ncg-marca')?.value||'';
+  const modelo=grupo.querySelector('.ncg-modelo')?.value||'';
+  const valor=grupo.querySelector('.ncg-valor')?.value||'';
+  grupo.querySelectorAll('.nc-item-row').forEach(row=>{
+    const marcaEl=row.querySelector('.nci-marca'); if(marcaEl) marcaEl.value=marca;
+    const modeloEl=row.querySelector('.nci-modelo'); if(modeloEl) modeloEl.value=modelo;
+    const valorEl=row.querySelector('.nci-valor'); if(valorEl) valorEl.value=valor;
+    _ncAtualizarTotalRow(row);
+  });
+}
+function _ncGrupoCamposChange(el){
+  const grupo=el?.closest?.('.nc-item-group'); if(!grupo) return;
+  _ncGrupoSyncCampos(grupo);
+  _ncRecalcValorGlobal();
+}
+function _ncGrupoChkChange(chk){
+  const grupo=chk?.closest?.('.nc-item-group'); if(!grupo) return;
+  _ncGrupoSyncCampos(grupo);
+  grupo.querySelectorAll('.nc-item-row').forEach(row=>{
+    const itemChk=row.querySelector('.nci-chk');
+    if(itemChk) itemChk.checked=chk.checked;
+    const bulkChk=row.querySelector('.nci-emp-bulk-chk');
+    if(bulkChk){ bulkChk.disabled=!chk.checked; if(!chk.checked) bulkChk.checked=false; }
+    const emp=row.querySelector('.nci-emp-section');
+    if(emp&&(window._ncModoAtual||'')==='aquisicao') emp.style.display=chk.checked?'':'none';
+  });
+  const gid=grupo.dataset.groupId;
+  if(gid&&typeof _ncEmpGrupoAtualizarContagem==='function') _ncEmpGrupoAtualizarContagem(gid);
+  _ncRecalcValorGlobal();
+}
+function _ncAtualizarResumoGrupo(grupo){
+  if(!grupo) return;
+  const rows=[...grupo.querySelectorAll('.nc-item-row')];
+  if(rows.length<=1){
+    rows.forEach(row=>_ncTransformarRowSolta(row,grupo));
+    grupo.remove();
+    return;
+  }
+  const qtd=rows.reduce((s,row)=>s+(Number(row.dataset.qtde)||0),0);
+  const qtdEl=grupo.querySelector('.ncg-qtde');
+  if(qtdEl) qtdEl.value=qtd||'';
+  const count=grupo.querySelector('.ncg-count');
+  if(count) count.textContent=`${rows.length} origens`;
+}
+function _ncTransformarRowSolta(row,grupo){
+  if(!row||!grupo?.parentNode) return;
+  _ncGrupoSyncCampos(grupo);
+  row.dataset.grouped='0';
+  row.classList.remove('nc-item-row-grouped');
+  row.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border)';
+  const itemChk=row.querySelector('.nci-chk'); if(itemChk) itemChk.style.display='';
+  const bulkWrap=row.querySelector('.nci-emp-bulk-wrap'); if(bulkWrap) bulkWrap.style.display='none';
+  const detach=row.querySelector('.nci-detach'); if(detach) detach.style.display='none';
+  const fields=row.querySelector('.nci-fields'); if(fields) fields.style.display='flex';
+  const emp=row.querySelector('.nci-emp-section');
+  if(emp&&(window._ncModoAtual||'')==='aquisicao') emp.style.display=itemChk?.checked?'':'none';
+  grupo.parentNode.insertBefore(row,grupo.nextSibling);
+  _ncAtualizarTotalRow(row);
+}
+function _ncDesvincularItemGrupo(btn){
+  const row=btn?.closest?.('.nc-item-row');
+  const grupo=btn?.closest?.('.nc-item-group');
+  if(!row||!grupo) return;
+  _ncTransformarRowSolta(row,grupo);
+  _ncAtualizarResumoGrupo(grupo);
+  _ncRecalcValorGlobal();
+}
 function _ncUpdateItemTotal(el){
   const r=el?.closest?.('.nc-item-row'); if(!r) return;
   const totEl=r.querySelector('.nci-total'); if(!totEl) return;
@@ -3276,6 +3360,106 @@ function _ncRecalcValorGlobal(){
   const el=document.getElementById('nc-valor-inicial'); if(el) el.value=valorGlobal?valorGlobal.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
   const mensalEl=document.getElementById('nc-valor-mensal');
   if(servMensal&&mensalEl) mensalEl.value=tot?tot.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
+}
+function _ncMetaItemContrato(it){
+  const unid=it.unidades?.nome||'';
+  const emendaNumero=String(it.emendas?.emenda||'').trim();
+  const emendaAno=String(it.emendas?.ano||'').trim();
+  const emendaCompleta=emendaNumero&&emendaAno&&!emendaNumero.endsWith('/'+emendaAno)?`${emendaNumero}/${emendaAno}`:emendaNumero;
+  const fonteBase=it.fonte_tipo==='emenda'&&emendaCompleta?`Emenda ${_sanEsc(emendaCompleta)}`:_itemFonteLabel(it.fonte_tipo);
+  const fonte=fonteBase+(it.fonte_descricao?(' · '+_sanEsc(it.fonte_descricao)):'');
+  return [
+    (it.qtde!=null?('qtde '+it.qtde):null),
+    (it.valor_estimado!=null?('un. est. '+fmtFull(it.valor_estimado)):null),
+    fonte,
+    (unid?_sanEsc(unid):null),
+    _sanEsc(it.status||'—')
+  ].filter(Boolean).join(' · ');
+}
+function _ncItemRowHtml(it,agrupado){
+  const jaCont=!!it.contrato_id;
+  const defVal=(it.valor_estimado!=null)?String(it.valor_estimado).replace('.',','):'';
+  const inp='font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
+  const emp=(window._ncModoAtual||'')==='aquisicao'&&!jaCont?_ncEmpItemHtml(String(it.id)):'';
+  const bulk=(window._ncModoAtual||'')==='aquisicao'&&agrupado&&!jaCont
+    ?`<label class="nci-emp-bulk-wrap" style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);white-space:nowrap" title="Selecionar este item para a vinculação coletiva de empenho"><input type="checkbox" class="nci-emp-bulk-chk" disabled onchange="_ncEmpGrupoAtualizarContagem(this.closest('.nc-item-group')?.dataset.groupId)"> empenho</label>`
+    :'';
+  return `<div class="nc-item-row${agrupado?' nc-item-row-grouped':''}" data-id="${it.id}" data-jacont="${jaCont?1:0}" data-grouped="${agrupado?1:0}" data-qtde="${it.qtde??''}" style="display:flex;align-items:flex-start;gap:8px;padding:${agrupado?'7px 4px':'8px 4px'};border-bottom:1px solid var(--border)${jaCont?';opacity:.6':''}">
+    <input type="checkbox" class="nci-chk" ${jaCont?'disabled title="Item já vinculado a um contrato"':''} onchange="_ncItemChkChange(this)" style="margin-top:3px;${agrupado?'display:none':''}">
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="min-width:0">
+          <div style="font-size:12px;font-weight:600">${agrupado?_sanEsc(it.unidades?.nome||it.fonte_descricao||'Origem do item'):_sanEsc(it.descricao||'(sem descrição)')}${jaCont?' <span style="color:var(--text3);font-weight:400">— já contratado</span>':''}</div>
+          <div style="font-size:11px;color:var(--text3)">${_ncMetaItemContrato(it)}</div>
+        </div>
+        ${agrupado?`<div style="display:flex;align-items:center;gap:6px">${bulk}<button type="button" class="nci-detach" onclick="_ncDesvincularItemGrupo(this)" style="font-size:10px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;white-space:nowrap">Desvincular</button></div>`:''}
+      </div>
+      ${jaCont?'':`<div class="nci-fields" style="display:${agrupado?'none':'flex'};gap:6px;flex-wrap:wrap;margin-top:5px;align-items:flex-start">
+        <input type="number" class="nci-qtde" min="0" step="any" placeholder="qtde p/ este contrato" title="Dividir quantidade: informe a quantidade adjudicada a esta empresa (≤ total). Vazio = quantidade total; o saldo permanece na licitação." oninput="_ncUpdateItemTotal(this)" style="width:150px;${inp}">
+        <input type="text" class="nci-marca" placeholder="marca" style="width:110px;${inp}">
+        <input type="text" class="nci-modelo" placeholder="modelo" style="width:110px;${inp}">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+          <input type="text" class="nci-valor" value="${_sanEsc(defVal)}" oninput="_ncUpdateItemTotal(this)" placeholder="vl. unit. contratado" title="Valor UNITÁRIO contratado por item (default = estimado)" style="width:125px;${inp}">
+          <span class="nci-total" style="font-size:10px;color:var(--text3)">Total: —</span>
+        </div>
+      </div>`}
+      ${emp}
+    </div>
+    ${jaCont?`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><input type="text" class="nci-valor" disabled style="width:110px;${inp}"></div>`:''}
+  </div>`;
+}
+function _ncRenderItensAgrupados(itens,lista){
+  const grupos=new Map();
+  itens.filter(it=>!it.contrato_id).forEach(it=>{
+    const key=_ncNomeGrupo(it.descricao);
+    if(!key) return;
+    if(!grupos.has(key)) grupos.set(key,[]);
+    grupos.get(key).push(it);
+  });
+  const usados=new Set();
+  let grupoSeq=0;
+  const partes=[];
+  itens.forEach(it=>{
+    const key=!it.contrato_id?_ncNomeGrupo(it.descricao):'';
+    const membros=key?grupos.get(key):null;
+    if(membros?.length>1){
+      if(usados.has(key)) return;
+      usados.add(key);
+      const gid='grp-'+(grupoSeq++);
+      const qtd=membros.reduce((s,item)=>s+(Number(item.qtde)||0),0);
+      const valores=[...new Set(membros.map(item=>item.valor_estimado).filter(v=>v!=null).map(Number))];
+      const marcas=[...new Set(membros.map(item=>String(item.marca||'').trim()).filter(Boolean))];
+      const modelos=[...new Set(membros.map(item=>String(item.modelo||'').trim()).filter(Boolean))];
+      const valor=valores.length===1?String(valores[0]).replace('.',','):'';
+      const inp='font-size:11px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
+      partes.push(`<div class="nc-item-group" data-group-id="${gid}" style="margin:8px 0;border:1px solid var(--border);border-radius:8px;background:var(--surface);overflow:hidden">
+        <div style="padding:10px;background:var(--surface2);border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <input type="checkbox" class="ncg-chk" onchange="_ncGrupoChkChange(this)" style="margin-top:3px">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div><div style="font-size:13px;font-weight:700">${_sanEsc(membros[0].descricao||'(sem descrição)')}</div><div style="font-size:10px;color:var(--text3)"><span class="ncg-count">${membros.length} origens</span> · os dados abaixo serão aplicados a cada item</div></div>
+                <label style="font-size:10px;color:var(--text3)">Quantidade total<input class="ncg-qtde" type="number" value="${qtd||''}" readonly style="display:block;width:100px;margin-top:2px;${inp};background:var(--surface2);font-weight:700"></label>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">
+                <input type="text" class="ncg-marca" value="${_sanEsc(marcas.length===1?marcas[0]:'')}" placeholder="marca do grupo" oninput="_ncGrupoCamposChange(this)" style="width:150px;${inp}">
+                <input type="text" class="ncg-modelo" value="${_sanEsc(modelos.length===1?modelos[0]:'')}" placeholder="modelo do grupo" oninput="_ncGrupoCamposChange(this)" style="width:150px;${inp}">
+                <input type="text" class="ncg-valor" value="${_sanEsc(valor)}" placeholder="valor unitário" oninput="_ncGrupoCamposChange(this)" style="width:135px;${inp}" title="${valores.length>1?'Os valores estimados das origens são diferentes; informe o valor contratado do grupo.':'Valor unitário aplicado a todas as origens'}">
+              </div>
+              ${(window._ncModoAtual||'')==='aquisicao'?_ncEmpGrupoHtml(gid):''}
+            </div>
+          </div>
+        </div>
+        <div class="ncg-rows" style="padding:0 8px">${membros.map(item=>_ncItemRowHtml(item,true)).join('')}</div>
+      </div>`);
+    }else{
+      partes.push(_ncItemRowHtml(it,false));
+    }
+  });
+  lista.innerHTML=partes.join('');
+  lista.querySelectorAll('.nc-item-group').forEach(_ncGrupoSyncCampos);
+  lista.querySelectorAll('.nc-item-row').forEach(_ncAtualizarTotalRow);
+  _ncRecalcValorGlobal();
 }
 // Carrega os itens do processo no modal de novo contrato (Fase 3)
 async function _ncCarregarItensProcesso(processoId){
@@ -3317,43 +3501,7 @@ async function _ncCarregarItensProcesso(processoId){
   }
   window._ncItensCache=Object.fromEntries(itens.map(it=>[String(it.id),it]));
   if(!itens.length){ lista.innerHTML='<div style="font-size:12px;color:var(--text3)">Este processo não possui itens cadastrados. O contrato será salvo sem vínculo de itens.</div>'; return; }
-  lista.innerHTML=itens.map(it=>{
-    const jaCont=!!it.contrato_id;
-    const unid=it.unidades?.nome||'';
-    const emendaNumero=String(it.emendas?.emenda||'').trim();
-    const emendaAno=String(it.emendas?.ano||'').trim();
-    const emendaCompleta=emendaNumero&&emendaAno&&!emendaNumero.endsWith('/'+emendaAno)?`${emendaNumero}/${emendaAno}`:emendaNumero;
-    const fonteBase=it.fonte_tipo==='emenda'&&emendaCompleta?`Emenda ${_sanEsc(emendaCompleta)}`:_itemFonteLabel(it.fonte_tipo);
-    const fonte=fonteBase+(it.fonte_descricao?(' · '+_sanEsc(it.fonte_descricao)):'');
-    const defVal=(it.valor_estimado!=null)?String(it.valor_estimado).replace('.',',') :'';
-    const meta=[
-      (it.qtde!=null?('qtde '+it.qtde):null),
-      (it.valor_estimado!=null?('un. est. '+fmtFull(it.valor_estimado)):null),
-      fonte,
-      (unid?_sanEsc(unid):null),
-      _sanEsc(it.status||'—')
-    ].filter(Boolean).join(' · ');
-    const inp='font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
-    return `<div class="nc-item-row" data-id="${it.id}" data-jacont="${jaCont?1:0}" data-qtde="${it.qtde??''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border)${jaCont?';opacity:.6':''}">
-      <input type="checkbox" class="nci-chk" ${jaCont?'disabled title="Item já vinculado a um contrato"':''} onchange="_ncItemChkChange(this)" style="margin-top:3px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600">${_sanEsc(it.descricao||'(sem descrição)')}${jaCont?' <span style="color:var(--text3);font-weight:400">— já contratado</span>':''}</div>
-        <div style="font-size:11px;color:var(--text3)">${meta}</div>
-        ${jaCont?'':`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-          <input type="number" class="nci-qtde" min="0" step="any" placeholder="qtde p/ este contrato" title="Dividir quantidade: informe a quantidade adjudicada a esta empresa (≤ total). Vazio = quantidade total; o saldo permanece na licitação." oninput="_ncUpdateItemTotal(this)" style="width:150px;${inp}">
-          <input type="text" class="nci-marca" placeholder="marca" style="width:110px;${inp}">
-          <input type="text" class="nci-modelo" placeholder="modelo" style="width:110px;${inp}">
-        </div>`}
-        ${(window._ncModoAtual||'')==='aquisicao'&&!jaCont?_ncEmpItemHtml(String(it.id)):''}
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
-        <input type="text" class="nci-valor" value="${jaCont?'':_sanEsc(defVal)}" ${jaCont?'disabled':''} oninput="_ncUpdateItemTotal(this)" placeholder="vl. unit. contratado" title="Valor UNITÁRIO contratado por item (default = estimado)" style="width:110px;${inp}">
-        ${jaCont?'':'<span class="nci-total" style="font-size:10px;color:var(--text3)">Total: —</span>'}
-      </div>
-    </div>`;
-  }).join('');
-  if(typeof _ncRecalcValorGlobal==='function') _ncRecalcValorGlobal();
-  document.querySelectorAll('#nc-itens-lista .nci-valor').forEach(_ncUpdateItemTotal);
+  _ncRenderItensAgrupados(itens,lista);
 }
 // Aplica contrato_id/fornecedor/valor/status aos itens marcados (Fase 3)
 async function _ncVincularItens(contratoId, fornecedorId){
