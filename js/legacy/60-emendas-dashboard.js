@@ -857,8 +857,8 @@ function renderEmPorEmenda(){
     if(aberto){
       h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1280px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em">${_emPodeGerarLicitacao()?'<th style="padding:7px 8px;text-align:center">Selecionar</th>':''}<th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
       items.forEach(i=>{
-        h+=`<tr style="border-top:1px solid var(--border)">
-          ${_emPodeGerarLicitacao()?`<td style="padding:8px;text-align:center">${_emCheckboxLicitacao(i)}</td>`:''}
+        h+=`<tr onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" title="Clique para ver os detalhes deste item" style="border-top:1px solid var(--border);cursor:pointer">
+          ${_emPodeGerarLicitacao()?`<td onclick="event.stopPropagation()" style="padding:8px;text-align:center">${_emCheckboxLicitacao(i)}</td>`:''}
           <td style="padding:8px 14px">${_sanEsc(i.item||'—')}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}</td>
           <td style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}</td>
@@ -878,6 +878,19 @@ function renderEmPorEmenda(){
     }
     h=h.replace(/>Em [^<]*<\/th>/, '>Valor unit. licitação</th>').replace('>Valor planejado</th>','>Valor unit. planejado</th>').replace('>Contratado / executado</th>','>Valor unit. contratado</th>');
     h=h.replace('<th style="padding:7px 8px;text-align:left">Nota fiscal</th>','<th style="padding:7px 8px;text-align:right">Total executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th>');
+    h=h.replace(/<th style="padding:7px 14px;text-align:right">[^<]*<\/th>/,'')
+      .replace(/<td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem[^]*?<\/button><\/td>/g,'');
+    // Cabeçalhos curtos impedem que a largura seja definida pelos rótulos longos.
+    h=h.replace('width:100%;min-width:1280px','width:100%;min-width:1080px')
+      .replace('letter-spacing:.035em','letter-spacing:.02em')
+      .replace('<th style="padding:7px 8px;text-align:center">Selecionar</th>','<th title="Selecionar" style="width:38px;padding:7px 4px;text-align:center">Sel.</th>')
+      .replace('padding:8px;text-align:center','padding:8px 4px;text-align:center')
+      .replace('>Valor unit. planejado</th>',' title="Valor unitário planejado" style="width:92px;padding:7px 6px;text-align:right">Vl. plan.</th>')
+      .replace(/>Valor unit\.[^<]*<\/th>/,' title="Valor unitário em licitação" style="width:92px;padding:7px 6px;text-align:right">Vl. licit.</th>')
+      .replace('>Valor unit. contratado</th>',' title="Valor unitário contratado" style="width:100px;padding:7px 6px;text-align:right">Vl. contrat.</th>')
+      .replace('>Total executado</th>',' title="Total executado" style="width:96px;padding:7px 6px;text-align:right">Total exec.</th>')
+      .replace('>Nota fiscal</th>',' title="Nota fiscal" style="width:70px;padding:7px 6px;text-align:left">NF</th>')
+      .replace('>Processo</th>',' title="Processo" style="width:96px;padding:7px 6px;text-align:left">Proc.</th>');
     h+=`</div>`;
     h=h.replace(/(?:â€”|—)/g,'-');
     return h;
