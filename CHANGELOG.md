@@ -2,6 +2,11 @@
 
 ## 2026-07-30
 
+- **Emendas públicas com o fluxo completo:** visitantes anônimos voltaram a receber os
+  dados derivados de licitação, contrato, empenho, nota fiscal, patrimônio/série e
+  recebimento. A leitura pública foi limitada aos catálogos de secretarias e status
+  efetivamente vinculados a itens de emendas; as demais abas e operações continuam
+  protegidas.
 - **Execuções de ATA:** ao expandir uma execução, a tela mostra somente as unidades
   físicas/patrimônios recebidos. Cada linha abre seus detalhes completos por clique, sem
   botão ou painel-resumo duplicado.

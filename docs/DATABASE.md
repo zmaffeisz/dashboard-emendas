@@ -128,8 +128,12 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 - Padrão de policy (exemplo de `itens_entregas_unidades`):
   - **SELECT** para `authenticated` usando `is_approved_profile()`.
   - **ALL (escrita)** condicionada a `can_access_tab('itens'|'contratos'|'dashboard'|'atas','edit')`.
-- O `anon` foi **revogado** das tabelas do ciclo de itens (acesso público só pela RPC
-  `abrir_chamado_publico`).
+- O `anon` permanece revogado do ciclo operacional em geral, mas possui policies
+  `SELECT` estritas para as linhas comprovadamente vinculadas a `emenda_itens`, pois a
+  aba Emendas é pública. Isso inclui o fluxo derivado de licitação, contratos, empenhos,
+  notas fiscais, entregas, patrimônios/séries e ATAs. Nos catálogos auxiliares,
+  `secretarias` e `status_opcoes` expõem somente os registros referenciados por esse
+  fluxo público. Escritas e a navegação das demais abas continuam restritas.
 
 > Recomenda-se rodar `get_advisors` (security/performance) periodicamente — ver [SECURITY.md](SECURITY.md).
 
