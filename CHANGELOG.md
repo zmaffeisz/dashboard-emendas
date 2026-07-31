@@ -2,6 +2,10 @@
 
 ## 2026-07-30
 
+- **Menu-vitrine no acesso público:** visitantes anônimos agora visualizam, com cadeado,
+  as principais funcionalidades do sistema no menu lateral. O clique direciona ao login
+  sem abrir painéis nem carregar dados internos; Usuários, Cadastros, Planilhas e o Portal
+  de Unidades permanecem ocultos.
 - **Emendas públicas com o fluxo completo:** visitantes anônimos voltaram a receber os
   dados derivados de licitação, contrato, empenho, nota fiscal, patrimônio/série e
   recebimento. A leitura pública foi limitada aos catálogos de secretarias e status

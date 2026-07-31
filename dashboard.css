@@ -39,6 +39,9 @@
 .sidebar-item.active{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
 .sidebar-item.active::before{content:"";position:absolute;left:-.5rem;top:6px;bottom:6px;width:3px;border-radius:0 3px 3px 0;background:var(--primary)}
 .sidebar-item.active .sidebar-icon svg{stroke:var(--primary)}
+.sidebar-item.guest-locked{color:var(--text3)}
+.sidebar-item.guest-locked::after{content:"\1F512";font-size:10px;line-height:1;opacity:.72;margin-left:auto;filter:grayscale(1)}
+.sidebar-item.guest-locked:hover{color:var(--text2)}
 .sidebar-icon{font-size:15px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .sidebar-icon svg{width:17px;height:17px;stroke:var(--text3);fill:none;stroke-width:1.8;transition:stroke .12s}
 .sidebar-item:hover .sidebar-icon svg{stroke:var(--text)}
@@ -53,6 +56,7 @@
   .sidebar:not(:hover) .sidebar-section{align-items:center}
   .sidebar:not(:hover) .sidebar-section-label{opacity:0;max-height:0;padding:0;overflow:hidden}
   .sidebar:not(:hover) .sidebar-item{width:42px;justify-content:center;gap:0;padding:.55rem 0}
+  .sidebar:not(:hover) .sidebar-item.guest-locked::after{position:absolute;right:1px;bottom:2px;font-size:8px;margin:0}
   .sidebar:not(:hover) .sidebar-icon{width:100%;font-size:16px}
   .sidebar:not(:hover) .sidebar-label,
   .sidebar:not(:hover) .sidebar-item>span:not(.sidebar-icon){opacity:0;max-width:0;overflow:hidden;margin:0}

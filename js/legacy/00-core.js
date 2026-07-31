@@ -21,6 +21,19 @@ window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
 const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
+const PUBLIC_TEASER_TABS = ['consulta','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','licitacoes','sancoes'];
+const PUBLIC_TEASER_LABELS = {
+  consulta:'Consulta rápida',
+  'chamados-novos':'Chamados novos',
+  fiscalizacao:'Fiscalização',
+  'inventario-ac':'Inventário',
+  itens:'Controle de Entregas',
+  empenhos:'Empenhos',
+  atas:'Atas RP Vigentes',
+  contratos:'Contratos em execução',
+  licitacoes:'Licitações em andamento',
+  sancoes:'Sanções'
+};
 function _isApprovedProfile(){ return currentProfile?.aprovado !== false; }
 function _isAdmin(){ return (window._userPapel==='admin' || currentProfile?.papel==='admin') && _isApprovedProfile(); }
 function _perfilEhDivisao(){ return currentProfile?.escopo_organizacional==='divisao'; }
@@ -92,9 +105,29 @@ function userCanEdit(tabKey){
 function aplicarVisibilidadeAbas(){
   SIDEBAR_TABS.forEach(n=>{
     const el=document.getElementById("sidebar-"+n);
-    if(el) el.style.display = (n==='saldo-emendas' ? userCanEdit('dashboard') : userCanView(n)) ? "flex" : "none";
+    if(el){
+      _setSidebarGuestLock(el,false);
+      el.style.display = (n==='saldo-emendas' ? userCanEdit('dashboard') : userCanView(n)) ? "flex" : "none";
+    }
   });
+  const portal=document.getElementById('sidebar-portal-unidades');
+  if(portal){
+    _setSidebarGuestLock(portal,false);
+    portal.style.display='flex';
+  }
   updateSidebarSections();
+}
+function _setSidebarGuestLock(el,locked){
+  if(!el) return;
+  if(!el.dataset.originalTitle) el.dataset.originalTitle=el.getAttribute('title')||'';
+  el.classList.toggle('guest-locked',!!locked);
+  if(locked){
+    el.setAttribute('title',(el.dataset.originalTitle||'Funcionalidade')+' · Requer login');
+    el.setAttribute('aria-label',(el.querySelector('.sidebar-label')?.textContent||el.dataset.originalTitle||'Funcionalidade')+' — requer login');
+  }else{
+    el.setAttribute('title',el.dataset.originalTitle||'');
+    el.removeAttribute('aria-label');
+  }
 }
 function updateSidebarSections(){
   document.querySelectorAll('.sidebar-section').forEach(sec=>{
@@ -229,9 +262,14 @@ function entrarModoConvidado(){
   window._pendingApproval = false;
   window._userPapel = null;
   window._tabPerms = [];
-  // Esconder todas as abas exceto Emendas
+  // Emendas é pública. As principais funcionalidades internas aparecem como
+  // vitrine bloqueada, sem abrir painéis nem disparar consultas protegidas.
   document.querySelectorAll('.sidebar-item').forEach(el=>{
-    el.style.display = el.id==='sidebar-dashboard' ? 'flex' : 'none';
+    const tab=el.id.replace(/^sidebar-/,'');
+    const publica=tab==='dashboard';
+    const vitrine=PUBLIC_TEASER_TABS.includes(tab);
+    _setSidebarGuestLock(el,vitrine);
+    el.style.display = publica||vitrine ? 'flex' : 'none';
   });
   updateSidebarSections();
   // Mostrar banner e botão de login
@@ -255,6 +293,7 @@ function entrarModoPendente(){
   window._pendingApproval = true;
   window._tabPerms = [];
   document.querySelectorAll('.sidebar-item').forEach(el=>{
+    _setSidebarGuestLock(el,false);
     el.style.display = el.id==='sidebar-dashboard' ? 'flex' : 'none';
   });
   updateSidebarSections();
@@ -280,7 +319,13 @@ function entrarModoPendente(){
   showTab("dashboard");
 }
 
-function abrirModalLogin(){
+function abrirModalLogin(contexto){
+  const mensagem=typeof contexto==='string'?contexto:'';
+  const contextEl=document.getElementById('login-context');
+  if(contextEl){
+    contextEl.textContent=mensagem;
+    contextEl.style.display=mensagem?'block':'none';
+  }
   document.getElementById("modal-login").classList.add("active");
   document.getElementById("login-email").value="";
   document.getElementById("login-senha").value="";
@@ -432,6 +477,12 @@ function fecharModalEdicao(name){
 }
 
 function showTab(name){
+  if(!currentUser&&name!=='dashboard'&&PUBLIC_TEASER_TABS.includes(name)){
+    const label=PUBLIC_TEASER_LABELS[name]||'Esta funcionalidade';
+    fecharSidebar();
+    abrirModalLogin(`${label} está disponível para usuários autorizados. Entre com sua conta para acessar.`);
+    return;
+  }
   if(name==='saldo-emendas'&&!podeEditar('dashboard')){
     alert("⛔ Você não tem permissão para acessar o saldo das emendas.");
     return;
