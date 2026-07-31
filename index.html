@@ -1605,9 +1605,9 @@
     <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
       <div class="proc-ident-grid full">
         <div class="form-group"><div class="form-label">Tipo *</div><select id="proc-tipo" onchange="_procTipoChange()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>OUTRO</option></select></div>
-        <div class="form-group"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
+        <div class="form-group"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" inputmode="numeric" pattern="[0-9./-]*" oninput="_procIdentFiltrar()"></div>
         <div class="form-group proc-tipo-outro" id="proc-tipo-outro-wrap" style="display:none"><div class="form-label">Outro tipo *</div><input type="text" id="proc-tipo-outro" placeholder="Informe o tipo do processo"></div>
-        <div class="form-group proc-sc"><div class="form-label">SC</div><input type="text" id="proc-sc" inputmode="text" oninput="this.value=this.value.replace(/[^0-9/]/g,'')" placeholder="Número da Solicitação de Compra (opcional)"></div>
+        <div class="form-group proc-sc"><div class="form-label">SC</div><input type="text" id="proc-sc" inputmode="numeric" pattern="[0-9./-]*" oninput="_procCodigoNumericoFiltrar(this)" placeholder="Número da Solicitação de Compra (opcional)"></div>
       </div>
       <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>

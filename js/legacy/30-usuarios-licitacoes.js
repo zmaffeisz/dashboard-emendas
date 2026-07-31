@@ -241,7 +241,7 @@ function renderLicitacoes(){
     const aberto=!!_cpExpanded[p.id];
     const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
     const tituloSc=p.sc?` title="SC: ${_sanEsc(p.sc)}"`:'';
-    let bloco=`<div class="lic-process-card"${tituloSc} style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
+    let bloco=`<div class="lic-process-card"${tituloSc} style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface);text-transform:uppercase">
       <div class="lic-process-card-header" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
         <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
@@ -615,11 +615,17 @@ function _procTipoChange(){
   _procIdentFiltrar();
 }
 function _procIdentFiltrar(){
-  const tipo=document.getElementById('proc-tipo')?.value;
   const inp=document.getElementById('proc-identificador'); if(!inp) return;
-  if(tipo==='SEI'){
-    const limpo=inp.value.replace(/[A-Za-zÀ-ÿ]/g,'');
-    if(limpo!==inp.value){ const p=inp.selectionStart; inp.value=limpo; try{inp.setSelectionRange(p-1,p-1);}catch(_){} }
+  _procCodigoNumericoFiltrar(inp);
+}
+function _procCodigoNumericoFiltrar(inp){
+  if(!inp) return;
+  const limpo=inp.value.replace(/[^0-9./-]/g,'');
+  if(limpo!==inp.value){
+    const p=inp.selectionStart;
+    const removidos=inp.value.length-limpo.length;
+    inp.value=limpo;
+    try{ inp.setSelectionRange(Math.max(0,p-removidos),Math.max(0,p-removidos)); }catch(_){}
   }
 }
 async function salvarProcesso(){
