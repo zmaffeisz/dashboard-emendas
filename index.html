@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
-<link rel="stylesheet" href="dashboard.css?v=20260730-public-showcase">
+<link rel="stylesheet" href="dashboard.css?v=20260731-table-widths">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
 
@@ -967,12 +967,12 @@
         <span class="table-hdr-count" id="inv-count">—</span>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="inv-table">
           <thead>
             <tr>
-              <th>Tipo</th><th>Item</th><th>Unidade</th><th>Empresa</th>
-              <th>Patrimônio</th><th>Entrega na Unidade</th>
-              <th>Empenho</th><th>Emenda</th><th>Contrato/ATA</th><th>Ações</th>
+              <th style="width:90px">Tipo</th><th style="width:260px">Item</th><th style="width:230px">Unidade</th><th style="width:200px">Empresa</th>
+              <th style="width:110px">Patrimônio</th><th style="width:140px">Entrega na Unidade</th>
+              <th style="width:125px">Empenho</th><th style="width:140px">Emenda</th><th style="width:260px">Contrato/ATA</th><th style="width:150px">Ações</th>
             </tr>
           </thead>
           <tbody id="inv-body"></tbody>
@@ -1752,10 +1752,10 @@
           <thead>
             <tr>
               <th style="width:34px" title="Selecione solicitações pendentes da mesma empresa e CPL">Sel.</th>
-              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('cpl')" class="th-sort-label">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('sim')" class="th-sort-label">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('item')" class="th-sort-label">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('unidade')" class="th-sort-label">Unidade <span id="sort-exec-unidade"></span></span><span class="hdr-filter-btn" id="hfe-unidade" onclick="openExecFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="width:105px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('cpl')" class="th-sort-label">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="width:105px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('sim')" class="th-sort-label">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="width:270px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('item')" class="th-sort-label">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="width:270px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('unidade')" class="th-sort-label">Unidade <span id="sort-exec-unidade"></span></span><span class="hdr-filter-btn" id="hfe-unidade" onclick="openExecFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortExecs('qtde')" class="th-sort-label">Qtde <span id="sort-exec-qtde"></span></span><span class="hdr-filter-btn" id="hfe-qtde" onclick="openExecFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortExecs('valor')" class="th-sort-label">Valor total <span id="sort-exec-valor"></span></span><span class="hdr-filter-btn" id="hfe-valor" onclick="openExecFilter(event,'valor')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('empenho')" class="th-sort-label">Empenho <span id="sort-exec-empenho"></span></span><span class="hdr-filter-btn" id="hfe-empenho" onclick="openExecFilter(event,'empenho')" title="Filtrar">▾</span></span></th>

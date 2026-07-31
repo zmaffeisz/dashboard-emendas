@@ -171,6 +171,11 @@ th.resizable-th{position:sticky;background-clip:padding-box}
 .col-resizer:hover,.col-resizer.col-resizing{background:var(--blue,#3b82f6)}
 table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
 
+/* Larguras de partida equilibradas para as grades com campos longos. */
+.inv-table{min-width:1925px}
+.empenhos-table{min-width:1260px}
+#atas-execs-wrap table{min-width:1900px}
+
 /* Chamados novos: preserva espaço para a descrição e usa rolagem horizontal. */
 #panel-chamados-novos .cn-table{min-width:2800px}
 #panel-chamados-novos .cn-table th:nth-child(8),

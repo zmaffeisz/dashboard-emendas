@@ -1,5 +1,9 @@
 # Changelog
 
+## Em desenvolvimento
+
+- Ajustadas as larguras iniciais das colunas de Inventário, Execuções de ATA e Empenhos para priorizar campos com conteúdo longo.
+
 ## 2026-07-30
 
 - **Menu-vitrine no acesso público:** visitantes anônimos agora visualizam, com cadeado,

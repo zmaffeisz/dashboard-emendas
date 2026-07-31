@@ -108,9 +108,9 @@ function renderEmpenhos(){
   const cEl=document.getElementById('emp-count'); if(cEl) cEl.textContent=`${rows.length} empenho(s)`;
   const podeEd=podeEditar('empenhos');
   if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum empenho cadastrado. Clique em <b>+ Novo empenho</b>.</div>'; return; }
-  wrap.innerHTML=`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
+  wrap.innerHTML=`<table class="empenhos-table" style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px">Número</th><th style="padding:7px 8px">Despesa</th><th style="padding:7px 8px">Fonte</th><th style="padding:7px 8px">Contrato</th><th style="padding:7px 8px">Emenda</th><th style="padding:7px 8px;text-align:right">Valor</th><th style="padding:7px 8px;text-align:right">Vinculado</th><th style="padding:7px 8px;text-align:right">Saldo</th><th style="padding:7px 8px"></th>
+      <th style="width:115px;padding:7px 8px">Número</th><th style="width:80px;padding:7px 8px">Despesa</th><th style="width:150px;padding:7px 8px">Fonte</th><th style="width:330px;padding:7px 8px">Contrato</th><th style="width:130px;padding:7px 8px">Emenda</th><th style="width:115px;padding:7px 8px;text-align:right">Valor</th><th style="width:115px;padding:7px 8px;text-align:right">Vinculado</th><th style="width:105px;padding:7px 8px;text-align:right">Saldo</th><th style="width:120px;padding:7px 8px"></th>
     </tr></thead><tbody>${rows.map(e=>{
       const saldoCor=e._saldo<0?'var(--red)':(e._saldo===0?'var(--text3)':'var(--green)');
       return `<tr style="border-bottom:1px solid var(--border)">
