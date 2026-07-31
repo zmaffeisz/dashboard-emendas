@@ -279,7 +279,7 @@ function renderLicitacoes(){
           }else if(podeEd){
             ctrl=_cpSituacaoEditor(`cp-serv-secretaria-${p.id}-${idx}`,`cp-serv-texto-${p.id}-${idx}`,it,`cpSalvarSituacaoServicoMensal(${p.id},${idx})`);
           }else{
-            ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
+            ctrl=_sanEsc(_cpSituacao(it).nome);
           }
           bloco+=`<tr style="border-top:1px solid var(--border)">
             <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço ${periodoLabel}</span></td>
@@ -300,7 +300,7 @@ function renderLicitacoes(){
         } else if(podeEd){
           ctrl=_cpSituacaoEditor(`cp-secretaria-${it.id}`,`cp-texto-${it.id}`,it,`cpSalvarSituacaoItem('${it.id}')`);
         } else {
-          ctrl=cur?_sanEsc(cur.nome):'<span style="color:var(--text3)">indefinido</span>';
+          ctrl=_sanEsc(_cpSituacao(it).nome);
         }
         bloco+=`<tr style="border-top:1px solid var(--border)">
           <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}</td>

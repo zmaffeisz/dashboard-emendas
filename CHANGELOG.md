@@ -2,6 +2,7 @@
 
 ## Em desenvolvimento
 
+- **Licitações em andamento:** contas com acesso somente de visualização, inclusive no perfil Divisão, agora leem a secretaria e a situação manual de cada item em vez de exibir “indefinido”.
 - **Licitações em andamento:** os cards agora sempre exibem os textos em letras maiúsculas. No cadastro, Identificador e SC aceitam apenas números e os separadores `.`, `/` e `-`; o campo Identificador não exibe mais exemplo.
 - **Licitações em andamento:** ao passar o mouse sobre um card de processo, a dica agora mostra o número da SC vinculada.
 - Ajustadas as larguras iniciais das colunas de Inventário, Execuções de ATA e Empenhos para priorizar campos com conteúdo longo.
