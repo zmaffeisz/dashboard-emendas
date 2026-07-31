@@ -207,7 +207,6 @@ function _atualizarIconesSortFisc(){
 }
 
 function filtrarFiscalizacao(){
-  const podeEd=podeEditar('fiscalizacao');
   const busca=(document.getElementById("fisc-busca")?.value||"").toLowerCase();
   fiscalizacaoFiltrados=fiscalizacaoRows.filter(r=>{
     for(const [col,sel] of Object.entries(fiscHeaderFilters)){
@@ -225,6 +224,7 @@ function filtrarFiscalizacao(){
 }
 
 function _renderFiscalizacao(){
+  const podeEd=podeEditar('fiscalizacao');
   const rows=_ordenarRowsFiscalizacao(fiscalizacaoFiltrados);
   _atualizarIconesSortFisc();
   const nao=rows.filter(r=>!r.situacao_os||r.situacao_os==='nao_fiscalizado').length;
@@ -258,7 +258,7 @@ function _renderFiscalizacao(){
       <td style="font-size:11px;text-align:center">${_calcSLA(r)}</td>
       <td style="font-size:11px">${r.fiscalizado_por||"—"}</td>
       <td style="font-size:11px">${r.fiscalizado_em||"—"}</td>
-      <td>${podeEditar('fiscalizacao')?`<button onclick="abrirModalEditarNF('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar NF e Competência">✏️ NF/Comp.</button>`:"—"}</td>
+      <td>${podeEd?`<button onclick="abrirModalEditarNF('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar NF e Competência">✏️ NF/Comp.</button>`:"—"}</td>
     </tr>`;
   }).join("");
 }
