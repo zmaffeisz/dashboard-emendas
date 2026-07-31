@@ -2,6 +2,7 @@
 
 ## Em desenvolvimento
 
+- **Atas Rp Vigentes:** perfis somente visualizadores agora veem apenas a consulta das solicitações. Os controles para criar solicitação, prorrogar, reajustar, encerrar ou excluir ficam ocultos, e as funções também bloqueiam a abertura desses fluxos sem permissão de edição.
 - **Fiscalização de Contratos:** corrigido o carregamento infinito causado pelo escopo da verificação de permissão ao montar a tabela.
 - **Fiscalização de Contratos:** perfis somente visualizadores não veem mais os controles de seleção nem “Gerar medição”; as funções também recusam essa ação antes de abrir ou confirmar o modal. O banco continua exigindo permissão de edição para qualquer gravação.
 - **Licitações em andamento:** contas com acesso somente de visualização, inclusive no perfil Divisão, agora leem a secretaria e a situação manual de cada item em vez de exibir “indefinido”.

@@ -358,6 +358,7 @@ function clearAllAtas(){
 }
 
 function filtrarAtas(){
+  const podeEdAtas=podeEditar('atas');
   const cpl=document.getElementById("fat-cpl")?.value||"";
   const sim=document.getElementById("fat-sim")?.value||"";
   const emp=document.getElementById("fat-empresa")?.value||"";
@@ -435,7 +436,7 @@ function filtrarAtas(){
       <td><span class="badge" style="background:${stColor}22;color:${stColor}">${r.status}</span></td>
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
-        ${r.status&&r.status.toUpperCase().startsWith("ENCERRADO")?`
+        ${(r.status&&r.status.toUpperCase().startsWith("ENCERRADO"))||!podeEdAtas?`
         <button onclick="verExecsItem('${r.id}')" class="btn-secondary btn-compact" title="Ver solicitações deste item">📋 Solicitações</button>
         `:`
         <div style="display:flex;align-items:center;gap:6px">
@@ -737,7 +738,7 @@ window.toggleDetalheExecAta=toggleDetalheExecAta;
 window.verTudoUnidadeExecAta=verTudoUnidadeExecAta;
 
 function _execAtaPodeExcluir(r){
-  if(!r) return false;
+  if(!r||!podeEditar('atas')) return false;
   return ![
     r.af_numero,r.data_af,r.prev_entrega,r.nf,r.dt_entrega,r.data_entrega_unidade,
     r.termo_arquivo,r.termo_responsavel,r.termo_cargo,r.confirmacao_obs
@@ -1109,6 +1110,7 @@ window.salvarReajusteExecucaoAta=salvarReajusteExecucaoAta;
 
 let _renovarItemId=null;
 function renovarAta(itemId){
+  if(bloquearSeVisualiz('atas')) return;
   const at=_resolverAtaItemRef(itemId);
   if(!at) return;
   _renovarItemId=at.id;
@@ -1323,10 +1325,12 @@ async function confirmarEncerramentoCt(){
 // partir de Atas Rp Vigentes. Garantem que contratosRows esteja carregado, já que o usuário
 // pode acessar Atas sem nunca ter visitado a aba Contratos.
 async function _ataAbrirEditarContrato(contratoId){
+  if(!_isAdmin()&&!podeEditar('contratos')){ alert('⛔ Você não tem permissão para editar contratos.'); return; }
   if(!contratosCarregado) await loadContratos();
   abrirEditarContrato(contratoId);
 }
 async function _ataAbrirEmailContrato(contratoId){
+  if(!podeEditar('contratos')){ alert('⛔ Você não tem permissão para editar contratos.'); return; }
   if(!contratosCarregado) await loadContratos();
   abrirEmailContrato(contratoId);
 }
@@ -1394,6 +1398,7 @@ async function excluirExec(execId){
 // ═══ PRORROGAR PRAZO DE ENTREGA ═══
 let _prorrogarExecId=null, _prorrogarEntregaId=null;
 function abrirModalProrrogarPrazo(execId){
+  if(!podeEditar('atas')&&!podeEditar('itens')){ alert('⛔ Você não tem permissão para alterar esta execução.'); return; }
   const r=(atasExec||[]).find(x=>String(x.id)===String(execId))
     || entregasRows.find(x=>String(x.exec_id)===String(execId));
   if(!r) return;
@@ -1405,6 +1410,7 @@ function abrirModalProrrogarPrazo(execId){
   document.getElementById("modal-prorrogar-prazo").classList.add("active");
 }
 function abrirModalProrrogarPrazoAquisicao(entregaId){
+  if(bloquearSeVisualiz('itens')) return;
   const r=entregasRows.find(x=>String(x.entrega_id)===String(entregaId));
   if(!r) return;
   _prorrogarEntregaId=r.entrega_id; _prorrogarExecId=null;
@@ -1521,6 +1527,7 @@ function calcValorExec(){
 }
 
 async function abrirModalNovaExec(){
+  if(bloquearSeVisualiz('atas')) return;
   const itensUnicos=atasItens.filter(r=>!String(r.status||"").toUpperCase().startsWith("ENCERRADO")).sort((a,b)=>a.item.localeCompare(b.item,'pt-BR'));
   const itemSel=document.getElementById("ne2-item");
   itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
@@ -1597,6 +1604,7 @@ async function neEmendaItemChange(){
 
 let _editExecId=null;
 async function abrirModalEditExec(execId){
+  if(!podeEditar('atas')&&!podeEditar('itens')){ alert('⛔ Você não tem permissão para alterar esta execução.'); return; }
   const entregaAta=entregasRows.find(r=>String(r.exec_id)===String(execId)&&r.tipo==='ATA');
   if(entregaAta) return abrirRecebimentoAta(execId);
   let r=atasExec.find(x=>String(x.id)===String(execId));
@@ -1621,6 +1629,7 @@ async function abrirModalEditExec(execId){
 }
 
 function abrirModalEditAta(itemId){
+  if(bloquearSeVisualiz('atas')) return;
   const at=_resolverAtaItemRef(itemId);
   if(!at) return;
   abrirModalNovaExec();
