@@ -18,6 +18,8 @@ function badgeSituacaoFisc(s){
 }
 
 async function loadFiscalizacao(){
+  const podeEd=podeEditar('fiscalizacao');
+  document.querySelectorAll('.fisc-edit-only').forEach(el=>el.style.display=podeEd?'':'none');
   document.getElementById("fisc-loading").style.display="block";
   document.getElementById("fisc-main").style.display="none";
   const {data:controle,error}=await sb.from("chamados_controle")
@@ -205,6 +207,7 @@ function _atualizarIconesSortFisc(){
 }
 
 function filtrarFiscalizacao(){
+  const podeEd=podeEditar('fiscalizacao');
   const busca=(document.getElementById("fisc-busca")?.value||"").toLowerCase();
   fiscalizacaoFiltrados=fiscalizacaoRows.filter(r=>{
     for(const [col,sel] of Object.entries(fiscHeaderFilters)){
@@ -236,9 +239,9 @@ function _renderFiscalizacao(){
     const ch=r._chamado||{};
     const data=ch.carimbo||"—";
     return `<tr>
-      <td style="text-align:center"><input type="checkbox" class="fisc-check" data-protocolo="${r.protocolo}" style="accent-color:var(--blue);cursor:pointer"></td>
+      ${podeEd?`<td style="text-align:center"><input type="checkbox" class="fisc-check" data-protocolo="${r.protocolo}" style="accent-color:var(--blue);cursor:pointer"></td>`:''}
       <td style="white-space:nowrap">
-        ${podeEditar('fiscalizacao')?`<button onclick="abrirModalFiscOS('${r.protocolo}')" class="btn-secondary btn-compact" style="margin-right:4px" title="Fiscalizar OS">🔍 Fiscalizar</button>`:""}
+        ${podeEd?`<button onclick="abrirModalFiscOS('${r.protocolo}')" class="btn-secondary btn-compact" style="margin-right:4px" title="Fiscalizar OS">🔍 Fiscalizar</button>`:""}
         <button onclick="abrirHistoricoOS('${r.protocolo}')" class="btn-ghost btn-compact" title="Ver histórico">📋 Histórico</button>
       </td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
@@ -267,6 +270,7 @@ function clearAllFiscalizacao(){
 }
 
 function selecionarTodasFisc(v){
+  if(!podeEditar('fiscalizacao')) return;
   document.querySelectorAll(".fisc-check").forEach(c=>c.checked=v);
   const all=document.getElementById("fisc-check-all"); if(all) all.checked=v;
 }
@@ -544,6 +548,7 @@ function _fiscContratoDaOs(r){
 function gerarTermoAteste(){ gerarMedicaoFiscalizacao(); }
 
 async function gerarMedicaoFiscalizacao(){
+  if(!podeEditar('fiscalizacao')){ alert("Sua conta tem permissão apenas para visualização."); return; }
   if(typeof _ensureContratosModal==='function') await _ensureContratosModal();
   const selecionadas=_fiscSelecionadasParaMedicao();
   if(!selecionadas.length){alert("Selecione ao menos uma OS para gerar a medicao.");return;}
@@ -631,6 +636,7 @@ function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal
 }
 
 async function confirmarGerarMedicaoFiscalizacao(){
+  if(!podeEditar('fiscalizacao')){ alert("Sua conta tem permissão apenas para visualização."); return; }
   const competencia=document.getElementById("mta-competencia").value.trim();
   const nf=document.getElementById("mta-nf").value.trim();
   const nfData=document.getElementById("mta-nf-data")?.value||null;
