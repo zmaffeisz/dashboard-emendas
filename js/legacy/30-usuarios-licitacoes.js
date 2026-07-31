@@ -240,7 +240,8 @@ function renderLicitacoes(){
       : ((items.length||itensServico.length)?_cpRollup(items.length?items:itensServico):{nome:'sem itens',orgao:null,auto:false});
     const aberto=!!_cpExpanded[p.id];
     const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
-    let bloco=`<div class="lic-process-card" style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
+    const tituloSc=p.sc?` title="SC: ${_sanEsc(p.sc)}"`:'';
+    let bloco=`<div class="lic-process-card"${tituloSc} style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
       <div class="lic-process-card-header" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
         <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">

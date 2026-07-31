@@ -2,6 +2,7 @@
 
 ## Em desenvolvimento
 
+- **Licitações em andamento:** ao passar o mouse sobre um card de processo, a dica agora mostra o número da SC vinculada.
 - Ajustadas as larguras iniciais das colunas de Inventário, Execuções de ATA e Empenhos para priorizar campos com conteúdo longo.
 
 ## 2026-07-30
