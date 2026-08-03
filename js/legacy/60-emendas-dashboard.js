@@ -92,6 +92,9 @@ async function loadData(){
         vl_unitario_cadastrado:num(i.vl_unitario_cadastrado),
         vl_total_cadastrado:num(i.vl_total_cadastrado),
         cpl:cplFinal,
+        processo_id:(f&&f.processoId)||null,
+        processo_tipo:(f&&f.processoTipo)||'',
+        processo_link_publico:(f&&f.processoLink)||'',
         contrato_sim:(f?f.sim:"")||"",
         fornecedor_fluxo:(f?f.fornecedor:"")||"",
         status_raw:statusFinal,
@@ -690,6 +693,19 @@ function _emStatusChip(i){
   const cor=/ENTREGUE/i.test(c)?'var(--green)':(/(FRACASS|CANCEL|SUSPEN)/i.test(c)?'var(--red)':'var(--text2)');
   return `<span style="font-size:11px;font-weight:600;color:${cor}">${_sanEsc(_emStatusLabel(i))}</span>`;
 }
+function _emProcessoHtml(item){
+  const texto=item?.cpl||'';
+  if(!texto) return '—';
+  if(typeof _procIdentificadorHtml==='function'){
+    return _procIdentificadorHtml({
+      id:item.processo_id,
+      identificador:texto,
+      tipo:item.processo_tipo,
+      link_publico_sei:item.processo_link_publico
+    });
+  }
+  return _sanEsc(texto);
+}
 function _emStatusBadge(i){
   const c=i.status_cat||'';
   const info=STATUS_MAP[c]||{color:'#888'};
@@ -870,7 +886,7 @@ function renderEmPorEmenda(){
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.empenho||'â€”')}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.patrimonio||'â€”')}</td>
           <td style="padding:8px;white-space:nowrap">${_emStatusChip(i)}</td>
-          <td style="padding:8px;color:var(--text3);font-size:11px;white-space:nowrap">${_sanEsc(i.cpl||'â€”')}</td>
+          <td style="padding:8px;color:var(--text3);font-size:11px;white-space:nowrap">${_emProcessoHtml(i)}</td>
           <td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" style="font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">🔎 Ver tudo</button></td>
         </tr>`;
       });
@@ -1324,7 +1340,7 @@ function renderTable(){
     <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
     <td class="em-vl-unit-exec" style="text-align:right;white-space:nowrap">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
-    <td style="font-size:11px;color:var(--text3);white-space:nowrap">${r.cpl||"—"}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>
+    <td style="font-size:11px;color:var(--text3);white-space:nowrap">${_emProcessoHtml(r)}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>
     <td>${_emStatusBadge(r)}</td>
     <td style="font-size:11px;max-width:240px;white-space:pre-wrap;word-break:break-word">${r.status_raw||"—"}</td>
     <td style="font-size:11px;white-space:nowrap;color:var(--text3)">${r.data_atualizacao||"—"}</td>

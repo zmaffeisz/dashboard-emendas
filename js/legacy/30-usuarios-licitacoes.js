@@ -176,6 +176,22 @@ let _licitacoesCache=[];
 let _procEditId=null;
 let _procSaldoCache={};
 let _procEditOldByEmenda={};
+function _procLinkPublicoSeguro(valor){
+  const texto=String(valor||'').trim();
+  if(!texto) return '';
+  try{
+    const url=new URL(texto);
+    return (url.protocol==='http:'||url.protocol==='https:')?url.href:'';
+  }catch(_){ return ''; }
+}
+function _procIdentificadorHtml(processo){
+  const texto=_sanEsc(processo?.identificador||('#'+(processo?.id||'')));
+  const ehSei=String(processo?.tipo||'').toUpperCase()==='SEI';
+  if(!ehSei) return texto;
+  const link=_procLinkPublicoSeguro(processo?.link_publico_sei);
+  if(!link) return `<span class="processo-sei-sem-link" onclick="event.stopPropagation()" title="Nenhum link público vinculado a este processo SEI">${texto}</span>`;
+  return `<a class="processo-sei-link" href="${_sanEsc(link)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir processo SEI público em uma nova aba" aria-label="Abrir processo SEI ${texto} em uma nova aba">${texto}<span class="processo-sei-link-icone" aria-hidden="true">↗</span></a>`;
+}
 async function loadLicitacoes(){
   const box=document.getElementById('lic-lista');
   if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
@@ -245,7 +261,7 @@ function renderLicitacoes(){
       <div class="lic-process-card-header" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
         <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
-          <div style="font-weight:600;font-size:13px">${_sanEsc(p.identificador||('#'+p.id))} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
+          <div style="font-weight:600;font-size:13px">${_procIdentificadorHtml(p)} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
           <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
         </div>
         ${_cpStatusBadge(roll)}
@@ -515,7 +531,7 @@ async function abrirNovoProcesso(opcoes={}){
   const itensEmenda=Array.isArray(opcoes.itensEmenda)?opcoes.itensEmenda:[];
   _procEditId=null;
   document.getElementById('proc-titulo').textContent='➕ Novo processo';
-  ['proc-identificador','proc-tipo-outro','proc-sc','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
+  ['proc-identificador','proc-sei-link','proc-tipo-outro','proc-sc','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
   _procServicoMensalIds().forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const ciclosEl=document.getElementById('proc-serv-trimestral-ciclos'); if(ciclosEl) ciclosEl.value='';
   document.getElementById('proc-serv-mensal-itens-lista').innerHTML='';
@@ -552,6 +568,7 @@ function abrirEditarProcesso(id){
   _procEditOldByEmenda={};
   document.getElementById('proc-titulo').textContent='✏️ Editar processo';
   document.getElementById('proc-identificador').value=p.identificador||'';
+  document.getElementById('proc-sei-link').value=p.link_publico_sei||'';
   const tipoPadrao=['CPL','SEI'].includes(p.tipo)?p.tipo:(p.tipo?'OUTRO':'');
   document.getElementById('proc-tipo').value=tipoPadrao;
   document.getElementById('proc-tipo-outro').value=tipoPadrao==='OUTRO'?(p.tipo||''):'';
@@ -609,9 +626,14 @@ async function excluirProcesso(id){
 }
 // SEI = somente números e separadores (. / -). CPL e demais tipos podem ter letras.
 function _procTipoChange(){
-  const outro=document.getElementById('proc-tipo')?.value==='OUTRO';
+  const tipo=document.getElementById('proc-tipo')?.value||'';
+  const outro=tipo==='OUTRO';
   const wrap=document.getElementById('proc-tipo-outro-wrap');
   if(wrap) wrap.style.display=outro?'flex':'none';
+  const linkWrap=document.getElementById('proc-sei-link-wrap');
+  const linkInput=document.getElementById('proc-sei-link');
+  if(linkWrap) linkWrap.style.display=tipo==='SEI'?'flex':'none';
+  if(linkInput) linkInput.required=tipo==='SEI';
   _procIdentFiltrar();
 }
 function _procIdentFiltrar(){
@@ -633,6 +655,8 @@ async function salvarProcesso(){
   const tipoSelecionado=document.getElementById('proc-tipo').value;
   const tipoOutro=document.getElementById('proc-tipo-outro')?.value.trim()||'';
   const tipo=tipoSelecionado==='OUTRO'?tipoOutro:tipoSelecionado;
+  const linkSeiInformado=document.getElementById('proc-sei-link')?.value.trim()||'';
+  const linkPublicoSei=tipo==='SEI'?_procLinkPublicoSeguro(linkSeiInformado):null;
   const sc=document.getElementById('proc-sc')?.value.trim()||null;
   const status=document.getElementById('proc-status')?.value||null;
   const natureza=document.getElementById('proc-natureza').value;
@@ -643,6 +667,8 @@ async function salvarProcesso(){
   const secaoId=_secoesOrganizacionais.find(s=>s.sigla===secao)?.id||null;
   const objeto=document.getElementById('proc-objeto').value.trim();
   if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
+  if(tipo==='SEI'&&!linkSeiInformado){showMsg('proc','Informe o link público do processo SEI.','err');document.getElementById('proc-sei-link')?.focus();return;}
+  if(tipo==='SEI'&&!linkPublicoSei){showMsg('proc','O link público do processo SEI deve começar com http:// ou https:// e não pode conter espaços.','err');document.getElementById('proc-sei-link')?.focus();return;}
   if(natureza==='SERVIÇO'&&!tipoServico){showMsg('proc','Preencha o campo obrigatório (*): Tipo do serviço.','err');return;}
   if(_procEhServicoPeriodicoFixo()&&!_procServicoMensalValido(servicoMensal)){showMsg('proc',`Preencha todos os campos obrigatórios do Serviço ${_procEhServicoTrimestralFixo()?'trimestral':'mensal'} valor fixo.`,'err');return;}
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
@@ -653,6 +679,7 @@ async function salvarProcesso(){
   const dados={
     identificador:ident,
     tipo,
+    link_publico_sei:linkPublicoSei,
     sc,
     natureza,
     tipo_servico:natureza==='SERVIÇO'?tipoServico:null,

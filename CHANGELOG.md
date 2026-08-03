@@ -2,6 +2,7 @@
 
 ## Em desenvolvimento
 
+- **Processos SEI com acesso público:** novos processos do tipo SEI agora exigem o link público no cadastro. O identificador abre esse endereço em uma nova aba quando clicado nas telas de Licitações em andamento e Emendas, sem acionar a expansão do card ou os detalhes da linha. Processos históricos sem link permanecem visíveis e informam a ausência do vínculo ao passar o mouse.
 - **Recuperacao de senha:** os links solicitam retorno explicito ao dashboard publicado, em vez de depender de `localhost`.
 
 - **Atas Rp Vigentes:** perfis somente visualizadores agora veem apenas a consulta das solicitações. Os controles para criar solicitação, prorrogar, reajustar, encerrar ou excluir ficam ocultos, e as funções também bloqueiam a abertura desses fluxos sem permissão de edição.

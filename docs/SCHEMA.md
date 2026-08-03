@@ -69,6 +69,7 @@ A licitação / processo de contratação.
 | `status` | text | |
 | `valor_estimado` | numeric | **valor monetário** |
 | `natureza` | — | (ver migration `add_natureza_e_status_processo`) |
+| `link_publico_sei` | text, nullable | URL pública `http/https` do processo SEI; históricos podem permanecer sem link |
 | `servico_trimestral_itens` | jsonb | itens e valores periódicos do serviço trimestral |
 | `servico_trimestral_meses` / `servico_trimestral_ciclos` | integer | vigência e quantidade esperada de ciclos |
 | `servico_trimestral_valor_trimestral` / `servico_trimestral_valor_global` | numeric | valores trimestral e global |

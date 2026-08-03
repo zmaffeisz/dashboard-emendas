@@ -64,6 +64,10 @@
   só são considerados totais quando alcançam a quantidade completa do item.
 - Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
   com espaços.
+- Novos processos do tipo **SEI** exigem uma URL pública `http/https`. Nas telas de
+  Licitações e Emendas, o clique exato no identificador abre o SEI em nova aba sem
+  disparar a expansão do card ou os detalhes do item; processos históricos sem URL
+  exibem uma indicação de que não há link vinculado.
 - Cada item de processo com natureza **Aquisição** ou **ATA de RP** deve possuir prazo de
   entrega em dias, inteiro e maior que zero. O processo não pode ser gravado enquanto
   houver item sem prazo válido, pois esse dado define o limite usado na emissão da AF.

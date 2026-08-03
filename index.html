@@ -1606,6 +1606,7 @@
       <div class="proc-ident-grid full">
         <div class="form-group"><div class="form-label">Tipo *</div><select id="proc-tipo" onchange="_procTipoChange()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>OUTRO</option></select></div>
         <div class="form-group"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" inputmode="numeric" pattern="[0-9./-]*" oninput="_procIdentFiltrar()"></div>
+        <div class="form-group proc-sei-link" id="proc-sei-link-wrap" style="display:none"><div class="form-label">Link público do processo SEI *</div><input type="url" id="proc-sei-link" inputmode="url" autocomplete="url" placeholder="https://sei.sorocaba.sp.gov.br/..."><div class="form-help">Cole o link de acesso público do processo no SEI.</div></div>
         <div class="form-group proc-tipo-outro" id="proc-tipo-outro-wrap" style="display:none"><div class="form-label">Outro tipo *</div><input type="text" id="proc-tipo-outro" placeholder="Informe o tipo do processo"></div>
         <div class="form-group proc-sc"><div class="form-label">SC</div><input type="text" id="proc-sc" inputmode="numeric" pattern="[0-9./-]*" oninput="_procCodigoNumericoFiltrar(this)" placeholder="Número da Solicitação de Compra (opcional)"></div>
       </div>
@@ -2953,10 +2954,10 @@
 <script src="js/legacy/00-core.js?v=20260730-public-showcase"></script>
 <script src="js/legacy/10-chamados-inventario.js"></script>
 <script src="js/legacy/20-atas.js?v=20260731-atas-permissoes-1"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20260730-status-flow"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20260803-link-sei"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260730-contract-item-groups-1"></script>
-<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260730-status-flow"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260730-status-flow"></script>
+<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260803-link-sei"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260803-link-sei"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260731-fiscalizacao-permissoes-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

@@ -186,9 +186,16 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .proc-ident-grid{display:grid;grid-template-columns:minmax(140px,180px) minmax(0,1fr);gap:12px}
 .proc-ident-grid.full{grid-column:1/-1}
+.proc-sei-link{grid-column:2}
 .proc-tipo-outro{grid-column:1}
 .proc-sc{grid-column:2}
-@media(max-width:600px){.proc-ident-grid{grid-template-columns:1fr}.proc-tipo-outro,.proc-sc{grid-column:1}}
+@media(max-width:600px){.proc-ident-grid{grid-template-columns:1fr}.proc-sei-link,.proc-tipo-outro,.proc-sc{grid-column:1}}
+.form-help{font-size:10px;color:var(--text3);line-height:1.35}
+.processo-sei-link,.processo-sei-sem-link{display:inline-flex;align-items:center;gap:4px;border-radius:4px;padding:1px 4px;margin:-1px -4px;font-weight:650;line-height:1.35;transition:background-color .15s ease,color .15s ease,box-shadow .15s ease}
+.processo-sei-link{color:var(--blue);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;cursor:pointer}
+.processo-sei-link:hover,.processo-sei-link:focus-visible{background:var(--blue-bg);box-shadow:0 0 0 2px var(--blue-bg);outline:none}
+.processo-sei-link-icone{font-size:.85em;opacity:.75}
+.processo-sei-sem-link{color:var(--text);border-bottom:1px dashed currentColor;cursor:help}
 
 /* selects estilizados (form-group / ne-item): remove o widget nativo (que no Windows em
    modo escuro ignora parte do background do autor) e desenha uma seta própria */
