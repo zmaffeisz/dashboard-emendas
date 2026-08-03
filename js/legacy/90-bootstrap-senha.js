@@ -106,7 +106,9 @@ async function enviarLinkRecuperacao(){
   const btn = document.getElementById('btn-enviar-link');
   if(btn){ btn.disabled = true; btn.textContent = 'Enviando...'; }
   try{
-    const {error} = await sb.auth.resetPasswordForEmail(email);
+    const {error} = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://zmaffeisz.github.io/dashboard-emendas/index.html'
+    });
     if(error) throw error;
     msgEl.textContent = '✅ Link enviado! Verifique a caixa de entrada.';
     msgEl.style.color = 'var(--green)';
@@ -122,7 +124,9 @@ async function enviarResetSenha(email){
   if(!email){ if(window.toast) toast('E-mail não encontrado.', 'error'); return; }
   if(!await uiConfirm(`Enviar e-mail de redefinição de senha para:\n${email}?`)) return;
   try{
-    const {error} = await sb.auth.resetPasswordForEmail(email);
+    const {error} = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://zmaffeisz.github.io/dashboard-emendas/index.html'
+    });
     if(error) throw error;
     if(window.toast) toast('Link enviado para ' + email, 'success');
   }catch(e){
