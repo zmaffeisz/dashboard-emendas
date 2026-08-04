@@ -85,6 +85,9 @@
 - **Valores monetários**: usar sempre os campos numéricos `valor_inicial_num`,
   `valor_atual_num`, `valor_mensal_num` para cálculo. Os campos texto (`valor_inicial`,
   `valor_atual`, `valor_mensal`) são legado de exibição.
+- **Serviço mensal de valor fixo**: usar `periodicidade_pagamento = MENSAL` e
+  `modelo_execucao = continuo_mensal_fixo`; a classificação exibida no filtro de modelo
+  deriva desses campos padronizados.
 - **Serviço trimestral de valor fixo**:
   - o contrato permanece vigente e disponível para chamados corretivos durante toda a
     vigência; chamados são ilimitados, não consomem saldo e não geram cobrança individual;

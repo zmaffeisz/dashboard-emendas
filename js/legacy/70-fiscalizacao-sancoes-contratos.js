@@ -1020,7 +1020,9 @@ function _ctHumanize(v){
   return String(v||'').replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase());
 }
 function _ctModeloKey(r){
-  if(String(r?.periodicidade_pagamento||'').toUpperCase()==='TRIMESTRAL') return 'servico_continuo_trimestral_fixo';
+  const periodicidade=String(r?.periodicidade_pagamento||'').toUpperCase();
+  if(periodicidade==='TRIMESTRAL') return 'servico_continuo_trimestral_fixo';
+  if(periodicidade==='MENSAL'||r?.modelo_execucao==='continuo_mensal_fixo') return 'servico_continuo_mensal_fixo';
   return r.modelo_contrato||r.contractModel||r.modelo||'nao_classificado';
 }
 function _ctModeloLabelFromKey(key){

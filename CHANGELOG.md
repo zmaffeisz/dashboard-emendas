@@ -2,6 +2,9 @@
 
 ## Em desenvolvimento
 
+- **Contratos mensais fixos:** o filtro de modelo agora reconhece contratos com
+  periodicidade mensal ou modelo de execução mensal fixo como serviço contínuo de valor
+  mensal fixo, em vez de exibi-los como não classificados.
 - **Processos SEI com acesso público:** novos processos do tipo SEI agora exigem o link público no cadastro. O identificador abre esse endereço em uma nova aba quando clicado nas telas de Licitações em andamento e Emendas, sem acionar a expansão do card ou os detalhes da linha. Processos históricos sem link permanecem visíveis e informam a ausência do vínculo ao passar o mouse.
 - **Recuperacao de senha:** os links solicitam retorno explicito ao dashboard publicado, em vez de depender de `localhost`.
 
