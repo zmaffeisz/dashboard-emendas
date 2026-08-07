@@ -1046,6 +1046,13 @@ function _ctPeriodicidade(r=_ctAtual){
 }
 function _ctEhTrimestral(r=_ctAtual){ return _ctPeriodicidade(r)==='TRIMESTRAL'; }
 function _ctValorPeriodico(r=_ctAtual){ return _ctNum(r?.valor_periodico_num??r?.valor_mensal_num??r?.valor_mensal); }
+function _ctMetricValorPeriodico(r,metricFn){
+  const periodicidade=_ctPeriodicidade(r);
+  const valor=_ctValorPeriodico(r);
+  if(!periodicidade||valor<=0||typeof metricFn!=='function') return '';
+  const trimestral=periodicidade==='TRIMESTRAL';
+  return metricFn(trimestral?'Valor trimestral':'Valor mensal',_ctMoney(valor),'valor vigente do período','var(--blue)');
+}
 function _ctValorInicial(r){ return _ctNum(r.valor_inicial_num??r.valor_inicial); }
 function _ctValorAtual(r){ return _ctNum(r.valor_atual_num??r.valor_atual??r.valor_total??r.valor_inicial); }
 function _ctValorReajustado(r){
@@ -3532,6 +3539,7 @@ async function abrirDetalheContrato(id){
       ${metric('Valor inicial',_ctMoney(financial.initialValue))}
       ${metric('Inicial reajustado',_ctMoney(financial.initialAdjustedValue))}
       ${metric('Valor atual',_ctMoney(financial.currentValue),'consolidado','var(--blue)')}
+      ${_ctMetricValorPeriodico(c,metric)}
       ${metric('Executado/medido',_ctMoney(financial.executedValue),'medições válidas')}
       ${metric('NF aprovada',_ctMoney(financial.approvedInvoiceValue),'não é pagamento')}
       ${metric('Saldo a executar',_ctMoney(financial.contractBalance))}

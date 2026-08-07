@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Gestão de contratos periódicos:** o resumo gerencial agora exibe o valor mensal ou
+  trimestral vigente em um cartão próprio. O Contrato 100/2021 foi classificado como
+  serviço contínuo mensal fixo com valor mensal de `R$ 16.012,98`, conforme a soma dos
+  49 itens técnicos vinculados.
 - **Regularização de legado — processo 309/2020:** os 49 itens técnicos cadastrados foram
   materializados e vinculados ao Contrato 100/2021 já vigente; o processo passou para
   `Contratado`, sem criar um novo contrato e preservando 9 itens com quantidade zero.

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Teste - valor periódico do contrato</title></head>
+<body>
+  <pre id="resultado">Executando...</pre>
+  <script>
+    window.fmtFull=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    window.normalizar=v=>String(v||'').toLowerCase();
+    window.setHeaderH=()=>{};
+  </script>
+  <script src="../js/legacy/70-fiscalizacao-sancoes-contratos.js"></script>
+  <script>
+    try{
+      const checks=[];
+      const ok=(cond,msg)=>{if(!cond) throw new Error(msg);checks.push('OK - '+msg)};
+      const metric=(label,value,sub,color)=>JSON.stringify({label,value,sub,color});
+      const mensal=JSON.parse(_ctMetricValorPeriodico({periodicidade_pagamento:'MENSAL',valor_mensal_num:16012.98},metric));
+      ok(mensal.label==='Valor mensal','usa o rótulo mensal');
+      ok(mensal.value.includes('16.012,98'),'exibe o valor mensal vigente');
+      ok(mensal.color==='var(--blue)','destaca o valor periódico no resumo');
+      const trimestral=JSON.parse(_ctMetricValorPeriodico({periodicidade_pagamento:'TRIMESTRAL',valor_periodico_num:48038.94},metric));
+      ok(trimestral.label==='Valor trimestral','adapta o cartão para contratos trimestrais');
+      ok(_ctMetricValorPeriodico({valor_mensal_num:100},metric)==='','não mostra valor periódico sem periodicidade definida');
+      document.getElementById('resultado').textContent=checks.join('\n')+'\n\nTODOS OS TESTES PASSARAM';
+      document.body.dataset.testStatus='passed';
+    }catch(error){
+      document.getElementById('resultado').textContent='FALHA: '+error.stack;
+      document.body.dataset.testStatus='failed';
+      console.error(error);
+    }
+  </script>
+</body>
+</html>
