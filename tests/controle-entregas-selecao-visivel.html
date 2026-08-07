@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste - selecionar pendencias visiveis</title>
+  <style>
+    :root{--border:#ccd3df;--surface:#fff;--surface2:#f4f6fa;--text:#172033;--text2:#526078;--text3:#7c899e;--blue:#2672c9;--blue-bg:#e9f2ff;--green:#169b72;--amber:#d88a12;--amber-bg:#fff0d6;--amber-text:#8a5200;--red:#b42318}
+    body{font-family:Arial,sans-serif;margin:20px;color:var(--text)}
+    #resultado{white-space:pre-wrap;padding:12px;border:1px solid var(--border);border-radius:6px}
+  </style>
+</head>
+<body>
+  <input id="entregas-busca"><select id="entregas-f-tipo"><option value=""></option></select>
+  <select id="entregas-f-prazo"><option value=""></option></select>
+  <span id="entregas-count"></span><div id="entregas-wrap"></div>
+  <pre id="resultado">Executando...</pre>
+  <script>
+    window.PROC_FONTES=[];
+    window.podeEditar=()=>true;
+    window.userCanView=()=>true;
+    window._isAdmin=()=>true;
+    window._sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    window.fmtDate=v=>v||'';
+    window.matchBusca=(texto,q)=>String(q||'').trim().toLowerCase().split(/\s+/).every(p=>String(texto||'').toLowerCase().includes(p));
+    window._testToasts=[];
+    window.toast=(mensagem,tipo)=>_testToasts.push({mensagem,tipo});
+  </script>
+  <script src="../js/legacy/40-itens-entregas.js"></script>
+  <script>
+    try{
+      const checks=[];
+      const ok=(cond,msg)=>{if(!cond) throw new Error(msg);checks.push('OK - '+msg)};
+      entregasRows=[
+        {tipo:'ATA',exec_id:'1',contrato_id:'10',contrato:'SIAM 100/2026',processo:'CPL 1',item:'Item A',unidade:'UBS A',status:'aguardando AF',qtde:1,_pendente:true},
+        {tipo:'ATA',exec_id:'2',contrato_id:'10',contrato:'SIAM 100/2026',processo:'CPL 1',item:'Item B',unidade:'UBS B',status:'no prazo',qtde:1},
+        {tipo:'ATA',exec_id:'3',contrato_id:'20',contrato:'SIAM 200/2026',processo:'CPL 2',item:'Item C',unidade:'UBS C',status:'no prazo',qtde:1}
+      ];
+      renderItensEntregas();
+      const cabecalho=document.getElementById('ce-selecionar-visiveis');
+      ok(!!cabecalho,'o cabecalho mostra um checkbox real');
+      ok(cabecalho.getAttribute('aria-label')==='Selecionar pendências visíveis','o checkbox identifica a acao de selecionar pendencias visiveis');
+      cabecalho.checked=true;
+      cabecalho.dispatchEvent(new Event('change',{bubbles:true}));
+      ok(_ceAdvSel.size===2,'seleciona todas as pendencias visiveis do primeiro contrato');
+      ok(_ceAdvLock==='id:10','mantem o bloqueio das acoes em lote no mesmo contrato');
+      ok(document.querySelectorAll('.ce-adv-chk:checked').length===2,'as duas linhas compativeis aparecem marcadas');
+      ok(document.querySelectorAll('.ce-adv-chk:disabled').length===1,'a pendencia de outro contrato permanece bloqueada');
+      ok(document.getElementById('ce-selecionar-visiveis').checked,'o checkbox do cabecalho reflete a selecao completa');
+      ok(_testToasts.length===1,'informa que itens de outros contratos ficaram de fora');
+      const limpar=document.getElementById('ce-selecionar-visiveis');
+      limpar.checked=false;
+      limpar.dispatchEvent(new Event('change',{bubbles:true}));
+      ok(_ceAdvSel.size===0&&_ceAdvLock==='','desmarcar limpa as pendencias visiveis e libera o contrato');
+      document.getElementById('resultado').textContent=checks.join('\n')+'\n\nTODOS OS TESTES PASSARAM';
+      document.body.dataset.testStatus='passed';
+    }catch(error){
+      document.getElementById('resultado').textContent='FALHA: '+error.stack;
+      document.body.dataset.testStatus='failed';
+      console.error(error);
+    }
+  </script>
+</body>
+</html>

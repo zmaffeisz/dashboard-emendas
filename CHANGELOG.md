@@ -2,6 +2,16 @@
 
 ## Em desenvolvimento
 
+- **Controle de Entregas / Prazos:** o cabeçalho agora permite selecionar de uma vez as
+  pendências visíveis nos filtros atuais, preservando a regra existente que limita as
+  ações em lote aos itens de um mesmo contrato.
+- **Confirmação de Entrega na Unidade:** pendências agora podem ser selecionadas livremente
+  e confirmadas em conjunto, inclusive misturando aquisições, ATAs, unidades e contratos.
+  Data, responsável, cargo, observação e termo são aplicados individualmente a cada item;
+  eventuais falhas são informadas sem desfazer as confirmações já concluídas.
+- **Controle de Entregas:** a busca agora aceita vários termos independentes, inclusive
+  quando eles aparecem em colunas diferentes da mesma linha, ignorando acentos e diferenças
+  entre letras maiúsculas e minúsculas.
 - **Planilha de Emendas:** a coluna **Item** agora reserva 280 px, evitando que descrições
   sejam espremidas em várias linhas muito curtas; a tabela mantém a rolagem horizontal.
 - **Detalhes dos itens:** os modais abertos por Emendas, Inventário, Contratos e execuções

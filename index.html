@@ -1151,7 +1151,7 @@
     </div>
     <div id="itens-sub-entregas" class="itens-sub" style="display:none">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
-        <input type="text" id="entregas-busca" placeholder="buscar item, processo, empresa, AF, unidade..." oninput="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
+        <input type="text" id="entregas-busca" placeholder="buscar por uma ou mais palavras..." oninput="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
         <select id="entregas-f-tipo" onchange="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           <option value="">Aquisições + Atas</option>
           <option value="Aquisição">Só Aquisições</option>
@@ -1186,6 +1186,7 @@
           <option value="todos">Todos</option>
         </select>
         <button onclick="loadConfirmacoes()" title="Recarregar" style="font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
+        <button id="conf-confirmar-selecionados" onclick="abrirConfirmacaoSelecionados()" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;font-weight:600">Confirmar selecionados</button>
         <span id="conf-count" style="font-size:12px;color:var(--text3)"></span>
       </div>
       <div id="confirmacao-wrap" style="overflow-x:auto"></div>
@@ -1536,7 +1537,7 @@
 <div class="modal-overlay" id="modal-confirmacao-unidade">
   <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
-      <span style="font-size:15px;font-weight:700">Confirmar entrega na unidade</span>
+      <span id="cu-titulo" style="font-size:15px;font-weight:700">Confirmar entrega na unidade</span>
       <button onclick="document.getElementById('modal-confirmacao-unidade').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
     </div>
     <div id="cu-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
@@ -2955,7 +2956,7 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/20-atas.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260803-link-sei"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260730-contract-item-groups-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260807-entregas-selecionar-visiveis-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260807-emendas-item-width-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260807-detalhe-marca-modelo-1"></script>

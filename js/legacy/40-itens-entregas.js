@@ -1263,7 +1263,7 @@ async function loadItensEntregas(){
 }
 function renderItensEntregas(){
   const wrap=document.getElementById('entregas-wrap'); if(!wrap) return;
-  const q=(document.getElementById('entregas-busca')?.value||'').toLowerCase();
+  const q=document.getElementById('entregas-busca')?.value||'';
   const fT=document.getElementById('entregas-f-tipo')?.value||'';
   const fP=document.getElementById('entregas-f-prazo')?.value||'';
   const rows=entregasRows.filter(r=>{
@@ -1280,18 +1280,22 @@ function renderItensEntregas(){
     if(entregue && fP!=='recebido') return false;
     if(fT && r.tipo!==fT) return false;
     if(fP && r.status!==fP) return false;
-    if(q){ const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade,r.empenho,r.af_dataISO,r.af_dataISO?fmtDate(r.af_dataISO):'',r.nota_fiscal,r.marca,r.modelo,r.patrimonio,r.numero_serie].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    if(q){
+      const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade,r.empenho,r.af_dataISO,r.af_dataISO?fmtDate(r.af_dataISO):'',r.nota_fiscal,r.marca,r.modelo,r.patrimonio,r.numero_serie].filter(Boolean).join(' ');
+      if(!matchBusca(hay,q)) return false;
+    }
     return true;
   }).sort((a,b)=>{ // atrasados primeiro, depois por dias restantes
     const ord={'atrasado':0,'aguardando AF':1,'vence hoje':2,'no prazo':3,'sem prazo':4,'recebido':5,'cancelado':6};
     const da=(ord[a.status]??9)-(ord[b.status]??9); if(da) return da;
     return (_diasRestantes(a.limiteISO)??99999)-(_diasRestantes(b.limiteISO)??99999);
   });
+  _ceAdvRowsVisiveis=rows;
   const cEl=document.getElementById('entregas-count'); if(cEl) cEl.textContent=`${rows.length} registro(s)`;
   if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item encontrado. Itens aguardando AF e itens com AF emitida (aguardando recebimento) aparecem aqui. Após o recebimento total, passam para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
   wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px;width:28px" title="Selecionar para ações em lote">☑</th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
+      <th style="padding:7px 8px;width:28px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="ce-selecionar-visiveis" onchange="_ceAdvToggleVisiveis(this.checked)" aria-label="Selecionar pendências visíveis" style="width:15px;height:15px;accent-color:#EF9F27;cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
       const dias=_diasRestantes(r.limiteISO);
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
@@ -1349,6 +1353,7 @@ function renderItensEntregas(){
       <td style="padding:6px 8px">${_prazoBadge(r.status,dias)}</td>
       <td style="padding:6px 8px">${acoes}</td>
     </tr>`;}).join('')}</tbody></table>`;
+  _ceAdvAtualizarCheckboxVisiveis();
   _ceCompactarAcoes(wrap);
 }
 
@@ -1389,7 +1394,7 @@ window.abrirObservacaoEntrega=abrirObservacaoEntrega;
 window.salvarObservacaoEntrega=salvarObservacaoEntrega;
 
 // ── Advertência multi-item no Controle de Entregas (mesmo contrato) ──
-let _ceAdvSel=new Set(), _ceAdvLock='', _ceAdvAtivo=false, _ceAdvRows=[], _ceAdvContrato=null;
+let _ceAdvSel=new Set(), _ceAdvLock='', _ceAdvAtivo=false, _ceAdvRows=[], _ceAdvContrato=null, _ceAdvRowsVisiveis=[];
 function _ceRowKey(r){ return r.entrega_id?('a'+r.entrega_id):(r.exec_id?('t'+r.exec_id):('i'+(r.item_id||r.item||''))); }
 function _ceAdvLockKey(r){
   if(r?.contrato_id!=null&&String(r.contrato_id).trim()!=='') return `id:${r.contrato_id}`;
@@ -1853,6 +1858,37 @@ function _ceAdvToggle(key,cb){
   const r=entregasRows.find(x=>_ceRowKey(x)===key); if(!r){cb.checked=false;return;}
   if(cb.checked){ if(!_ceAdvLock) _ceAdvLock=_ceAdvLockKey(r); _ceAdvSel.add(key); }
   else { _ceAdvSel.delete(key); if(!_ceAdvSel.size) _ceAdvLock=''; }
+  renderItensEntregas();
+}
+function _ceAdvRowsVisiveisElegiveis(lock=_ceAdvLock){
+  if(!podeEditar('itens')) return [];
+  const elegiveis=_ceAdvRowsVisiveis.filter(_ceAdvElegivel);
+  const lockAlvo=lock||_ceAdvLockKey(elegiveis[0]);
+  return lockAlvo?elegiveis.filter(r=>_ceAdvLockKey(r)===lockAlvo):[];
+}
+function _ceAdvAtualizarCheckboxVisiveis(){
+  const cb=document.getElementById('ce-selecionar-visiveis'); if(!cb) return;
+  const rows=_ceAdvRowsVisiveisElegiveis();
+  const marcados=rows.filter(r=>_ceAdvSel.has(_ceRowKey(r))).length;
+  cb.disabled=!rows.length;
+  cb.checked=!!rows.length&&marcados===rows.length;
+  cb.indeterminate=marcados>0&&marcados<rows.length;
+  cb.style.cursor=rows.length?'pointer':'not-allowed';
+}
+function _ceAdvToggleVisiveis(checked){
+  const elegiveis=_ceAdvRowsVisiveis.filter(r=>_ceAdvElegivel(r)&&podeEditar('itens'));
+  if(!elegiveis.length){ _ceAdvAtualizarCheckboxVisiveis(); return; }
+  const lockAlvo=_ceAdvLock||_ceAdvLockKey(elegiveis[0]);
+  const compativeis=elegiveis.filter(r=>_ceAdvLockKey(r)===lockAlvo);
+  if(checked){
+    _ceAdvLock=lockAlvo;
+    compativeis.forEach(r=>_ceAdvSel.add(_ceRowKey(r)));
+    const ignorados=elegiveis.length-compativeis.length;
+    if(ignorados&&window.toast) toast(`${compativeis.length} pendência(s) visível(is) selecionada(s); ${ignorados} de outro(s) contrato(s) ficou(aram) de fora.`,'info');
+  }else{
+    compativeis.forEach(r=>_ceAdvSel.delete(_ceRowKey(r)));
+    if(!_ceAdvSel.size) _ceAdvLock='';
+  }
   renderItensEntregas();
 }
 function _ceAdvLimpar(){ _ceAdvSel.clear(); _ceAdvLock=''; renderItensEntregas(); }
@@ -2787,8 +2823,48 @@ window._recToggleNovoDoc=_recToggleNovoDoc;
 window.normalizarNumeroDocumento=normalizarNumeroDocumento;
 
 // Fase 7 — confirmação de entrega na unidade + termo
-let confirmacaoRows=[], confirmacoesCarregado=false;
+let confirmacaoRows=[], confirmacoesCarregado=false, _confRowsVisiveis=[];
+let _confSelecionados=new Set(), _confModoLote=false;
 function _confStatus(row){ return row.data_entrega_unidade?'confirmado':'pendente'; }
+function _confKey(row){ return `${row?.tipo||''}::${row?.id||''}`; }
+function _confPodeEditarRow(row){ return row?.tipo==='ATA'?podeEditar('atas'):podeEditar('itens'); }
+function _confSelecionavel(row){ return !!row&&_confStatus(row)==='pendente'&&_confPodeEditarRow(row); }
+function _confRowsSelecionados(){ return confirmacaoRows.filter(r=>_confSelecionados.has(_confKey(r))&&_confSelecionavel(r)); }
+function _confLimparSelecaoInvalida(){
+  const validos=new Set(confirmacaoRows.filter(_confSelecionavel).map(_confKey));
+  [..._confSelecionados].forEach(key=>{ if(!validos.has(key)) _confSelecionados.delete(key); });
+}
+function _confAtualizarSelecaoUI(){
+  const selecionados=_confRowsSelecionados();
+  const btn=document.getElementById('conf-confirmar-selecionados');
+  if(btn){
+    btn.style.display=selecionados.length?'':'none';
+    btn.disabled=!selecionados.length;
+    btn.textContent=selecionados.length?`Confirmar selecionados (${selecionados.length})`:'Confirmar selecionados';
+  }
+  const elegiveis=_confRowsVisiveis.filter(_confSelecionavel);
+  const marcados=elegiveis.filter(r=>_confSelecionados.has(_confKey(r))).length;
+  const todos=document.getElementById('conf-selecionar-visiveis');
+  if(todos){
+    todos.disabled=!elegiveis.length;
+    todos.checked=!!elegiveis.length&&marcados===elegiveis.length;
+    todos.indeterminate=marcados>0&&marcados<elegiveis.length;
+  }
+}
+function _confToggle(encodedKey,checked){
+  const key=decodeURIComponent(encodedKey||'');
+  const row=confirmacaoRows.find(r=>_confKey(r)===key);
+  if(!_confSelecionavel(row)) return;
+  if(checked) _confSelecionados.add(key); else _confSelecionados.delete(key);
+  _confAtualizarSelecaoUI();
+}
+function _confToggleVisiveis(checked){
+  _confRowsVisiveis.filter(_confSelecionavel).forEach(r=>{
+    const key=_confKey(r);
+    if(checked) _confSelecionados.add(key); else _confSelecionados.delete(key);
+  });
+  renderConfirmacoes();
+}
 function _confBadge(status){
   const ok=status==='confirmado';
   return `<span class="badge" style="background:${ok?'var(--green-bg)':'var(--amber-bg)'};color:${ok?'var(--green-text)':'var(--amber-text)'}">${ok?'Confirmado':'Pendente'}</span>`;
@@ -2870,6 +2946,7 @@ async function loadConfirmacoes(){
     });
   });
   confirmacaoRows=rows;
+  _confLimparSelecaoInvalida();
   confirmacoesCarregado=true;
   renderConfirmacoes();
 }
@@ -2884,17 +2961,20 @@ function renderConfirmacoes(){
     if(q){ const hay=[r.tipo,r.processo,r.contrato,r.empresa,r.item,r.unidade,r.patrimonio,r.empenho,r.nota_fiscal,r.termo_arquivo].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
     return true;
   }).sort((a,b)=>_confStatus(a).localeCompare(_confStatus(b)) || String(a.unidade||'').localeCompare(String(b.unidade||''),'pt-BR'));
+  _confRowsVisiveis=rows;
   const cEl=document.getElementById('conf-count'); if(cEl) cEl.textContent=`${rows.length} registro(s)`;
-  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhuma entrega encontrada para os filtros atuais.</div>'; return; }
+  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhuma entrega encontrada para os filtros atuais.</div>'; _confAtualizarSelecaoUI(); return; }
   wrap.innerHTML=`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/Ata</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Recebimento</th><th style="padding:7px 8px">Entrega unidade</th><th style="padding:7px 8px">Responsável</th><th style="padding:7px 8px">Termo</th><th style="padding:7px 8px">Status</th><th style="padding:7px 8px">Ações</th>
+      <th style="padding:7px 8px;width:30px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="conf-selecionar-visiveis" onchange="_confToggleVisiveis(this.checked)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/Ata</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Recebimento</th><th style="padding:7px 8px">Entrega unidade</th><th style="padding:7px 8px">Responsável</th><th style="padding:7px 8px">Termo</th><th style="padding:7px 8px">Status</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
       const termo=r.termo_arquivo?`<button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Abrir</button>`:'—';
-      const pode=(r.tipo==='ATA'?podeEditar('atas'):podeEditar('itens'));
+      const pode=_confPodeEditarRow(r);
+      const selecionavel=_confSelecionavel(r), key=_confKey(r), marcado=_confSelecionados.has(key);
       const btn=pode?`<button onclick="abrirConfirmacaoUnidade('${r.tipo}','${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">${r.data_entrega_unidade?'Editar':'Confirmar'}</button>`:'—';
       return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;text-align:center"><input type="checkbox" ${marcado?'checked':''} ${selecionavel?'':'disabled'} onchange="_confToggle('${encodeURIComponent(key)}',this.checked)" title="${selecionavel?'Selecionar para confirmação coletiva':'Somente pendências editáveis podem ser selecionadas'}" style="width:15px;height:15px;accent-color:var(--green);cursor:${selecionavel?'pointer':'not-allowed'}"></td>
         <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
         <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.processo||'—')}</td>
         <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.contrato||'—')}</td>
@@ -2910,12 +2990,33 @@ function renderConfirmacoes(){
         <td style="padding:6px 8px">${btn}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
+  _confAtualizarSelecaoUI();
+}
+function abrirConfirmacaoSelecionados(){
+  const rows=_confRowsSelecionados();
+  if(!rows.length){ if(window.toast) toast('Selecione ao menos uma entrega pendente.','warning'); return; }
+  _confModoLote=true;
+  document.getElementById('cu-titulo').textContent=`Confirmar ${rows.length} entregas na unidade`;
+  document.getElementById('cu-tipo').value='LOTE';
+  document.getElementById('cu-id').value='';
+  const resumo=rows.slice(0,8).map(r=>`<div style="padding:3px 0;border-top:1px solid var(--border)"><b>${_sanEsc(r.item||'Item')}</b> · ${_sanEsc(r.tipo)} · ${_sanEsc(r.contrato||r.processo||'—')} · ${_sanEsc(r.unidade||'—')}</div>`).join('');
+  document.getElementById('cu-info').innerHTML=`<b>${rows.length} itens selecionados</b><div style="margin-top:6px">Os mesmos dados de entrega, responsável e termo serão aplicados a todos, sem agrupamento por contrato.</div><div style="margin-top:7px;max-height:180px;overflow:auto">${resumo}${rows.length>8?`<div style="padding-top:5px;color:var(--text3)">e mais ${rows.length-8} item(ns)…</div>`:''}</div>`;
+  document.getElementById('cu-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('cu-responsavel').value='';
+  document.getElementById('cu-cargo').value='';
+  document.getElementById('cu-obs').value='';
+  document.getElementById('cu-arquivo').value='';
+  document.getElementById('cu-salvar').textContent=`Confirmar ${rows.length} itens`;
+  _confSetMsg('Preencha uma vez; os dados serão aplicados individualmente a todos os itens selecionados.');
+  document.getElementById('modal-confirmacao-unidade').classList.add('active');
 }
 function abrirConfirmacaoUnidade(tipo,id){
   const row=confirmacaoRows.find(r=>r.tipo===tipo&&String(r.id)===String(id));
   if(!row) return;
   if(tipo==='ATA'&&bloquearSeVisualiz('atas')) return;
   if(tipo!=='ATA'&&bloquearSeVisualiz('itens')) return;
+  _confModoLote=false;
+  document.getElementById('cu-titulo').textContent='Confirmar entrega na unidade';
   document.getElementById('cu-tipo').value=tipo;
   document.getElementById('cu-id').value=id;
   document.getElementById('cu-info').innerHTML=`<b>${_sanEsc(row.item||'Item')}</b><br>${_sanEsc(tipo)} · ${_sanEsc(row.processo||'—')} · Unidade ${_sanEsc(row.unidade||'—')} · Qtde ${row.qtde||'—'}`;
@@ -2924,6 +3025,7 @@ function abrirConfirmacaoUnidade(tipo,id){
   document.getElementById('cu-cargo').value=row.termo_cargo||'';
   document.getElementById('cu-obs').value=row.confirmacao_obs||'';
   document.getElementById('cu-arquivo').value='';
+  document.getElementById('cu-salvar').textContent='Salvar confirmação';
   _confSetMsg(row.termo_arquivo?'Termo atual será mantido se nenhum novo arquivo for selecionado.':'');
   document.getElementById('modal-confirmacao-unidade').classList.add('active');
 }
@@ -2956,8 +3058,8 @@ async function _prepararTermoUpload(file){
   }
   throw new Error('Envie um PDF ou imagem.');
 }
-async function _uploadTermoEntrega(row,file){
-  const prep=await _prepararTermoUpload(file);
+async function _uploadTermoEntrega(row,file,prepPronto=null){
+  const prep=prepPronto||await _prepararTermoUpload(file);
   if(!prep) return row.termo_arquivo||null;
   const prefix=row.tipo==='ATA'?'atas':'aquisicoes';
   const path=`${prefix}/${row.id}/${Date.now()}-${_safeFileName(file.name).replace(/\.[^.]+$/,'')}.${prep.ext}`;
@@ -2991,57 +3093,88 @@ async function _confWriteBackEmenda(row,dataEntrega){
     console.warn('Write-back ignorou data_entrega manual em emenda_itens',row.emenda_item_id);
   }
 }
-async function salvarConfirmacaoUnidade(){
-  const tipo=document.getElementById('cu-tipo').value;
-  const id=document.getElementById('cu-id').value;
-  const row=confirmacaoRows.find(r=>r.tipo===tipo&&String(r.id)===String(id));
-  if(!row){ _confSetMsg('Registro não encontrado.','err'); return; }
-  if(tipo==='ATA'&&bloquearSeVisualiz('atas')) return;
-  if(tipo!=='ATA'&&bloquearSeVisualiz('itens')) return;
-  const dataEntrega=document.getElementById('cu-data').value;
-  const responsavel=document.getElementById('cu-responsavel').value.trim();
-  if(!dataEntrega){ _confSetMsg('Informe a data real de entrega.','err'); return; }
-  if(!responsavel){ _confSetMsg('Informe o responsável pelo recebimento na unidade.','err'); return; }
-  const file=document.getElementById('cu-arquivo').files?.[0]||null;
-  if(!file && !row.termo_arquivo){ _confSetMsg('Anexe o termo em PDF ou imagem.','err'); return; }
-  const btn=document.getElementById('cu-salvar'); const label=btn.textContent;
-  btn.disabled=true; btn.textContent='Salvando...'; _confSetMsg('Salvando...');
-  let novoTermoPath=null;
-  let registroAtualizado=false;
+async function _salvarConfirmacaoRegistro(row,dados){
+  let novoTermoPath=null, registroAtualizado=false;
   try{
-    const termoPath=await _uploadTermoEntrega(row,file);
-    if(file) novoTermoPath=termoPath;
+    const termoPath=await _uploadTermoEntrega(row,dados.file,dados.prepPronto||null);
+    if(dados.file) novoTermoPath=termoPath;
     const patch={
-      data_entrega_unidade:dataEntrega,
+      data_entrega_unidade:dados.dataEntrega,
       termo_arquivo:termoPath,
-      termo_responsavel:responsavel,
-      termo_cargo:document.getElementById('cu-cargo').value.trim()||null,
-      confirmacao_obs:document.getElementById('cu-obs').value.trim()||null
+      termo_responsavel:dados.responsavel,
+      termo_cargo:dados.cargo||null,
+      confirmacao_obs:dados.obs||null
     };
-    const table=tipo==='ATA'?'atas_execucao':'itens_entregas';
-    const {error}=await sb.from(table).update(patch).eq('id',id);
+    const table=row.tipo==='ATA'?'atas_execucao':'itens_entregas';
+    const {data,error}=await sb.from(table).update(patch).eq('id',row.id).select('id').maybeSingle();
     if(error) throw error;
+    if(!data) throw new Error('Registro não atualizado. Verifique sua permissão de edição.');
     registroAtualizado=true;
-    if(file && row.termo_arquivo && row.termo_arquivo!==termoPath){
+    if(dados.file&&row.termo_arquivo&&row.termo_arquivo!==termoPath){
       try{ await removerTermosEntrega([row.termo_arquivo]); }
       catch(cleanupError){ console.warn('Termo anterior não removido do Storage',cleanupError); }
     }
-    if(tipo!=='ATA') await _confWriteBackEmenda(row,dataEntrega);
-    document.getElementById('modal-confirmacao-unidade').classList.remove('active');
-    if(window.toast) toast('Entrega na unidade confirmada','success');
-    confirmacoesCarregado=false;
-    await loadConfirmacoes();
-    inventarioCarregado=false;
-    if(window._activeTab==='inventario-ac') loadInventario();
-    itensEntregasCarregado=false;
-    if(document.getElementById('itens-sub-entregas')?.style.display!=='none') await loadItensEntregas();
-    if(tipo==='ATA'&&typeof loadAtas==='function') loadAtas();
-    if(tipo!=='ATA'&&row.emenda_item_id) loadData();
+    if(row.tipo!=='ATA') await _confWriteBackEmenda(row,dados.dataEntrega);
   }catch(e){
     if(novoTermoPath&&!registroAtualizado){
       try{ await removerTermosEntrega([novoTermoPath]); }
       catch(rollbackError){ console.error('Falha ao desfazer upload sem vínculo',rollbackError); }
     }
+    throw e;
+  }
+}
+async function _atualizarTelasAposConfirmacao(rows){
+  if(!rows.length) return;
+  confirmacoesCarregado=false;
+  await loadConfirmacoes();
+  inventarioCarregado=false;
+  if(window._activeTab==='inventario-ac') await loadInventario();
+  itensEntregasCarregado=false;
+  if(document.getElementById('itens-sub-entregas')?.style.display!=='none') await loadItensEntregas();
+  if(rows.some(r=>r.tipo==='ATA')&&typeof loadAtas==='function') await loadAtas();
+  if(rows.some(r=>r.tipo!=='ATA'&&r.emenda_item_id)&&typeof loadData==='function') await loadData();
+}
+async function salvarConfirmacaoUnidade(){
+  const tipo=document.getElementById('cu-tipo').value;
+  const id=document.getElementById('cu-id').value;
+  const rows=_confModoLote?_confRowsSelecionados():[confirmacaoRows.find(r=>r.tipo===tipo&&String(r.id)===String(id))].filter(Boolean);
+  if(!rows.length){ _confSetMsg('Nenhum registro selecionado.','err'); return; }
+  if(rows.some(r=>!_confPodeEditarRow(r))){ _confSetMsg('Há item selecionado sem permissão de edição.','err'); return; }
+  const dataEntrega=document.getElementById('cu-data').value;
+  const responsavel=document.getElementById('cu-responsavel').value.trim();
+  if(!dataEntrega){ _confSetMsg('Informe a data real de entrega.','err'); return; }
+  if(!responsavel){ _confSetMsg('Informe o responsável pelo recebimento na unidade.','err'); return; }
+  const file=document.getElementById('cu-arquivo').files?.[0]||null;
+  if(!file && rows.some(row=>!row.termo_arquivo)){ _confSetMsg('Anexe o termo em PDF ou imagem.','err'); return; }
+  const btn=document.getElementById('cu-salvar'); const label=btn.textContent;
+  btn.disabled=true; btn.textContent='Salvando...'; _confSetMsg('Salvando...');
+  try{
+    const dados={
+      dataEntrega,
+      responsavel,
+      cargo:document.getElementById('cu-cargo').value.trim(),
+      obs:document.getElementById('cu-obs').value.trim(),
+      file,
+      prepPronto:file?await _prepararTermoUpload(file):null
+    };
+    const concluidos=[], falhas=[];
+    for(let i=0;i<rows.length;i++){
+      const row=rows[i];
+      btn.textContent=rows.length>1?`Salvando ${i+1}/${rows.length}...`:'Salvando...';
+      try{ await _salvarConfirmacaoRegistro(row,dados); concluidos.push(row); }
+      catch(error){ falhas.push({row,error}); }
+    }
+    concluidos.forEach(row=>_confSelecionados.delete(_confKey(row)));
+    await _atualizarTelasAposConfirmacao(concluidos);
+    if(falhas.length){
+      const detalhes=falhas.slice(0,3).map(({row,error})=>`${row.item||row.id}: ${error.message||error}`).join(' | ');
+      _confSetMsg(`${concluidos.length} confirmado(s); ${falhas.length} falhou(aram). ${detalhes}`,'err');
+      if(window.toast&&concluidos.length) toast(`${concluidos.length} entrega(s) confirmada(s); ${falhas.length} com erro.`,'warning');
+    }else{
+      document.getElementById('modal-confirmacao-unidade').classList.remove('active');
+      if(window.toast) toast(rows.length>1?`${rows.length} entregas confirmadas`:'Entrega na unidade confirmada','success');
+    }
+  }catch(e){
     _confSetMsg('Erro: '+e.message,'err');
   }finally{
     btn.disabled=false; btn.textContent=label;
@@ -3049,6 +3182,9 @@ async function salvarConfirmacaoUnidade(){
 }
 window.loadConfirmacoes=loadConfirmacoes;
 window.renderConfirmacoes=renderConfirmacoes;
+window._confToggle=_confToggle;
+window._confToggleVisiveis=_confToggleVisiveis;
+window.abrirConfirmacaoSelecionados=abrirConfirmacaoSelecionados;
 window.abrirConfirmacaoUnidade=abrirConfirmacaoUnidade;
 window.salvarConfirmacaoUnidade=salvarConfirmacaoUnidade;
 window.abrirTermoEntrega=abrirTermoEntrega;

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste — confirmação coletiva de entrega</title>
+  <style>
+    :root{--border:#ccd3df;--surface:#fff;--surface2:#f4f6fa;--text:#172033;--text2:#526078;--text3:#7c899e;--green:#169b72;--green-bg:#dff7ee;--green-text:#087354;--amber-bg:#fff0d6;--amber-text:#8a5200}
+    body{font-family:Arial,sans-serif;margin:20px;color:var(--text)}
+    #resultado{white-space:pre-wrap;padding:12px;border:1px solid var(--border);border-radius:6px}
+    .modal-overlay{display:none}.modal-overlay.active{display:block}
+  </style>
+</head>
+<body>
+  <input id="conf-busca"><select id="conf-f-tipo"><option value=""></option></select>
+  <select id="conf-f-status"><option value="pendente">Pendentes</option></select>
+  <button id="conf-confirmar-selecionados" style="display:none" onclick="abrirConfirmacaoSelecionados()">Confirmar selecionados</button>
+  <span id="conf-count"></span><div id="confirmacao-wrap"></div>
+  <div id="itens-sub-entregas" style="display:none"></div>
+  <div class="modal-overlay" id="modal-confirmacao-unidade">
+    <span id="cu-titulo"></span><div id="cu-info"></div>
+    <input id="cu-tipo"><input id="cu-id"><input id="cu-data" type="date">
+    <input id="cu-responsavel"><input id="cu-cargo"><input id="cu-arquivo" type="file">
+    <textarea id="cu-obs"></textarea><button id="cu-salvar" onclick="salvarConfirmacaoUnidade()">Salvar confirmação</button>
+    <span id="cu-msg" class="fmsg"></span>
+  </div>
+  <pre id="resultado">Executando…</pre>
+  <script>
+    window.PROC_FONTES=[];
+    window._activeTab='itens';
+    window.podeEditar=()=>true;
+    window.userCanView=()=>true;
+    window._isAdmin=()=>true;
+    window.bloquearSeVisualiz=()=>false;
+    window._sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    window.fmtDate=v=>v||'';
+    window.toast=()=>{};
+    window.matchBusca=(texto,q)=>String(q||'').trim().toLowerCase().split(/\s+/).every(p=>String(texto||'').toLowerCase().includes(p));
+    window._testOps=[];
+    window.sb={
+      from(table){return{
+        update(payload){return{
+          eq(field,value){return{
+            select(){return{
+              maybeSingle(){window._testOps.push({table,payload,field,value});return Promise.resolve({data:{id:value},error:null});}
+            }}
+          }}
+        }}
+      }},
+      storage:{from(){return{remove(){return Promise.resolve({data:[],error:null})}}}}
+    };
+  </script>
+  <script src="../js/legacy/40-itens-entregas.js"></script>
+  <script>
+    (async()=>{
+      const checks=[];
+      const ok=(cond,msg)=>{if(!cond) throw new Error(msg);checks.push('✓ '+msg)};
+      confirmacaoRows=[
+        {tipo:'Aquisição',id:'aq-1',processo:'CPL 001/2026',contrato:'Contrato 10',item:'Bisturi Elétrico',unidade:'UBS A',qtde:1,nota_fiscal:'NF 1',data_recebimento:'2026-08-01',termo_arquivo:'aquisicoes/aq-1/termo.pdf'},
+        {tipo:'ATA',id:'ata-2',processo:'CPL 999/2025',contrato:'ATA 77',item:'Monitor',unidade:'UBS B',qtde:2,nota_fiscal:'NF 2',data_recebimento:'2026-08-02',termo_arquivo:'atas/ata-2/termo.pdf'}
+      ];
+      renderConfirmacoes();
+      const caixas=[...document.querySelectorAll('#confirmacao-wrap tbody input[type="checkbox"]')];
+      ok(caixas.length===2,'a grade oferece seleção por item');
+      caixas.forEach(cb=>{cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));});
+      ok(_confRowsSelecionados().length===2,'itens de contratos e tipos diferentes permanecem selecionados');
+      ok(document.getElementById('conf-confirmar-selecionados').textContent.includes('(2)'),'o botão coletivo mostra a quantidade selecionada');
+      abrirConfirmacaoSelecionados();
+      ok(document.getElementById('cu-titulo').textContent.includes('2 entregas'),'o modal entra no modo coletivo');
+      document.getElementById('cu-data').value='2026-08-07';
+      document.getElementById('cu-responsavel').value='Responsável Teste';
+      loadConfirmacoes=async()=>{};
+      loadItensEntregas=async()=>{};
+      await salvarConfirmacaoUnidade();
+      ok(_testOps.length===2,'cada item selecionado recebe uma atualização própria');
+      ok(new Set(_testOps.map(op=>op.table)).has('itens_entregas')&&new Set(_testOps.map(op=>op.table)).has('atas_execucao'),'o lote aceita aquisição e ATA simultaneamente');
+      ok(_testOps.every(op=>op.payload.termo_responsavel==='Responsável Teste'&&op.payload.data_entrega_unidade==='2026-08-07'),'os dados comuns são aplicados a todo o lote');
+      document.getElementById('resultado').textContent=checks.join('\n')+'\n\nTODOS OS TESTES PASSARAM';
+      document.body.dataset.testStatus='passed';
+    })().catch(error=>{
+      document.getElementById('resultado').textContent='FALHA: '+error.stack;
+      document.body.dataset.testStatus='failed';
+      console.error(error);
+    });
+  </script>
+</body>
+</html>
