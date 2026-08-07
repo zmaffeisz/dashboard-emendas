@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste - colagem de planilha nos itens da licitacao</title>
+  <style>
+    :root{--border:#ccd3df;--surface:#fff;--surface2:#f4f6fa;--text:#172033;--text2:#526078;--text3:#7c899e;--blue:#2672c9;--red:#b42318}
+    body{font-family:Arial,sans-serif;margin:20px;color:var(--text)}
+    input,select{box-sizing:border-box}#resultado{white-space:pre-wrap;padding:12px;border:1px solid var(--border);border-radius:6px}
+  </style>
+</head>
+<body>
+  <select id="proc-natureza"><option value="SERVIÇO" selected>SERVIÇO</option><option value="ATA DE RP">ATA DE RP</option></select>
+  <select id="proc-tipo-servico"><option selected>Serviço mensal valor fixo</option></select>
+  <div id="proc-serv-mensal-itens-lista"></div>
+  <input id="proc-serv-mensal-meses" value="12"><input id="proc-serv-mensal-valor-mensal"><input id="proc-serv-mensal-valor-global"><input id="proc-serv-trimestral-ciclos"><input id="proc-valor">
+  <div id="proc-serv-trimestral-ciclos-wrap"></div><div id="proc-serv-periodico-valor-label"></div>
+  <div id="proc-itens-lista"></div><div id="proc-itens-vazio"></div><div id="proc-emenda-saldo-resumo"></div>
+  <button id="proc-btn-puxar-emenda"></button><div id="proc-import-box"></div><span id="proc-itens-hint"></span>
+  <pre id="resultado">Executando...</pre>
+  <script>
+    window.PROC_FONTES=[]; window.cachedUnidades=[]; window.cachedEmendas=[]; window._secoesOrganizacionais=[];
+    window._sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    window.fmtFull=v=>String(v); window.toast=()=>{}; window.userCanView=()=>true; window.podeEditar=()=>true; window._isAdmin=()=>true;
+  </script>
+  <script src="../js/legacy/30-usuarios-licitacoes.js"></script>
+  <script>
+    try{
+      const checks=[];
+      const ok=(cond,msg)=>{if(!cond) throw new Error(msg);checks.push('OK - '+msg)};
+      const colar=(alvo,texto,html='')=>{
+        let bloqueado=false;
+        _procColarPlanilha({target:alvo,clipboardData:{getData:tipo=>tipo==='text/html'?html:texto},preventDefault:()=>{bloqueado=true;}});
+        return bloqueado;
+      };
+      procAddServicoMensalItemRow();
+      let rows=[...document.querySelectorAll('.proc-serv-mensal-item')];
+      ok(colar(rows[0].querySelector('.smi-desc'),'Corretiva A\nCorretiva B\nCorretiva C'),'a colagem de varias linhas substitui a colagem comum');
+      rows=[...document.querySelectorAll('.proc-serv-mensal-item')];
+      ok(rows.length===3,'cria automaticamente as linhas mensais que faltam');
+      ok(rows.map(r=>r.querySelector('.smi-desc').value).join('|')==='Corretiva A|Corretiva B|Corretiva C','distribui a coluna de itens verticalmente');
+      colar(rows[0].querySelector('.smi-qtd'),'1\n2\n3');
+      ok(rows.map(r=>r.querySelector('.smi-qtd').value).join('|')==='1|2|3','distribui a coluna de quantidades nas mesmas linhas');
+      colar(rows[0].querySelector('.smi-valor'),'R$ 1.500,00\n2500,50\n3.000');
+      ok(rows.map(r=>r.querySelector('.smi-valor').value).join('|')==='1500|2500.5|3000','converte e distribui valores monetarios brasileiros');
+      ok(document.getElementById('proc-serv-mensal-valor-mensal').value==='15501.00','recalcula o valor mensal depois da colagem');
+      const tabelaExcel='<table><tbody><tr><td>10</td></tr><tr><td>20</td></tr><tr><td>30</td></tr></tbody></table>';
+      colar(rows[0].querySelector('.smi-qtd'),'10',tabelaExcel);
+      ok(rows.map(r=>r.querySelector('.smi-qtd').value).join('|')==='10|20|30','le a coluna numerica enviada pela planilha como tabela HTML');
+      rows[0].querySelector('.smi-qtd').value='0';
+      procRecalcServicoMensal();
+      const servicoComZero=_procLerServicoMensal();
+      ok(servicoComZero.servico_mensal_itens[0].quantidade===0,'preserva a quantidade zero no item');
+      ok(servicoComZero.servico_mensal_itens[0].valor_mensal===0,'o item com quantidade zero contribui com valor zero');
+      ok(_procServicoMensalValido(servicoComZero),'permite salvar quando alguns itens possuem quantidade zero');
+      ok(document.getElementById('proc-serv-mensal-valor-mensal').value==='140010.00','exclui o item de quantidade zero do total mensal');
+
+      document.getElementById('proc-natureza').value='ATA DE RP';
+      procAddItemRow();
+      let itemRows=[...document.querySelectorAll('.proc-item-card')];
+      colar(itemRows[0].querySelector('.pi-desc'),'Monitor\t2\t1.200,50\nBomba de infusão\t3\t2500');
+      itemRows=[...document.querySelectorAll('.proc-item-card')];
+      ok(itemRows.length===2,'cria linhas na grade comum de itens da licitacao');
+      ok(itemRows[0].querySelector('.pi-desc').value==='Monitor'&&itemRows[0].querySelector('.pi-qtde').value==='2'&&itemRows[0].querySelector('.pi-valor').value==='1200.5','cola item, quantidade e valor juntos na primeira linha');
+      ok(itemRows[1].querySelector('.pi-desc').value==='Bomba de infusão'&&itemRows[1].querySelector('.pi-qtde').value==='3'&&itemRows[1].querySelector('.pi-valor').value==='2500','distribui as tres colunas para a linha seguinte');
+      let simplesBloqueado=false;
+      _procColarPlanilha({target:itemRows[0].querySelector('.pi-desc'),clipboardData:{getData:()=>'texto unico'},preventDefault:()=>{simplesBloqueado=true;}});
+      ok(!simplesBloqueado,'mantem a colagem normal quando ha apenas uma celula');
+      document.getElementById('resultado').textContent=checks.join('\n')+'\n\nTODOS OS TESTES PASSARAM';
+      document.body.dataset.testStatus='passed';
+    }catch(error){
+      document.getElementById('resultado').textContent='FALHA: '+error.stack;
+      document.body.dataset.testStatus='failed';
+      console.error(error);
+    }
+  </script>
+</body>
+</html>

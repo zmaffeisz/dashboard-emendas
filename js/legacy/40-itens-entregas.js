@@ -3619,15 +3619,15 @@ async function _ncCarregarItensProcesso(processoId){
     window._ncItensCache={};
     const inp='font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
     lista.innerHTML=itensServico.map((it,idx)=>{
-      const qtd=Number(it.quantidade||0);
+      const qtd=Number(it.quantidade??0);
       const unit=Number(it.valor_unitario||0);
       const mensal=Number(it.valor_trimestral||it.valor_mensal||(qtd*unit)||0);
       const id='svc-'+idx;
-      return `<div class="nc-item-row" data-id="${id}" data-service-json="1" data-service-index="${idx}" data-jacont="0" data-qtde="${qtd||''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border)">
+      return `<div class="nc-item-row" data-id="${id}" data-service-json="1" data-service-index="${idx}" data-jacont="0" data-qtde="${Number.isFinite(qtd)?qtd:''}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border)">
         <input type="checkbox" class="nci-chk" onchange="_ncItemChkChange(this)" style="margin-top:3px">
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600">${_sanEsc(it.descricao||'(sem descrição)')}</div>
-          <div style="font-size:11px;color:var(--text3)">serviço ${servTrimestral?'trimestral':'mensal'} · qtde ${qtd||'—'} · un. ${unit?fmtFull(unit):'—'} · ${servTrimestral?'trimestral':'mensal'} ${mensal?fmtFull(mensal):'—'} · ${servTrimestral?(procAtual.servico_trimestral_ciclos||'—')+' ciclos':(procAtual.servico_mensal_meses||'—')+' meses'}</div>
+          <div style="font-size:11px;color:var(--text3)">serviço ${servTrimestral?'trimestral':'mensal'} · qtde ${Number.isFinite(qtd)?qtd:'—'} · un. ${unit?fmtFull(unit):'—'} · ${servTrimestral?'trimestral':'mensal'} ${Number.isFinite(mensal)?fmtFull(mensal):'—'} · ${servTrimestral?(procAtual.servico_trimestral_ciclos||'—')+' ciclos':(procAtual.servico_mensal_meses||'—')+' meses'}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
           <input type="text" class="nci-valor" value="${unit?String(unit).replace('.',','):''}" oninput="_ncUpdateItemTotal(this)" placeholder="vl. unit. contratado" title="Valor UNITÁRIO contratado por item" style="width:110px;${inp}">
@@ -3664,13 +3664,14 @@ async function _ncVincularItens(contratoId, fornecedorId){
     const servTrimestral=_ncServicoTrimestralFixo(procAtual);
     const itensServico=(typeof _procServicoMensalItensFromValor==='function')?_procServicoMensalItensFromValor(servTrimestral?procAtual.servico_trimestral_itens:procAtual.servico_mensal_itens):[];
     const svc=itensServico[Number(r.dataset.serviceIndex)]||{};
-    const qtd=Number(svc.quantidade||r.dataset.qtde||0)||null;
+    const qtdTexto=svc.quantidade??r.dataset.qtde;
+    const qtd=qtdTexto===null||qtdTexto===undefined||qtdTexto===''?null:Number(qtdTexto);
     const unit=valor||(Number(svc.valor_unitario||0)||null);
     const insert={
       processo_id:procAtual.id||null,
       origem:servTrimestral?'servico_trimestral':'servico_mensal',
       descricao:svc.descricao||'(sem descrição)',
-      qtde:qtd,
+      qtde:Number.isFinite(qtd)?qtd:null,
       valor_estimado:unit,
       contrato_id:marcado?contratoId:null,
       fornecedor_id:marcado?(fornecedorId||null):null,

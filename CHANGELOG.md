@@ -2,6 +2,17 @@
 
 ## Em desenvolvimento
 
+- **Regularização de legado — processo 309/2020:** os 49 itens técnicos cadastrados foram
+  materializados e vinculados ao Contrato 100/2021 já vigente; o processo passou para
+  `Contratado`, sem criar um novo contrato e preservando 9 itens com quantidade zero.
+- **Serviço mensal/trimestral de valor fixo:** itens com quantidade `0` agora podem ser
+  salvos e permanecem cadastrados para futura utilização, contribuindo com `R$ 0,00` para
+  os valores estimados mensal/trimestral e global.
+- **Criar/editar licitação:** os campos de item, quantidade e valor unitário agora aceitam
+  colagem vertical a partir de colunas de uma planilha, criam automaticamente as linhas
+  necessárias e também permitem colar as três colunas juntas a partir do primeiro item.
+  A leitura contempla tanto texto tabulado quanto a tabela HTML enviada por Excel e outros
+  editores, inclusive para quantidades e valores monetários.
 - **Controle de Entregas / Prazos:** o cabeçalho agora permite selecionar de uma vez as
   pendências visíveis nos filtros atuais, preservando a regra existente que limita as
   ações em lote aos itens de um mesmo contrato.

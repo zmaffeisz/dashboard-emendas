@@ -786,6 +786,83 @@ function _procCarregarServicoMensalItens(p){
     procAddServicoMensalItemRow({descricao:'', quantidade:p.servico_mensal_qtd_itens??'', valor_unitario:p.servico_mensal_valor_item??''});
   }
 }
+function _procLerTabelaColada(texto){
+  const linhas=[], linha=[];
+  let celula='', entreAspas=false;
+  const textoSeguro=String(texto||'').replace(/\r\n/g,'\n').replace(/[\r\u000b\u000c\u2028\u2029]/g,'\n');
+  for(let i=0;i<textoSeguro.length;i++){
+    const char=textoSeguro[i];
+    if(char==='"'){
+      if(entreAspas&&textoSeguro[i+1]==='"'){ celula+='"'; i++; }
+      else entreAspas=!entreAspas;
+    }else if(char==='\t'&&!entreAspas){ linha.push(celula); celula=''; }
+    else if(char==='\n'&&!entreAspas){ linha.push(celula); linhas.push(linha.splice(0)); celula=''; }
+    else celula+=char;
+  }
+  linha.push(celula); linhas.push(linha);
+  while(linhas.length&&linhas[linhas.length-1].every(valor=>!String(valor).trim())) linhas.pop();
+  return linhas;
+}
+function _procLerClipboardPlanilha(evento){
+  const html=evento?.clipboardData?.getData('text/html')||'';
+  if(html){
+    try{
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      const tabela=[...doc.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll(':scope > th, :scope > td')].map(td=>(td.innerText||td.textContent||'').replace(/\u00a0/g,' ').trim())).filter(linha=>linha.length);
+      if(tabela.length>1||tabela[0]?.length>1) return tabela;
+    }catch(error){ console.warn('Não foi possível interpretar a tabela copiada; usando texto simples.',error); }
+  }
+  return _procLerTabelaColada(evento?.clipboardData?.getData('text/plain')||'');
+}
+function _procNumeroColado(valor){
+  let texto=String(valor??'').trim().replace(/\u00a0/g,' ').replace(/R\$/gi,'').replace(/\s/g,'');
+  if(!texto) return '';
+  const negativo=/^\(.*\)$/.test(texto); texto=texto.replace(/[()]/g,'');
+  const ultimaVirgula=texto.lastIndexOf(','), ultimoPonto=texto.lastIndexOf('.');
+  if(ultimaVirgula>=0&&ultimoPonto>=0){
+    texto=ultimaVirgula>ultimoPonto?texto.replace(/\./g,'').replace(',','.'):texto.replace(/,/g,'');
+  }else if(ultimaVirgula>=0){ texto=texto.replace(/\./g,'').replace(',','.'); }
+  else if(/^[-+]?\d{1,3}(\.\d{3})+$/.test(texto)){ texto=texto.replace(/\./g,''); }
+  texto=texto.replace(/[^0-9.-]/g,'');
+  const numero=Number(texto);
+  return Number.isFinite(numero)?String(negativo?-numero:numero):'';
+}
+function _procColarPlanilha(evento){
+  const alvo=evento?.target;
+  if(!(alvo instanceof HTMLInputElement)||alvo.readOnly||alvo.disabled) return;
+  const tabela=_procLerClipboardPlanilha(evento);
+  if(!tabela.length||(tabela.length===1&&tabela[0].length===1)) return;
+  const configuracoes=[
+    {lista:'#proc-serv-mensal-itens-lista',card:'.proc-serv-mensal-item',campos:['.smi-desc','.smi-qtd','.smi-valor'],adicionar:()=>procAddServicoMensalItemRow(),finalizar:()=>procRecalcServicoMensal()},
+    {lista:'#proc-itens-lista',card:'.proc-item-card',campos:['.pi-desc','.pi-qtde','.pi-valor'],adicionar:()=>procAddItemRow(null,{adiarAtualizacao:true}),finalizar:()=>{_renderProcItensVazio();_recalcProcValorEstimado();_procAplicarModoAta();}}
+  ];
+  const config=configuracoes.find(item=>alvo.closest(item.lista)&&item.campos.some(seletor=>alvo.matches(seletor)));
+  if(!config) return;
+  let cards=[...document.querySelectorAll(`${config.lista} ${config.card}`)];
+  const cardInicial=alvo.closest(config.card), linhaInicial=cards.indexOf(cardInicial);
+  const colunaInicial=config.campos.findIndex(seletor=>alvo.matches(seletor));
+  if(linhaInicial<0||colunaInicial<0) return;
+  evento.preventDefault();
+  while(cards.length<linhaInicial+tabela.length){ config.adicionar(); cards=[...document.querySelectorAll(`${config.lista} ${config.card}`)]; }
+  let preenchidos=0, invalidos=0;
+  tabela.forEach((valores,deslocamentoLinha)=>{
+    const card=cards[linhaInicial+deslocamentoLinha];
+    valores.forEach((valor,deslocamentoColuna)=>{
+      const indiceColuna=colunaInicial+deslocamentoColuna;
+      const seletor=config.campos[indiceColuna]; if(!seletor) return;
+      const input=card?.querySelector(seletor); if(!input||input.readOnly||input.disabled) return;
+      const convertido=indiceColuna===0?String(valor).trim():_procNumeroColado(valor);
+      if(indiceColuna>0&&String(valor).trim()&&convertido===''){ invalidos++; return; }
+      input.value=convertido;
+      preenchidos++;
+    });
+  });
+  config.finalizar();
+  if(window.toast){
+    if(invalidos) toast(`${preenchidos} campo(s) preenchido(s). ${invalidos} valor(es) numérico(s) não foram reconhecidos.`,'warning');
+    else toast(`${preenchidos} campo(s) preenchido(s) a partir da planilha.`,'success');
+  }
+}
 function procAddServicoMensalItemRow(item={}){
   const lista=document.getElementById('proc-serv-mensal-itens-lista');
   if(!lista) return;
@@ -797,9 +874,9 @@ function procAddServicoMensalItemRow(item={}){
   if(item.status_lic_desde) row.dataset.statusLicDesde=String(item.status_lic_desde);
   if(item.status_lic_atualizado_em) row.dataset.statusLicAtualizadoEm=String(item.status_lic_atualizado_em);
   row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);min-width:0;max-width:100%;box-sizing:border-box;width:100%';
-  row.innerHTML=`<div><div class="form-label">Item *</div><input type="text" class="smi-desc" placeholder="Descreva o item" value="${_sanEsc(String(item.descricao||'')).replace(/"/g,'&quot;')}" oninput="procRecalcServicoMensal()"></div>
-    <div><div class="form-label">Quantidade *</div><input type="number" class="smi-qtd" min="0" step="1" placeholder="ex: 2" value="${item.quantidade??''}" oninput="procRecalcServicoMensal()"></div>
-    <div><div class="form-label">Valor unitário *</div><input type="number" class="smi-valor" min="0" step="0.01" placeholder="ex: 1500" value="${item.valor_unitario??''}" oninput="procRecalcServicoMensal()"></div>
+  row.innerHTML=`<div><div class="form-label">Item *</div><input type="text" class="smi-desc" placeholder="Descreva o item" value="${_sanEsc(String(item.descricao||'')).replace(/"/g,'&quot;')}" oninput="procRecalcServicoMensal()" onpaste="_procColarPlanilha(event)"></div>
+    <div><div class="form-label">Quantidade *</div><input type="number" class="smi-qtd" min="0" step="1" placeholder="ex: 2" value="${item.quantidade??''}" oninput="procRecalcServicoMensal()" onpaste="_procColarPlanilha(event)"></div>
+    <div><div class="form-label">Valor unitário *</div><input type="number" class="smi-valor" min="0" step="0.01" placeholder="ex: 1500" value="${item.valor_unitario??''}" oninput="procRecalcServicoMensal()" onpaste="_procColarPlanilha(event)"></div>
     <button type="button" class="btn-secondary" onclick="procRemoveServicoMensalItemRow(this)" title="Remover item" style="font-size:12px;padding:7px 10px;width:100%">Remover</button>`;
   lista.appendChild(row);
   procRecalcServicoMensal();
@@ -815,13 +892,16 @@ function _procEnsureServicoMensalItemRow(){
 function _procLerServicoMensal(){
   const trimestral=_procEhServicoTrimestralFixo();
   const itens=[...document.querySelectorAll('#proc-serv-mensal-itens-lista .proc-serv-mensal-item')].map(row=>{
-    const quantidade=Number(row.querySelector('.smi-qtd')?.value||0);
-    const valorUnitario=Number(row.querySelector('.smi-valor')?.value||0);
+    const quantidadeTexto=String(row.querySelector('.smi-qtd')?.value??'').trim();
+    const valorUnitarioTexto=String(row.querySelector('.smi-valor')?.value??'').trim();
+    const quantidade=quantidadeTexto===''?null:Number(quantidadeTexto);
+    const valorUnitario=valorUnitarioTexto===''?null:Number(valorUnitarioTexto);
+    const valorPeriodo=quantidade!==null&&valorUnitario!==null?quantidade*valorUnitario:null;
     const item={
       descricao:(row.querySelector('.smi-desc')?.value||'').trim(),
-      quantidade:quantidade||null,
-      valor_unitario:valorUnitario||null,
-      valor_mensal:(quantidade&&valorUnitario)?quantidade*valorUnitario:null
+      quantidade:Number.isFinite(quantidade)?quantidade:null,
+      valor_unitario:Number.isFinite(valorUnitario)?valorUnitario:null,
+      valor_mensal:Number.isFinite(valorPeriodo)?valorPeriodo:null
     };
     if(trimestral){
       item.valor_trimestral=item.valor_mensal;
@@ -853,7 +933,10 @@ function _procLerServicoMensal(){
   };
 }
 function _procServicoMensalValido(d){
-  return !!(d.servico_mensal_itens.length && d.servico_mensal_itens.every(item=>item.descricao && item.quantidade>0 && item.valor_unitario>0 && (item.valor_mensal>0||item.valor_trimestral>0)) && d.servico_mensal_meses>0 && d.servico_mensal_valor_mensal>0 && d.servico_mensal_valor_global>0);
+  return !!(d.servico_mensal_itens.length && d.servico_mensal_itens.every(item=>{
+    const valorPeriodo=item.valor_trimestral??item.valor_mensal;
+    return item.descricao && Number.isFinite(item.quantidade) && item.quantidade>=0 && item.valor_unitario>0 && Number.isFinite(valorPeriodo) && valorPeriodo>=0;
+  }) && d.servico_mensal_meses>0 && d.servico_mensal_valor_mensal>0 && d.servico_mensal_valor_global>0);
 }
 function procRecalcServicoMensal(){
   const d=_procLerServicoMensal();
@@ -1019,12 +1102,12 @@ function procAddItemRow(data,opcoes={}){
   div.innerHTML=`
     <div style="display:flex;gap:8px;align-items:flex-start">
       <div style="flex:1"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Descrição *${locked?' <span style="text-transform:none;letter-spacing:0">· da emenda</span>':''}</div>
-        <input type="text" class="pi-desc"${roAttr} placeholder="ex: AR CONDICIONADO 12000 BTU" value="${_sanEsc(String(data.descricao||'')).replace(/"/g,'&quot;')}" style="${inp};${ro}"></div>
+        <input type="text" class="pi-desc"${roAttr} placeholder="ex: AR CONDICIONADO 12000 BTU" value="${_sanEsc(String(data.descricao||'')).replace(/"/g,'&quot;')}" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
       <button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>
     </div>
     <div style="display:grid;grid-template-columns:90px 130px 100px 1fr;gap:8px;margin-top:6px">
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" style="${inp};${ro}"></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor" placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" style="${inp}"></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor" placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo" min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
     </div>

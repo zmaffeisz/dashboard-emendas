@@ -1622,6 +1622,7 @@
           <div class="form-label" style="margin:0">Itens do contrato *</div>
           <button type="button" class="btn-secondary" onclick="procAddServicoMensalItemRow()" style="font-size:12px;padding:5px 10px">+ Adicionar item</button>
         </div>
+        <div style="font-size:11px;color:var(--text3);margin:-2px 0 8px">Dica: copie uma coluna da planilha e cole no primeiro campo correspondente. As linhas restantes serão preenchidas automaticamente.</div>
         <div id="proc-serv-mensal-itens-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;min-width:0;max-width:100%"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
           <div class="form-group"><div class="form-label">Vigência do contrato em meses *</div><input type="number" id="proc-serv-mensal-meses" min="1" step="1" placeholder="ex: 24" oninput="procRecalcServicoMensal()"></div>
@@ -1643,6 +1644,7 @@
           <button type="button" onclick="procAddItemRow()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Adicionar item</button>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--text3);margin:0 0 8px">Dica: cole uma coluna de itens, quantidades ou valores no primeiro campo correspondente; também é possível colar as três colunas juntas começando em Descrição.</div>
       <div id="proc-import-box" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem;margin-bottom:.5rem"></div>
       <div id="proc-itens-lista" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="proc-itens-vazio" style="font-size:12px;color:var(--text3);padding:.5rem 0">Nenhum item adicionado. Use "Adicionar item" ou "Puxar de emenda".</div>
@@ -2955,8 +2957,8 @@
 <script src="js/legacy/00-core.js?v=20260730-public-showcase"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/20-atas.js?v=20260807-detalhe-marca-modelo-1"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20260803-link-sei"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260807-confirmacao-busca-multitermo-1"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260807-servico-item-quantidade-zero-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260807-emendas-item-width-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260807-detalhe-marca-modelo-1"></script>

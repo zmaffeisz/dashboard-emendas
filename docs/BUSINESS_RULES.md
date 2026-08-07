@@ -64,6 +64,9 @@
   só são considerados totais quando alcançam a quantidade completa do item.
 - Ao criar/editar processo, **Objeto é obrigatório** e não pode ser salvo vazio ou apenas
   com espaços.
+- Em serviços mensais ou trimestrais de valor fixo, um item pode permanecer cadastrado com
+  **quantidade zero**. Ele continua integrando a relação contratual, mas contribui com
+  `R$ 0,00` para o cálculo estimado do período e do valor global.
 - Novos processos do tipo **SEI** exigem uma URL pública `http/https`. Nas telas de
   Licitações e Emendas, o clique exato no identificador abre o SEI em nova aba sem
   disparar a expansão do card ou os detalhes do item; processos históricos sem URL
