@@ -171,6 +171,11 @@ th.resizable-th{position:sticky;background-clip:padding-box}
 .col-resizer:hover,.col-resizer.col-resizing{background:var(--blue,#3b82f6)}
 table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
 
+/* Emendas em planilha: reserva espaço legível para descrições de itens. */
+#em-view-planilha .em-item-col,
+#em-view-planilha .em-item-cell{width:280px;min-width:280px;max-width:360px}
+#em-view-planilha .em-item-cell{white-space:normal;word-break:normal;overflow-wrap:anywhere}
+
 /* Larguras de partida equilibradas para as grades com campos longos. */
 .inv-table{min-width:1925px}
 .empenhos-table{min-width:1260px}

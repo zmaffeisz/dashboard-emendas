@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
-<link rel="stylesheet" href="dashboard.css?v=20260731-table-widths">
+<link rel="stylesheet" href="dashboard.css?v=20260807-emendas-item-width-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
 
@@ -148,7 +148,7 @@
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('ano')">Ano <span class="sort-icon" id="si-ano"></span></span><span class="hdr-filter-btn" id="hf-ano" onclick="openHeaderFilter(event,'ano')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></span><span class="hdr-filter-btn" id="hf-unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></span><span class="hdr-filter-btn" id="hf-item" onclick="openHeaderFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th class="em-item-col" style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></span><span class="hdr-filter-btn" id="hf-item" onclick="openHeaderFilter(event,'item')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></span><span class="hdr-filter-btn" id="hf-qtde" onclick="openHeaderFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_unitario_cadastrado')">Vl. unit. plan. <span class="sort-icon" id="si-vl_unitario_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario_cadastrado" onclick="openHeaderFilter(event,'vl_unitario_cadastrado')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_total_cadastrado')">Vl. total plan. <span class="sort-icon" id="si-vl_total_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_total_cadastrado" onclick="openHeaderFilter(event,'vl_total_cadastrado')" title="Filtrar">▾</span></span></th>
@@ -2957,7 +2957,7 @@
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260803-link-sei"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260730-contract-item-groups-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260807-detalhe-marca-modelo-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260807-detalhe-marca-modelo-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260807-emendas-item-width-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

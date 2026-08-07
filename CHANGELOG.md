@@ -2,6 +2,8 @@
 
 ## Em desenvolvimento
 
+- **Planilha de Emendas:** a coluna **Item** agora reserva 280 px, evitando que descrições
+  sejam espremidas em várias linhas muito curtas; a tabela mantém a rolagem horizontal.
 - **Detalhes dos itens:** os modais abertos por Emendas, Inventário, Contratos e execuções
   de ATA agora exibem marca e modelo. Itens de ATA preservam o campo combinado
   **Marca / Modelo**, e itens de contrato sem vínculo com emenda também passam a abrir

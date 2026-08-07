@@ -1337,7 +1337,7 @@ function renderTable(){
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td class="em-parlamentar-cell" style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}</td>
-    <td class="td-trunc" title="${r.item}">${r.item||"—"}</td>
+    <td class="td-trunc em-item-cell" title="${r.item}">${r.item||"—"}</td>
     <td style="text-align:right">${r.qtde||"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
