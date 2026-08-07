@@ -9,9 +9,9 @@
   e confirmadas em conjunto, inclusive misturando aquisições, ATAs, unidades e contratos.
   Data, responsável, cargo, observação e termo são aplicados individualmente a cada item;
   eventuais falhas são informadas sem desfazer as confirmações já concluídas.
-- **Controle de Entregas:** a busca agora aceita vários termos independentes, inclusive
-  quando eles aparecem em colunas diferentes da mesma linha, ignorando acentos e diferenças
-  entre letras maiúsculas e minúsculas.
+- **Controle de Entregas:** a busca nas duas subabas agora aceita vários termos
+  independentes, inclusive quando eles aparecem em colunas diferentes da mesma linha,
+  ignorando acentos e diferenças entre letras maiúsculas e minúsculas.
 - **Planilha de Emendas:** a coluna **Item** agora reserva 280 px, evitando que descrições
   sejam espremidas em várias linhas muito curtas; a tabela mantém a rolagem horizontal.
 - **Detalhes dos itens:** os modais abertos por Emendas, Inventário, Contratos e execuções

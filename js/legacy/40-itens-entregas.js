@@ -2952,13 +2952,16 @@ async function loadConfirmacoes(){
 }
 function renderConfirmacoes(){
   const wrap=document.getElementById('confirmacao-wrap'); if(!wrap) return;
-  const q=(document.getElementById('conf-busca')?.value||'').toLowerCase();
+  const q=document.getElementById('conf-busca')?.value||'';
   const tipo=document.getElementById('conf-f-tipo')?.value||'';
   const status=document.getElementById('conf-f-status')?.value||'pendente';
   const rows=confirmacaoRows.filter(r=>{
     if(tipo && r.tipo!==tipo) return false;
     if(status && status!=='todos' && _confStatus(r)!==status) return false;
-    if(q){ const hay=[r.tipo,r.processo,r.contrato,r.empresa,r.item,r.unidade,r.patrimonio,r.empenho,r.nota_fiscal,r.termo_arquivo].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    if(q){
+      const hay=[r.tipo,r.processo,r.contrato,r.empresa,r.item,r.unidade,r.patrimonio,r.empenho,r.nota_fiscal,r.termo_arquivo].filter(Boolean).join(' ');
+      if(!matchBusca(hay,q)) return false;
+    }
     return true;
   }).sort((a,b)=>_confStatus(a).localeCompare(_confStatus(b)) || String(a.unidade||'').localeCompare(String(b.unidade||''),'pt-BR'));
   _confRowsVisiveis=rows;

@@ -34,7 +34,10 @@
     window._sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     window.fmtDate=v=>v||'';
     window.toast=()=>{};
-    window.matchBusca=(texto,q)=>String(q||'').trim().toLowerCase().split(/\s+/).every(p=>String(texto||'').toLowerCase().includes(p));
+    window.matchBusca=(texto,q)=>{
+      const normalizar=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return normalizar(q).trim().split(/\s+/).filter(Boolean).every(p=>normalizar(texto).includes(p));
+    };
     window._testOps=[];
     window.sb={
       from(table){return{
@@ -55,9 +58,16 @@
       const checks=[];
       const ok=(cond,msg)=>{if(!cond) throw new Error(msg);checks.push('✓ '+msg)};
       confirmacaoRows=[
-        {tipo:'Aquisição',id:'aq-1',processo:'CPL 001/2026',contrato:'Contrato 10',item:'Bisturi Elétrico',unidade:'UBS A',qtde:1,nota_fiscal:'NF 1',data_recebimento:'2026-08-01',termo_arquivo:'aquisicoes/aq-1/termo.pdf'},
+        {tipo:'Aquisição',id:'aq-1',processo:'CPL 001/2026',contrato:'Contrato 10',item:'Purificador de Água',unidade:'Emenda 190 - Aparecidinha',qtde:1,nota_fiscal:'NF 1',data_recebimento:'2026-08-01',termo_arquivo:'aquisicoes/aq-1/termo.pdf'},
         {tipo:'ATA',id:'ata-2',processo:'CPL 999/2025',contrato:'ATA 77',item:'Monitor',unidade:'UBS B',qtde:2,nota_fiscal:'NF 2',data_recebimento:'2026-08-02',termo_arquivo:'atas/ata-2/termo.pdf'}
       ];
+      document.getElementById('conf-busca').value='puri apa';
+      renderConfirmacoes();
+      ok(document.querySelectorAll('#confirmacao-wrap tbody tr').length===1,'a busca combina palavras de colunas diferentes');
+      document.getElementById('conf-busca').value='agua aparecidinha';
+      renderConfirmacoes();
+      ok(document.querySelectorAll('#confirmacao-wrap tbody tr').length===1,'a busca ignora acentos');
+      document.getElementById('conf-busca').value='';
       renderConfirmacoes();
       const caixas=[...document.querySelectorAll('#confirmacao-wrap tbody input[type="checkbox"]')];
       ok(caixas.length===2,'a grade oferece seleção por item');
