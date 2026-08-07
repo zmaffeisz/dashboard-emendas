@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Detalhes dos itens:** os modais abertos por Emendas, Inventário, Contratos e execuções
+  de ATA agora exibem marca e modelo. Itens de ATA preservam o campo combinado
+  **Marca / Modelo**, e itens de contrato sem vínculo com emenda também passam a abrir
+  o detalhe em vez de mostrar apenas um aviso.
 - **Contratos mensais fixos:** o filtro de modelo agora reconhece contratos com
   periodicidade mensal ou modelo de execução mensal fixo como serviço contínuo de valor
   mensal fixo, em vez de exibi-los como não classificados.

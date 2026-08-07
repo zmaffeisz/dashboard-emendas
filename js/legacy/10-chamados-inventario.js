@@ -81,7 +81,7 @@ async function loadInventario(){
   try{
     const [{data:aq,error:e1},{data:at,error:e2}]=await Promise.all([
       sb.from('itens_entregas')
-        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total,arquivo_url), itens(id,descricao,emenda_item_id, processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
+        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total,arquivo_url), itens(id,descricao,marca,modelo,emenda_item_id, processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
         .or('data_entrega_unidade.not.is.null,data_recebimento.not.is.null')
         .order('data_entrega_unidade',{ascending:false}),
       sb.from('atas_execucao')
@@ -108,6 +108,8 @@ async function loadInventario(){
       const base={
         tipo:'Aquisição', id:r.id,
         item:it.descricao||'',
+        marca:it.marca||'',
+        modelo:it.modelo||'',
         unidade:it.unidades?.nome||'',
         empresa:it.fornecedores?.razao_social||'',
         cnpj:it.fornecedores?.cnpj_normalizado||'',
@@ -676,7 +678,7 @@ function filtrarInventario(){
   _invFiltered=inventarioRows.filter(r=>{
     if(tipo&&r.tipo!==tipo) return false;
     if(unidade&&r.unidade!==unidade) return false;
-    if(q){const hay=[r.item,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.processo,r.numero_serie].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    if(q){const hay=[r.item,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.processo,r.numero_serie].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
   const total=_invFiltered.length;
@@ -771,6 +773,9 @@ async function verTudoEmendaItem(id){
     :(inventarioRows||[]).find(x=>String(x.emenda_item_id||'')===baseId);
   const campos=[
     ['Item', r.item],
+    ['Marca', _sanEsc(r.marca)],
+    ['Modelo', _sanEsc(r.modelo)],
+    ['Marca / Modelo', _sanEsc(r.marca_modelo)],
     ['Emenda', (r.emenda||'')+(r.tipo?(' · '+r.tipo):'')],
     ['Parlamentar', r.parlamentar],
     ['Unidade beneficiada', r.unidade],
@@ -824,6 +829,9 @@ function abrirDetalheInvRow(r){
     campos.push(
       ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
       ['Item', _sanEsc(em.item||r.item)],
+      ['Marca', _sanEsc(em.marca||r.marca)],
+      ['Modelo', _sanEsc(em.modelo||r.modelo)],
+      ['Marca / Modelo', _sanEsc(em.marca_modelo||r.marca_modelo)],
       ['Emenda', (em.emenda||r.emenda||'')+(em.tipo?' · '+em.tipo:'')],
       ['Parlamentar', _sanEsc(em.parlamentar||r.parlamentar)],
       ['Unidade beneficiada', _sanEsc(em.unidade||'')],
@@ -863,6 +871,9 @@ function abrirDetalheInvRow(r){
     campos.push(
       ['Tipo',`<span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span>`],
       ['Item / Descrição',_sanEsc(r.item)],
+      ['Marca',_sanEsc(r.marca)],
+      ['Modelo',_sanEsc(r.modelo)],
+      ['Marca / Modelo',_sanEsc(r.marca_modelo)],
       ['Unidade de destino',_sanEsc(r.unidade)],
       ['Empresa / Fornecedor',_sanEsc(r.empresa)+(r.cnpj?` <span style="color:var(--text3);font-size:11px">(CNPJ: ${_sanEsc(r.cnpj)})</span>`:'')],
       ['Quantidade recebida',r.qtde||null],

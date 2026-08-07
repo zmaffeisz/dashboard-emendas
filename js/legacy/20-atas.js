@@ -111,6 +111,7 @@ async function loadAtas(){
       cpl:ata.cpl,
       sim:ata.sim,
       item:ata.item,
+      marca_modelo:ata.marca,
       unidade:(r.unidade||"").trim(),
       qtde:Number(r.qtde)||0,
       valor:Number(r.valor)||0,
@@ -691,7 +692,7 @@ function _renderDetalheExecAta(exec){
   const resumo=[
     ['Origem do recurso',exec.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'],
     ['Empresa',exec.empresa],['CNPJ',exec.cnpj],['Contrato / ATA',exec.sim],['Processo / CPL',exec.cpl],
-    ['Item',exec.item],['Unidade',exec.unidade],['Quantidade',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
+    ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Unidade',exec.unidade],['Quantidade',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
     ['Empenho(s)',empenhos],['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],
     ['Recebimento',exec.dt_entrega],['Nota fiscal',exec.nf],['Possui patrimônio',exec.possui_patrimonio===true?'Sim':exec.possui_patrimonio===false?'Não':'Não informado'],
     ['Entrega na unidade',exec.data_entrega_unidade],['Responsável na unidade',exec.termo_responsavel],['Cargo',exec.termo_cargo],
@@ -719,7 +720,7 @@ function verTudoUnidadeExecAta(execId,unidadeId){
   const nf=detalhe.notas.get(String(u.nota_fiscal_id))||{};
   const em=detalhe.emenda||{}, ec=em.emendas||{};
   const campos=[
-    ['Item',exec.item],['Patrimônio',u.patrimonio],['Número de série',u.numero_serie],['Sequência da unidade',u.unidade_seq],
+    ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Patrimônio',u.patrimonio],['Número de série',u.numero_serie],['Sequência da unidade',u.unidade_seq],
     ['Unidade de destino',exec.unidade],['Empresa / Fornecedor',exec.empresa],['CNPJ',exec.cnpj],['Processo / CPL',exec.cpl],
     ['Contrato / ATA',exec.sim],['Quantidade da execução',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
     ['Origem do recurso',exec.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'],['Empenho',exec.empenho],

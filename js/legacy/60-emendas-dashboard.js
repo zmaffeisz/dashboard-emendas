@@ -78,6 +78,9 @@ async function loadData(){
         unidade_beneficiada_id:i.unidade_beneficiada_id||null,
         // ── executado ──
         item:(i.item||"").toString().trim(),
+        marca:f&&f.marcas?Array.from(f.marcas).filter(Boolean).join("; "):"",
+        modelo:f&&f.modelos?Array.from(f.modelos).filter(Boolean).join("; "):"",
+        marca_modelo:f&&f.marcasModelos?Array.from(f.marcasModelos).filter(Boolean).join("; "):"",
         qtde:(i.qtde!=null?i.qtde:"").toString().trim(),
         vl_unitario:vlUnitExec,
         vl_total:vlTotalFinal,

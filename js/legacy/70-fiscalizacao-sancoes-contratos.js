@@ -2884,7 +2884,36 @@ function verTudoContratoItem(contratoId,itemId){
     verTudoEmendaItem(String(item.emenda_item_id));
     return;
   }
-  alert('Este item não possui vínculo com uma emenda para abrir os Detalhes do Item.');
+  const contrato=contratosRows.find(r=>String(r.id)===String(contratoId))||{};
+  const entregas=(item.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
+  const executado=item.origem==='servico_demanda'
+    ?Number(item._qtdeMedida)||0
+    :entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
+  const qtde=Number(item.qtde)||0;
+  const valorUnit=_ctNum(item.valor_contratado??item.valor_estimado);
+  const campos=[
+    ['Item',item.descricao],
+    ['Marca',item.marca],
+    ['Modelo',item.modelo],
+    ['Tipo',_ctItemTipoLabel(_ctItemTipo(item))],
+    ['Contrato',[contrato.cpl,contrato.numero_contrato].filter(Boolean).join(' · ')],
+    ['Empresa / Fornecedor',contrato.prestador],
+    ['Quantidade',qtde||''],
+    [item.origem==='servico_demanda'?'Quantidade executada':'Quantidade recebida',executado||''],
+    ['Saldo',qtde-executado],
+    ['Valor unitário',valorUnit?_ctMoney(valorUnit):''],
+    ['Valor total',valorUnit&&qtde?_ctMoney(valorUnit*qtde):''],
+    ['Patrimônio',(item._patrimonios||[]).join(', ')],
+    ['Nº de série',(item._series||[]).join(', ')],
+    ['Empenho',(item._empenhos||[]).join(', ')]
+  ].filter(([,v])=>v!=null&&String(v).trim()!==''&&String(v)!=='—');
+  const modal=document.getElementById('modal-inv-detalhe');
+  if(!modal) return;
+  document.body.appendChild(modal);
+  document.getElementById('inv-detalhe-content').innerHTML=`
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(item.descricao||'Item')}</div>
+    <div>${campos.map(([l,v])=>_invField(_sanEsc(l),_sanEsc(String(v)))).join('')}</div>`;
+  modal.classList.add('active');
 }
 function _ctLinhaItensServicoMensalHtml(itens,eventos=[],trimestral=false){
   const linhas=itens.map(i=>{

@@ -975,7 +975,7 @@ async function _fetchItensFlowData(eiIds){
   const [itemChunks,{data:statusLicRows}]=await Promise.all([
     Promise.all(_chunkArray(eiIds,200).map(slice=>
       sb.from("itens")
-        .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,processo_id,contrato_id,status_lic_id,status_lic_secretaria_id,status_lic_texto,processos(id,identificador,tipo,link_publico_sei),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome),secretarias(sigla)")
+        .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,marca,modelo,processo_id,contrato_id,status_lic_id,status_lic_secretaria_id,status_lic_texto,processos(id,identificador,tipo,link_publico_sei),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome),secretarias(sigla)")
         .in("emenda_item_id",slice)
     )),
     sb.from("status_opcoes").select("id,nome,ordem,orgao,automatico").eq("contexto","licitacao")
@@ -1043,7 +1043,7 @@ async function _fetchAtaFlowData(eiIds){
   // não uma da outra: buscar as duas em paralelo.
   const [_ataItemChunks,_ataUnidadesChunks]=await Promise.all([
     Promise.all(_chunkArray(_ataIds,200).map(slice=>
-      sb.from("atas_itens").select("id,cpl,sim,item,contrato_id,contratos(cpl,numero_contrato)").in("id",slice)
+      sb.from("atas_itens").select("id,cpl,sim,item,marca_modelo,contrato_id,contratos(cpl,numero_contrato)").in("id",slice)
     )),
     Promise.all(_chunkArray(_ataExecIds,200).map(ids=>
       sb.from("atas_execucao_unidades")
@@ -1054,7 +1054,7 @@ async function _fetchAtaFlowData(eiIds){
   ]);
   const _ataItemInf={};
   _ataItemChunks.forEach(({data:ait})=>{
-    (ait||[]).forEach(i=>{ _ataItemInf[i.id]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||''}; });
+    (ait||[]).forEach(i=>{ _ataItemInf[i.id]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',marca_modelo:i.marca_modelo||''}; });
   });
   const _ataUnidadesByExec={};
   _ataUnidadesChunks.forEach(({data:unsAta})=>{
@@ -1085,6 +1085,7 @@ async function _carregarFluxoEmendaItens(eiIds){
       if(!f.sim&&ai.sim) f.sim=ai.sim;
       if(!f.unidade&&r.unidade) f.unidade=r.unidade;
       if(!f.fornecedor) f.fornecedor="";
+      if(ai.marca_modelo) (f.marcasModelos||(f.marcasModelos=new Set())).add(ai.marca_modelo);
       const q=Number(r.qtde)||0; qAta+=q;
       const vl=Number(r.valor)||0; vAta+=vl;
       if(r.af_numero||r.data_af){
@@ -1131,6 +1132,8 @@ async function _carregarFluxoEmendaItens(eiIds){
     if(!f.sim && it.contratos?.numero_contrato) f.sim=it.contratos.numero_contrato;
     if(!f.fornecedor && it.fornecedores?.razao_social) f.fornecedor=it.fornecedores.razao_social;
     if(!f.unidade && it.unidades?.nome) f.unidade=it.unidades.nome;
+    if(it.marca) (f.marcas||(f.marcas=new Set())).add(it.marca);
+    if(it.modelo) (f.modelos||(f.modelos=new Set())).add(it.modelo);
     const itQtde=Number(it.qtde)||0;
     const temContratado=it.valor_contratado!==null&&it.valor_contratado!==undefined;
     const itVlUnit=temContratado?Number(it.valor_contratado)||0:Number(it.valor_estimado)||0;
