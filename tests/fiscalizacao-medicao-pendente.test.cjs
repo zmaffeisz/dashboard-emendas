@@ -22,6 +22,12 @@ element('mfo-data-atendimento', '2026-08-10');
 element('mfo-servico', 'Pendência sanada pela empresa');
 element('mfo-ocorrencias', 'Regularização conferida');
 element('modal-fisc-os');
+element('fm-total');
+element('fm-nao');
+element('fm-pend');
+element('fm-conf');
+element('fisc-count');
+element('fisc-body');
 const saveButton = element('save-button');
 
 let rpcCall = null;
@@ -51,6 +57,11 @@ const context = vm.createContext({
   setTimeout() {},
   clearTimeout() {},
   setHeaderH() {},
+  _sanEsc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+  },
   currentProfile: { nome: 'Fiscal de teste' },
   sb: {
     rpc: async (name, payload) => {
@@ -69,6 +80,25 @@ assert.equal(context._fiscSituacaoPermiteMedicao('conforme_ressalva'), true);
 assert.equal(context._fiscSituacaoPermiteMedicao('parcial'), true);
 assert.equal(context._fiscSituacaoPermiteMedicao('nao_conforme'), false);
 assert.equal(context._fiscSituacaoPermiteMedicao('nao_fiscalizado'), false);
+
+vm.runInContext(`
+  podeEditar=()=>true;
+  fiscalizacaoFiltrados=[{
+    protocolo:'SES-TABELA',
+    empresa:'Empresa Técnica Ltda.',
+    cpl_contrato:'327/2024',
+    situacao_os:'nao_fiscalizado',
+    _chamado:{
+      carimbo:'10/08/2026, 10:00:00',
+      unidade:'UBS Teste',
+      equipamento:'Compressor',
+      descricao:'Compressor sem energia e sem funcionamento.'
+    }
+  }];
+  _renderFiscalizacao();
+`, context);
+assert.match(elements.get('fisc-body').innerHTML, /Empresa Técnica Ltda\./);
+assert.match(elements.get('fisc-body').innerHTML, /Compressor sem energia e sem funcionamento\./);
 
 vm.runInContext(`
   _fiscAtual='SES-TESTE';

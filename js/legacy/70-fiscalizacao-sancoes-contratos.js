@@ -39,7 +39,7 @@ async function loadFiscalizacao(){
   const protocolos=(controle||[]).map(c=>c.protocolo).filter(Boolean);
   let chamados=[];
   if(protocolos.length){
-    const {data:ch}=await sb.from("chamados").select("protocolo,carimbo,unidade,equipamento,patrimonio,fabricante,descricao,grau_urgencia,servico").in("protocolo",protocolos);
+    const {data:ch}=await sb.from("chamados").select("protocolo,carimbo,unidade,equipamento,patrimonio,fabricante,problema,descricao,grau_urgencia,servico").in("protocolo",protocolos);
     chamados=ch||[];
   }
   const chamadoMap={};
@@ -68,8 +68,10 @@ const FISC_FILTER_COLS = {
   data:        {get:r=>r._chamado?.carimbo||r._chamado?.data_solicitacao||'', disp:v=>v||'(vazio)'},
   unidade:     {get:r=>r._chamado?.unidade||'',      disp:v=>v||'(vazio)'},
   equipamento: {get:r=>r._chamado?.equipamento||'',  disp:v=>v||'(vazio)'},
+  problema:     {get:r=>r._chamado?.descricao||r._chamado?.problema||'', disp:v=>v||'(vazio)'},
   patrimonio:  {get:r=>r._chamado?.patrimonio||'',   disp:v=>v||'(vazio)'},
   cpl:         {get:r=>r.cpl_contrato||'',           disp:v=>v||'(sem CPL)'},
+  empresa:     {get:r=>r.empresa||'',                disp:v=>v||'(vazio)'},
   os:          {get:r=>r.os||'',                     disp:v=>v||'(vazio)'},
   servico:     {get:r=>r.servico_realizado||r.feito||'', disp:v=>v||'(vazio)'},
   situacao:    {get:r=>r.situacao_os||'nao_fiscalizado', disp:v=>(SITUACAO_FISC[v]?.label||v||'(vazio)')},
@@ -169,7 +171,7 @@ function _popularFiltrosFisc(){ _fiscUpdateHdrBtns(); }
 
 let fiscSortCol = "data";
 let fiscSortAsc = false;
-const FISC_SORT_COLS = ["protocolo","data","unidade","equipamento","patrimonio","cpl","os","servico","situacao","competencia","nf","sla","fiscalizado_por","fiscalizado_em"];
+const FISC_SORT_COLS = ["protocolo","data","unidade","equipamento","problema","patrimonio","cpl","empresa","os","servico","situacao","competencia","nf","sla","fiscalizado_por","fiscalizado_em"];
 
 function _fiscDataMs(raw){
   if(!raw) return null;
@@ -188,7 +190,7 @@ function _fiscSortValue(r,col){
     const m=String(r.competencia||"").match(/(\d{1,2})\D+(\d{4})/);
     return m?(+m[2]*12+(+m[1]-1)):null;
   }
-  const vals={protocolo:r.protocolo,unidade:ch.unidade,equipamento:ch.equipamento,patrimonio:ch.patrimonio,cpl:r.cpl_contrato,os:r.os,servico:r.servico_realizado||r.feito,situacao:SITUACAO_FISC[r.situacao_os]?.label||r.situacao_os,nf:r.nf_referencia,fiscalizado_por:r.fiscalizado_por};
+  const vals={protocolo:r.protocolo,unidade:ch.unidade,equipamento:ch.equipamento,problema:ch.descricao||ch.problema,patrimonio:ch.patrimonio,cpl:r.cpl_contrato,empresa:r.empresa,os:r.os,servico:r.servico_realizado||r.feito,situacao:SITUACAO_FISC[r.situacao_os]?.label||r.situacao_os,nf:r.nf_referencia,fiscalizado_por:r.fiscalizado_por};
   return vals[col]??"";
 }
 function ordenarFiscalizacao(col){
@@ -224,7 +226,7 @@ function filtrarFiscalizacao(){
       if(!sel.includes(val)) return false;
     }
     if(busca){
-      const hay=[r.protocolo,r._chamado?.equipamento,r._chamado?.unidade,r._chamado?.patrimonio,r.os,r.cpl_contrato,r.servico_realizado,r.feito].filter(Boolean).join(" ").toLowerCase();
+      const hay=[r.protocolo,r._chamado?.equipamento,r._chamado?.descricao,r._chamado?.problema,r._chamado?.unidade,r._chamado?.patrimonio,r.empresa,r.os,r.cpl_contrato,r.servico_realizado,r.feito].filter(Boolean).join(" ").toLowerCase();
       if(!hay.includes(busca)) return false;
     }
     return true;
@@ -247,6 +249,7 @@ function _renderFiscalizacao(){
   document.getElementById("fisc-body").innerHTML=rows.map(r=>{
     const ch=r._chamado||{};
     const data=ch.carimbo||"—";
+    const problema=ch.descricao||ch.problema||"—";
     return `<tr>
       ${podeEd?`<td style="text-align:center"><input type="checkbox" class="fisc-check" data-protocolo="${r.protocolo}" style="accent-color:var(--blue);cursor:pointer"></td>`:''}
       <td style="white-space:nowrap">
@@ -257,8 +260,10 @@ function _renderFiscalizacao(){
       <td style="font-size:11px;white-space:nowrap">${data}</td>
       <td style="font-size:12px">${ch.unidade||"—"}</td>
       <td style="font-size:11px">${ch.equipamento||"—"}</td>
+      <td style="font-size:11px;min-width:240px;max-width:360px;white-space:normal;word-break:break-word" title="${_sanEsc(problema)}">${_sanEsc(problema)}</td>
       <td style="font-size:11px">${ch.patrimonio||"—"}</td>
       <td style="font-size:11px;white-space:nowrap"><strong>${r.cpl_contrato||"—"}</strong></td>
+      <td style="font-size:11px;min-width:180px;max-width:260px;white-space:normal;word-break:break-word" title="${_sanEsc(r.empresa||'')}">${_sanEsc(r.empresa||"—")}</td>
       <td style="font-size:11px">${r.os||"—"}</td>
       <td style="font-size:11px;max-width:180px;white-space:normal;word-break:break-word" title="${r.servico_realizado||r.feito||''}">${r.servico_realizado||r.feito||"—"}</td>
       <td>${badgeSituacaoFisc(r.situacao_os)}</td>

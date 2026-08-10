@@ -111,6 +111,8 @@
   `pendente`, além de `conforme`, `conforme_ressalva` e `parcial`. Gerar a medição não
   encerra nem congela a fiscalização: a situação da OS permanece editável e pode ser
   atualizada posteriormente, preservando os vínculos com medição, NF e termo de ateste.
+- A listagem da Fiscalização identifica a empresa vinculada na abertura do chamado e
+  mantém visível a descrição original do problema relatado em `chamados.descricao`.
 - A aba **Atas Rp** é visão derivada da matriz; recarrega sempre (`loadAtas`) para refletir
   encerrar/prorrogar/editar feitos em Contratos. **Não é subaba de Contratos.**
 - Ao salvar contrato `tipo=ATA`, os itens são **espelhados** para `atas_itens`

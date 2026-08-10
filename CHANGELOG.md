@@ -5,6 +5,8 @@
 - **Fiscalização de Contratos:** OS fiscalizadas como pendentes agora também podem gerar
   medição, NF e termo de ateste. A situação da OS continua editável depois da medição,
   sem perder os vínculos financeiros e documentais já registrados.
+- **Fiscalização de Contratos:** a tabela agora exibe a empresa vinculada e o problema
+  relatado no chamado; os dois campos também participam da busca, ordenação e filtros.
 - **Gestão de contratos periódicos:** o resumo gerencial agora exibe o valor mensal ou
   trimestral vigente em um cartão próprio. O Contrato 100/2021 foi classificado como
   serviço contínuo mensal fixo com valor mensal de `R$ 16.012,98`, conforme a soma dos
