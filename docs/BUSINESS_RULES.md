@@ -107,6 +107,10 @@
   - uma medição/NF por ciclo é o comportamento esperado, sem bloqueio rígido de exceções
     justificadas.
 - **Edição completa de contrato é exclusiva de admin.**
+- **Fiscalização de OS por demanda:** a medição e a NF podem incluir OS com situação
+  `pendente`, além de `conforme`, `conforme_ressalva` e `parcial`. Gerar a medição não
+  encerra nem congela a fiscalização: a situação da OS permanece editável e pode ser
+  atualizada posteriormente, preservando os vínculos com medição, NF e termo de ateste.
 - A aba **Atas Rp** é visão derivada da matriz; recarrega sempre (`loadAtas`) para refletir
   encerrar/prorrogar/editar feitos em Contratos. **Não é subaba de Contratos.**
 - Ao salvar contrato `tipo=ATA`, os itens são **espelhados** para `atas_itens`

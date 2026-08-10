@@ -12,6 +12,15 @@ const SITUACAO_FISC = {
   parcial:         {label:'Parcial',          color:'#E67E22',  bg:'#FDF0E6'},
   nao_conforme:    {label:'Não conforme',     color:'var(--red)', bg:'var(--red-bg)'},
 };
+const SITUACOES_FISC_PERMITEM_MEDICAO = new Set([
+  'pendente',
+  'conforme',
+  'conforme_ressalva',
+  'parcial',
+]);
+function _fiscSituacaoPermiteMedicao(situacao){
+  return SITUACOES_FISC_PERMITEM_MEDICAO.has(String(situacao||''));
+}
 function badgeSituacaoFisc(s){
   const cfg=SITUACAO_FISC[s||'nao_fiscalizado']||SITUACAO_FISC.nao_fiscalizado;
   return `<span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;background:${cfg.bg};color:${cfg.color}">${cfg.label}</span>`;
@@ -552,8 +561,8 @@ async function gerarMedicaoFiscalizacao(){
   if(typeof _ensureContratosModal==='function') await _ensureContratosModal();
   const selecionadas=_fiscSelecionadasParaMedicao();
   if(!selecionadas.length){alert("Selecione ao menos uma OS para gerar a medicao.");return;}
-  if(selecionadas.some(r=>!['conforme','conforme_ressalva','parcial'].includes(String(r.situacao_os||'')))){
-    alert("Gere medicao apenas para OS ja fiscalizadas como conforme, conforme com ressalva ou parcial.");
+  if(selecionadas.some(r=>!_fiscSituacaoPermiteMedicao(r.situacao_os))){
+    alert("Gere medição apenas para OS já fiscalizadas como pendente, conforme, conforme com ressalva ou parcial.");
     return;
   }
   const contratos=[...new Set(selecionadas.map(r=>String(r.contrato_id||_fiscContratoDaOs(r)?.id||r.cpl_contrato||'')).filter(Boolean))];
@@ -568,7 +577,7 @@ async function gerarMedicaoFiscalizacao(){
   }
   const n=selecionadas.length;
   const contratoTxt=contrato?`${contrato.numero_contrato||contrato.cpl||contrato.id} - ${contrato.prestador||''}`:(selecionadas[0].cpl_contrato||'contrato selecionado');
-  document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} para ${contratoTxt}. A medicao sera criada no contrato e a NF ficara vinculada a ela.`;
+  document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} para ${contratoTxt}. A medição será criada no contrato e a NF ficará vinculada a ela. A situação de cada OS continuará editável depois da medição.`;
   document.getElementById("mta-competencia").value="";
   document.getElementById("mta-nf").value="";
   const nfData=document.getElementById("mta-nf-data"); if(nfData) nfData.value=_ctTodayISO();
@@ -645,6 +654,11 @@ async function confirmarGerarMedicaoFiscalizacao(){
   const btn=document.querySelector("#modal-termo-ateste .btn-primary");
   btn.disabled=true;btn.textContent="Gerando...";
   const selecionadas=_fiscSelecionadasParaMedicao();
+  if(!selecionadas.length||selecionadas.some(r=>!_fiscSituacaoPermiteMedicao(r.situacao_os))){
+    showMsg("mta","A seleção mudou. Use apenas OS fiscalizadas como pendente, conforme, conforme com ressalva ou parcial.","err");
+    btn.disabled=false;btn.textContent="Gerar medicao";
+    return;
+  }
   const protocolos=selecionadas.map(r=>r.protocolo).filter(Boolean);
   const contrato=_fiscContratoDaOs(selecionadas[0]);
   if(!contrato?.id){
