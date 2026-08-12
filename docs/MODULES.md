@@ -95,7 +95,19 @@ Ciclo de vida do item após a contratação:
 - **Termo de entrega**: `abrirTermoEntrega` (arquivo no Storage).
 - **Notas Fiscais**: `notas_fiscais` + `nota_fiscal_itens` (rateio).
 
-## 9. Atas Rp Vigentes  ⚠️ aba própria
+## 9. Notas Fiscais — central e controle mensal
+
+- **Cadastro central:** cria a NF de serviço antes da medição, vinculando contrato,
+  fornecedor, processo, datas, valores, status e anexo.
+- **Controle mensal:** cards dos contratos de manutenção com prefixo e checklist em
+  `nf_checklist_documentos` / `nf_checklist_marcacoes`; concluídos permanecem visíveis no
+  final da lista.
+- **Todas as notas:** consulta unificada de `notas_fiscais`, inclusive aquisições e atas,
+  com situação do vínculo em `contratos_medicoes`.
+- **Medição:** tanto o fluxo contratual quanto a Fiscalização listam somente NFs do mesmo
+  contrato com `medicao_id is null`.
+
+## 10. Atas Rp Vigentes  ⚠️ aba própria
 Gestão **específica das Atas de Registro de Preços**. Tecnicamente, uma ATA é um registro
 da matriz `contratos` com `tipo_instrumento = 'ATA'`; os itens vivem em `atas_itens` e a
 execução em `atas_execucao`.
@@ -117,25 +129,25 @@ execução em `atas_execucao`.
 > - Ao solicitar execução de ATA com origem em Emenda, item de emenda já vinculado a outro
 >   fluxo deve ficar bloqueado e não pode ser salvo novamente.
 
-## 10. Contratos em execução  ⭐ MATRIZ
+## 11. Contratos em execução  ⭐ MATRIZ
 Aba-**matriz** de todos os instrumentos contratuais (`contratos`). Inclui vigências
 (`contratos_vigencias`), histórico (`contratos_historico`), fiscalizadores
 (`contratos_fiscalizadores`) e fornecedores. Edição completa de contrato é **exclusiva de
 admin** (`abrirEditarContrato`/`abrirDetalheContrato`). É a fonte de verdade de onde a aba
 Atas Rp deriva sua visão.
 
-## 11. Licitações em andamento
+## 12. Licitações em andamento
 Processos (`processos`, `vw_processos_resumo`) e status de licitação por **item**
 (`itens.status_lic_id`). Tela "Controle de processos". O status viaja por item; a emenda
 apenas lê o status.
 
-## 12. Sanções
+## 13. Sanções
 Solicitação (`sancoes_solicitadas` + `sancao_itens`) e aplicação
 (`sancoes_administrativas`) de sanções administrativas, ligadas a `contratos` e a itens
 de emenda. Geração de documento (`abrirModalSolicitacaoSancao`,
 `abrirModalSolicitacaoSancaoAta`).
 
-## 13. Cadastros (admin)
+## 14. Cadastros (admin)
 Cadastros-mestre: `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `secoes`,
 `secretarias`, `pessoas`. Inclui fila de **revisão/moderação/dedup** de cadastros criados inline
 
@@ -144,11 +156,11 @@ institucional e um texto livre de situação (máximo de 55 caracteres); os esta
 continuam sob controle do sistema e a data **Desde** é mantida.
 (`carregarRevisao`). Apenas admin.
 
-## 14. Usuários (admin)
+## 15. Usuários (admin)
 Gestão de `profiles` e `user_tab_permissions` (caixinhas ver/editar por aba), aprovação de
 contas e exclusão (`admin_delete_user`). Apenas admin. Ver [SECURITY.md](SECURITY.md).
 
-## 15. Planilhas
+## 16. Planilhas
 Importação/exportação de planilhas (Excel/CSV via `xlsx`/`papaparse`). Oculta por padrão
 (`DEFAULT_HIDDEN_TABS`), liberada por admin.
 

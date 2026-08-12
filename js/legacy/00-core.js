@@ -20,7 +20,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','notas-fiscais','licitacoes','sancoes','cadastros','usuarios','planilhas'];
 const PUBLIC_TEASER_TABS = ['consulta','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','licitacoes','sancoes'];
 const PUBLIC_TEASER_LABELS = {
   consulta:'Consulta rápida',
@@ -494,7 +494,7 @@ function showTab(name){
   localStorage.setItem("ultima_aba", name);
   window._activeTab = name;
   document.body.classList.toggle('no-edit-tab', !userCanEdit(name==='saldo-emendas'?'dashboard':name));
-  const names=["dashboard","saldo-emendas","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","itens","empenhos","atas","contratos","usuarios","planilhas"];
+  const names=["dashboard","saldo-emendas","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","itens","empenhos","atas","contratos","notas-fiscais","usuarios","planilhas"];
   document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
   fecharSidebar();
   document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
@@ -507,6 +507,7 @@ function showTab(name){
   if(name==="itens"){ if(!itensCarregado) loadItens(); itensShowSub('entregas'); }
   if(name==="empenhos"&&!empenhosCarregado) loadEmpenhos();
   if(name==="contratos"&&!contratosCarregado) loadContratos();
+  if(name==="notas-fiscais") loadNotasFiscais();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
   if(name==="sancoes") loadSancoes();

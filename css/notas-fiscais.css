@@ -1,0 +1,73 @@
+#panel-notas-fiscais{min-width:0}
+.nf-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
+.nf-page-header h2{margin:0;color:var(--text);font-size:22px}
+.nf-page-header p{margin:5px 0 0;color:var(--text3);font-size:13px}
+.nf-page-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.nf-subtabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:14px;overflow-x:auto}
+.nf-subtab-btn{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:13px;font-weight:600;padding:9px 2px;white-space:nowrap}
+.nf-subtab-btn:hover{color:var(--text)}
+.nf-subtab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+.nf-toolbar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.nf-filter-field{display:flex;flex-direction:column;gap:5px;min-width:160px}
+.nf-filter-field>span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3)}
+.nf-filter-field input,.nf-filter-field select{height:36px;min-width:0;width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit;font-size:12px;padding:7px 10px}
+.nf-filter-field input::placeholder{color:var(--text3)}
+.nf-filter-grow{flex:1 1 300px}
+.nf-refresh-btn{height:36px}
+.nf-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.nf-summary-chip{display:flex;align-items:baseline;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text2);font-size:11px}
+.nf-summary-chip strong{font-size:14px;color:var(--text)}
+.nf-summary-chip.pending{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+.nf-summary-chip.done{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.nf-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;align-items:start}
+.nf-control-card{border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:10px;background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden;transition:opacity .15s,border-color .15s,transform .15s}
+.nf-control-card:hover{transform:translateY(-1px)}
+.nf-control-card.is-complete{border-left-color:var(--green);background:linear-gradient(145deg,var(--surface),var(--green-bg));opacity:.72}
+.nf-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:13px 14px 10px}
+.nf-card-company{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+.nf-card-meta{margin-top:4px;color:var(--text3);font-size:11px;line-height:1.5}
+.nf-card-status{flex:0 0 auto;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;white-space:nowrap}
+.nf-card-status.pending{background:var(--amber-bg);color:var(--amber)}
+.nf-card-status.done{background:var(--green-bg);color:var(--green)}
+.nf-progress{height:4px;margin:0 14px 11px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.nf-progress>span{display:block;height:100%;border-radius:inherit;background:var(--amber);transition:width .2s}
+.nf-control-card.is-complete .nf-progress>span{background:var(--green)}
+.nf-check-items{border-top:1px solid var(--border)}
+.nf-check-row{display:flex;align-items:flex-start;gap:9px;padding:9px 14px;border-bottom:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:12px;line-height:1.35}
+.nf-check-row:last-child{border-bottom:0}
+.nf-check-row:hover{background:var(--surface2)}
+.nf-check-row input{width:16px;height:16px;margin:0;accent-color:var(--green);flex:0 0 auto}
+.nf-check-row.is-checked{color:var(--text3);text-decoration:line-through}
+.nf-check-scope{display:block;margin-top:2px;color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.03em;text-decoration:none}
+.nf-card-empty{padding:14px;color:var(--text3);font-size:12px;text-align:center}
+.nf-card-footer{display:flex;justify-content:flex-end;padding:8px 12px;border-top:1px solid var(--border);background:var(--surface2)}
+.nf-card-footer button{border:0;background:transparent;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer}
+.nf-empty{padding:28px 18px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text3);font-size:13px}
+.nf-table-card{overflow:hidden}
+.nf-table-wrap{max-height:calc(100vh - 330px);min-height:260px;overflow:auto}
+#nf-todas-table{width:100%;min-width:1080px}
+#nf-todas-table th,#nf-todas-table td{font-size:11px;vertical-align:middle}
+.nf-origin-badge,.nf-measure-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+.nf-origin-badge.servico{background:var(--blue-bg);color:var(--blue-text)}
+.nf-origin-badge.aquisicao{background:var(--amber-bg);color:var(--amber)}
+.nf-origin-badge.ata{background:var(--purple-bg,var(--surface2));color:var(--purple-text,var(--text2))}
+.nf-measure-badge.with{background:var(--green-bg);color:var(--green)}
+.nf-measure-badge.without{background:var(--surface2);color:var(--text3)}
+.nf-modal-help{margin:.45rem 0 1rem;padding:9px 11px;border-radius:var(--radius-sm);background:var(--blue-bg);color:var(--blue-text);font-size:12px;line-height:1.45}
+.nf-optional{font-size:10px;color:var(--text3);font-weight:400}
+#modal-nf-cadastro textarea{width:100%;resize:vertical;min-height:70px}
+.nf-checklist-form{align-items:end}
+.nf-checklist-actions{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.nf-checklist-list-title{margin:0 0 7px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3)}
+.nf-checklist-manager-list{display:flex;flex-direction:column;gap:7px;max-height:320px;overflow-y:auto}
+.nf-checklist-manager-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
+.nf-checklist-manager-name{font-size:12px;font-weight:600;color:var(--text)}
+.nf-checklist-manager-meta{margin-top:2px;font-size:10px;color:var(--text3)}
+.nf-checklist-manager-item button{border:0;background:transparent;color:var(--red);cursor:pointer;font-size:11px}
+@media(max-width:700px){
+  .nf-page-header{flex-direction:column}
+  .nf-page-actions{width:100%;justify-content:flex-start}
+  .nf-cards{grid-template-columns:1fr}
+  .nf-filter-field,.nf-filter-grow{flex:1 1 100%;min-width:100%}
+  .nf-refresh-btn{width:100%}
+}

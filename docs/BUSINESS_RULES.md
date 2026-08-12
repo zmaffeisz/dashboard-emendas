@@ -169,6 +169,18 @@
   | Valor por item (rateio) | `nota_fiscal_itens.valor_total` / `valor_unitario` |
   | Valor por unidade | **não existe** (proposital — evita soma indevida) |
 - **Preferência:** NF cadastrada **uma única vez** e vinculada a itens/unidades.
+- A aba **Notas Fiscais** é a central administrativa para cadastro antecipado de NFs de
+  serviço e consulta de NFs de qualquer origem. Serviço, aquisição e ATA continuam usando
+  a mesma tabela `notas_fiscais`.
+- Uma medição de serviço deve selecionar uma NF previamente cadastrada no mesmo contrato
+  cujo `medicao_id` ainda esteja vazio. Cada medição aceita no máximo uma NF e, depois do
+  vínculo, a NF deixa de aparecer entre as opções disponíveis.
+- O controle documental mensal considera contratos de manutenção que possuem
+  `prefixo_chamado` e ainda não foram encerrados definitivamente. Contratos vencidos que
+  permanecem ativos, exibidos como **Aguardando renovação**, continuam no controle.
+- Itens do checklist podem valer para todos os contratos da seção ou para um contrato
+  específico. As marcações usam o primeiro dia do mês como competência; a virada mensal
+  cria um estado visual novo sem excluir o histórico dos meses anteriores.
 - No recebimento, uma NF nova só pode ser cadastrada com seu arquivo anexado em PDF ou
   imagem. NF antiga sem anexo deve receber o arquivo antes de ser vinculada.
 - No detalhe **Ver tudo** de uma unidade física, os anexos existentes da NF e do termo de

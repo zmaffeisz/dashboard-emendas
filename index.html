@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
 <link rel="stylesheet" href="dashboard.css?v=20260807-emendas-item-width-1">
+<link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
 
@@ -71,6 +72,7 @@
       <div class="sidebar-section-label">Contratos</div>
       <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')" title="Atas Rp Vigentes"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6" stroke-linecap="round"/></svg></span><span class="sidebar-label">Atas Rp Vigentes</span></div>
       <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')" title="Contratos em execução"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="sidebar-label">Contratos em execução</span></div>
+      <div class="sidebar-item" id="sidebar-notas-fiscais" style="display:none" onclick="showTab('notas-fiscais')" title="Notas Fiscais"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6M9 16h4" stroke-linecap="round"/></svg></span><span class="sidebar-label">Notas Fiscais</span></div>
       <div class="sidebar-item" id="sidebar-licitacoes" style="display:none" onclick="showTab('licitacoes')" title="Licitações em andamento"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-6 2 2-6z" stroke-linejoin="round"/></svg></span><span class="sidebar-label">Licitações em andamento</span></div>
       <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')" title="Sanções"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 21h14" stroke-linecap="round"/><path d="M5 7h6M13 7h6" stroke-linecap="round"/><path d="M3 7l3 6a3 3 0 006 0L9 7"/><path d="M15 7l3 6a3 3 0 006 0l-3-6"/></svg></span><span class="sidebar-label">Sanções</span></div>
     </div>
@@ -910,17 +912,17 @@
         <div class="form-label">Competência * <span style="font-size:10px;font-weight:400">(mês/ano)</span></div>
         <input type="text" id="mta-competencia" placeholder="ex: 06/2026">
       </div>
-      <div class="form-group">
-        <div class="form-label">Número da NF *</div>
-        <input type="text" id="mta-nf" placeholder="ex: NF 12345">
+      <div class="form-group full">
+        <div class="form-label">Nota fiscal disponível *</div>
+        <select id="mta-nf" onchange="fiscSelecionarNFMedicao()"></select>
       </div>
       <div class="form-group">
         <div class="form-label">Data da NF</div>
-        <input type="date" id="mta-nf-data">
+        <input type="date" id="mta-nf-data" disabled>
       </div>
       <div class="form-group">
         <div class="form-label">Valor da medição/NF (R$) *</div>
-        <input type="number" id="mta-valor" step="0.01" min="0" placeholder="0,00">
+        <input type="number" id="mta-valor" step="0.01" min="0" placeholder="0,00" disabled>
       </div>
     </div>
     <div class="form-actions">
@@ -2144,6 +2146,153 @@
 </div>
 
 <!-- ══════════════════════ CONTRATOS (SUPABASE) ══════════════════════ -->
+<!-- ═══════════════════════ NOTAS FISCAIS ═══════════════════════ -->
+<div id="panel-notas-fiscais" class="panel">
+  <div class="nf-page-header">
+    <div>
+      <h2>Notas Fiscais</h2>
+      <p>Controle mensal de documentos e cadastro centralizado de notas fiscais.</p>
+    </div>
+    <div class="nf-page-actions">
+      <button class="btn-secondary" id="nf-btn-checklist" onclick="abrirGerenciadorChecklistNF()">Gerenciar checklist</button>
+      <button class="btn-primary" id="nf-btn-nova" onclick="abrirCadastroNotaFiscal()">+ Nova nota fiscal</button>
+    </div>
+  </div>
+
+  <div class="nf-subtabs" role="tablist" aria-label="Seções de notas fiscais">
+    <button class="nf-subtab-btn active" data-sub="controle" onclick="nfShowSub('controle')">Controle mensal</button>
+    <button class="nf-subtab-btn" data-sub="todas" onclick="nfShowSub('todas')">Todas as notas fiscais</button>
+  </div>
+
+  <section id="nf-sub-controle" class="nf-subpanel">
+    <div class="nf-toolbar">
+      <label class="nf-filter-field">
+        <span>Competência</span>
+        <input type="month" id="nf-controle-mes" onchange="loadNFControleMensal()">
+      </label>
+      <label class="nf-filter-field nf-filter-grow">
+        <span>Buscar contrato, processo ou empresa</span>
+        <input type="search" id="nf-controle-busca" placeholder="Digite para filtrar..." oninput="renderNFControleMensal()">
+      </label>
+      <label class="nf-filter-field">
+        <span>Situação</span>
+        <select id="nf-controle-status" onchange="renderNFControleMensal()">
+          <option value="pendentes">Pendentes primeiro</option>
+          <option value="todos">Todos</option>
+          <option value="concluidos">Somente concluídos</option>
+        </select>
+      </label>
+      <button class="btn-secondary nf-refresh-btn" onclick="loadNFControleMensal()" title="Atualizar controle mensal">Atualizar</button>
+    </div>
+    <div class="nf-summary" id="nf-controle-resumo"></div>
+    <div id="nf-controle-loading" class="loading" style="display:none"><span class="spinner"></span>Carregando controle mensal...</div>
+    <div id="nf-controle-vazio" class="nf-empty" style="display:none"></div>
+    <div id="nf-controle-cards" class="nf-cards"></div>
+  </section>
+
+  <section id="nf-sub-todas" class="nf-subpanel" style="display:none">
+    <div class="nf-toolbar">
+      <label class="nf-filter-field nf-filter-grow">
+        <span>Buscar NF, empresa, contrato ou processo</span>
+        <input type="search" id="nf-todas-busca" placeholder="Digite para filtrar..." oninput="renderTodasNotasFiscais()">
+      </label>
+      <label class="nf-filter-field">
+        <span>Origem</span>
+        <select id="nf-todas-origem" onchange="renderTodasNotasFiscais()">
+          <option value="">Todas</option>
+          <option value="servico">Serviço</option>
+          <option value="aquisicao">Aquisição</option>
+          <option value="ata">Ata</option>
+        </select>
+      </label>
+      <label class="nf-filter-field">
+        <span>Medição</span>
+        <select id="nf-todas-medicao" onchange="renderTodasNotasFiscais()">
+          <option value="">Todas</option>
+          <option value="com">Com medição</option>
+          <option value="sem">Sem medição</option>
+        </select>
+      </label>
+      <button class="btn-secondary nf-refresh-btn" onclick="loadTodasNotasFiscais(true)">Atualizar</button>
+    </div>
+    <div class="nf-summary" id="nf-todas-resumo"></div>
+    <div id="nf-todas-loading" class="loading" style="display:none"><span class="spinner"></span>Carregando notas fiscais...</div>
+    <div class="table-card nf-table-card">
+      <div class="table-wrap nf-table-wrap">
+        <table id="nf-todas-table">
+          <thead><tr>
+            <th>Número</th><th>Origem</th><th>Empresa</th><th>Processo / contrato</th>
+            <th>Emissão</th><th style="text-align:right">Valor</th><th>Medição</th><th>Status</th><th>Anexo</th>
+          </tr></thead>
+          <tbody id="nf-todas-body"></tbody>
+        </table>
+      </div>
+      <div id="nf-todas-vazio" class="nf-empty" style="display:none"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Cadastro central de nota fiscal -->
+<div class="modal-overlay" id="modal-nf-cadastro" style="overflow-y:auto;padding:1rem">
+  <div class="modal-box" style="width:min(760px,96vw);max-width:96vw;max-height:92vh;overflow-y:auto;box-sizing:border-box">
+    <div class="modal-title">Nova nota fiscal</div>
+    <div class="nf-modal-help">Cadastre a NF antes da medição. A empresa e o processo são preenchidos pelo contrato selecionado.</div>
+    <div class="form-grid">
+      <div class="form-group full"><div class="form-label">Contrato *</div><select id="nfc-contrato" onchange="nfCadastroContratoChange()"></select></div>
+      <div class="form-group"><div class="form-label">Empresa</div><input id="nfc-empresa" type="text" disabled></div>
+      <div class="form-group"><div class="form-label">Processo</div><input id="nfc-processo" type="text" disabled></div>
+      <div class="form-group"><div class="form-label">Número da NF *</div><input id="nfc-numero" type="text" maxlength="80"></div>
+      <div class="form-group"><div class="form-label">Série</div><input id="nfc-serie" type="text" maxlength="40"></div>
+      <div class="form-group full"><div class="form-label">Chave de acesso</div><input id="nfc-chave" type="text" maxlength="80" inputmode="numeric"></div>
+      <div class="form-group"><div class="form-label">Competência</div><input id="nfc-competencia" type="month"></div>
+      <div class="form-group"><div class="form-label">Data de emissão *</div><input id="nfc-emissao" type="date"></div>
+      <div class="form-group"><div class="form-label">Data de recebimento</div><input id="nfc-recebimento" type="date"></div>
+      <div class="form-group"><div class="form-label">Valor bruto (R$) *</div><input id="nfc-valor" type="number" min="0" step="0.01" oninput="nfCadastroAtualizarAprovado()"></div>
+      <div class="form-group"><div class="form-label">Glosa/desconto (R$)</div><input id="nfc-glosa" type="number" min="0" step="0.01" value="0" oninput="nfCadastroAtualizarAprovado()"></div>
+      <div class="form-group"><div class="form-label">Valor aprovado</div><input id="nfc-aprovado" type="text" disabled></div>
+      <div class="form-group"><div class="form-label">Status *</div>
+        <select id="nfc-status">
+          <option value="recebida">Recebida</option>
+          <option value="pendente">Pendente</option>
+          <option value="em_conferencia">Em conferência</option>
+          <option value="aprovada">Aprovada</option>
+          <option value="aprovada_com_glosa">Aprovada com glosa</option>
+          <option value="recusada">Recusada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="form-group full"><div class="form-label">Arquivo da NF <span class="nf-optional">(PDF ou imagem, até 10 MB)</span></div><input id="nfc-arquivo" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"></div>
+      <div class="form-group full"><div class="form-label">Observações</div><textarea id="nfc-obs" rows="3" placeholder="Informações de conferência ou recebimento"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="nfc-salvar" onclick="salvarCadastroNotaFiscal()">Salvar nota fiscal</button>
+      <button class="btn-secondary" onclick="fecharCadastroNotaFiscal()">Cancelar</button>
+      <span id="nfc-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Gerenciador de documentos do checklist -->
+<div class="modal-overlay" id="modal-nf-checklist" style="overflow-y:auto;padding:1rem">
+  <div class="modal-box" style="width:min(680px,96vw);max-width:96vw;max-height:90vh;overflow-y:auto;box-sizing:border-box">
+    <div class="modal-title">Documentos do checklist mensal</div>
+    <div class="nf-modal-help">Itens globais aparecem em todos os contratos de manutenção. Também é possível criar um item somente para um contrato.</div>
+    <div class="form-grid nf-checklist-form">
+      <div class="form-group full"><div class="form-label">Documento *</div><input id="nfck-nome" type="text" maxlength="120" placeholder="Ex.: Nota fiscal, certidão, relatório de serviços"></div>
+      <div class="form-group"><div class="form-label">Aplicar em</div><select id="nfck-contrato"><option value="">Todos os contratos de manutenção</option></select></div>
+      <div class="form-group"><div class="form-label">Ordem</div><input id="nfck-ordem" type="number" min="0" step="1" value="0"></div>
+      <div class="form-group full"><div class="form-label">Descrição</div><input id="nfck-descricao" type="text" maxlength="240" placeholder="Orientação opcional"></div>
+    </div>
+    <div class="form-actions nf-checklist-actions">
+      <button class="btn-primary" id="nfck-adicionar" onclick="salvarDocumentoChecklistNF()">Adicionar documento</button>
+      <span id="nfck-msg" class="fmsg"></span>
+    </div>
+    <div class="nf-checklist-list-title">Itens ativos</div>
+    <div id="nfck-lista" class="nf-checklist-manager-list"></div>
+    <div class="form-actions"><button class="btn-secondary" onclick="fecharGerenciadorChecklistNF()">Fechar</button></div>
+  </div>
+</div>
+
 <div id="panel-contratos" class="panel">
   <div id="contratos-loading" class="loading"><span class="spinner"></span>Carregando contratos...</div>
   <div id="contratos-main" style="display:none">
@@ -2507,6 +2656,7 @@
     <div class="modal-title">Medição do contrato</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctmed-info"></div>
     <div class="form-grid">
+      <div class="form-group full"><div class="form-label">Nota fiscal disponível *</div><select id="ctmed-nf" onchange="ctSelecionarNotaMedicao()"></select><div style="font-size:10px;color:var(--text3);margin-top:4px">Apenas NFs deste contrato que ainda não possuem medição.</div></div>
       <div class="form-group"><div class="form-label" id="ctmed-competencia-label">Competência *</div><input type="month" id="ctmed-competencia"></div>
       <div class="form-group"><div class="form-label">Data da medição *</div><input type="date" id="ctmed-data"></div>
       <div class="form-group"><div class="form-label">Tipo *</div>
@@ -2964,6 +3114,7 @@
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260807-emendas-item-width-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260810-fiscalizacao-empresa-problema-2"></script>
+<script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>
 <script type="module" src="js/app.js"></script>

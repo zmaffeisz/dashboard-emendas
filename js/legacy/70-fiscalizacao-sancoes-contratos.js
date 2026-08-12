@@ -561,6 +561,8 @@ function _fiscContratoDaOs(r){
 
 function gerarTermoAteste(){ gerarMedicaoFiscalizacao(); }
 
+let _fiscNFsDisponiveisMedicao=[];
+
 async function gerarMedicaoFiscalizacao(){
   if(!podeEditar('fiscalizacao')){ alert("Sua conta tem permissão apenas para visualização."); return; }
   if(typeof _ensureContratosModal==='function') await _ensureContratosModal();
@@ -582,13 +584,34 @@ async function gerarMedicaoFiscalizacao(){
   }
   const n=selecionadas.length;
   const contratoTxt=contrato?`${contrato.numero_contrato||contrato.cpl||contrato.id} - ${contrato.prestador||''}`:(selecionadas[0].cpl_contrato||'contrato selecionado');
-  document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} para ${contratoTxt}. A medição será criada no contrato e a NF ficará vinculada a ela. A situação de cada OS continuará editável depois da medição.`;
+  document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} para ${contratoTxt}. Escolha uma NF já cadastrada e ainda sem medição. A situação de cada OS continuará editável depois da medição.`;
   document.getElementById("mta-competencia").value="";
-  document.getElementById("mta-nf").value="";
-  const nfData=document.getElementById("mta-nf-data"); if(nfData) nfData.value=_ctTodayISO();
-  const valor=document.getElementById("mta-valor"); if(valor) valor.value=contrato?.valor_mensal!=null?String(_ctNum(contrato.valor_mensal)):"";
+  const nfSel=document.getElementById("mta-nf");
+  if(nfSel) nfSel.innerHTML='<option value="">Carregando notas fiscais disponíveis...</option>';
+  const nfData=document.getElementById("mta-nf-data"); if(nfData) nfData.value="";
+  const valor=document.getElementById("mta-valor"); if(valor) valor.value="";
   document.getElementById("mta-msg").className="fmsg";
   document.getElementById("modal-termo-ateste").classList.add("active");
+  try{
+    _fiscNFsDisponiveisMedicao=typeof nfNotasDisponiveisContrato==='function'?await nfNotasDisponiveisContrato(contrato?.id):[];
+    if(nfSel){
+      nfSel.innerHTML='<option value="">Selecione uma nota fiscal...</option>'+_fiscNFsDisponiveisMedicao.map(nf=>`<option value="${_sanEsc(String(nf.id))}">${_sanEsc(typeof nfNotaOptionLabel==='function'?nfNotaOptionLabel(nf):('NF '+(nf.numero||'')))}</option>`).join('');
+      if(!_fiscNFsDisponiveisMedicao.length) nfSel.innerHTML='<option value="">Nenhuma NF disponível — cadastre-a na aba Notas Fiscais</option>';
+    }
+  }catch(e){
+    if(nfSel) nfSel.innerHTML='<option value="">Erro ao carregar notas fiscais</option>';
+    showMsg('mta','Não foi possível carregar as NFs disponíveis: '+e.message,'err');
+  }
+  fiscSelecionarNFMedicao();
+}
+
+function fiscSelecionarNFMedicao(){
+  const id=document.getElementById('mta-nf')?.value||'';
+  const nota=_fiscNFsDisponiveisMedicao.find(n=>String(n.id)===String(id));
+  const data=document.getElementById('mta-nf-data');if(data)data.value=nota?.data_emissao||'';
+  const valor=document.getElementById('mta-valor');if(valor)valor.value=nota?String(_ctNum(nota.valor_bruto??nota.valor_total)||''):'';
+  const competencia=document.getElementById('mta-competencia');
+  if(nota?.competencia&&competencia&&!competencia.value)competencia.value=nota.competencia;
 }
 
 async function confirmarGerarTermo(){ return confirmarGerarMedicaoFiscalizacao(); }
@@ -652,10 +675,11 @@ function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal
 async function confirmarGerarMedicaoFiscalizacao(){
   if(!podeEditar('fiscalizacao')){ alert("Sua conta tem permissão apenas para visualização."); return; }
   const competencia=document.getElementById("mta-competencia").value.trim();
-  const nf=document.getElementById("mta-nf").value.trim();
-  const nfData=document.getElementById("mta-nf-data")?.value||null;
-  const valor=_ctNum(document.getElementById("mta-valor")?.value);
-  if(!competencia||!nf||!valor){showMsg("mta","Preencha a competencia, a NF e o valor da medicao.","err");return;}
+  const nfId=document.getElementById("mta-nf").value;
+  const nfSelecionada=_fiscNFsDisponiveisMedicao.find(n=>String(n.id)===String(nfId));
+  const nf=nfSelecionada?.numero||'';
+  const valor=_ctNum(nfSelecionada?.valor_bruto??nfSelecionada?.valor_total);
+  if(!competencia||!nfId||!nfSelecionada||!valor){showMsg("mta","Informe a competência e selecione uma NF disponível.","err");return;}
   const btn=document.querySelector("#modal-termo-ateste .btn-primary");
   btn.disabled=true;btn.textContent="Gerando...";
   const selecionadas=_fiscSelecionadasParaMedicao();
@@ -695,32 +719,13 @@ async function confirmarGerarMedicaoFiscalizacao(){
   };
   const {data:med,error:medErr}=await sb.from("contratos_medicoes").insert(medPayload).select("*").single();
   if(medErr){showMsg("mta","Erro ao criar medicao: "+medErr.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;}
-  const numeroNorm=_ctNormalizedDoc(nf);
-  const nfPayload={
-    numero:nf,
-    numero_normalizado:numeroNorm||null,
-    fornecedor_id:contrato.fornecedor_id||null,
-    contrato_id:contrato.id,
-    processo_id:contrato.processo_id||null,
-    medicao_id:med.id,
-    competencia,
-    data_emissao:nfData,
-    data_recebimento:_ctTodayISO(),
-    valor_total:valor,
-    valor_bruto:valor,
-    valor_liquido:valor,
-    valor_glosa:0,
-    valor_aprovado:valor,
-    status:'aprovada',
-    origem_sistema:'fiscalizacao',
-    origem_codigo:med.id,
-    observacoes:`NF vinculada automaticamente pela Fiscalizacao. Protocolos: ${protocolos.join(', ')}`,
-    validado_por:fiscal,
-    validado_em:new Date().toISOString(),
-    updated_at:new Date().toISOString()
-  };
-  const {data:nfRow,error:nfErr}=await sb.from("notas_fiscais").insert(nfPayload).select("*").single();
-  if(nfErr){showMsg("mta","Medicao criada, mas erro ao vincular NF: "+nfErr.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;}
+  let nfRow;
+  try{
+    nfRow=await nfVincularNotaMedicao({notaId:nfId,contratoId:contrato.id,medicao:med,competencia});
+  }catch(e){
+    await sb.from('contratos_medicoes').delete().eq('id',med.id);
+    showMsg("mta","A medição não foi salva: "+e.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;
+  }
   const {data:termo,error:termoErr}=await sb.from("termos_ateste").insert({
     cpl_contrato:contrato.cpl||selecionadas[0].cpl_contrato||null,
     contrato_id:contrato.id,
@@ -756,7 +761,7 @@ async function confirmarGerarMedicaoFiscalizacao(){
   document.getElementById("modal-termo-ateste").classList.remove("active");
   btn.disabled=false;btn.textContent="Gerar medicao";
   contratosCarregado=false;
-  if(window.toast) toast("Medicao, NF e termo registrados no contrato.","success");
+  if(window.toast) toast("Medição vinculada à NF existente e termo registrado no contrato.","success");
 }
 
 async function baixarTermoAtesteMedicao(medicaoId){
@@ -3409,7 +3414,7 @@ async function abrirDetalheContrato(id){
         ${actionBtn('itens','Ajustes por item (reajuste/aditivo/supressão)',"abrirModalItensEventos()")}
         ${actionBtn('prorrogacoes','Registrar prorrogação',"abrirModalContratoOp('prorrogacao')")}
         ${actionBtn('medicoes','Nova medição','abrirModalMedicaoContrato()',true)}
-        ${actionBtn('notas','Vincular NF','abrirModalNotaFiscalContrato()')}
+        ${actionBtn('notas','Cadastrar NF','abrirModalNotaFiscalContrato()')}
         ${actionBtn('documentos','Registrar documento','abrirModalDocumentoContrato()')}
       </div>
     </div>`:'';
@@ -3635,8 +3640,8 @@ async function abrirDetalheContrato(id){
     </div>
     <div class="ct-detail-pane" data-tab="notas" style="display:none">
       <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
-        <div style="font-size:13px;color:var(--text2)">Notas fiscais associadas à execução contratual. O registro da NF não representa pagamento e deve estar vinculado a uma medição.</div>
-        ${editor?'<button class="btn-secondary" onclick="abrirModalNotaFiscalContrato()">Vincular NF</button>':''}
+        <div style="font-size:13px;color:var(--text2)">Notas fiscais do contrato. NFs cadastradas antecipadamente ficam "Sem medição" até serem selecionadas em uma nova medição.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalNotaFiscalContrato()">Cadastrar NF</button>':''}
       </div>
       ${nfError}
       ${rowsNotas?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Número</th><th>Medição</th><th>Datas</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor aprovado</th><th>Status</th><th>Obs.</th></tr></thead><tbody>${rowsNotas}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma nota fiscal vinculada a este contrato.</div>'}
@@ -4143,7 +4148,8 @@ function ctAtualizarTotaisItensMedicao(){
   let bruto=0;
   document.querySelectorAll('#ctmed-itens-lista .ctmed-item-row').forEach(row=>{ bruto+=_ctNum(row.dataset.valorTotal); });
   const brutoEl=document.getElementById('ctmed-valor-bruto');
-  if(brutoEl) brutoEl.value=bruto?bruto.toFixed(2):'';
+  const nfSelecionada=document.getElementById('ctmed-nf')?.value;
+  if(brutoEl&&!nfSelecionada) brutoEl.value=bruto?bruto.toFixed(2):'';
   ctAtualizarLiquidoMedicao();
 }
 
@@ -4164,7 +4170,9 @@ function ctAtualizarCicloTrimestralMedicao(){
   competencia.dataset.cicloFim=ciclo.endDate;
 }
 
-function abrirModalMedicaoContrato(){
+let _ctNotasDisponiveisMedicao=[];
+
+async function abrirModalMedicaoContrato(){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
   const demanda=_ctEhServicoDemandaContrato(_ctAtual);
@@ -4213,22 +4221,54 @@ function abrirModalMedicaoContrato(){
   if(demanda) ctAdicionarItemMedicao();
   const brutoEl=document.getElementById('ctmed-valor-bruto');
   if(brutoEl){
-    brutoEl.value=trimestral?String(_ctValorPeriodico(_ctAtual)||''):'';
-    brutoEl.readOnly=demanda||trimestral;
-    brutoEl.style.background=(demanda||trimestral)?'var(--surface2)':'';
-    brutoEl.style.color=(demanda||trimestral)?'var(--text2)':'';
+    brutoEl.value='';
+    brutoEl.readOnly=true;
+    brutoEl.style.background='var(--surface2)';
+    brutoEl.style.color='var(--text2)';
   }
   document.getElementById('ctmed-valor-glosa').value='0';
   document.getElementById('ctmed-glosa-motivo').value='';
   document.getElementById('ctmed-obs').value='';
   const msg=document.getElementById('ctmed-msg'); if(msg){msg.className='fmsg';msg.textContent='';}
-  ctAtualizarLiquidoMedicao();
+  const nfSel=document.getElementById('ctmed-nf');
+  if(nfSel) nfSel.innerHTML='<option value="">Carregando notas fiscais disponíveis...</option>';
   document.getElementById('modal-ct-medicao').classList.add('active');
+  try{
+    _ctNotasDisponiveisMedicao=typeof nfNotasDisponiveisContrato==='function'?await nfNotasDisponiveisContrato(_ctAtual.id):[];
+    if(nfSel){
+      nfSel.innerHTML='<option value="">Selecione uma nota fiscal...</option>'+_ctNotasDisponiveisMedicao.map(n=>`<option value="${_sanEsc(String(n.id))}">${_sanEsc(typeof nfNotaOptionLabel==='function'?nfNotaOptionLabel(n):('NF '+(n.numero||'')))}</option>`).join('');
+      if(!_ctNotasDisponiveisMedicao.length) nfSel.innerHTML='<option value="">Nenhuma NF disponível — cadastre-a na aba Notas Fiscais</option>';
+    }
+  }catch(e){
+    if(nfSel) nfSel.innerHTML='<option value="">Erro ao carregar notas fiscais</option>';
+    if(msg){msg.textContent='Não foi possível carregar as NFs disponíveis: '+e.message;msg.className='fmsg err';}
+  }
+  ctSelecionarNotaMedicao();
+}
+
+function ctSelecionarNotaMedicao(){
+  const id=document.getElementById('ctmed-nf')?.value||'';
+  const nota=_ctNotasDisponiveisMedicao.find(n=>String(n.id)===String(id));
+  const bruto=document.getElementById('ctmed-valor-bruto');
+  const glosa=document.getElementById('ctmed-valor-glosa');
+  if(bruto) bruto.value=nota?String(_ctNum(nota.valor_bruto??nota.valor_total)||''):'';
+  if(glosa) glosa.value=nota?String(_ctNum(nota.valor_glosa)||0):'0';
+  const competencia=document.getElementById('ctmed-competencia');
+  if(nota&&competencia&&competencia.type==='month'&&nota.competencia){
+    const raw=String(nota.competencia);
+    const iso=/^\d{4}-\d{2}$/.test(raw)?raw:(/^(\d{2})\/(\d{4})$/.test(raw)?raw.replace(/^(\d{2})\/(\d{4})$/,'$2-$1'):'');
+    if(iso) competencia.value=iso;
+  }
+  ctAtualizarLiquidoMedicao();
 }
 
 function abrirModalNotaFiscalContrato(){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
+  if(typeof abrirCadastroNotaFiscal==='function'){
+    abrirCadastroNotaFiscal(_ctAtual.id);
+    return;
+  }
   document.getElementById('ctnf-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — NF sempre vinculada a uma medição; não há controle de pagamento.`;
   const sel=document.getElementById('ctnf-medicao');
   const statusPermitidosTrimestral=new Set(['aprovada_pelo_fiscal','aprovada_com_glosa']);
@@ -4312,6 +4352,8 @@ async function salvarMedicaoContrato(){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
   const msg=document.getElementById('ctmed-msg');
+  const notaId=document.getElementById('ctmed-nf')?.value||'';
+  const notaSelecionada=_ctNotasDisponiveisMedicao.find(n=>String(n.id)===String(notaId));
   const competencia=document.getElementById('ctmed-competencia').value;
   const data=document.getElementById('ctmed-data').value||_ctTodayISO();
   const tipo=document.getElementById('ctmed-tipo').value||'competencia';
@@ -4339,6 +4381,7 @@ async function salvarMedicaoContrato(){
   const motivoGlosa=(document.getElementById('ctmed-glosa-motivo').value||'').trim();
   const obs=(document.getElementById('ctmed-obs').value||'').trim();
   const demanda=_ctEhServicoDemandaContrato(_ctAtual);
+  if(!notaId||!notaSelecionada){if(msg){msg.textContent='Selecione uma nota fiscal previamente cadastrada e ainda sem medição.';msg.className='fmsg err';}return;}
   if(demanda&&!itensMedidos.length){if(msg){msg.textContent='Adicione ao menos um item medido.';msg.className='fmsg err';}return;}
   if(demanda&&itensMedidos.some(x=>!x.itemId)){if(msg){msg.textContent='Selecione todos os itens medidos.';msg.className='fmsg err';}return;}
   if(demanda&&itensMedidos.some(x=>x.quantidade<=0)){if(msg){msg.textContent='Informe a quantidade medida de todos os itens.';msg.className='fmsg err';}return;}
@@ -4352,6 +4395,8 @@ async function salvarMedicaoContrato(){
   }
   const itensDuplicados=itensMedidos.map(x=>String(x.itemId)).filter((id,idx,arr)=>id&&arr.indexOf(id)!==idx);
   if(demanda&&itensDuplicados.length){if(msg){msg.textContent='Cada item deve aparecer apenas uma vez na mesma medicao.';msg.className='fmsg err';}return;}
+  const totalItens=itensMedidos.reduce((s,x)=>s+_ctNum(x.total),0);
+  if(demanda&&Math.abs(totalItens-valorBruto)>0.01){if(msg){msg.textContent=`O total dos itens medidos (${_ctMoney(totalItens)}) precisa corresponder ao valor bruto da NF (${_ctMoney(valorBruto)}).`;msg.className='fmsg err';}return;}
   if(!fiscal){if(msg){msg.textContent='Selecione o fiscal responsavel.';msg.className='fmsg err';}return;}
   if(!competencia){if(msg){msg.textContent='Informe a competência.';msg.className='fmsg err';}return;}
   if(trimestral&&!cicloNumero){if(msg){msg.textContent='Selecione o ciclo trimestral do contrato.';msg.className='fmsg err';}return;}
@@ -4412,19 +4457,37 @@ async function salvarMedicaoContrato(){
     });
     if(gErr) console.warn('Falha ao registrar glosa da medição',gErr);
   }
+  let notaVinculada;
+  try{
+    notaVinculada=await nfVincularNotaMedicao({notaId,contratoId:_ctAtual.id,medicao:med,competencia});
+  }catch(e){
+    await sb.from('contratos_medicoes').delete().eq('id',med.id);
+    if(btn)btn.disabled=false;
+    if(msg){msg.textContent='A medição não foi salva: '+e.message;msg.className='fmsg err';}
+    return;
+  }
+  if(trimestral&&!(_ctTermosAtual||[]).some(t=>String(t.medicao_id||'')===String(med.id))){
+    const {error:termoErr}=await sb.from('termos_ateste').insert({
+      contrato_id:_ctAtual.id,cpl_contrato:_ctAtual.cpl||null,medicao_id:med.id,nota_fiscal_id:notaVinculada.id,
+      competencia,nf_referencia:notaVinculada.numero||null,
+      fiscalizado_por:med.fiscal_responsavel||currentProfile?.nome||currentProfile?.email||null,
+      gerado_em:data,protocolos:[],valor_atestado:valorLiquido
+    });
+    if(termoErr) console.warn('Falha ao criar termo de ateste da medição trimestral',termoErr);
+  }
   await sb.from('contratos_historico').insert({
     contrato_id:_ctAtual.id,
     cpl:_ctAtual.cpl||null,
     tipo:'Medição contratual',
     data_evento:data,
     valor_novo:String(valorLiquido),
-    obs:`Medição ${competencia} registrada com status ${CT_MEDICAO_STATUS_LABELS[status]||status}. Valor bruto ${_ctMoney(valorBruto)}, glosa ${_ctMoney(valorGlosa)}, líquido ${_ctMoney(valorLiquido)}.${trimestral?` Preventiva/calibração executada em ${fmtDate(dataExecucaoPreventiva)}; relatório: ${relatorioServico}.`:''}`,
+    obs:`Medição ${competencia} registrada com a NF ${notaVinculada.numero||notaVinculada.id}. Status ${CT_MEDICAO_STATUS_LABELS[status]||status}. Valor bruto ${_ctMoney(valorBruto)}, glosa ${_ctMoney(valorGlosa)}, líquido ${_ctMoney(valorLiquido)}.${trimestral?` Preventiva/calibração executada em ${fmtDate(dataExecucaoPreventiva)}; relatório: ${relatorioServico}.`:''}`,
     usuario:currentProfile?.nome||currentProfile?.email||null
   });
   if(btn)btn.disabled=false;
   document.getElementById('modal-ct-medicao').classList.remove('active');
   delete ctItensPorContrato[_ctAtual.id];
-  if(window.toast) toast('Medição registrada.','success');
+  if(window.toast) toast(`Medição registrada e vinculada à NF ${notaVinculada.numero||''}.`,'success');
   await abrirDetalheContrato(_ctAtual.id);
   ctOpenContratoTab('medicoes');
 }

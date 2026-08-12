@@ -10,6 +10,7 @@ const PERM_TABS = [
   {key:'inventario-ac', label:'Inventário'},
   {key:'atas', label:'Atas Rp Vigentes'},
   {key:'contratos', label:'Contratos em execução'},
+  {key:'notas-fiscais', label:'Notas Fiscais'},
   {key:'licitacoes', label:'Licitações em andamento'},
   {key:'itens', label:'Controle de Entregas'},
   {key:'empenhos', label:'Empenhos'},

@@ -2,6 +2,20 @@
 
 ## Em desenvolvimento
 
+- **Correção da central de Notas Fiscais:** ajustada a leitura de fornecedores para o
+  campo real `cnpj_normalizado`, restabelecendo os cards dos contratos de manutenção e a
+  listagem das NFs existentes. Os filtros e a tabela também foram realinhados ao tema e à
+  largura disponível.
+- **Nova aba Notas Fiscais:** adicionada uma central com cadastro antecipado de NFs de
+  serviço, consulta unificada de todas as NFs (serviços, aquisições e atas) e indicação
+  explícita de vínculo com medição.
+- **Controle mensal de documentos:** contratos de manutenção com prefixo ganham cards por
+  empresa/processo e checklist configurável, global ou específico por contrato. As
+  marcações são preservadas por competência; a cada novo mês os cards começam desmarcados,
+  com pendências primeiro e concluídos ao final.
+- **Medições com NF pré-cadastrada:** medições de contrato e medições geradas pela
+  Fiscalização agora exigem a seleção de uma NF do mesmo contrato ainda sem medição. O
+  valor bruto vem da NF escolhida e o vínculo é protegido como relação um-para-um.
 - **Fiscalização de Contratos:** OS fiscalizadas como pendentes agora também podem gerar
   medição, NF e termo de ateste. A situação da OS continua editável depois da medição,
   sem perder os vínculos financeiros e documentais já registrados.
