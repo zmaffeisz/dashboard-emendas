@@ -2146,6 +2146,7 @@ async function _ncVinculEmpGrupo(gid){
 
 function _ncItemChkChange(chk){
   _ncRecalcValorGlobal();
+  if(typeof _ncAtualizarPlanejamentosAta==='function') _ncAtualizarPlanejamentosAta();
   if((window._ncModoAtual||'')!=='aquisicao') return;
   const row=chk.closest('.nc-item-row');
   const id=row?.dataset?.id; if(!id) return;
@@ -2473,7 +2474,7 @@ async function salvarNovoContrato(){
   const {data:novoContrato,error}=await sb.from("contratos").insert(dados).select("id").single();
   if(error){btn.disabled=false;btn.textContent=label;showMsg("nc","Erro: "+error.message,"err");return;}
   // Fase 3: vincular itens selecionados do processo ao contrato + marcar se o processo gera mais contratos
-  let _ataEspelhados=0;
+  let _ataEspelhados=0, _ataPlanejamentoResultado={formalizados:0,requisitados:0,falhas:[]};
   if(window._gerarContratoProcesso && novoContrato?.id){
     const _gm=document.getElementById("nc-gera-mais")?.checked||false;
     try{ await sb.from("processos").update({gera_mais_contratos:_gm}).eq("id",window._gerarContratoProcesso.id); }catch(_){}
@@ -2483,6 +2484,8 @@ async function salvarNovoContrato(){
     if(tipoInstrumento==="ATA"){
       try{ _ataEspelhados=await _ncEspelharAta(novoContrato.id); }
       catch(e){ showMsg("nc","Contrato ATA salvo, mas falha ao espelhar itens para a ATA: "+(e.message||e),"err"); }
+      try{ _ataPlanejamentoResultado=await _ncFormalizarPlanejamentosAta(novoContrato.id); }
+      catch(e){ _ataPlanejamentoResultado.falhas.push(e.message||String(e)); }
     }
   }
   // Fase 10: registra os fiscais e vincula empenhos selecionados
@@ -2494,7 +2497,11 @@ async function salvarNovoContrato(){
     try{ await _ncSalvarEmpItens(novoContrato.id); }catch(e){ showMsg("nc","Contrato salvo, mas falha ao vincular empenhos: "+(e.message||e),"err"); }
   }
   btn.disabled=false;btn.textContent=label;
-  showMsg("nc",tipoInstrumento==="ATA"?(_ataEspelhados>0?`✓ ATA cadastrada! ${_ataEspelhados} item(ns) espelhado(s) automaticamente para a ATA.`:"✓ ATA cadastrada! Agora inclua os itens."):"✓ Contrato cadastrado!","ok");
+  const _ataResumoPlanejamento=_ataPlanejamentoResultado.formalizados
+    ?` ${_ataPlanejamentoResultado.formalizados} vínculo(s) de Emenda formalizado(s); ${_ataPlanejamentoResultado.requisitados} requisição(ões) criada(s) agora.`:'';
+  const _ataAvisoFalhas=_ataPlanejamentoResultado.falhas.length
+    ?` ${_ataPlanejamentoResultado.falhas.length} requisição/vínculo não pôde ser concluído e permaneceu disponível para tratamento na Ata.`:'';
+  showMsg("nc",tipoInstrumento==="ATA"?(_ataEspelhados>0?`✓ ATA cadastrada! ${_ataEspelhados} item(ns) espelhado(s) automaticamente para a Ata.${_ataResumoPlanejamento}${_ataAvisoFalhas}`:`✓ ATA cadastrada! Agora inclua os itens.${_ataAvisoFalhas}`):"✓ Contrato cadastrado!",_ataPlanejamentoResultado.falhas.length?"err":"ok");
   contratosCarregado=false;
   atasContratos=[];
   itensCarregado=false;

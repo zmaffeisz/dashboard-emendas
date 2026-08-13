@@ -48,6 +48,11 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260730211951 | `ata_reajustes_e_data_base` — data-base dos contratos, histórico de preço e pagamento complementar por execução de ATA |
 | 20260730212030 | `indexar_fks_ata_reajustes` — índices das relações organizacionais e de emenda dos reajustes |
 | 20260730220523 | `criar_empenho_obrigatorio_reajuste_ata` — exige novo empenho e NF, cria o empenho e vincula integralmente a diferença |
+| 20260813213015 | `planejamento_emendas_ata_em_licitacao` — vínculo não orçamentário de Emenda com futura Ata, RLS e sincronização com requisição |
+| 20260813213102 | `indexar_planejamento_emendas_ata` — índices das relações do planejamento |
+| 20260813213230 | `corrigir_validacao_planejamento_ata` — validação da correspondência entre item licitado e item formalizado da Ata |
+| 20260813213648 | `liberar_fluxo_publico_planejamento_ata` — leitura limitada do planejamento pela aba pública de Emendas |
+| 20260813213831 | `corrigir_reabertura_planejamento_ata` — reabre o planejamento ao excluir uma requisição ainda removível |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -144,6 +149,13 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | atas_execucao | ata_item_id | atas_itens.id |
 | atas_execucao | emenda_id | emendas.id |
 | atas_execucao | emenda_item_id | emenda_itens.id |
+| ata_planejamento_emendas | processo_id | processos.id |
+| ata_planejamento_emendas | processo_item_id | itens.id |
+| ata_planejamento_emendas | emenda_id | emendas.id |
+| ata_planejamento_emendas | emenda_item_id | emenda_itens.id |
+| ata_planejamento_emendas | contrato_id | contratos.id |
+| ata_planejamento_emendas | ata_item_id | atas_itens.id |
+| ata_planejamento_emendas | ata_execucao_id | atas_execucao.id |
 | atas_itens | contrato_id | contratos.id |
 | chamados | contrato_id | contratos.id |
 | chamados | unidade_id | unidades.id |

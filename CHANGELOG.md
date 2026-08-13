@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Emenda planejada para futura Ata:** itens de Emenda podem ser vinculados a itens/lotes
+  de uma Ata de Registro de Preços ainda em licitação sem criar reserva, requisição, AF ou
+  consumo de saldo. Ao gerar a Ata, o usuário decide vínculo a vínculo se cria a
+  requisição imediatamente e informa a quantidade efetiva; os demais ficam como
+  **Ata vigente — aguardando requisição** e seguem disponíveis no fluxo normal de Atas.
 - **Prorrogação bloqueada para aquisições:** contratos classificados como aquisição não
   permitem mais abrir nem salvar prorrogação de vigência em Contratos em execução. A tela
   orienta que eventual ampliação do prazo do objeto seja tratada como

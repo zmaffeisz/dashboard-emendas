@@ -1555,16 +1555,19 @@ function neOrigemChange(){
   document.getElementById("ne2-unidade-auto").style.display=emenda?'block':'none';
   if(!emenda){ uni.value=''; }
 }
-async function _neEmendaItensJaUsados(ids){
+async function _neEmendaItensJaUsados(ids,{incluirPlanejamento=true}={}){
   const set=new Set();
   const clean=(ids||[]).filter(Boolean);
   if(!clean.length) return set;
-  const [itRes, ataRes]=await Promise.all([
+  const consultas=[
     sb.from('itens').select('emenda_item_id').in('emenda_item_id',clean),
     sb.from('atas_execucao').select('emenda_item_id').in('emenda_item_id',clean)
-  ]);
+  ];
+  if(incluirPlanejamento) consultas.push(sb.from('ata_planejamento_emendas').select('emenda_item_id').in('emenda_item_id',clean).neq('status','CANCELADO'));
+  const [itRes,ataRes,planRes]=await Promise.all(consultas);
   (itRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
   (ataRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
+  (planRes?.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
   return set;
 }
 function _isUnidadeVarias(v){
@@ -1585,11 +1588,18 @@ async function neEmendaChange(){
   document.getElementById("ne2-unidade").value='';
   if(!eid) return;
   const {data}=await sb.from('emenda_itens').select('id,item,qtde,unidade_beneficiada,unidade_entrega').eq('emenda_id',eid).order('item');
-  const usados=await _neEmendaItensJaUsados((data||[]).map(i=>i.id));
+  const ids=(data||[]).map(i=>i.id);
+  const [usados,planRes]=await Promise.all([
+    _neEmendaItensJaUsados(ids,{incluirPlanejamento:false}),
+    ids.length?sb.from('ata_planejamento_emendas').select('emenda_item_id,status,ata_item_id,quantidade_prevista,atas_itens(item)').in('emenda_item_id',ids).neq('status','CANCELADO'):Promise.resolve({data:[]})
+  ]);
+  window._nePlanejamentosByItem=Object.fromEntries((planRes.data||[]).map(p=>[String(p.emenda_item_id),p]));
   sel.innerHTML='<option value="">Selecione...</option>'+(data||[]).map(i=>{
-    const locked=usados.has(String(i.id));
+    const plano=window._nePlanejamentosByItem[String(i.id)];
+    const locked=usados.has(String(i.id))||plano?.status==='PLANEJAMENTO';
     const unidade=_preferUnidadeExec(i.unidade_beneficiada,i.unidade_entrega,'sem unidade')||'sem unidade';
-    const txt=`${i.item||'item'}${i.qtde?(' · qtde '+i.qtde):''} · ${unidade}${locked?' · já vinculado':''}`;
+    const complemento=plano?.status==='PLANEJAMENTO'?' · futura Ata ainda em licitação':(plano?.status==='ATA_VIGENTE_AGUARDANDO_REQUISICAO'?` · planejamento: ${plano.atas_itens?.item||'Ata vigente'}`:(locked?' · já vinculado':''));
+    const txt=`${i.item||'item'}${i.qtde?(' · qtde '+i.qtde):''} · ${unidade}${complemento}`;
     return `<option value="${i.id}" ${locked?'disabled':''} data-locked="${locked?'1':'0'}">${_sanEsc(txt)}</option>`;
   }).join("");
 }
@@ -1601,6 +1611,13 @@ async function neEmendaItemChange(){
   let unidade=em?.unidade||'';
   if(iid){ const {data}=await sb.from('emenda_itens').select('unidade_beneficiada,unidade_entrega').eq('id',iid).single(); unidade=_preferUnidadeExec(data?.unidade_beneficiada,data?.unidade_entrega,unidade); }
   uni.value=unidade||'';
+  const plano=(window._nePlanejamentosByItem||{})[String(iid)];
+  if(plano?.status==='ATA_VIGENTE_AGUARDANDO_REQUISICAO'&&plano.ata_item_id){
+    const item=document.getElementById('ne2-item');
+    if(item&&[...item.options].some(o=>String(o.value)===String(plano.ata_item_id))){ item.value=plano.ata_item_id; autoPreencherCplSim(); }
+    const qtde=document.getElementById('ne2-qtde'); if(qtde&&!qtde.value) qtde.value=plano.quantidade_prevista||'';
+    calcValorExec();
+  }
 }
 
 let _editExecId=null;
@@ -1675,10 +1692,17 @@ async function salvarNovaExec(){
   if(!at||!unidade||!qtde){showMsg("ne2","Selecione o item da ATA e preencha Unidade e Quantidade (*)","err");return}
   if(origem==='emenda' && (!emendaId||!emendaItemId)){showMsg("ne2","Selecione a emenda e o item da emenda (*)","err");return}
   if(origem==='emenda' && emendaItemId){
-    const usados=await _neEmendaItensJaUsados([emendaItemId]);
+    const usados=await _neEmendaItensJaUsados([emendaItemId],{incluirPlanejamento:false});
     if(usados.has(String(emendaItemId))){
       showMsg("ne2","Este item da emenda já está vinculado a outro processo/solicitação. Escolha outro item.","err");
       return;
+    }
+    const {data:plano}=await sb.from('ata_planejamento_emendas').select('status,ata_item_id').eq('emenda_item_id',emendaItemId).neq('status','CANCELADO').maybeSingle();
+    if(plano?.status==='PLANEJAMENTO'){
+      showMsg('ne2','Este item acompanha uma futura Ata que ainda está em licitação. Aguarde a formalização da Ata.','err'); return;
+    }
+    if(plano?.status==='ATA_VIGENTE_AGUARDANDO_REQUISICAO'&&String(plano.ata_item_id)!==String(at.id)){
+      showMsg('ne2','Este planejamento está vinculado a outro item da Ata. Selecione o item indicado pelo planejamento.','err'); return;
     }
   }
   const saldo=getSaldo(at);

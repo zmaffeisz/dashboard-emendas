@@ -3431,6 +3431,7 @@ function _ncGrupoChkChange(chk){
   });
   const gid=grupo.dataset.groupId;
   if(gid&&typeof _ncEmpGrupoAtualizarContagem==='function') _ncEmpGrupoAtualizarContagem(gid);
+  _ncAtualizarPlanejamentosAta();
   _ncRecalcValorGlobal();
 }
 function _ncAtualizarResumoGrupo(grupo){
@@ -3641,6 +3642,92 @@ async function _ncCarregarItensProcesso(processoId){
   window._ncItensCache=Object.fromEntries(itens.map(it=>[String(it.id),it]));
   if(!itens.length){ lista.innerHTML='<div style="font-size:12px;color:var(--text3)">Este processo não possui itens cadastrados. O contrato será salvo sem vínculo de itens.</div>'; return; }
   _ncRenderItensAgrupados(itens,lista);
+  await _ncCarregarPlanejamentosAta(processoId,wrap);
+}
+
+async function _ncCarregarPlanejamentosAta(processoId,wrap){
+  wrap.querySelector('#nc-ata-planejamentos')?.remove();
+  window._ncAtaPlanCache={};
+  if(_ncModo(window._gerarContratoProcesso?.natureza)!=='ata') return;
+  const {data,error}=await sb.from('ata_planejamento_emendas')
+    .select('id,processo_item_id,emenda_id,emenda_item_id,quantidade_prevista,status,emendas(emenda,ano,parlamentar),emenda_itens(item,qtde,unidade_beneficiada,unidade_entrega)')
+    .eq('processo_id',processoId).eq('status','PLANEJAMENTO').order('created_at');
+  if(error) throw error;
+  if(!(data||[]).length) return;
+  window._ncAtaPlanCache=Object.fromEntries(data.map(p=>[String(p.id),p]));
+  const bloco=document.createElement('div'); bloco.id='nc-ata-planejamentos';
+  bloco.style.cssText='margin-top:14px;padding:12px;border:1px solid var(--blue);border-radius:8px;background:rgba(55,138,221,.06)';
+  bloco.innerHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:3px">Emendas vinculadas para planejamento</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:9px">A Ata será formalizada para os vínculos cujos itens estejam marcados acima. Marque abaixo apenas os que já devem virar requisição.</div>`+
+    data.map(p=>{
+      const em=p.emendas||{}, ei=p.emenda_itens||{};
+      const unidade=_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,'');
+      return `<div class="nc-ata-plan-row" data-plan-id="${p.id}" data-processo-item-id="${p.processo_item_id}" style="padding:8px 0;border-top:1px solid var(--border)">
+        <div style="font-size:12px"><b>Emenda ${_sanEsc(em.emenda||'?')}${em.ano?('/'+_sanEsc(em.ano)):''}</b> · ${_sanEsc(unidade||'sem unidade')} · ${_sanEsc(ei.item||'item')}</div>
+        <div style="font-size:11px;color:var(--text3);margin:3px 0">Quantidade prevista: ${p.quantidade_prevista} · disponível no item da Emenda: ${ei.qtde??'—'}</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px"><input type="checkbox" class="nc-ata-plan-criar" onchange="_ncAtualizarPlanejamentoAtaRow(this.closest('.nc-ata-plan-row'))"> Criar requisição deste item agora</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:5px">Quantidade efetivamente requisitada <input type="number" class="nc-ata-plan-qtde" min="0.0001" step="any" max="${ei.qtde||''}" value="${p.quantidade_prevista}" disabled style="width:110px"></label>
+        <div class="nc-ata-plan-aviso" style="font-size:10px;color:var(--text3);margin-top:4px"></div>
+      </div>`;
+    }).join('');
+  wrap.appendChild(bloco);
+  _ncAtualizarPlanejamentosAta();
+}
+function _ncAtualizarPlanejamentoAtaRow(row){
+  if(!row) return;
+  const criar=row.querySelector('.nc-ata-plan-criar');
+  const qtde=row.querySelector('.nc-ata-plan-qtde');
+  if(qtde) qtde.disabled=!criar?.checked||!!criar?.disabled;
+}
+function _ncAtualizarPlanejamentosAta(){
+  const lista=document.getElementById('nc-itens-lista');
+  document.querySelectorAll('#nc-ata-planejamentos .nc-ata-plan-row').forEach(row=>{
+    const alvo=lista?.querySelector(`.nc-item-row[data-id="${row.dataset.processoItemId}"] .nci-chk`);
+    const ativo=!!alvo?.checked;
+    const criar=row.querySelector('.nc-ata-plan-criar');
+    const aviso=row.querySelector('.nc-ata-plan-aviso');
+    if(criar){ criar.disabled=!ativo; if(!ativo) criar.checked=false; }
+    if(aviso) aviso.textContent=ativo?'Se não marcar, ficará como “Ata vigente — aguardando requisição”.':'Marque o item correspondente acima para formalizar este vínculo.';
+    _ncAtualizarPlanejamentoAtaRow(row);
+  });
+}
+
+async function _ncFormalizarPlanejamentosAta(contratoId){
+  const rows=[...document.querySelectorAll('#nc-ata-planejamentos .nc-ata-plan-row')];
+  const map=window._ncVincularItensMap||{}, cache=window._ncAtaPlanCache||{};
+  const selecionados=rows.filter(row=>map[String(row.dataset.processoItemId)]);
+  if(!selecionados.length) return {formalizados:0,requisitados:0,falhas:[]};
+  const itemIds=[...new Set(selecionados.map(row=>map[String(row.dataset.processoItemId)]))];
+  const {data:itens,error}=await sb.from('itens').select('id,ata_item_id,valor_contratado,valor_estimado').in('id',itemIds);
+  if(error) throw error;
+  const porId=Object.fromEntries((itens||[]).map(i=>[String(i.id),i]));
+  const ataIds=[...new Set((itens||[]).map(i=>i.ata_item_id).filter(Boolean))];
+  const {data:atas,error:eAtas}=ataIds.length?await sb.from('atas_itens').select('id,qtde_contratada,valor_unit,atas_execucao(qtde)').in('id',ataIds):{data:[],error:null};
+  if(eAtas) throw eAtas;
+  const saldoAta=Object.fromEntries((atas||[]).map(a=>[String(a.id),Math.max(0,Number(a.qtde_contratada||0)-(a.atas_execucao||[]).reduce((s,e)=>s+(Number(e.qtde)||0),0))]));
+  const ataPorId=Object.fromEntries((atas||[]).map(a=>[String(a.id),a]));
+  const resultado={formalizados:0,requisitados:0,falhas:[]};
+  for(const row of selecionados){
+    const plano=cache[String(row.dataset.planId)], item=porId[String(map[String(row.dataset.processoItemId)])];
+    if(!plano||!item?.ata_item_id){ resultado.falhas.push('Item da Ata não localizado para um vínculo de Emenda.'); continue; }
+    const {error:eUpd}=await sb.from('ata_planejamento_emendas').update({contrato_id:contratoId,ata_item_id:item.ata_item_id,status:'ATA_VIGENTE_AGUARDANDO_REQUISICAO',updated_at:new Date().toISOString()}).eq('id',plano.id).eq('status','PLANEJAMENTO');
+    if(eUpd){ resultado.falhas.push(eUpd.message); continue; }
+    resultado.formalizados++;
+    if(!row.querySelector('.nc-ata-plan-criar')?.checked) continue;
+    const quantidade=Number(row.querySelector('.nc-ata-plan-qtde')?.value||0);
+    const limite=Number(plano.emenda_itens?.qtde||0);
+    if(!quantidade||(limite&&quantidade>limite)){ resultado.falhas.push(`Quantidade inválida para ${plano.emenda_itens?.item||'item da Emenda'}.`); continue; }
+    const unidade=_preferUnidadeExec(plano.emenda_itens?.unidade_beneficiada,plano.emenda_itens?.unidade_entrega,'');
+    if(!unidade){ resultado.falhas.push(`Informe uma unidade válida no item ${plano.emenda_itens?.item||'da Emenda'} antes de criar a requisição.`); continue; }
+    const saldo=Number(saldoAta[String(item.ata_item_id)]||0);
+    if(quantidade>saldo){ resultado.falhas.push(`Quantidade de ${plano.emenda_itens?.item||'item'} maior que o saldo da Ata (${saldo}).`); continue; }
+    const valorUnit=Number(ataPorId[String(item.ata_item_id)]?.valor_unit??item.valor_contratado??item.valor_estimado??0);
+    const {data:exec,error:eExec}=await sb.rpc('criar_solicitacao_ata_execucao',{p_ata_item_id:item.ata_item_id,p_unidade:unidade,p_qtde:quantidade,p_valor:valorUnit*quantidade,p_origem_recurso:'emenda',p_emenda_id:plano.emenda_id,p_emenda_item_id:plano.emenda_item_id,p_data_af:null,p_dt_entrega:null});
+    const salvo=Array.isArray(exec)?exec[0]:exec;
+    if(eExec||!salvo?.exec_id) resultado.falhas.push(eExec?.message||`Não foi possível criar a requisição de ${plano.emenda_itens?.item||'um item'}.`);
+    else { resultado.requisitados++; saldoAta[String(item.ata_item_id)]=saldo-quantidade; }
+  }
+  return resultado;
 }
 // Aplica contrato_id/fornecedor/valor/status aos itens marcados (Fase 3)
 async function _ncVincularItens(contratoId, fornecedorId){

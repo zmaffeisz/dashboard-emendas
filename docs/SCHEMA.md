@@ -11,7 +11,7 @@
 | **Emendas** | `emendas`, `emenda_itens`, `parlamentares`, `unidades` |
 | **Licitação / Processos** | `processos`, `status_opcoes` |
 | **Contratos (matriz)** | `contratos`, `contratos_vigencias`, `contratos_historico`, `contratos_fiscalizadores`, `fornecedores`, `fornecedor_contatos` |
-| **Atas de Registro de Preços** | `atas_itens`, `atas_execucao`, `atas_item_reajustes`, `atas_execucao_reajustes` |
+| **Atas de Registro de Preços** | `atas_itens`, `atas_execucao`, `ata_planejamento_emendas`, `atas_item_reajustes`, `atas_execucao_reajustes` |
 | **Itens (ciclo de vida)** | `itens`, `itens_entregas`, `itens_entregas_unidades`, `itens_status_historico` |
 | **Empenhos** | `empenhos`, `empenho_itens` |
 | **Notas Fiscais** | `notas_fiscais`, `nota_fiscal_itens` |

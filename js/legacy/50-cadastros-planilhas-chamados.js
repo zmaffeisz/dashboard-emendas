@@ -1068,9 +1068,14 @@ async function _carregarFluxoEmendaItens(eiIds){
   // As duas trilhas (itens→entregas/empenhos/NF e atas_execucao→atas_itens/unidades) são
   // independentes entre si: buscar em paralelo em vez de encadeadas em série.
   console.time('fluxo:itens+atas (paralelo)');
-  const [itensData,ataData]=await Promise.all([
+  const [itensData,ataData,planejamentoData]=await Promise.all([
     _fetchItensFlowData(eiIds),
-    _fetchAtaFlowData(eiIds).catch(e=>{ console.error('_carregarFluxoEmendaItens ATA:', e); return null; })
+    _fetchAtaFlowData(eiIds).catch(e=>{ console.error('_carregarFluxoEmendaItens ATA:', e); return null; }),
+    sb.from('ata_planejamento_emendas')
+      .select('id,emenda_item_id,processo_id,processo_item_id,quantidade_prevista,status,contrato_id,ata_item_id,processos(identificador,tipo,link_publico_sei),itens(descricao,valor_estimado,status_lic_texto,secretarias(sigla)),contratos(cpl,numero_contrato,prestador),atas_itens(item,valor_unit)')
+      .in('emenda_item_id',eiIds).in('status',['PLANEJAMENTO','ATA_VIGENTE_AGUARDANDO_REQUISICAO'])
+      .then(r=>{ if(r.error) throw r.error; return r.data||[]; })
+      .catch(e=>{ console.error('_carregarFluxoEmendaItens planejamento ATA:',e); return []; })
   ]);
   console.timeEnd('fluxo:itens+atas (paralelo)');
   const {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem,statusLicById}=itensData;
@@ -1117,6 +1122,30 @@ async function _carregarFluxoEmendaItens(eiIds){
     f._ataSolicitada=true;
   });
   }
+  (planejamentoData||[]).forEach(p=>{
+    const eid=p.emenda_item_id; if(!eid) return;
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),statusLicitacao:new Map(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+    const proc=p.processos||{}, item=p.itens||{}, contrato=p.contratos||{}, ataItem=p.atas_itens||{};
+    const q=Number(p.quantidade_prevista)||0;
+    if(!f.cpl) f.cpl=contrato.cpl||proc.identificador||'';
+    if(!f.sim) f.sim=contrato.numero_contrato||'';
+    if(!f.fornecedor) f.fornecedor=contrato.prestador||'';
+    if(!f.processoId) f.processoId=p.processo_id||null;
+    if(!f.processoTipo) f.processoTipo=proc.tipo||'';
+    if(!f.processoLink) f.processoLink=proc.link_publico_sei||'';
+    const secretaria=item.secretarias?.sigla||'', texto=String(item.status_lic_texto||'').trim();
+    if(secretaria&&texto) f.statusLicitacao.set(`planejamento:${p.id}`,{id:`planejamento:${p.id}`,nome:`${secretaria} – ${texto}`,ordem:0});
+    f.temProcesso=true;
+    if(p.status==='PLANEJAMENTO'){
+      const unit=Number(item.valor_estimado)||0;
+      f.valorLicitacao+=unit*q; f.qtdeLicitacao+=q;
+    }else{
+      const unit=Number(ataItem.valor_unit)||0;
+      f.valorContratado+=unit*q; f.qtdeContratado+=q;
+      if(unit&&f.valorUnit===null) f.valorUnit=unit;
+      f._ataFormalizadaAguardando=true;
+    }
+  });
   itensFlow.forEach(it=>{
     const eid=it.emenda_item_id; if(!eid) return;
     const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),statusLicitacao:new Map(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
@@ -1188,6 +1217,7 @@ function _flowStatusFromFlow(f){
   if(aut>0 && (!totalEsperado || aut>=totalEsperado)) return "AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO";
   if(aut>0) return "AF PARCIAL - SALDO AGUARDANDO AF";
   if(f._ataSolicitada) return "AGUARDANDO AF";
+  if(f._ataFormalizadaAguardando) return "ATA VIGENTE - AGUARDANDO REQUISIÇÃO";
   if(f.temContrato) return f.empenhos&&f.empenhos.size?"AGUARDANDO AF":"CONTRATADO - AGUARDANDO EMPENHO/AF";
   if(f.temProcesso) return _flowStatusLicitacaoFromFlow(f)||"EM LICITAÇÃO";
   return "";

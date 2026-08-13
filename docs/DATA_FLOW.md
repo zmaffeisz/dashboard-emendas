@@ -43,6 +43,7 @@
 | Contrato (matriz) | aba **Contratos** (`contratos`) | editar contrato (admin) | Atas, Itens, Empenhos, Chamados, Sanções |
 | Ata (itens) | espelhada ao salvar contrato ATA (`atas_itens`) | aba **Atas Rp** | Execução de ata, Itens |
 | Execução de ata | aba **Atas Rp** (`atas_execucao`) | AF/entrega/termo | Saldo, Inventário |
+| Planejamento de Emenda para futura Ata | Licitações (`ata_planejamento_emendas`) | vínculo no item/lote de processo `ATA DE RP` | Emendas e conversão opcional ao gerar a Ata; não reserva nem executa |
 | AF / entrega | aba **Itens** (`itens_entregas`) | modal AF / recebimento / confirmação na unidade | Emendas, Saldo, NF, Inventário |
 | Recebimento por unidade | aba **Itens** (`itens_entregas_unidades`) | modal recebimento | agregado em `itens_entregas` (trigger) |
 | Empenho | aba **Itens/Contratos** (`empenhos`,`empenho_itens`) | modal empenho | Saldo, NF, AF de ATA |
@@ -72,6 +73,11 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    empenho, NF, patrimônio e data de entrega precisam aparecer ali sem edição manual.
    Enquanto o item está na licitação, o nome detalhado de `itens.status_lic_id` é exibido e
    o painel é recarregado logo após a alteração na aba Licitações.
+
+5. **Planejamento de futura Ata** — o vínculo percorre
+   `Emenda → Licitação → Ata vigente aguardando requisição`. Somente a criação efetiva de
+   `atas_execucao`, no momento da formalização ou posteriormente na aba Atas, inicia
+   `Requisição → AF → Recebimento` e passa a consumir saldo.
    Para ATA, `atas_execucao` também alimenta esse painel: empenho vinculado, AF, prazo
    calculado e entrega precisam refletir no item da emenda correspondente.
 5. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`

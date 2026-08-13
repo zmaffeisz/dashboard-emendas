@@ -56,6 +56,18 @@
 
 ## 3. Licitação / status por item
 
+- Para processos de natureza **ATA DE RP**, um item/lote pode receber vínculos de
+  planejamento com itens de Emendas. O vínculo é registrado em
+  `ata_planejamento_emendas` e não cria requisição, AF, reserva orçamentária nem consumo
+  de saldo.
+- O item da Emenda acompanha o processo até a formalização da Ata. Na ação **Gerar
+  contrato**, cada vínculo cujo item da licitação foi selecionado pode, opcionalmente,
+  criar uma requisição com quantidade efetiva. Sem essa opção, permanece em **Ata vigente
+  — aguardando requisição**.
+- A execução só existe quando `atas_execucao` é criada pela mesma RPC usada nas
+  solicitações comuns da aba Atas. A partir desse ponto não há tratamento operacional
+  especial para a origem planejada.
+
 - O **status detalhado da licitação viaja por item** (`itens.status_lic_id`), não pela
   emenda. `emenda_itens.status_id` permanece como categoria/fallback do cadastro.
   Enquanto o item ainda não possui contrato, a aba **Emendas** exibe o status manual

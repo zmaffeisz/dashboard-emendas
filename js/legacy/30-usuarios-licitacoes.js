@@ -197,11 +197,14 @@ async function loadLicitacoes(){
   const box=document.getElementById('lic-lista');
   if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
   try{
-    const [proc,so,itens,secretarias]=await Promise.all([
+    const [proc,so,itens,secretarias,planejamentos]=await Promise.all([
       sb.from('vw_processos_resumo').select('*').order('identificador'),
       sb.from('status_opcoes').select('id,nome,ordem,orgao,automatico').eq('contexto','licitacao').eq('ativo',true).order('ordem'),
       _cpFetchAllItens(),
-      sb.from('secretarias').select('id,sigla,nome').eq('ativo',true).order('sigla')
+      sb.from('secretarias').select('id,sigla,nome').eq('ativo',true).order('sigla'),
+      sb.from('ata_planejamento_emendas')
+        .select('id,processo_id,processo_item_id,emenda_id,emenda_item_id,quantidade_prevista,status,contrato_id,ata_item_id,ata_execucao_id,emendas(emenda,ano,parlamentar),emenda_itens(item,qtde,unidade_beneficiada,unidade_entrega)')
+        .neq('status','CANCELADO')
     ]);
     _licitacoesCache=proc.data||[];
     _cpStatusOpts=so.data||[]; _cpStatusById={}; _cpStatusOpts.forEach(s=>_cpStatusById[s.id]=s);
@@ -209,6 +212,7 @@ async function loadLicitacoes(){
     const filtro=document.getElementById('lic-f-orgao');
     if(filtro) filtro.innerHTML='<option value="">Todas</option>'+_cpSecretarias.map(s=>`<option value="${s.sigla}">${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join('');
     _cpItens=itens||[];
+    _ataPlanejamentosLicitacao=planejamentos.data||[];
   }catch(e){ if(box) box.innerHTML='<div style="padding:1rem;color:var(--red)">Erro: '+_sanEsc(e.message||e)+'</div>'; return; }
   renderLicitacoes();
 }
@@ -319,8 +323,16 @@ function renderLicitacoes(){
         } else {
           ctrl=_sanEsc(_cpSituacao(it).nome);
         }
+        const planos=p.natureza==='ATA DE RP'?_ataPlanejamentosLicitacao.filter(v=>String(v.processo_item_id)===String(it.id)):[];
+        const planosHtml=planos.map(v=>{
+          const em=v.emendas||{}, ei=v.emenda_itens||{};
+          const unidade=_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,'sem unidade');
+          const estado=v.status==='REQUISITADO'?'requisição criada':(v.status==='ATA_VIGENTE_AGUARDANDO_REQUISICAO'?'Ata vigente — aguardando requisição':'planejamento');
+          return `<div style="margin-top:5px;padding:5px 7px;border-left:3px solid var(--blue);background:rgba(55,138,221,.07);font-size:10px;color:var(--text2)"><b>Emenda ${_sanEsc(em.emenda||'?')}${em.ano?('/'+_sanEsc(em.ano)):''}</b> · ${_sanEsc(unidade)} · ${_sanEsc(ei.item||'item')} · previsão ${v.quantidade_prevista} · ${_sanEsc(estado)}${podeEd&&v.status==='PLANEJAMENTO'?` <button type="button" onclick="cancelarPlanejamentoEmendaAta('${v.id}')" style="margin-left:5px;border:0;background:none;color:var(--red);cursor:pointer;font-size:10px">cancelar</button>`:''}</div>`;
+        }).join('');
+        const vincularAta=p.natureza==='ATA DE RP'&&podeEd&&!_licItemContratado(it)?` <button type="button" onclick="abrirPlanejamentoEmendaAta(${p.id},'${it.id}')" style="margin-left:6px;font-size:10px;padding:3px 7px;border:1px solid var(--blue);border-radius:4px;background:var(--surface);color:var(--blue);cursor:pointer">Vincular Emenda</button>`:'';
         bloco+=`<tr style="border-top:1px solid var(--border)">
-          <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}</td>
+          <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}${planosHtml}</td>
           <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
           <td style="padding:8px 8px">${ctrl}</td>
           <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
@@ -336,8 +348,82 @@ function renderLicitacoes(){
   if(cnt) cnt.textContent=mostrados+' em andamento'+(_ocultos?` · ${_ocultos} já contratada${_ocultos!==1?'s':''} oculta${_ocultos!==1?'s':''}`:'');
 }
 
+let _ataPlanContext=null, _ataPlanEmendas=[];
+function _ataPlanEnsureModal(){
+  let modal=document.getElementById('modal-planejamento-emenda-ata');
+  if(modal) return modal;
+  modal=document.createElement('div');
+  modal.id='modal-planejamento-emenda-ata'; modal.className='modal-overlay';
+  modal.innerHTML=`<div class="modal-box" style="max-width:620px;width:100%">
+    <div class="modal-title">Vincular Emenda à futura Ata</div>
+    <p style="font-size:12px;color:var(--text2);margin:0 0 12px">Vínculo somente para planejamento e acompanhamento. Não cria requisição, AF, reserva nem consome saldo.</p>
+    <div id="ata-plan-item" style="font-size:12px;font-weight:600;margin-bottom:10px"></div>
+    <label class="field-label">Emenda</label><select id="ata-plan-emenda" onchange="ataPlanEmendaChange()" style="width:100%;margin-bottom:10px"><option value="">Selecione...</option></select>
+    <label class="field-label">Item da Emenda</label><select id="ata-plan-emenda-item" style="width:100%;margin-bottom:10px"><option value="">Selecione...</option></select>
+    <label class="field-label">Quantidade prevista</label><input id="ata-plan-qtde" type="number" min="0.0001" step="any" style="width:100%">
+    <div id="ata-plan-msg" class="fmsg"></div>
+    <div class="modal-actions"><button type="button" onclick="document.getElementById('modal-planejamento-emenda-ata').classList.remove('active')">Cancelar</button><button type="button" class="btn-primary" onclick="salvarPlanejamentoEmendaAta()">Salvar planejamento</button></div>
+  </div>`;
+  document.body.appendChild(modal); return modal;
+}
+async function abrirPlanejamentoEmendaAta(processoId,processoItemId){
+  if(bloquearSeVisualiz('contratos')) return;
+  const proc=_licitacoesCache.find(p=>String(p.id)===String(processoId));
+  const item=_cpItens.find(i=>String(i.id)===String(processoItemId));
+  if(!proc||!item||proc.natureza!=='ATA DE RP') return;
+  _ataPlanContext={processoId:proc.id,processoItemId:item.id,secaoId:proc.secao_id||null,item};
+  const modal=_ataPlanEnsureModal();
+  document.getElementById('ata-plan-item').textContent=`Item/lote da futura Ata: ${item.descricao||'—'}`;
+  document.getElementById('ata-plan-emenda-item').innerHTML='<option value="">Selecione...</option>';
+  document.getElementById('ata-plan-qtde').value='';
+  document.getElementById('ata-plan-msg').className='fmsg';
+  const {data,error}=await sb.from('emendas').select('id,emenda,ano,parlamentar').order('ano',{ascending:false});
+  if(error){ showMsg('ata-plan','Erro ao carregar emendas: '+error.message,'err'); return; }
+  _ataPlanEmendas=data||[];
+  document.getElementById('ata-plan-emenda').innerHTML='<option value="">Selecione...</option>'+_ataPlanEmendas.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join('');
+  modal.classList.add('active');
+}
+async function ataPlanEmendaChange(){
+  const emendaId=document.getElementById('ata-plan-emenda')?.value;
+  const sel=document.getElementById('ata-plan-emenda-item');
+  sel.innerHTML='<option value="">Selecione...</option>'; if(!emendaId) return;
+  const {data,error}=await sb.from('emenda_itens').select('id,item,qtde,unidade_beneficiada,unidade_entrega').eq('emenda_id',emendaId).order('item');
+  if(error){ showMsg('ata-plan','Erro ao carregar itens: '+error.message,'err'); return; }
+  const usados=await _neEmendaItensJaUsados((data||[]).map(i=>i.id));
+  sel.innerHTML='<option value="">Selecione...</option>'+(data||[]).map(i=>{
+    const usado=usados.has(String(i.id));
+    const unidade=_preferUnidadeExec(i.unidade_beneficiada,i.unidade_entrega,'sem unidade');
+    return `<option value="${i.id}" data-qtde="${i.qtde||''}" ${usado?'disabled':''}>${_sanEsc(i.item||'item')} · qtde ${i.qtde||'—'} · ${_sanEsc(unidade)}${usado?' · já vinculado':''}</option>`;
+  }).join('');
+}
+async function salvarPlanejamentoEmendaAta(){
+  const emendaId=document.getElementById('ata-plan-emenda')?.value||null;
+  const itemSel=document.getElementById('ata-plan-emenda-item');
+  const emendaItemId=itemSel?.value||null;
+  const quantidade=Number(document.getElementById('ata-plan-qtde')?.value||0);
+  const limite=Number(itemSel?.selectedOptions?.[0]?.dataset?.qtde||0);
+  if(!_ataPlanContext||!emendaId||!emendaItemId||!quantidade){ showMsg('ata-plan','Selecione a Emenda, o item e informe a quantidade prevista.','err'); return; }
+  if(limite&&quantidade>limite){ showMsg('ata-plan',`A quantidade prevista não pode superar a quantidade do item da Emenda (${limite}).`,'err'); return; }
+  const btn=document.querySelector('#modal-planejamento-emenda-ata .btn-primary'); btn.disabled=true;
+  const {error}=await sb.from('ata_planejamento_emendas').insert({processo_id:_ataPlanContext.processoId,processo_item_id:_ataPlanContext.processoItemId,emenda_id:emendaId,emenda_item_id:emendaItemId,secao_id:_ataPlanContext.secaoId,quantidade_prevista:quantidade,status:'PLANEJAMENTO'});
+  btn.disabled=false;
+  if(error){ showMsg('ata-plan','Erro ao salvar planejamento: '+error.message,'err'); return; }
+  document.getElementById('modal-planejamento-emenda-ata').classList.remove('active');
+  if(window.toast) toast('Vínculo de planejamento salvo. Nenhum saldo foi reservado.','ok');
+  await loadLicitacoes();
+  if(typeof loadData==='function'){ try{ await loadData(); }catch(_){} }
+}
+async function cancelarPlanejamentoEmendaAta(id){
+  if(!await uiConfirm('Cancelar este vínculo de planejamento? Nenhuma execução será alterada.')) return;
+  const {error}=await sb.from('ata_planejamento_emendas').update({status:'CANCELADO',updated_at:new Date().toISOString()}).eq('id',id).eq('status','PLANEJAMENTO');
+  if(error){ if(window.toast) toast('Erro ao cancelar: '+error.message,'err'); return; }
+  await loadLicitacoes();
+  if(typeof loadData==='function'){ try{ await loadData(); }catch(_){} }
+}
+
 // ═══ CONTROLE DE PROCESSOS (gestão de status por item) ═══
 let _cpProcessos=[], _cpItens=[], _cpStatusOpts=[], _cpStatusById={}, _cpSecretarias=[], _cpSecretariaById={}, _cpExpanded={};
+let _ataPlanejamentosLicitacao=[];
 function _cpOrgaoCor(o){ return o==='SEAD'?'#d8a730':(o==='CONTROLADORIA'?'#7c5cd6':'var(--blue)'); }
 async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
