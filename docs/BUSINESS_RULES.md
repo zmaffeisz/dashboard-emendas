@@ -175,6 +175,9 @@
 - Uma medição de serviço deve selecionar uma NF previamente cadastrada no mesmo contrato
   cujo `medicao_id` ainda esteja vazio. Cada medição aceita no máximo uma NF e, depois do
   vínculo, a NF deixa de aparecer entre as opções disponíveis.
+- Nas medições mensais e por demanda, `notas_fiscais.competencia` é a fonte única da
+  competência: o valor é apenas exibido para conferência e copiado para a medição, sem
+  entrada manual duplicada. A medição trimestral continua usando o ciclo contratual.
 - O controle documental mensal considera contratos de manutenção que possuem
   `prefixo_chamado` e ainda não foram encerrados definitivamente. Contratos vencidos que
   permanecem ativos, exibidos como **Aguardando renovação**, continuam no controle.

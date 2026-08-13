@@ -563,6 +563,16 @@ function gerarTermoAteste(){ gerarMedicaoFiscalizacao(); }
 
 let _fiscNFsDisponiveisMedicao=[];
 
+function _competenciaDaNotaFiscal(nota){
+  return String(nota?.competencia||'').trim();
+}
+
+function _competenciaNotaFiscalParaExibicao(nota){
+  const competencia=_competenciaDaNotaFiscal(nota);
+  const match=competencia.match(/^(\d{4})-(\d{2})$/);
+  return match?`${match[2]}/${match[1]}`:competencia;
+}
+
 async function gerarMedicaoFiscalizacao(){
   if(!podeEditar('fiscalizacao')){ alert("Sua conta tem permissão apenas para visualização."); return; }
   if(typeof _ensureContratosModal==='function') await _ensureContratosModal();
@@ -611,7 +621,7 @@ function fiscSelecionarNFMedicao(){
   const data=document.getElementById('mta-nf-data');if(data)data.value=nota?.data_emissao||'';
   const valor=document.getElementById('mta-valor');if(valor)valor.value=nota?String(_ctNum(nota.valor_bruto??nota.valor_total)||''):'';
   const competencia=document.getElementById('mta-competencia');
-  if(nota?.competencia&&competencia&&!competencia.value)competencia.value=nota.competencia;
+  if(competencia)competencia.value=nota?_competenciaNotaFiscalParaExibicao(nota):'';
 }
 
 async function confirmarGerarTermo(){ return confirmarGerarMedicaoFiscalizacao(); }
@@ -674,12 +684,14 @@ function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal
 
 async function confirmarGerarMedicaoFiscalizacao(){
   if(!podeEditar('fiscalizacao')){ alert("Sua conta tem permissão apenas para visualização."); return; }
-  const competencia=document.getElementById("mta-competencia").value.trim();
   const nfId=document.getElementById("mta-nf").value;
   const nfSelecionada=_fiscNFsDisponiveisMedicao.find(n=>String(n.id)===String(nfId));
+  const competencia=_competenciaDaNotaFiscal(nfSelecionada);
   const nf=nfSelecionada?.numero||'';
   const valor=_ctNum(nfSelecionada?.valor_bruto??nfSelecionada?.valor_total);
-  if(!competencia||!nfId||!nfSelecionada||!valor){showMsg("mta","Informe a competência e selecione uma NF disponível.","err");return;}
+  if(!nfId||!nfSelecionada){showMsg("mta","Selecione uma NF disponível.","err");return;}
+  if(!competencia){showMsg("mta","A NF selecionada não possui competência. Corrija o cadastro da nota fiscal antes de gerar a medição.","err");return;}
+  if(!valor){showMsg("mta","A NF selecionada não possui valor bruto válido.","err");return;}
   const btn=document.querySelector("#modal-termo-ateste .btn-primary");
   btn.disabled=true;btn.textContent="Gerando...";
   const selecionadas=_fiscSelecionadasParaMedicao();
@@ -4180,13 +4192,13 @@ async function abrirModalMedicaoContrato(){
   document.getElementById('ctmed-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — ${_ctAtual.prestador||''}`;
   const competenciaEl=document.getElementById('ctmed-competencia');
   competenciaEl.type=trimestral?'text':'month';
-  competenciaEl.readOnly=trimestral;
-  competenciaEl.value=trimestral?'':_ctMonthISO();
+  competenciaEl.readOnly=true;
+  competenciaEl.value='';
   delete competenciaEl.dataset.cicloNumero;
   delete competenciaEl.dataset.cicloInicio;
   delete competenciaEl.dataset.cicloFim;
   const competenciaLabel=document.getElementById('ctmed-competencia-label');
-  if(competenciaLabel) competenciaLabel.textContent=trimestral?'Competência trimestral *':'Competência *';
+  if(competenciaLabel) competenciaLabel.textContent=trimestral?'Competência trimestral *':'Competência da NF';
   document.getElementById('ctmed-data').value=_ctTodayISO();
   document.getElementById('ctmed-tipo').value=trimestral
     ?'competencia_trimestral'
@@ -4254,10 +4266,10 @@ function ctSelecionarNotaMedicao(){
   if(bruto) bruto.value=nota?String(_ctNum(nota.valor_bruto??nota.valor_total)||''):'';
   if(glosa) glosa.value=nota?String(_ctNum(nota.valor_glosa)||0):'0';
   const competencia=document.getElementById('ctmed-competencia');
-  if(nota&&competencia&&competencia.type==='month'&&nota.competencia){
-    const raw=String(nota.competencia);
+  if(competencia&&competencia.type==='month'){
+    const raw=_competenciaDaNotaFiscal(nota);
     const iso=/^\d{4}-\d{2}$/.test(raw)?raw:(/^(\d{2})\/(\d{4})$/.test(raw)?raw.replace(/^(\d{2})\/(\d{4})$/,'$2-$1'):'');
-    if(iso) competencia.value=iso;
+    competencia.value=iso;
   }
   ctAtualizarLiquidoMedicao();
 }
@@ -4354,10 +4366,12 @@ async function salvarMedicaoContrato(){
   const msg=document.getElementById('ctmed-msg');
   const notaId=document.getElementById('ctmed-nf')?.value||'';
   const notaSelecionada=_ctNotasDisponiveisMedicao.find(n=>String(n.id)===String(notaId));
-  const competencia=document.getElementById('ctmed-competencia').value;
+  const trimestral=_ctEhTrimestral(_ctAtual);
+  const competencia=trimestral
+    ?document.getElementById('ctmed-competencia').value
+    :_competenciaDaNotaFiscal(notaSelecionada);
   const data=document.getElementById('ctmed-data').value||_ctTodayISO();
   const tipo=document.getElementById('ctmed-tipo').value||'competencia';
-  const trimestral=_ctEhTrimestral(_ctAtual);
   const competenciaEl=document.getElementById('ctmed-competencia');
   const cicloNumero=trimestral?Number(competenciaEl?.dataset.cicloNumero||0):null;
   const cicloInicio=trimestral?(competenciaEl?.dataset.cicloInicio||null):null;
@@ -4398,7 +4412,7 @@ async function salvarMedicaoContrato(){
   const totalItens=itensMedidos.reduce((s,x)=>s+_ctNum(x.total),0);
   if(demanda&&Math.abs(totalItens-valorBruto)>0.01){if(msg){msg.textContent=`O total dos itens medidos (${_ctMoney(totalItens)}) precisa corresponder ao valor bruto da NF (${_ctMoney(valorBruto)}).`;msg.className='fmsg err';}return;}
   if(!fiscal){if(msg){msg.textContent='Selecione o fiscal responsavel.';msg.className='fmsg err';}return;}
-  if(!competencia){if(msg){msg.textContent='Informe a competência.';msg.className='fmsg err';}return;}
+  if(!competencia){if(msg){msg.textContent=trimestral?'Selecione o ciclo trimestral do contrato.':'A NF selecionada não possui competência. Corrija o cadastro da nota fiscal antes de gerar a medição.';msg.className='fmsg err';}return;}
   if(trimestral&&!cicloNumero){if(msg){msg.textContent='Selecione o ciclo trimestral do contrato.';msg.className='fmsg err';}return;}
   if(trimestral&&!dataExecucaoPreventiva){if(msg){msg.textContent='Informe a data em que a preventiva/calibração foi executada.';msg.className='fmsg err';}return;}
   if(trimestral&&!relatorioServico){if(msg){msg.textContent='Informe a referência do relatório de serviço enviado com a NF.';msg.className='fmsg err';}return;}

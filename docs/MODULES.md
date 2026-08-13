@@ -97,15 +97,19 @@ Ciclo de vida do item após a contratação:
 
 ## 9. Notas Fiscais — central e controle mensal
 
-- **Cadastro central:** cria a NF de serviço antes da medição, vinculando contrato,
-  fornecedor, processo, datas, valores, status e anexo.
+- **Cadastro central:** cria a NF de serviço antes da medição. O usuário informa somente
+  número, datas de emissão e recebimento, valor, anexo e observações; contrato, fornecedor,
+  processo e competência vêm do card, sem seletor de contrato no modal, enquanto o status
+  é definido automaticamente.
 - **Controle mensal:** cards dos contratos de manutenção com prefixo e checklist em
   `nf_checklist_documentos` / `nf_checklist_marcacoes`; concluídos permanecem visíveis no
-  final da lista.
+  final da lista. Cada card oferece um botão compacto para cadastrar NF já vinculada ao
+  contrato e à competência selecionada; o filtro abre por padrão no mês anterior.
 - **Todas as notas:** consulta unificada de `notas_fiscais`, inclusive aquisições e atas,
   com situação do vínculo em `contratos_medicoes`.
 - **Medição:** tanto o fluxo contratual quanto a Fiscalização listam somente NFs do mesmo
-  contrato com `medicao_id is null`.
+  contrato com `medicao_id is null`; nas medições mensais e por demanda, a competência é
+  herdada da NF selecionada e não pode ser redefinida no modal da medição.
 
 ## 10. Atas Rp Vigentes  ⚠️ aba própria
 Gestão **específica das Atas de Registro de Preços**. Tecnicamente, uma ATA é um registro

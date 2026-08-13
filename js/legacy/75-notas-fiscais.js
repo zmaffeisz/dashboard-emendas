@@ -15,11 +15,23 @@ let nfSubAtual='controle';
 function _nfEsc(value){ return typeof _sanEsc==='function'?_sanEsc(String(value??'')):String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function _nfNum(value){ return typeof _ctNum==='function'?_ctNum(value):(Number(value)||0); }
 function _nfMoney(value){ return 'R$ '+_nfNum(value).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function _nfToday(){ return new Date().toISOString().slice(0,10); }
-function _nfMonth(){ return new Date().toISOString().slice(0,7); }
-function _nfMonthDate(){ return `${document.getElementById('nf-controle-mes')?.value||_nfMonth()}-01`; }
+function _nfToday(referenceDate=new Date()){
+  const data=new Date(referenceDate);
+  return `${data.getFullYear()}-${String(data.getMonth()+1).padStart(2,'0')}-${String(data.getDate()).padStart(2,'0')}`;
+}
+function _nfMonth(referenceDate=new Date()){ return _nfToday(referenceDate).slice(0,7); }
+function _nfPreviousMonth(referenceDate=new Date()){
+  const hoje=new Date(referenceDate);
+  const anterior=new Date(hoje.getFullYear(),hoje.getMonth()-1,1);
+  return `${anterior.getFullYear()}-${String(anterior.getMonth()+1).padStart(2,'0')}`;
+}
+function _nfControleCompetencia(){ return document.getElementById('nf-controle-mes')?.value||_nfPreviousMonth(); }
+function _nfMonthDate(){ return `${_nfControleCompetencia()}-01`; }
 function _nfNormalize(value){ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function _nfDocNumber(value){ return String(value||'').replace(/\D/g,''); }
+function _nfNumeroExibicao(nota){
+  return String(nota?.numero_normalizado||'').trim()||_nfDocNumber(nota?.numero)||String(nota?.numero||'').trim()||'—';
+}
 function _nfContratoEncerrado(c){
   const status=_nfNormalize(c?.status).toUpperCase();
   return ['CONCLUIDO','CONCLUÍDO','ENCERRADO','CANCELADO','RESCINDIDO'].some(s=>status.includes(_nfNormalize(s).toUpperCase()));
@@ -35,12 +47,10 @@ function _nfPodeCadastrar(){ return podeEditar('notas-fiscais')||podeEditar('con
 
 function loadNotasFiscais(){
   const pode=_nfPodeEditar();
-  const btnNova=document.getElementById('nf-btn-nova');
   const btnCk=document.getElementById('nf-btn-checklist');
-  if(btnNova) btnNova.style.display=pode?'inline-flex':'none';
   if(btnCk) btnCk.style.display=pode?'inline-flex':'none';
   const mes=document.getElementById('nf-controle-mes');
-  if(mes&&!mes.value) mes.value=_nfMonth();
+  if(mes&&!mes.value) mes.value=_nfPreviousMonth();
   if(nfSubAtual==='todas') loadTodasNotasFiscais();
   else loadNFControleMensal();
 }
@@ -70,7 +80,7 @@ async function loadNFControleMensal(){
   if(loading) loading.style.display='flex';
   if(cards) cards.innerHTML='';
   if(vazio) vazio.style.display='none';
-  const mes=document.getElementById('nf-controle-mes'); if(mes&&!mes.value) mes.value=_nfMonth();
+  const mes=document.getElementById('nf-controle-mes'); if(mes&&!mes.value) mes.value=_nfPreviousMonth();
   try{
     const competencia=_nfMonthDate();
     const [contratosRes,docsRes,marcasRes]=await Promise.all([
@@ -128,13 +138,14 @@ function renderNFControleMensal(){
     return;
   }
   if(vazio) vazio.style.display='none';
-  const pode=_nfPodeEditar();
+  const podeEditarChecklist=_nfPodeEditar();
+  const podeCadastrarNF=_nfPodeCadastrar();
   cards.innerHTML=rows.map(({c,docs,feitos,completo})=>{
     const pct=docs.length?Math.round((feitos/docs.length)*100):0;
     const checks=docs.map(d=>{
       const marcado=!!_nfMarcacao(c.id,d.id)?.concluido;
       return `<label class="nf-check-row${marcado?' is-checked':''}">
-        <input type="checkbox" data-contrato-id="${c.id}" data-documento-id="${_nfEsc(d.id)}" ${marcado?'checked':''} ${pode?'':'disabled'} onchange="toggleDocumentoChecklistNF(this)">
+        <input type="checkbox" data-contrato-id="${c.id}" data-documento-id="${_nfEsc(d.id)}" ${marcado?'checked':''} ${podeEditarChecklist?'':'disabled'} onchange="toggleDocumentoChecklistNF(this)">
         <span>${_nfEsc(d.nome)}${d.descricao?`<span class="nf-check-scope">${_nfEsc(d.descricao)}</span>`:''}</span>
       </label>`;
     }).join('');
@@ -147,7 +158,10 @@ function renderNFControleMensal(){
       </div>
       <div class="nf-progress"><span style="width:${pct}%"></span></div>
       <div class="nf-check-items">${checks||'<div class="nf-card-empty">Nenhum documento configurado para este contrato.</div>'}</div>
-      ${pode?`<div class="nf-card-footer"><button data-contrato-id="${c.id}" onclick="abrirGerenciadorChecklistNF(this.dataset.contratoId)">+ Documento específico</button></div>`:''}
+      ${(podeCadastrarNF||podeEditarChecklist)?`<div class="nf-card-footer">
+        ${podeCadastrarNF?`<button class="nf-card-new-button" data-contrato-id="${c.id}" onclick="abrirCadastroNotaFiscalDoCard(this.dataset.contratoId)">+ Nova NF</button>`:''}
+        ${podeEditarChecklist?`<button class="nf-card-checklist-button" data-contrato-id="${c.id}" onclick="abrirGerenciadorChecklistNF(this.dataset.contratoId)">+ Documento específico</button>`:''}
+      </div>`:''}
     </article>`;
   }).join('');
 }
@@ -243,72 +257,67 @@ async function _nfCarregarContratosCadastro(){
   return nfContratosCadastro;
 }
 
-async function abrirCadastroNotaFiscal(contratoId=''){
+function abrirCadastroNotaFiscalDoCard(contratoId){
+  return abrirCadastroNotaFiscal(contratoId,_nfControleCompetencia());
+}
+
+async function abrirCadastroNotaFiscal(contratoId='',competencia=''){
   if(!_nfPodeCadastrar()){alert('Você não tem permissão para cadastrar notas fiscais.');return;}
   const modal=document.getElementById('modal-nf-cadastro');
-  const select=document.getElementById('nfc-contrato');
-  select.innerHTML='<option value="">Carregando contratos...</option>';
-  ['nfc-empresa','nfc-processo','nfc-numero','nfc-serie','nfc-chave','nfc-valor','nfc-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('nfc-competencia').value=_nfMonth();
+  const contratoDisplay=document.getElementById('nfc-contrato');
+  const contratoIdEl=document.getElementById('nfc-contrato-id');
+  contratoDisplay.value='Carregando contrato...';
+  contratoIdEl.value='';
+  ['nfc-empresa','nfc-processo','nfc-numero','nfc-valor','nfc-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('nfc-competencia').value=competencia||_nfMonth();
   document.getElementById('nfc-emissao').value=_nfToday();
   document.getElementById('nfc-recebimento').value=_nfToday();
-  document.getElementById('nfc-glosa').value='0';document.getElementById('nfc-status').value='recebida';document.getElementById('nfc-arquivo').value='';
+  document.getElementById('nfc-arquivo').value='';
   const msg=document.getElementById('nfc-msg');msg.textContent='';msg.className='fmsg';
-  nfCadastroAtualizarAprovado();
   modal.classList.add('active');
   try{
     await _nfCarregarContratosCadastro();
-    select.innerHTML='<option value="">Selecione o contrato...</option>'+nfContratosCadastro.map(c=>`<option value="${c.id}">${_nfEsc(_nfContratoLabel(c))}</option>`).join('');
     const preferido=contratoId||window._ctAtual?.id||'';
-    if(preferido&&nfContratosCadastro.some(c=>String(c.id)===String(preferido))) select.value=String(preferido);
-    nfCadastroContratoChange();
+    const contrato=nfContratosCadastro.find(c=>String(c.id)===String(preferido));
+    contratoIdEl.value=contrato?String(contrato.id):'';
+    contratoDisplay.value=contrato?_nfContratoLabel(contrato):'Contrato não identificado';
+    document.getElementById('nfc-empresa').value=contrato?_nfEmpresa(contrato):'';
+    document.getElementById('nfc-processo').value=contrato?_nfProcesso(contrato):'';
+    if(!contrato){msg.textContent='Não foi possível identificar o contrato selecionado no card.';msg.className='fmsg err';}
   }catch(e){msg.textContent='Erro ao carregar contratos: '+e.message;msg.className='fmsg err';}
 }
 function fecharCadastroNotaFiscal(){document.getElementById('modal-nf-cadastro').classList.remove('active');}
-function nfCadastroContratoChange(){
-  const id=document.getElementById('nfc-contrato')?.value;
-  const c=nfContratosCadastro.find(x=>String(x.id)===String(id));
-  document.getElementById('nfc-empresa').value=c?_nfEmpresa(c):'';
-  document.getElementById('nfc-processo').value=c?_nfProcesso(c):'';
-}
-function nfCadastroAtualizarAprovado(){
-  const bruto=_nfNum(document.getElementById('nfc-valor')?.value);
-  const glosa=_nfNum(document.getElementById('nfc-glosa')?.value);
-  const el=document.getElementById('nfc-aprovado'); if(el) el.value=_nfMoney(Math.max(bruto-glosa,0));
-}
-
 async function salvarCadastroNotaFiscal(){
   if(!_nfPodeCadastrar()) return;
-  const contratoId=Number(document.getElementById('nfc-contrato').value||0);
+  const contratoId=Number(document.getElementById('nfc-contrato-id').value||0);
   const contrato=nfContratosCadastro.find(c=>Number(c.id)===contratoId);
   const numero=(document.getElementById('nfc-numero').value||'').trim();
-  const emissao=document.getElementById('nfc-emissao').value||null;
+  const competencia=document.getElementById('nfc-competencia').value||'';
+  const emissao=document.getElementById('nfc-emissao').value||'';
+  const recebimento=document.getElementById('nfc-recebimento').value||'';
   const bruto=_nfNum(document.getElementById('nfc-valor').value);
-  const glosa=_nfNum(document.getElementById('nfc-glosa').value);
-  const aprovado=Math.max(bruto-glosa,0);
+  const glosa=0;
+  const aprovado=bruto;
   const msg=document.getElementById('nfc-msg');
-  if(!contrato){msg.textContent='Selecione o contrato.';msg.className='fmsg err';return;}
+  if(!contrato){msg.textContent='O contrato vinculado ao card não foi identificado.';msg.className='fmsg err';return;}
   if(!numero){msg.textContent='Informe o número da nota fiscal.';msg.className='fmsg err';return;}
-  if(!emissao){msg.textContent='Informe a data de emissão.';msg.className='fmsg err';return;}
+  if(!competencia){msg.textContent='Informe a competência da nota fiscal.';msg.className='fmsg err';return;}
+  if(!emissao){msg.textContent='Informe a data de emissão da nota fiscal.';msg.className='fmsg err';return;}
+  if(!recebimento){msg.textContent='Informe a data de recebimento da nota fiscal.';msg.className='fmsg err';return;}
   if(bruto<=0){msg.textContent='Informe um valor bruto maior que zero.';msg.className='fmsg err';return;}
-  if(glosa>bruto){msg.textContent='A glosa não pode ser maior que o valor bruto.';msg.className='fmsg err';return;}
   const normalizado=_nfDocNumber(numero);
   const {data:duplicadas,error:dupError}=await sb.from('notas_fiscais').select('id,numero,status').eq('contrato_id',contratoId).eq('numero_normalizado',normalizado).neq('status','cancelada').limit(5);
   if(dupError){msg.textContent='Erro ao conferir duplicidade: '+dupError.message;msg.className='fmsg err';return;}
   if(duplicadas?.length&&!await uiConfirm(`Já existe a NF ${duplicadas[0].numero} neste contrato. Deseja cadastrar outra mesmo assim?`)) return;
-  const status=document.getElementById('nfc-status').value||'recebida';
-  const validada=['aprovada','aprovada_com_glosa','encaminhada_para_pagamento'].includes(status);
+  const status='recebida';
   const payload={
     numero,numero_normalizado:normalizado||null,
-    serie:(document.getElementById('nfc-serie').value||'').trim()||null,
-    chave_acesso:(document.getElementById('nfc-chave').value||'').trim()||null,
     fornecedor_id:contrato.fornecedor_id||null,contrato_id:contrato.id,processo_id:contrato.processo_id||null,
-    competencia:document.getElementById('nfc-competencia').value||null,
-    data_emissao:emissao,data_recebimento:document.getElementById('nfc-recebimento').value||null,
+    competencia,
+    data_emissao:emissao,data_recebimento:recebimento,
     valor_total:bruto,valor_bruto:bruto,valor_liquido:aprovado,valor_glosa:glosa,valor_aprovado:aprovado,
     status,origem_sistema:'cadastro_central',observacoes:(document.getElementById('nfc-obs').value||'').trim()||null,
-    validado_por:validada?(currentProfile?.nome||currentProfile?.email||null):null,
-    validado_em:validada?new Date().toISOString():null,updated_at:new Date().toISOString()
+    validado_por:null,validado_em:null,updated_at:new Date().toISOString()
   };
   const btn=document.getElementById('nfc-salvar');btn.disabled=true;btn.textContent='Salvando...';
   const {data,error}=await sb.from('notas_fiscais').insert(payload).select('*').single();
@@ -359,7 +368,7 @@ function renderTodasNotasFiscais(){
     if(origemFiltro&&origem!==origemFiltro)return false;
     if(medFiltro==='com'&&!n.medicao_id)return false;
     if(medFiltro==='sem'&&n.medicao_id)return false;
-    if(busca&&!_nfNormalize([n.numero,n.serie,n.fornecedores?.razao_social,n.contratos?.cpl,n.contratos?.numero_contrato,n.processos?.identificador,n.competencia].filter(Boolean).join(' ')).includes(busca))return false;
+    if(busca&&!_nfNormalize([n.numero_normalizado,n.numero,n.serie,n.fornecedores?.razao_social,n.contratos?.cpl,n.contratos?.numero_contrato,n.processos?.identificador,n.competencia].filter(Boolean).join(' ')).includes(busca))return false;
     return true;
   });
   const comMed=rows.filter(n=>n.medicao_id).length;
@@ -378,7 +387,7 @@ function renderTodasNotasFiscais(){
     const empresa=n.fornecedores?.razao_social||n.contratos?.prestador||'—';
     const contexto=[n.processos?.identificador,n.contratos?.numero_contrato].filter(Boolean).join(' · ')||n.contratos?.cpl||'—';
     return `<tr>
-      <td><strong>${_nfEsc(n.numero||'—')}</strong>${n.serie?`<br><small>Série ${_nfEsc(n.serie)}</small>`:''}</td>
+      <td><strong>${_nfEsc(_nfNumeroExibicao(n))}</strong>${n.serie?`<br><small>Série ${_nfEsc(n.serie)}</small>`:''}</td>
       <td><span class="nf-origin-badge ${origem}">${_nfOrigemLabel(origem)}</span></td>
       <td>${_nfEsc(empresa)}</td>
       <td>${_nfEsc(contexto)}${n.contratos?.cpl?`<br><small>${_nfEsc(n.contratos.cpl)}</small>`:''}</td>
@@ -405,7 +414,7 @@ async function nfNotasDisponiveisContrato(contratoId){
 }
 function nfNotaOptionLabel(n){
   const data=n.data_emissao?(typeof fmtDate==='function'?fmtDate(n.data_emissao):n.data_emissao):'sem data';
-  return `NF ${n.numero||'sem número'} · ${data} · ${_nfMoney(n.valor_total)}`;
+  return `NF ${_nfNumeroExibicao(n)} · ${data} · ${_nfMoney(n.valor_total)}`;
 }
 
 async function nfVincularNotaMedicao({notaId,contratoId,medicao,competencia}){

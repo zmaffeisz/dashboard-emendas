@@ -165,8 +165,9 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
 .form-label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
-.form-group input,.form-group select{font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)}
-.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue)}
+.form-group input,.form-group select,.form-group textarea{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);box-sizing:border-box}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue)}
+.form-group textarea{width:100%;resize:vertical}
 .form-group input[readonly]{background:var(--surface2);color:var(--text3)}
 
 /* Recebimento em lote: os campos dinâmicos também precisam de fundo explícito.

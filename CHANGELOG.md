@@ -2,6 +2,22 @@
 
 ## Em desenvolvimento
 
+- **Número normalizado das NFs:** a listagem unificada e os rótulos de seleção agora
+  priorizam `notas_fiscais.numero_normalizado`, mantendo o valor original somente como
+  fallback para registros legados sem normalização.
+- **Nova NF por contrato no controle mensal:** o botão global foi substituído por uma ação
+  compacta em cada card. O modal já abre com contrato, empresa, processo e competência do
+  filtro preenchidos, sem permitir trocar o contrato, e o controle mensal inicia no mês
+  anterior ao mês corrente.
+- **Cadastro de NF simplificado:** removidos do modal os campos Série, Chave de acesso e
+  Glosa/desconto. Agora somente número, datas de emissão e recebimento, valor, anexo e
+  observações são editáveis; contrato, empresa, processo e competência ficam bloqueados,
+  e o status `recebida` é aplicado internamente. As datas abrem preenchidas com a data
+  local atual, e Observações respeita os temas claro e escuro.
+- **Competência única entre NF e medição:** medições mensais e por demanda agora herdam
+  obrigatoriamente a competência da nota fiscal selecionada. O modal mostra o dado apenas
+  para conferência, e novas NFs exigem competência no cadastro; ciclos trimestrais mantêm
+  sua competência contratual própria.
 - **Correção da central de Notas Fiscais:** ajustada a leitura de fornecedores para o
   campo real `cnpj_normalizado`, restabelecendo os cards dos contratos de manutenção e a
   listagem das NFs existentes. Os filtros e a tabela também foram realinhados ao tema e à
