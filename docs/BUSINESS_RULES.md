@@ -95,6 +95,11 @@
 - **Valores monetários**: usar sempre os campos numéricos `valor_inicial_num`,
   `valor_atual_num`, `valor_mensal_num` para cálculo. Os campos texto (`valor_inicial`,
   `valor_atual`, `valor_mensal`) são legado de exibição.
+- **Aquisição não admite prorrogação de vigência no fluxo de Contratos em execução.** A
+  ampliação do prazo para entrega do objeto deve ser registrada como
+  **Prorrogação/alteração do prazo de entrega** no Controle de Entregas. Para contratos
+  legados sem modelo preenchido, a tela também reconhece a aquisição quando todos os itens
+  vinculados têm origem `aquisicao`.
 - **Serviço mensal de valor fixo**: usar `periodicidade_pagamento = MENSAL` e
   `modelo_execucao = continuo_mensal_fixo`; a classificação exibida no filtro de modelo
   deriva desses campos padronizados.

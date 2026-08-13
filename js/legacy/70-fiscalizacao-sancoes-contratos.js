@@ -1067,6 +1067,17 @@ function _ctModeloLabelFromKey(key){
   return found?.label||_ctHumanize(key);
 }
 function _ctModeloLabel(r){ return _ctModeloLabelFromKey(_ctModeloKey(r)); }
+function _ctEhAquisicao(r=_ctAtual,itens=_ctItensAtual){
+  if(!r||String(r.tipo_instrumento||'').toUpperCase()==='ATA') return false;
+  const modelo=normalizar(_ctModeloKey(r));
+  const natureza=normalizar(r.natureza||r.processo_natureza||'');
+  if(modelo.startsWith('aquisicao')||natureza==='aquisicao') return true;
+  const lista=Array.isArray(itens)?itens:[];
+  return lista.length>0&&lista.every(i=>normalizar(i.origem)==='aquisicao');
+}
+function _ctMsgProrrogacaoAquisicao(){
+  return 'Contratos de aquisição não possuem prorrogação de vigência neste fluxo. Para ampliar o prazo de entrega do objeto, use "Prorrogação/alteração do prazo de entrega" no Controle de Entregas.';
+}
 function _ctOrigemKey(r){ return r.origem_contratacao||r.procurementOrigin||r.origem||'nao_informada'; }
 function _ctFormaKey(r){
   if(String(r?.periodicidade_pagamento||'').toUpperCase()==='TRIMESTRAL') return 'trimestral_fixo';
@@ -3373,6 +3384,7 @@ async function abrirDetalheContrato(id){
   _ctHistoricoAtual=hist;
   _ctItensAtual=itens;
   _ctFiscaisAtual=fiscais;
+  const aquisicao=_ctEhAquisicao(c,itens);
   const eventosContrato=_ctHistoricoToEvents(hist);
   const medicoesNorm=medicoes.map(m=>({
     ...m,
@@ -3419,12 +3431,15 @@ async function abrirDetalheContrato(id){
 
   const metric=(label,value,sub='',color='var(--text)')=>`<div class="metric"><div class="metric-label">${label}</div><div class="metric-value" style="font-size:20px;color:${color}">${value}</div><div class="metric-sub">${sub}</div></div>`;
   const actionBtn=(tab,label,fn,primary=false,color='')=>`<button class="${primary?'btn-primary':'btn-secondary'}" onclick="ctOpenContratoTab('${tab}');${fn}" style="font-size:12px;${color?`background:${color};border-color:${color};color:#fff;`:''}">${label}</button>`;
+  const acaoProrrogacao=aquisicao
+    ? '<button class="btn-secondary" type="button" disabled title="Use Prorrogação/alteração do prazo de entrega no Controle de Entregas" style="font-size:12px">Registrar prorrogação</button>'
+    : actionBtn('prorrogacoes','Registrar prorrogação',"abrirModalContratoOp('prorrogacao')");
   const quickActions=editor?`
     <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;border:1px solid var(--border);background:var(--surface2);border-radius:var(--radius-sm);padding:.625rem .75rem;margin-bottom:1rem">
       <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Ações de gestão</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         ${actionBtn('itens','Ajustes por item (reajuste/aditivo/supressão)',"abrirModalItensEventos()")}
-        ${actionBtn('prorrogacoes','Registrar prorrogação',"abrirModalContratoOp('prorrogacao')")}
+        ${acaoProrrogacao}
         ${actionBtn('medicoes','Nova medição','abrirModalMedicaoContrato()',true)}
         ${actionBtn('notas','Cadastrar NF','abrirModalNotaFiscalContrato()')}
         ${actionBtn('documentos','Registrar documento','abrirModalDocumentoContrato()')}
@@ -3637,8 +3652,8 @@ async function abrirDetalheContrato(id){
 
     <div class="ct-detail-pane" data-tab="prorrogacoes" style="display:none">
       <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
-        <div style="font-size:13px;color:var(--text2)">Prorrogações e vigências registradas para acompanhamento da continuidade contratual.</div>
-        ${editor?'<button class="btn-secondary" onclick="abrirModalContratoOp(\'prorrogacao\')">Registrar prorrogação</button>':''}
+        <div style="font-size:13px;color:var(--text2)">${aquisicao?'Aquisição não admite prorrogação de vigência neste fluxo. Para ampliar o prazo de entrega do objeto, use <b>Prorrogação/alteração do prazo de entrega</b> no Controle de Entregas.':'Prorrogações e vigências registradas para acompanhamento da continuidade contratual.'}</div>
+        ${editor?(aquisicao?'<button class="btn-secondary" type="button" disabled title="Use o Controle de Entregas">Registrar prorrogação</button>':'<button class="btn-secondary" onclick="abrirModalContratoOp(\'prorrogacao\')">Registrar prorrogação</button>'):''}
       </div>
       ${rowsProrrogacoes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Nova vigência inicial</th><th>Nova vigência final</th><th>Obs.</th></tr></thead><tbody>${rowsProrrogacoes}</tbody></table></div>`:(rowsVigs?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Início</th><th>Fim</th><th>Valor</th><th>Obs.</th></tr></thead><tbody>${rowsVigs}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma prorrogação ou vigência registrada para este contrato.</div>')}
     </div>
@@ -4745,6 +4760,10 @@ async function salvarTrocaMarcaModelo(){
 
 function abrirModalContratoOp(op){
   if(bloquearSeVisualiz()) return;
+  if(op==='prorrogacao'&&_ctEhAquisicao()){
+    alert(_ctMsgProrrogacaoAquisicao());
+    return;
+  }
   const infoMap={renovar:"ctr-info",prorrogacao:"ctpr-info",fiscal:"ctfi-info"};
   const modalMap={renovar:"modal-ct-renovar",prorrogacao:"modal-ct-prorrogacao",fiscal:"modal-ct-fiscal"};
   const info=_ctAtual?`${_ctAtual.cpl||""} — ${_ctAtual.prestador||""}`:"";
@@ -4790,6 +4809,10 @@ async function salvarOperacaoContrato(op){
   const id=_ctAtual.id;
   const msgEl=document.getElementById({renovar:"ctr-msg",prorrogacao:"ctpr-msg",fiscal:"ctfi-msg"}[op]);
   const setMsg=(txt,ok)=>{if(msgEl){msgEl.className="fmsg "+(ok?"ok":"err");msgEl.textContent=txt;}};
+  if(op==='prorrogacao'&&_ctEhAquisicao()){
+    setMsg(_ctMsgProrrogacaoAquisicao(),false);
+    return;
+  }
   const fmtBR=d=>{if(!d)return"";const[a,m,dd]=d.split("-");return`${dd}/${m}/${a}`;};
 
   try{
@@ -4850,6 +4873,10 @@ async function salvarOperacaoContratoLegacy(op){
   const id=_ctAtual.id;
   const msgEl=document.getElementById({renovar:"ctr-msg",reajuste:"ctrea-msg",aditivo:"ctad-msg",prorrogacao:"ctpr-msg",supressao:"ctsu-msg",fiscal:"ctfi-msg"}[op]);
   const setMsg=(txt,ok)=>{if(msgEl){msgEl.className="fmsg "+(ok?"ok":"err");msgEl.textContent=txt;}};
+  if(op==='prorrogacao'&&_ctEhAquisicao()){
+    setMsg(_ctMsgProrrogacaoAquisicao(),false);
+    return;
+  }
 
   try{
     if(op==="renovar"){

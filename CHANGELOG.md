@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Prorrogação bloqueada para aquisições:** contratos classificados como aquisição não
+  permitem mais abrir nem salvar prorrogação de vigência em Contratos em execução. A tela
+  orienta que eventual ampliação do prazo do objeto seja tratada como
+  **Prorrogação/alteração do prazo de entrega** no Controle de Entregas.
 - **Edição administrativa de emendas:** cada card da visão por emenda ganhou um pequeno
   botão de edição visível somente para administradores. A alteração atualiza o cadastro
   central da emenda; mudanças no valor cedido passam a recalcular saldo, indicadores e
