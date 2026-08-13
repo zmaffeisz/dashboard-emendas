@@ -322,6 +322,32 @@
 </div>
 
 <!-- ══════════════════════ CONSULTA RÁPIDA ══════════════════════ -->
+<div class="modal-overlay" id="modal-editar-emenda">
+  <div class="modal-box" style="width:760px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem;padding-bottom:.875rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Editar emenda</span>
+      <button type="button" onclick="fecharEditarEmenda()" aria-label="Fechar" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);background:var(--blue-bg);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:1rem;line-height:1.45">
+      Alteração administrativa do cadastro central. O valor cedido atualizado será usado automaticamente no saldo, nos indicadores e nas demais telas que consultam esta emenda.
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Tipo *</div><select id="edem-tipo"><option value="">Selecione...</option><option>ESTADUAL</option><option>FEDERAL</option><option>MUNICIPAL</option></select></div>
+      <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="edem-emenda"></div>
+      <div class="form-group"><div class="form-label">Ano *</div><input type="number" id="edem-ano" min="1900" max="2200" step="1"></div>
+      <div class="form-group"><div class="form-label">Parlamentar *</div><select id="edem-parlamentar"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="edem-sei"></div>
+      <div class="form-group"><div class="form-label">Valor total da emenda (R$) *</div><input type="number" id="edem-valor" min="0" step="0.01"></div>
+      <div class="form-group full"><div class="form-label">Objeto geral da emenda *</div><input type="text" id="edem-objeto"></div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn-primary" id="edem-salvar" onclick="salvarEditarEmenda()">Salvar alterações</button>
+      <button type="button" class="btn-secondary" onclick="fecharEditarEmenda()">Cancelar</button>
+      <span id="edem-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <div id="panel-consulta" class="panel">
   <div class="search-box">
     <div style="font-size:14px;font-weight:600;margin-bottom:.875rem">🔍 Consulta rápida</div>
@@ -3096,7 +3122,7 @@
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260807-servico-item-quantidade-zero-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260807-detalhe-marca-modelo-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260807-emendas-item-width-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260813-editar-emenda-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260810-fiscalizacao-empresa-problema-2"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>

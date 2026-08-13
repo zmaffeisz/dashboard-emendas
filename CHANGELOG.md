@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- **Edição administrativa de emendas:** cada card da visão por emenda ganhou um pequeno
+  botão de edição visível somente para administradores. A alteração atualiza o cadastro
+  central da emenda; mudanças no valor cedido passam a recalcular saldo, indicadores e
+  demais consultas derivadas após o recarregamento dos dados.
+- **Total executado nas emendas:** itens que ainda estão somente em licitação deixam de
+  exibir como executados valores legados copiados do planejamento. O valor estimado fica
+  em **Vl. licit.** e o **Total exec.** passa a refletir o fluxo contratado/ATA.
+
 - **Número normalizado das NFs:** a listagem unificada e os rótulos de seleção agora
   priorizam `notas_fiscais.numero_normalizado`, mantendo o valor original somente como
   fallback para registros legados sem normalização.

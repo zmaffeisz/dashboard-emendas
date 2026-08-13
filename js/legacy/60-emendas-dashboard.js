@@ -51,10 +51,19 @@ async function loadData(){
       const unidEntStored=(i.unidade_entrega||"").toString().trim();
       const unidEntFinal=(f?f.unidade:"")||unidEntStored||"";
       const vlTotalStored=num(i.vl_total);
-      const vlUnitExec=num(i.vl_unitario)||(f&&f.valorUnit!=null?f.valorUnit:0);
+      const vlUnitStored=num(i.vl_unitario);
       const qtdeExec=num(i.qtde);
+      const fluxoContratado=!!(f&&(f.temContrato||f._ataSolicitada));
+      // Quando o item já está no fluxo, a etapa real prevalece sobre os campos legados
+      // de emenda_itens. Itens apenas em licitação não são execução; ao contratar/usar
+      // ATA, o valor do fluxo passa a ser a fonte exibida como executado.
+      const vlUnitExec=fluxoContratado
+        ? Number(f.valorUnit)||0
+        : (f&&f.temProcesso?0:vlUnitStored);
       const vlTotalCalc=vlUnitExec>0&&qtdeExec>0?Number((vlUnitExec*qtdeExec).toFixed(2)):0;
-      const vlTotalFinal=vlTotalStored||vlTotalCalc||(f?Number(f.valor.toFixed(2)):0);
+      const vlTotalFinal=fluxoContratado
+        ? Number((Number(f.valorContratado)||Number(f.valor)||0).toFixed(2))
+        : (f&&f.temProcesso?0:(vlTotalStored||vlTotalCalc));
       const statusStored=(i.status||"").toString().trim();
       const statusLicitacao=f?_flowStatusLicitacaoFromFlow(f):"";
       const statusFlow=_flowStatusFromFlow(f);
@@ -122,7 +131,7 @@ async function loadData(){
     }).map(r=>({...r,status_cat:(!r._status_derivado&&r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
     _emSincronizarSelecaoLicitacao();
     const [{data:eData},uData,{data:pData}]=await Promise.all([
-      sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido,unidade,unidade_id").order("emenda",{ascending:true}),
+      sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,sei_emenda,valor_cedido,objeto,unidade,unidade_id,secao_id").order("emenda",{ascending:true}),
       _getUnidadesAtivasCache(),
       sb.from("processos").select("id,identificador").order("identificador")
     ]);
@@ -868,6 +877,7 @@ function renderEmPorEmenda(){
           <div style="font-size:11px;color:var(--text3);margin-top:3px">${_sanEsc(r0.parlamentar||'—')} · ${fmtFull(r0.valor_cedido||0)}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">${total} ${total===1?'item':'itens'} · ${entregues} entregue${entregues!==1?'s':''}</div>
         </div>
+        ${_isAdmin()?`<button type="button" onclick="event.stopPropagation();abrirEditarEmenda('${r0.emenda_id}')" title="Editar emenda" aria-label="Editar emenda ${_sanEsc(em)}" style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:13px">✏️</button>`:''}
         <div style="width:170px;flex-shrink:0">
           <div style="height:9px;background:var(--border);border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--green)"></div></div>
           <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% entregue</div>
@@ -962,6 +972,76 @@ function renderParlBars(){
   document.getElementById("parl-bars").innerHTML=sorted.map(([p,cnt],i)=>`<div class="bar-row"><div class="bar-lbl" title="${p}">${p}</div><div class="bar-track" onclick="filterByParl('${p}')"><div class="bar-fill" style="width:${Math.round(cnt/max*100)}%;background:${colors[i%8]}"></div></div><div class="bar-val">${cnt} emenda${cnt>1?"s":""}</div></div>`).join("");
 }
 function filterByParl(p){headerFilters.parlamentar=[p];updateHeaderFilterIndicators();applyFilters()}
+
+// Edição administrativa da emenda
+let _editEmendaId=null;
+async function abrirEditarEmenda(emendaId){
+  if(!_isAdmin()){
+    alert('Somente administradores podem editar os dados centrais da emenda.');
+    return;
+  }
+  const emenda=(cachedEmendas||[]).find(e=>String(e.id)===String(emendaId));
+  const linha=allRows.find(r=>String(r.emenda_id)===String(emendaId));
+  const dados=emenda||linha;
+  if(!dados){ alert('Emenda não encontrada. Recarregue a página e tente novamente.'); return; }
+  _editEmendaId=String(emendaId);
+  document.getElementById('edem-tipo').value=dados.tipo||'';
+  document.getElementById('edem-emenda').value=dados.emenda||'';
+  document.getElementById('edem-ano').value=dados.ano||'';
+  document.getElementById('edem-sei').value=dados.sei_emenda||'';
+  document.getElementById('edem-valor').value=dados.valor_cedido??'';
+  document.getElementById('edem-objeto').value=dados.objeto||'';
+  const parlSel=document.getElementById('edem-parlamentar');
+  const {data,error}=await sb.from('parlamentares').select('nome').eq('ativo',true).order('nome');
+  const nomes=(data||[]).map(p=>p.nome).filter(Boolean);
+  if(dados.parlamentar&&!nomes.includes(dados.parlamentar)) nomes.unshift(dados.parlamentar);
+  parlSel.innerHTML='<option value="">Selecione...</option>'+nomes.map(nome=>`<option value="${_sanEsc(nome)}">${_sanEsc(nome)}</option>`).join('');
+  parlSel.value=dados.parlamentar||'';
+  if(error) console.error('Não foi possível carregar parlamentares:',error.message);
+  const msg=document.getElementById('edem-msg'); msg.textContent=''; msg.className='fmsg';
+  document.getElementById('modal-editar-emenda').classList.add('active');
+}
+function fecharEditarEmenda(){
+  document.getElementById('modal-editar-emenda').classList.remove('active');
+  _editEmendaId=null;
+}
+async function salvarEditarEmenda(){
+  if(!_editEmendaId||!_isAdmin()){
+    alert('Somente administradores podem editar os dados centrais da emenda.');
+    return;
+  }
+  const tipo=document.getElementById('edem-tipo').value.trim();
+  const numero=document.getElementById('edem-emenda').value.trim();
+  const ano=Number(document.getElementById('edem-ano').value);
+  const parlamentar=document.getElementById('edem-parlamentar').value.trim();
+  const sei=document.getElementById('edem-sei').value.trim();
+  const valor=Number(document.getElementById('edem-valor').value);
+  const objeto=document.getElementById('edem-objeto').value.trim();
+  if(!tipo||!numero||!Number.isInteger(ano)||ano<1900||ano>2200||!parlamentar||!Number.isFinite(valor)||valor<0||!objeto){
+    showMsg('edem','Preencha corretamente os campos obrigatórios (*).','err');
+    return;
+  }
+  const duplicada=(cachedEmendas||[]).find(e=>String(e.id)!==String(_editEmendaId)&&String(e.emenda).trim()===numero&&Number(e.ano)===ano);
+  if(duplicada){
+    showMsg('edem',`Já existe outra emenda ${numero}/${ano}.`,'err');
+    return;
+  }
+  const btn=document.getElementById('edem-salvar');
+  const label=btn.textContent; btn.disabled=true; btn.textContent='Salvando...';
+  try{
+    const payload={tipo,emenda:numero,ano,parlamentar,sei_emenda:sei||null,valor_cedido:Number(valor.toFixed(2)),objeto};
+    const {error}=await sb.from('emendas').update(payload).eq('id',_editEmendaId).select('id').single();
+    if(error) throw error;
+    showMsg('edem','✓ Emenda atualizada. Recalculando todas as telas...','ok');
+    saldoEmendaCarregado=false;
+    await loadData();
+    setTimeout(fecharEditarEmenda,500);
+  }catch(err){
+    showMsg('edem','Erro ao atualizar a emenda: '+(err.message||err),'err');
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
+}
 
 // ═══ SALDO DAS EMENDAS ═══
 let saldoEmendaCarregado = false;

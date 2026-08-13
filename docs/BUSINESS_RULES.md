@@ -17,12 +17,19 @@
 
 - Identidade da emenda = **número + ano** (`emendas.emenda` + `emendas.ano`).
 - `valor_cedido` é o teto da emenda.
+- Os dados centrais da emenda são editáveis somente por administradores. Como saldo,
+  indicadores e seletores consultam `emendas` pela chave `emenda_id`, a atualização de
+  `valor_cedido` passa a valer automaticamente em todas as leituras derivadas; não existe
+  cópia separada do teto em cada item.
 - Em `emenda_itens` há **dois pares de valores**: planejado
   (`vl_*_cadastrado`) e executado (`vl_*`).
   - Planejado: `vl_unitario_cadastrado` e `vl_total_cadastrado`.
   - Executado: `vl_unitario` e `vl_total`; a aba **Emendas** deve exibir ambos, não só o
     total executado. Quando `vl_total` não estiver preenchido, a exibição pode derivar o
     total executado por `qtde × vl_unitario`.
+  - Quando já existe vínculo com `itens`, o estágio real do fluxo prevalece sobre campos
+    legados: processo sem contrato aparece em **Vl. licit.**, sem **Total exec.**; após
+    contrato ou solicitação de ATA, o contratado passa a alimentar a execução exibida.
 - `vw_emendas_saldo`:
   - `total_planejado` = Σ `vl_total_cadastrado`.
   - `total_executado` = Σ `vl_total`.
