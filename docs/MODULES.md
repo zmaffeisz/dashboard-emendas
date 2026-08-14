@@ -62,8 +62,12 @@ Acompanhamento/fiscalização de chamados e contratos: histórico
 `termo_contratos`), glosas.
 
 ## 7. Inventário
-`inventario_ac`: equipamentos por unidade, vinculados a `emenda_item_id`. Em evolução
-(não totalmente normalizado — ver [TODO.md](TODO.md)).
+O Inventário operacional é derivado das unidades físicas recebidas em
+`itens_entregas_unidades` e `atas_execucao_unidades`. Cada linha representa exatamente uma
+unidade, mesmo sem patrimônio/série; `inventario_ac` permanece apenas como legado da antiga
+planilha. `inventario_unidades` mantém o estado corrente e `inventario_movimentacoes` mantém
+o histórico documental imutável de transferências, empréstimos, devoluções e baixas. O modal
+“Vida do item” reúne estado atual, aquisição/origem e linha do tempo sem reescrever a Emenda.
 
 ## 8. Controle de Entregas (Itens)
 Ciclo de vida do item após a contratação:
@@ -90,8 +94,9 @@ Ciclo de vida do item após a contratação:
   processo, contrato/ATA, fornecedor, CNPJ, empenho, item, quantidades, valores, prazo e
   responsável.
 - **Recebimento**: `abrirRecebimento` → quantidade recebida, NF, patrimônio/série.
-  Recebimento **por unidade física** em `itens_entregas_unidades` (cada unidade com
-  patrimônio/série próprios; NF referenciada sem valor).
+  O lote recebido é materializado **por unidade física** em `itens_entregas_unidades` ou
+  `atas_execucao_unidades`: uma linha por unidade, com patrimônio/série opcionais e NF
+  apenas referenciada, sem duplicar valor.
 - **Termo de entrega**: `abrirTermoEntrega` (arquivo no Storage).
 - **Notas Fiscais**: `notas_fiscais` + `nota_fiscal_itens` (rateio).
 

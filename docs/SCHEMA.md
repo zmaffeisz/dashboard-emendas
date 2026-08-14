@@ -17,7 +17,7 @@
 | **Notas Fiscais** | `notas_fiscais`, `nota_fiscal_itens` |
 | **Sanções** | `sancoes_solicitadas`, `sancao_itens`, `sancoes_administrativas` |
 | **Chamados** | `chamados`, `chamados_controle`, `chamados_anexos`, `fiscalizacao_historico`, `termos_ateste`, `termo_chamados`, `termo_contratos` |
-| **Inventário** | `inventario_ac` |
+| **Inventário** | `inventario_unidades`, `inventario_movimentacoes`, `inventario_ac` (legado) |
 | **Pessoas / Acesso** | `profiles`, `user_tab_permissions`, `pessoas`, `secoes` |
 
 ## 2. Tabelas centrais do fluxo
@@ -185,19 +185,36 @@ Autorização de Fornecimento (AF) / recebimento agregado por item.
 confirmação de entrega na unidade. Linhas com `af_numero` alimentam a subaba
 **Confirmação de Entrega na Unidade** e o painel consolidado de **Emendas**.
 
-### `itens_entregas_unidades` (11 colunas)
-**Uma linha por unidade física recebida** (patrimônio/série individuais). Introduzida
-para recebimento por unidade. Referencia a NF **sem armazenar valor** (evita duplicidade).
+### `itens_entregas_unidades` (15 colunas)
+**Uma linha por unidade física recebida, sempre com quantidade 1.** Patrimônio e número
+de série são opcionais e não condicionam a criação da linha. Referencia a NF **sem
+armazenar valor** (evita duplicidade).
 
 | Campo | Tipo | Observação |
 |---|---|---|
 | `id` | uuid (PK) | |
 | `entrega_id` | FK → `itens_entregas.id` (ON DELETE CASCADE) | |
 | `item_id` | FK → `itens.id` | |
+| `unidade_id`, `unidade_nome` | unidade de nascimento/entrega | histórico da origem física |
+| `quantidade` | numeric | sempre `1` |
 | `nota_fiscal_id` | FK → `notas_fiscais.id` | **mesma NF pode repetir entre unidades — sem somar valor** |
 | `unidade_seq` | integer | 1..N |
-| `patrimonio`, `numero_serie` | text | individuais |
+| `patrimonio`, `numero_serie` | text | individuais e opcionais |
 | `recebido_em` | date | |
+
+### `inventario_unidades`
+
+Uma linha de estado por unidade física de aquisição ou ATA. Guarda `unidade_origem_*` como
+fotografia imutável, `unidade_atual_*`, `situacao_atual` (`ATIVO`, `EMPRESTADO`, `BAIXADO`),
+responsável e eventual previsão de devolução. A chave única é
+`(origem_tipo, unidade_fisica_id)`.
+
+### `inventario_movimentacoes`
+
+Linha do tempo imutável vinculada a `inventario_unidades`: tipo, data, origem/destino,
+destinatário, responsáveis, motivo/observação, caminho e nome do documento e usuário que
+registrou. O RPC `registrar_movimentacao_inventario` grava evento e novo estado na mesma
+transação.
 
 ## 3. Modelo de Notas Fiscais (anti-duplicidade)
 

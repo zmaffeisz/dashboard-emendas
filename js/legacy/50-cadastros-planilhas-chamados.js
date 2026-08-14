@@ -1085,6 +1085,34 @@ async function _fetchAtaFlowData(eiIds){
   });
   return {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec};
 }
+async function _enriquecerUnidadesComMovimentacaoInventario(flow){
+  // O painel público preserva a Emenda sem consultar dados internos do inventário.
+  if(typeof currentUser==='undefined'||!currentUser) return;
+  const unidades=Object.values(flow||{}).flatMap(f=>f?.unidades||[]).filter(u=>u?.id);
+  if(!unidades.length) return;
+  try{
+    const resultados=await Promise.all(_chunkArray([...new Set(unidades.map(u=>u.id))],200).map(ids=>
+      sb.from('inventario_unidades')
+        .select('origem_tipo,unidade_fisica_id,unidade_atual_nome,situacao_atual,ultima_movimentacao_em')
+        .in('unidade_fisica_id',ids)
+    ));
+    const estados={};
+    resultados.forEach(({data,error})=>{
+      if(error) throw error;
+      (data||[]).forEach(e=>{estados[`${e.origem_tipo}:${e.unidade_fisica_id}`]=e;});
+    });
+    unidades.forEach(u=>{
+      const origem=u.origem==='aquisicao'?'AQUISICAO':'ATA';
+      const estado=estados[`${origem}:${u.id}`];
+      if(!estado) return;
+      u.tem_movimentacao=!!estado.ultima_movimentacao_em;
+      u.situacao_atual=estado.situacao_atual||'ATIVO';
+      u.unidade_atual=estado.unidade_atual_nome||'';
+    });
+  }catch(e){
+    console.warn('Histórico do inventário indisponível na Emenda:',e?.message||e);
+  }
+}
 async function _carregarFluxoEmendaItens(eiIds){
   const flow={};
   if(!eiIds||!eiIds.length) return flow;
@@ -1224,6 +1252,7 @@ async function _carregarFluxoEmendaItens(eiIds){
     (nfByItem[it.id]||new Set()).forEach(v=>f.notas.add(v));
     f.unidadesFisicas += Number(unidadeByItem[it.id])||0;
   });
+  await _enriquecerUnidadesComMovimentacaoInventario(flow);
   return flow;
 }
 function _flowStatusLicitacaoFromFlow(f){
@@ -1266,6 +1295,9 @@ function _expandirLinhaEmendaPorUnidades(base, unidades){
     _unidadeFisica:true,
     _origem_unidade:u.origem||'',
     _unidade_seq:u.seq||idx+1,
+    _temMovimentacao:!!u.tem_movimentacao,
+    _situacaoAtual:u.situacao_atual||'ATIVO',
+    _unidadeAtual:u.unidade_atual||'',
     qtde:'1',
     qtde_cadastrada:base.qtde_cadastrada?'1':base.qtde_cadastrada,
     vl_total:vlUnit||base.vl_total,

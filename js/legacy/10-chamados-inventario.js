@@ -96,7 +96,7 @@ async function loadInventario(){
     const aqEntregaIds=[...new Set((aq||[]).map(r=>r.id).filter(Boolean))];
     for(const ids of _chunkArray(aqEntregaIds,200)){
       const {data:uns}=await sb.from('itens_entregas_unidades')
-        .select('id,entrega_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
+        .select('id,entrega_id,unidade_id,unidade_nome,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
         .in('entrega_id',ids)
         .order('unidade_seq',{ascending:true});
       (uns||[]).forEach(u=>{ (aqUnidadesPorEntrega[String(u.entrega_id)]=aqUnidadesPorEntrega[String(u.entrega_id)]||[]).push(u); });
@@ -152,6 +152,7 @@ async function loadInventario(){
           id:u.id||`${r.id}-u-${idx+1}`,
           _base_id:r.id,
           _unidadeFisica:true,
+          _origemTipo:'AQUISICAO',
           qtde:1,
           patrimonio:u.patrimonio||'',
           numero_serie:u.numero_serie||'',
@@ -239,6 +240,7 @@ async function loadInventario(){
           id:u.id||`${r.id}-u-${idx+1}`,
           _base_id:r.id,
           _unidadeFisica:true,
+          _origemTipo:'ATA',
           qtde:1,
           patrimonio:u.patrimonio||'',
           numero_serie:u.numero_serie||'',
@@ -252,6 +254,30 @@ async function loadInventario(){
       }else{
         rows.push(base);
       }
+    });
+    const fisicas=rows.filter(r=>r._unidadeFisica&&r.id).map(r=>r.id);
+    const estadoChunks=await Promise.all(_chunkArray([...new Set(fisicas)],200).map(ids=>
+      sb.from('inventario_unidades')
+        .select('id,origem_tipo,unidade_fisica_id,unidade_origem_id,unidade_origem_nome,unidade_atual_id,unidade_atual_nome,situacao_atual,responsavel_atual,emprestado_para,previsao_devolucao,ultima_movimentacao_em')
+        .in('unidade_fisica_id',ids)
+    ));
+    const estados={};
+    estadoChunks.forEach(({data,error})=>{
+      if(error) throw error;
+      (data||[]).forEach(e=>{ estados[`${e.origem_tipo}:${e.unidade_fisica_id}`]=e; });
+    });
+    rows.forEach(r=>{
+      if(!r._unidadeFisica) return;
+      const estado=estados[`${r._origemTipo}:${r.id}`]||null;
+      r._estadoInventario=estado;
+      r._inventario_unidade_id=estado?.id||null;
+      r.unidade_origem=estado?.unidade_origem_nome||r.unidade||'';
+      r.unidade=estado?.unidade_atual_nome||r.unidade||'';
+      r.situacao_atual=estado?.situacao_atual||'ATIVO';
+      r.responsavel_atual=estado?.responsavel_atual||'';
+      r.emprestado_para=estado?.emprestado_para||'';
+      r.previsao_devolucao=estado?.previsao_devolucao||null;
+      r._temMovimentacao=!!estado?.ultima_movimentacao_em;
     });
     inventarioRows=rows;
     inventarioCarregado=true;
@@ -670,7 +696,7 @@ function _popularFiltrosInv(){
 }
 
 function clearAllInv(){
-  ['finv-tipo','finv-unidade'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['finv-tipo','finv-unidade','finv-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const b=document.getElementById('finv-busca');if(b)b.value='';
   filtrarInventario();
 }
@@ -678,11 +704,13 @@ function clearAllInv(){
 function filtrarInventario(){
   const tipo=document.getElementById('finv-tipo')?.value||'';
   const unidade=document.getElementById('finv-unidade')?.value||'';
+  const situacao=document.getElementById('finv-status')?.value||'';
   const q=(document.getElementById('finv-busca')?.value||'').toLowerCase();
   _invFiltered=inventarioRows.filter(r=>{
     if(tipo&&r.tipo!==tipo) return false;
     if(unidade&&r.unidade!==unidade) return false;
-    if(q){const hay=[r.item,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.processo,r.numero_serie].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    if(situacao&&(r.situacao_atual||'ATIVO')!==situacao) return false;
+    if(q){const hay=[r.item,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.unidade_origem,r.processo,r.numero_serie,r.emprestado_para].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
   const total=_invFiltered.length;
@@ -700,16 +728,20 @@ function filtrarInventario(){
 function renderInventario(){
   const tbody=document.getElementById('inv-body');
   if(!_invFiltered.length){
-    tbody.innerHTML='<tr><td colspan="10"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item no inventário ainda. Confirme a entrega na unidade para que os itens apareçam aqui.</div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="11"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item no inventário ainda. Confirme a entrega na unidade para que os itens apareçam aqui.</div></td></tr>';
     return;
   }
   tbody.innerHTML=_invFiltered.map((r,i)=>{
     const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
     const emendaLabel=r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):'—';
+    const situacao=r.situacao_atual||'ATIVO';
+    const situacaoLabel={ATIVO:'Ativo',EMPRESTADO:'Emprestado',BAIXADO:'Baixado'}[situacao]||situacao;
+    const situacaoClass={ATIVO:'ativo',EMPRESTADO:'emprestado',BAIXADO:'baixado'}[situacao]||'ativo';
     return`<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:6px 8px;white-space:nowrap"><span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span></td>
       <td style="padding:6px 8px;max-width:220px;white-space:normal;word-break:break-word" title="${_sanEsc(r.item)}">${_sanEsc(r.item||'—')}</td>
-      <td style="padding:6px 8px;white-space:nowrap;font-size:12px">${_sanEsc(r.unidade||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap;font-size:12px">${_sanEsc(r.unidade||'—')}${r._temMovimentacao?'<span class="inv-movement-dot" title="Este item possui histórico de movimentações">↻</span>':''}</td>
+      <td style="padding:6px 8px;white-space:nowrap"><span class="inv-status inv-status-${situacaoClass}">${_sanEsc(situacaoLabel)}</span></td>
       <td style="padding:6px 8px;font-size:12px;max-width:160px;white-space:normal;word-break:break-word" title="${_sanEsc(r.empresa)}">${_sanEsc(r.empresa||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-weight:500">${_sanEsc(r.patrimonio||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap">${r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):'—'}</td>
@@ -718,6 +750,7 @@ function renderInventario(){
       <td style="padding:6px 8px;white-space:nowrap;font-size:11px">${_sanEsc(r.contrato||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap">
         <button onclick="abrirDetalheInv(${i})" style="font-size:11px;padding:3px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Ver tudo</button>
+        ${podeEditar('inventario-ac')&&r._inventario_unidade_id&&situacao!=='BAIXADO'?`<button onclick="abrirMovimentacaoInv(${i})" style="font-size:11px;padding:3px 9px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;margin-left:4px">Movimentar</button>`:''}
         ${r.termo_arquivo?`<button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;margin-left:4px">📄 Termo</button>`:''}
       </td>
     </tr>`;
@@ -792,7 +825,7 @@ function _invInventarioDaEmenda(em){
     ||linhas.find(x=>String(x.emenda_item_id||'')===baseId)
     ||null;
 }
-function _abrirDetalheItemUnificado(em,inv){
+function _abrirDetalheItemUnificadoLegado(em,inv){
   if(!em&&!inv) return;
   const tipoInstrumento=inv?.tipo||'';
   const tipoCor=tipoInstrumento==='ATA'?'#A371F7':'#378ADD';
@@ -867,9 +900,267 @@ function _abrirDetalheItemUnificado(em,inv){
   modal.classList.add('active');
 }
 
+let _invDetalheAtual={em:null,inv:null,tab:'geral',historico:null,formTipo:null};
+
+function _invStatusHtml(situacao){
+  const s=situacao||'ATIVO';
+  const label={ATIVO:'Ativo',EMPRESTADO:'Emprestado',BAIXADO:'Baixado'}[s]||s;
+  const cls={ATIVO:'ativo',EMPRESTADO:'emprestado',BAIXADO:'baixado'}[s]||'ativo';
+  return `<span class="inv-status inv-status-${cls}">${_sanEsc(label)}</span>`;
+}
+function _invCamposHtml(campos){
+  const validos=(campos||[]).filter(([,v])=>_invTemValor(v));
+  if(!validos.length) return '<div class="inv-empty-history">Nenhuma informação registrada nesta seção.</div>';
+  return `<div class="inv-detail-fields">${validos.map(([label,valor])=>`<div class="inv-detail-field"><div class="inv-detail-field-label">${_sanEsc(label)}</div><div class="inv-detail-field-value">${valor}</div></div>`).join('')}</div>`;
+}
+function _invSecaoHtml(titulo,campos,extra=''){
+  return `<section class="inv-detail-section"><div class="inv-detail-section-title">${_sanEsc(titulo)}</div>${_invCamposHtml(campos)}${extra}</section>`;
+}
+function _invTipoMovLabel(tipo){
+  return {TRANSFERENCIA:'Transferência',EMPRESTIMO:'Empréstimo',DEVOLUCAO:'Devolução',BAIXA:'Baixa'}[tipo]||tipo||'Movimentação';
+}
+function _invHeroHtml(em,inv){
+  const titulo=_invPrimeiro(em?.item,inv?.item,inv?.emenda_item_desc,'Item');
+  const meta=[];
+  if(inv?.tipo) meta.push(`<span class="badge">${_sanEsc(inv.tipo)}</span>`);
+  if(inv?.patrimonio) meta.push(`<span>Patrimônio ${_sanEsc(inv.patrimonio)}</span>`);
+  else if(inv?._unidadeFisica) meta.push(`<span>Unidade física ${_sanEsc(inv.id)}</span>`);
+  if(inv?.numero_serie) meta.push(`<span>Série ${_sanEsc(inv.numero_serie)}</span>`);
+  return `<div class="inv-detail-hero"><div><div class="inv-detail-name">${_sanEsc(titulo)}</div><div class="inv-detail-meta">${meta.join('<span>•</span>')}</div></div><div class="inv-detail-location"><div class="inv-detail-location-label">Localização e situação atuais</div><div class="inv-detail-location-value">${_sanEsc(inv?.unidade||em?.unidade||'Ainda não incorporado ao inventário')}</div><div style="margin-top:7px">${inv?_invStatusHtml(inv.situacao_atual):'<span style="font-size:12px;color:var(--text3)">Somente dados da Emenda</span>'}</div></div></div>`;
+}
+function _invTabsHtml(tab,temInventario){
+  const tabs=[['geral','Visão geral'],['aquisicao','Aquisição e origem'],['historico','Histórico e movimentações']];
+  return `<div class="inv-detail-tabs">${tabs.map(([id,label])=>`<button type="button" class="inv-detail-tab ${tab===id?'active':''}" onclick="mudarAbaDetalheInv('${id}')">${label}${id==='historico'&&!temInventario?' (ainda indisponível)':''}</button>`).join('')}</div>`;
+}
+function _invVisaoGeralHtml(em,inv){
+  const estado=inv?._estadoInventario||{};
+  const campos=[
+    ['Situação atual',inv?_invStatusHtml(inv.situacao_atual):null],
+    ['Localização atual',_invTexto(inv?.unidade)],
+    ['Unidade de origem',_invTexto(inv?.unidade_origem,em?.unidade,inv?.unidade)],
+    ['Unidade cadastrada na Emenda',_invTexto(em?.unidade)],
+    ['Patrimônio',_invTexto(inv?.patrimonio,em?.patrimonio)],
+    ['Número de série',_invTexto(inv?.numero_serie)],
+    ['Responsável atual',_invTexto(inv?.responsavel_atual)],
+    ['Emprestado para',_invTexto(inv?.emprestado_para)],
+    ['Previsão de devolução',_invData(inv?.previsao_devolucao)],
+    ['Última movimentação',estado.ultima_movimentacao_em?new Date(estado.ultima_movimentacao_em).toLocaleString('pt-BR'):null]
+  ];
+  const aviso=em&&inv&&em.unidade&&inv.unidade&&em.unidade!==inv.unidade
+    ?'<div style="margin:0 13px 13px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--blue-bg);color:var(--blue);font-size:12px">A unidade exibida na aba Emendas continua sendo a unidade originalmente cadastrada. A localização acima é a posição atual do bem.</div>'
+    :'';
+  return _invSecaoHtml('Estado do item',campos,aviso);
+}
+function _invAquisicaoHtml(em,inv){
+  const emendaNumero=_invPrimeiro(em?.emenda,inv?.emenda);
+  const emendaAno=_invPrimeiro(em?.ano,inv?.emenda_ano);
+  const emendaHtml=emendaNumero?`${_sanEsc(emendaNumero)}${emendaAno?`/${_sanEsc(emendaAno)}`:''}`:null;
+  const origem=_invSecaoHtml('Origem e Emenda',[
+    ['Item',_invTexto(em?.item,inv?.item,inv?.emenda_item_desc)],
+    ['Item planejado',_invTexto(em?.item_cadastrado)],
+    ['Emenda',emendaHtml],
+    ['Parlamentar',_invTexto(em?.parlamentar,inv?.parlamentar)],
+    ['Processo SEI da Emenda',_invTexto(em?.sei_emenda)],
+    ['Objeto',_invTexto(em?.objeto)],
+    ['Unidade cadastrada na Emenda',_invTexto(em?.unidade)],
+    ['Unidade da entrega original',_invTexto(inv?.unidade_origem,em?.unidade_entrega)],
+    ['Quantidade planejada',_invTexto(em?.qtde_cadastrada)],
+    ['Quantidade física',inv?._unidadeFisica?'1':_invTexto(em?.qtde,inv?.qtde)]
+  ]);
+  const contratacao=_invSecaoHtml('Contratação e valores',[
+    ['Tipo do instrumento',_invTexto(inv?.tipo)],
+    ['CPL / Processo',_invTexto(em?.cpl,inv?.processo)],
+    ['Tipo do processo',_invTexto(em?.processo_tipo)],
+    ['Contrato / ATA',_invTexto(inv?.contrato,em?.contrato_sim)],
+    ['Fornecedor',_invTexto(inv?.empresa,em?.fornecedor_fluxo)],
+    ['Marca',_invTexto(em?.marca,inv?.marca)],
+    ['Modelo',_invTexto(em?.modelo,inv?.modelo,inv?.marca_modelo)],
+    ['Valor planejado unitário',_invDinheiroPositivo(em?.vl_unitario_cadastrado)],
+    ['Valor licitado unitário',_invDinheiroPositivo(inv?.valor_licitacao_unit,em?.valor_licitacao_detalhe_unit,em?.valor_licitacao_unit)],
+    ['Valor executado unitário',_invDinheiroPositivo(inv?.valor_executado_unit,em?.valor_contratado_unit,em?.vl_unitario)]
+  ]);
+  const recebimento=_invSecaoHtml('Recebimento e documentos',[
+    ['Empenho',_invTexto(em?.empenho,inv?.empenho)],
+    ['Data do empenho',_invData(inv?.empenho_data)],
+    ['Nota fiscal',_invTexto(em?.nota_fiscal,inv?.nota_fiscal)],
+    ['Data da NF',_invData(inv?.nf_data)],
+    ['Valor total da NF',_invDinheiro(inv?.nf_valor)],
+    ['AF nº',_invTexto(inv?.af_numero)],
+    ['Data da AF',_invData(inv?.af_data)],
+    ['Data de recebimento',_invData(inv?.data_recebimento)],
+    ['Data de entrega na unidade',_invData(inv?.data_entrega_unidade,em?.data_entrega)],
+    ['Recebido por',_invTexto(inv?.recebido_por)],
+    ['Responsável na unidade',_invTexto(inv?.termo_responsavel)],
+    ['Cargo',_invTexto(inv?.termo_cargo)],
+    ['Observações',_invTexto(inv?.confirmacao_obs)]
+  ],_invDocumentoAcoes(inv?.nota_fiscal_arquivo,inv?.termo_arquivo));
+  return origem+contratacao+recebimento;
+}
+async function _invCarregarHistorico(inv,forcar=false){
+  if(!inv?._inventario_unidade_id) return [];
+  if(!forcar&&Array.isArray(_invDetalheAtual.historico)) return _invDetalheAtual.historico;
+  const {data,error}=await sb.from('inventario_movimentacoes')
+    .select('*').eq('inventario_unidade_id',inv._inventario_unidade_id)
+    .order('data_movimentacao',{ascending:false}).order('criado_em',{ascending:false});
+  if(error) throw error;
+  _invDetalheAtual.historico=data||[];
+  return _invDetalheAtual.historico;
+}
+function _invHistoricoTimelineHtml(historico){
+  if(!historico?.length) return '<div class="inv-empty-history">Nenhuma movimentação registrada. A entrega original permanece na aba “Aquisição e origem”.</div>';
+  return `<div class="inv-timeline">${historico.map(m=>{
+    const trajeto=m.tipo==='BAIXA'
+      ?`Baixa registrada${m.motivo?`: ${_sanEsc(m.motivo)}`:''}`
+      :[m.unidade_origem_nome,m.unidade_destino_nome].filter(Boolean).map(_sanEsc).join(' → ');
+    const detalhes=[];
+    if(trajeto) detalhes.push(trajeto);
+    if(m.destinatario) detalhes.push(`Destino/portador: ${_sanEsc(m.destinatario)}`);
+    if(m.previsao_devolucao) detalhes.push(`Previsão de devolução: ${fmtDate(m.previsao_devolucao)}`);
+    if(m.responsavel_entrega) detalhes.push(`Entregue por: ${_sanEsc(m.responsavel_entrega)}`);
+    if(m.responsavel_recebimento) detalhes.push(`Recebido por: ${_sanEsc(m.responsavel_recebimento)}`);
+    if(m.observacao) detalhes.push(_sanEsc(m.observacao));
+    return `<div class="inv-timeline-item"><div class="inv-timeline-head"><div class="inv-timeline-title">${_sanEsc(_invTipoMovLabel(m.tipo))}</div><div class="inv-timeline-date">${fmtDate(m.data_movimentacao)}</div></div><div class="inv-timeline-body">${detalhes.join('<br>')}<div style="margin-top:6px"><button type="button" class="btn-secondary" onclick="baixarArquivoStoragePrivado('inventario-movimentacoes','${encodeURIComponent(m.documento_path)}')" style="font-size:11px;padding:4px 9px">⬇ ${_sanEsc(m.documento_nome||'Documento')}</button></div></div></div>`;
+  }).join('')}</div>`;
+}
+function _invToolbarMovimentacoes(inv){
+  if(!inv||!podeEditar('inventario-ac')||!inv._inventario_unidade_id||inv.situacao_atual==='BAIXADO') return '';
+  if(inv.situacao_atual==='EMPRESTADO') return '<div class="inv-detail-toolbar"><button type="button" class="btn-primary" onclick="mostrarFormularioMovimentacaoInv(\'DEVOLUCAO\')">Registrar devolução</button></div>';
+  return '<div class="inv-detail-toolbar"><button type="button" class="btn-primary" onclick="mostrarFormularioMovimentacaoInv(\'TRANSFERENCIA\')">Transferir</button><button type="button" class="btn-secondary" onclick="mostrarFormularioMovimentacaoInv(\'EMPRESTIMO\')">Emprestar</button><button type="button" class="btn-secondary" style="color:var(--red);border-color:var(--red)" onclick="mostrarFormularioMovimentacaoInv(\'BAIXA\')">Dar baixa</button></div>';
+}
+function _invUnidadesOptions(selected){
+  const unidades=(typeof cachedUnidades!=='undefined'?cachedUnidades:[])||[];
+  return '<option value="">Selecione...</option>'+unidades.filter(u=>u&&u.id&&u.nome).map(u=>`<option value="${u.id}" ${String(u.id)===String(selected||'')?'selected':''}>${_sanEsc(u.nome)}</option>`).join('');
+}
+function _invFormularioHtml(tipo,inv){
+  const label=_invTipoMovLabel(tipo);
+  const mostraDestino=tipo!=='BAIXA';
+  const destinoObrigatorio=tipo==='TRANSFERENCIA';
+  const mostraDestinatario=tipo==='EMPRESTIMO';
+  const mostraPrevisao=tipo==='EMPRESTIMO';
+  const mostraMotivo=tipo==='BAIXA';
+  const agora=new Date();
+  const hoje=`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
+  const dicaDestino=tipo==='DEVOLUCAO'?'Deixe em branco para devolver à unidade anterior.':(tipo==='EMPRESTIMO'?'Opcional quando o empréstimo for para uma pessoa ou setor.':'');
+  return `<form class="inv-movement-form" onsubmit="salvarMovimentacaoInv(event)"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px"><div><div style="font-size:15px;font-weight:700">${_sanEsc(label)}</div><div style="font-size:11px;color:var(--text3)">Esta ação acrescenta um evento ao histórico; nada do passado será reescrito.</div></div><button type="button" class="btn-secondary" onclick="cancelarFormularioMovimentacaoInv()">Cancelar</button></div><input type="hidden" id="imv-tipo" value="${tipo}"><div class="inv-movement-form-grid"><div class="form-group"><div class="form-label">Data *</div><input id="imv-data" type="date" max="${hoje}" value="${hoje}" required></div>${mostraDestino?`<div class="form-group"><div class="form-label">Unidade de destino ${destinoObrigatorio?'*':''}</div><select id="imv-unidade" ${destinoObrigatorio?'required':''}>${_invUnidadesOptions(tipo==='DEVOLUCAO'?inv?._estadoInventario?.unidade_origem_id:'')}</select>${dicaDestino?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${dicaDestino}</div>`:''}</div>`:''}${mostraDestinatario?'<div class="form-group"><div class="form-label">Emprestado para (pessoa ou setor) *</div><input id="imv-destinatario" required placeholder="Nome da pessoa, setor ou responsável"></div>':''}${mostraPrevisao?`<div class="form-group"><div class="form-label">Previsão de devolução</div><input id="imv-previsao" type="date" min="${hoje}"></div>`:''}<div class="form-group"><div class="form-label">${tipo==='BAIXA'?'Responsável pela baixa':'Responsável pela entrega'} ${['TRANSFERENCIA','EMPRESTIMO'].includes(tipo)?'*':''}</div><input id="imv-resp-entrega" ${['TRANSFERENCIA','EMPRESTIMO'].includes(tipo)?'required':''}></div>${tipo!=='BAIXA'?`<div class="form-group"><div class="form-label">Responsável pelo recebimento ${['TRANSFERENCIA','DEVOLUCAO'].includes(tipo)?'*':''}</div><input id="imv-resp-recebimento" ${['TRANSFERENCIA','DEVOLUCAO'].includes(tipo)?'required':''}></div>`:''}${mostraMotivo?'<div class="form-group inv-movement-full"><div class="form-label">Motivo da baixa *</div><input id="imv-motivo" required placeholder="Ex.: inservível, extravio, descarte autorizado"></div>':''}<div class="form-group inv-movement-full"><div class="form-label">Termo ou documento comprobatório *</div><input id="imv-documento" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required><div style="font-size:10px;color:var(--text3);margin-top:3px">PDF ou imagem, até 10 MB.</div></div><div class="form-group inv-movement-full"><div class="form-label">Observações</div><textarea id="imv-observacao" rows="3" placeholder="Informações complementares"></textarea></div></div><div class="form-actions"><button id="imv-salvar" type="submit" class="btn-primary">Registrar ${_sanEsc(label.toLowerCase())}</button><span id="imv-msg" class="fmsg"></span></div></form>`;
+}
+async function _invRenderDetalhe(){
+  const {em,inv,tab,formTipo}=_invDetalheAtual;
+  const content=document.getElementById('inv-detalhe-content');
+  if(!content) return;
+  let corpo='';
+  if(tab==='geral') corpo=_invVisaoGeralHtml(em,inv);
+  else if(tab==='aquisicao') corpo=_invAquisicaoHtml(em,inv);
+  else{
+    if(inv?._inventario_unidade_id&&!Array.isArray(_invDetalheAtual.historico)){
+      corpo='<div class="inv-empty-history"><span class="spinner"></span> Carregando histórico...</div>';
+      content.innerHTML=_invHeroHtml(em,inv)+_invTabsHtml(tab,!!inv)+corpo;
+      try{ await _invCarregarHistorico(inv); }catch(e){ _invDetalheAtual.historico=[]; corpo=`<div class="inv-empty-history" style="color:var(--red)">Não foi possível carregar o histórico: ${_sanEsc(e.message)}</div>`; }
+    }
+    corpo=(formTipo?_invFormularioHtml(formTipo,inv):'')+_invToolbarMovimentacoes(inv)+_invHistoricoTimelineHtml(_invDetalheAtual.historico||[]);
+  }
+  content.innerHTML=_invHeroHtml(em,inv)+_invTabsHtml(tab,!!inv)+corpo;
+}
+async function _abrirDetalheItemUnificado(em,inv,tabInicial='geral'){
+  if(!em&&!inv) return;
+  _invDetalheAtual={em:em||null,inv:inv||null,tab:tabInicial,historico:null,formTipo:null};
+  const modal=document.getElementById('modal-inv-detalhe');
+  document.body.appendChild(modal);
+  modal.classList.add('active');
+  await _invRenderDetalhe();
+}
+async function mudarAbaDetalheInv(tab){
+  _invDetalheAtual.tab=tab;
+  _invDetalheAtual.formTipo=null;
+  await _invRenderDetalhe();
+}
+async function mostrarFormularioMovimentacaoInv(tipo){
+  if(!_invDetalheAtual.inv?._inventario_unidade_id||!podeEditar('inventario-ac')) return;
+  if((typeof cachedUnidades==='undefined'||!cachedUnidades?.length)&&typeof _getUnidadesAtivasCache==='function'){
+    try{ cachedUnidades=await _getUnidadesAtivasCache(); }catch(_){}
+  }
+  _invDetalheAtual.tab='historico';
+  _invDetalheAtual.formTipo=tipo;
+  await _invRenderDetalhe();
+  document.querySelector('.inv-movement-form')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function cancelarFormularioMovimentacaoInv(){
+  _invDetalheAtual.formTipo=null;
+  _invRenderDetalhe();
+}
+function _invSafeFileName(nome){
+  return String(nome||'documento').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-').slice(0,120);
+}
+async function salvarMovimentacaoInv(event){
+  event.preventDefault();
+  const inv=_invDetalheAtual.inv;
+  if(!inv?._inventario_unidade_id) return;
+  const tipo=document.getElementById('imv-tipo')?.value||'';
+  const file=document.getElementById('imv-documento')?.files?.[0];
+  const msg=document.getElementById('imv-msg');
+  const btn=document.getElementById('imv-salvar');
+  const setMsg=(texto,erro=false)=>{if(msg){msg.textContent=texto;msg.style.color=erro?'var(--red)':'var(--text2)';}};
+  if(!file){setMsg('Anexe o termo ou documento comprobatório.',true);return;}
+  if(file.size>10*1024*1024){setMsg('O arquivo deve ter no máximo 10 MB.',true);return;}
+  const permitidos=['application/pdf','image/jpeg','image/png','image/webp'];
+  if(!permitidos.includes(file.type)){setMsg('Use um arquivo PDF, JPG, PNG ou WEBP.',true);return;}
+  btn.disabled=true; btn.textContent='Registrando...'; setMsg('Enviando documento...');
+  const path=`${inv._inventario_unidade_id}/${Date.now()}-${_invSafeFileName(file.name)}`;
+  try{
+    const {error:uploadError}=await sb.storage.from('inventario-movimentacoes').upload(path,file,{contentType:file.type,upsert:false});
+    if(uploadError) throw uploadError;
+    const valor=id=>document.getElementById(id)?.value?.trim()||null;
+    const unidadeValor=valor('imv-unidade');
+    const {error}=await sb.rpc('registrar_movimentacao_inventario',{
+      p_inventario_unidade_id:inv._inventario_unidade_id,
+      p_tipo:tipo,
+      p_data_movimentacao:valor('imv-data'),
+      p_documento_path:path,
+      p_documento_nome:file.name,
+      p_documento_mime:file.type,
+      p_unidade_destino_id:unidadeValor?Number(unidadeValor):null,
+      p_destinatario:valor('imv-destinatario'),
+      p_previsao_devolucao:valor('imv-previsao'),
+      p_responsavel_entrega:valor('imv-resp-entrega'),
+      p_responsavel_recebimento:valor('imv-resp-recebimento'),
+      p_motivo:valor('imv-motivo'),
+      p_observacao:valor('imv-observacao')
+    });
+    if(error){
+      await sb.storage.from('inventario-movimentacoes').remove([path]);
+      throw error;
+    }
+    (typeof allRows!=='undefined'?allRows:[]).forEach(r=>{
+      if(String(r._unidade_id||'')===String(inv.id)){r._temMovimentacao=true;}
+    });
+    inventarioCarregado=false;
+    await loadInventario();
+    const atualizado=(inventarioRows||[]).find(r=>String(r._inventario_unidade_id||'')===String(inv._inventario_unidade_id));
+    _invDetalheAtual.inv=atualizado||inv;
+    _invDetalheAtual.em=_invEmendaDoInventario(_invDetalheAtual.inv)||_invDetalheAtual.em;
+    _invDetalheAtual.historico=null;
+    _invDetalheAtual.formTipo=null;
+    _invDetalheAtual.tab='historico';
+    await _invCarregarHistorico(_invDetalheAtual.inv,true);
+    await _invRenderDetalhe();
+    if(typeof renderTable==='function'&&document.getElementById('table-body')) renderTable();
+    if(window.toast) toast(`${_invTipoMovLabel(tipo)} registrada com sucesso.`,'success');
+  }catch(e){
+    setMsg('Erro: '+(e.message||e),true);
+    btn.disabled=false; btn.textContent='Tentar novamente';
+  }
+}
+function fecharDetalheInventario(){
+  document.getElementById('modal-inv-detalhe')?.classList.remove('active');
+  _invDetalheAtual={em:null,inv:null,tab:'geral',historico:null,formTipo:null};
+}
+
 function abrirDetalheInv(idx){
   const inv=_invFiltered[idx];if(!inv)return;
   _abrirDetalheItemUnificado(_invEmendaDoInventario(inv),inv);
+}
+function abrirMovimentacaoInv(idx){
+  const inv=_invFiltered[idx];if(!inv)return;
+  _abrirDetalheItemUnificado(_invEmendaDoInventario(inv),inv,'historico');
 }
 async function verInvDeEmendaItem(emendaItemId){
   if(!emendaItemId) return;
@@ -898,4 +1189,10 @@ window.loadInventario=loadInventario;
 window.filtrarInventario=filtrarInventario;
 window.clearAllInv=clearAllInv;
 window.abrirDetalheInv=abrirDetalheInv;
+window.abrirMovimentacaoInv=abrirMovimentacaoInv;
 window.baixarArquivoStoragePrivado=baixarArquivoStoragePrivado;
+window.mudarAbaDetalheInv=mudarAbaDetalheInv;
+window.mostrarFormularioMovimentacaoInv=mostrarFormularioMovimentacaoInv;
+window.cancelarFormularioMovimentacaoInv=cancelarFormularioMovimentacaoInv;
+window.salvarMovimentacaoInv=salvarMovimentacaoInv;
+window.fecharDetalheInventario=fecharDetalheInventario;

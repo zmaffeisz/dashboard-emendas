@@ -290,8 +290,21 @@
 - Após emitir AF, o Controle de Entregas deve disponibilizar **Baixar AF em PDF** com os
   dados oficiais da autorização: número/data da AF, processo, contrato/ATA, fornecedor,
   CNPJ, empenho, item, quantidade, valores, unidade/local de entrega, prazo e responsável.
-- Recebimento por unidade física: `itens_entregas_unidades` (patrimônio/série individuais
-  por unidade; `unidade_seq` 1..N).
+- **Nascimento da unidade física:** quantidades agregadas são permitidas durante
+  planejamento, licitação, contratação, solicitação de ATA, AF e execução ainda não
+  recebida. No recebimento com NF, cada unidade nasce como uma linha independente em
+  `itens_entregas_unidades` ou `atas_execucao_unidades`, sempre com quantidade 1.
+  Patrimônio e número de série são atributos opcionais: sua ausência nunca mantém o item
+  consolidado. O registro pai preserva a quantidade e o histórico do lote/pedido.
+- **Vida posterior da unidade física:** transferência, empréstimo, devolução e baixa nunca
+  alteram nem apagam o recebimento original. Cada operação exige termo/documento, acrescenta
+  uma linha imutável em `inventario_movimentacoes` e atualiza somente a localização/situação
+  corrente em `inventario_unidades`. Item emprestado deve ser devolvido antes de transferência
+  ou baixa; item baixado permanece consultável e não recebe novas movimentações.
+- **Unidade da Emenda é histórica:** `emenda_itens.unidade_beneficiada` continua sendo a
+  unidade originalmente cadastrada e não muda quando o bem é movimentado. Na listagem de
+  Emendas aparece somente um marcador discreto de movimentação; localização atual e histórico
+  completo ficam dentro da ficha “Vida do item”.
 - O Controle de Entregas permite selecionar pelo menos dois itens de aquisição compatíveis
   e abrir um único modal de recebimento. Quantidade e patrimônios permanecem separados por
   item/unidade; data, responsável e nota fiscal são compartilhados pelo lote.

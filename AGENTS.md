@@ -69,10 +69,19 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
 - **Solicitação parcial de ATA com origem em Emenda:** nunca reduzir a linha inteira da
   emenda para a quantidade solicitada. Dividir `emenda_itens`: a fração solicitada fica
   vinculada à `atas_execucao` e o saldo restante vira nova linha livre para solicitação.
-- **Patrimônio/série por unidade física:** enquanto não houver patrimônio/série
-  preenchido, Emendas e Inventário podem mostrar o item consolidado. Depois do
-  recebimento com patrimônio/série, mostrar uma linha por unidade física. Aquisições usam
-  `itens_entregas_unidades`; ATAs usam `atas_execucao_unidades`.
+- **Inventário é sempre unitário:** quantidade maior que 1 pertence somente a planejamento,
+  licitação, contrato, solicitação de ATA, AF ou execução ainda não recebida. No nascimento
+  físico do bem (normalmente no recebimento com NF), criar **uma linha por unidade**, sempre
+  com quantidade 1, mesmo quando patrimônio e número de série não estiverem disponíveis.
+  Patrimônio/série são atributos opcionais e nunca condição para individualizar. Aquisições
+  usam `itens_entregas_unidades`; ATAs usam `atas_execucao_unidades`. O registro pai mantém
+  a quantidade agregada e o histórico do lote/pedido; cada linha física passa a ter vida e
+  histórico próprios.
+- **Movimentação não reescreve origem:** transferência, empréstimo, devolução e baixa criam
+  eventos imutáveis em `inventario_movimentacoes` e atualizam apenas o estado corrente em
+  `inventario_unidades`. A unidade beneficiada mostrada na aba **Emendas** é a fotografia do
+  cadastro original e nunca acompanha a localização atual; a tela pode apenas sinalizar que
+  existe movimentação e mostrar os detalhes dentro da ficha do item.
 - **Permissões:** `admin` (total) vs. usuário comum (caixinhas em `user_tab_permissions`).
   RLS no banco é autoritativa (`can_access_tab`); o cliente apenas espelha
   (`userCanView/userCanEdit`). `usuarios`/`cadastros` são admin-only.

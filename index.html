@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
-<link rel="stylesheet" href="dashboard.css?v=20260814-chamados-sem-contrato-1">
+<link rel="stylesheet" href="dashboard.css?v=20260814-movimentacoes-inventario-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
@@ -983,6 +983,15 @@
         <select id="finv-unidade" onchange="filtrarInventario()"><option value="">Todas</option></select>
       </div>
       <div class="fg">
+        <div class="fg-label">Situação <button onclick="clearF('finv-status')">✕</button></div>
+        <select id="finv-status" onchange="filtrarInventario()">
+          <option value="">Todas</option>
+          <option value="ATIVO">Ativo</option>
+          <option value="EMPRESTADO">Emprestado</option>
+          <option value="BAIXADO">Baixado</option>
+        </select>
+      </div>
+      <div class="fg">
         <div class="fg-label">Buscar <button onclick="clearF('finv-busca')">✕</button></div>
         <input type="text" id="finv-busca" placeholder="item, empresa, patrimônio, empenho..." oninput="filtrarInventario()">
       </div>
@@ -1005,9 +1014,9 @@
         <table class="inv-table">
           <thead>
             <tr>
-              <th style="width:90px">Tipo</th><th style="width:260px">Item</th><th style="width:230px">Unidade</th><th style="width:200px">Empresa</th>
+              <th style="width:90px">Tipo</th><th style="width:260px">Item</th><th style="width:230px">Localização atual</th><th style="width:110px">Situação</th><th style="width:200px">Empresa</th>
               <th style="width:110px">Patrimônio</th><th style="width:140px">Entrega na Unidade</th>
-              <th style="width:125px">Empenho</th><th style="width:140px">Emenda</th><th style="width:260px">Contrato/ATA</th><th style="width:150px">Ações</th>
+              <th style="width:125px">Empenho</th><th style="width:140px">Emenda</th><th style="width:260px">Contrato/ATA</th><th style="width:210px">Ações</th>
             </tr>
           </thead>
           <tbody id="inv-body"></tbody>
@@ -1017,11 +1026,11 @@
 
     <!-- Modal Detalhes do Item -->
     <div class="modal-overlay" id="modal-inv-detalhe">
-      <div class="modal-box" style="width:700px;max-height:90vh;overflow-y:auto">
-        <div class="modal-title">📋 Detalhes do Item</div>
+      <div class="modal-box inv-detail-modal">
+        <div class="modal-title inv-detail-modal-title"><span>📋 Vida do item</span><button type="button" class="modal-title-close" onclick="fecharDetalheInventario()" aria-label="Fechar">×</button></div>
         <div id="inv-detalhe-content"></div>
-        <div class="form-actions" style="margin-top:1rem">
-          <button class="btn-secondary" onclick="document.getElementById('modal-inv-detalhe').classList.remove('active')">Fechar</button>
+        <div class="form-actions inv-detail-footer">
+          <button class="btn-secondary" onclick="fecharDetalheInventario()">Fechar</button>
         </div>
       </div>
     </div>
@@ -3135,12 +3144,12 @@
 
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260730-public-showcase"></script>
-<script src="js/legacy/10-chamados-inventario.js?v=20260814-detalhe-unificado-2"></script>
+<script src="js/legacy/10-chamados-inventario.js?v=20260814-movimentacoes-inventario-1"></script>
 <script src="js/legacy/20-atas.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260807-servico-item-quantidade-zero-1"></script>
-<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260814-detalhe-valores-item-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260814-detalhe-valores-item-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260814-inventario-unitario-1"></script>
+<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260814-movimentacoes-inventario-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260814-movimentacoes-inventario-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260814-chamados-sem-contrato-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>

@@ -101,12 +101,17 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    pedido da ATA; nesse caso o Controle de Entregas apenas libera **Emitir AF**, sem criar
    novo vínculo/rateio.
 5. **Recebimento e confirmação** — `itens_entregas.qtde_recebida`, `data_entrega_unidade`
-   e, por unidade física, linhas em
-   `itens_entregas_unidades` (patrimônio/série). A **NF** é cadastrada **uma vez** em
+   e uma linha por unidade física em `itens_entregas_unidades` ou
+   `atas_execucao_unidades`, inclusive quando patrimônio/série estiverem vazios. A
+   quantidade agregada permanece apenas no registro pai. A **NF** é cadastrada **uma vez** em
    `notas_fiscais` (valor total) e rateada em `nota_fiscal_itens`.
 6. **Emendas** — a aba Emendas reflete o estágio atual do item: aguardando AF, AF emitida,
    recebido aguardando confirmação, ou adquirido/entregue na unidade.
-7. **Saldo** — `vw_emendas_saldo` reflete `total_executado` (soma de `vl_total`) e
+7. **Movimentação física** — após o nascimento, `inventario_unidades` guarda localização e
+   situação atuais; `inventario_movimentacoes` acrescenta transferência, empréstimo,
+   devolução ou baixa com documento. A unidade beneficiada de `emenda_itens` não é alterada:
+   Emendas mostra apenas um marcador e a ficha detalhada consulta o histórico.
+8. **Saldo** — `vw_emendas_saldo` reflete `total_executado` (soma de `vl_total`) e
    `saldo_remanescente = valor_cedido − comprometido`.
 
 ## 5. Pontos de atenção de integridade

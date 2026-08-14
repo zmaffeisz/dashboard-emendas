@@ -966,7 +966,9 @@ function _toISODate(s){
   return '';
 }
 function _unidadeFisicaTemId(u){
-  return !!String(u?.patrimonio||u?.numero_serie||'').trim();
+  // A identidade física é a PK da linha, não a existência de patrimônio/série.
+  // Bens legados sem esses números também são unidades independentes no inventário.
+  return !!u?.id;
 }
 function _unidadeFisicaLabel(u){
   const p=String(u?.patrimonio||'').trim();
@@ -2190,7 +2192,7 @@ function _recTogglePatrimonio(){
   if(auto) auto.style.display=possui?'block':'none';
   if(bloco) bloco.style.display=possui?'block':'none';
   const ajuda=document.getElementById('rec-patrimonio-ajuda');
-  if(ajuda) ajuda.textContent=!escolha?'Selecione uma opção para continuar.':(possui?'Informe um patrimônio para cada unidade recebida.':'O item permanecerá consolidado, sem criar unidades físicas.');
+  if(ajuda) ajuda.textContent=!escolha?'Selecione uma opção para continuar.':(possui?'Informe um patrimônio para cada unidade recebida.':'As unidades físicas serão criadas individualmente, mesmo sem patrimônio ou série.');
   if(possui) _recRenderUnidades();
   else{
     const cont=document.getElementById('rec-unidades');
@@ -2489,6 +2491,7 @@ async function salvarRecebimentoAta(){
   const qtde=_recNum('rec-qtde');
   const totalAut=Number(row.qtde)||0;
   if(!qtde||qtde<=0){ _recSetMsg('Informe uma quantidade recebida maior que zero.','err'); return; }
+  if(!Number.isInteger(qtde)){ _recSetMsg('O recebimento físico exige uma quantidade inteira.','err'); return; }
   if(totalAut && qtde!==totalAut){
     _recSetMsg('Recebimento de ATA deve fechar a quantidade total autorizada nesta AF.','err');
     return;
@@ -2508,14 +2511,12 @@ async function salvarRecebimentoAta(){
     const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
-    })):[];
+    })):Array.from({length:qtde},()=>({patrimonio:'',numero_serie:''}));
     const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
     const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,possui_patrimonio:possuiPatrimonio};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
-    const {error:delU}=await sb.from('atas_execucao_unidades').delete().eq('exec_id',execId);
-    if(delU) throw delU;
     const unidadesPayload=unidades.map((u,i)=>({
       exec_id:execId,
       ata_item_id:row.ata_item_id||null,
@@ -2528,7 +2529,7 @@ async function salvarRecebimentoAta(){
       recebido_por:document.getElementById('rec-recebido-por').value.trim()||null
     }));
     if(unidadesPayload.length){
-      const {error:insU}=await sb.from('atas_execucao_unidades').insert(unidadesPayload);
+      const {error:insU}=await sb.from('atas_execucao_unidades').upsert(unidadesPayload,{onConflict:'exec_id,unidade_seq'});
       if(insU) throw insU;
     }
     const patrimonioResumo=unidades.map(_unidadeFisicaLabel).filter(Boolean).join('; ')||null;
@@ -2561,6 +2562,7 @@ async function salvarRecebimento(){
   const qtde=_recNum('rec-qtde');
   const saldo=Number(row.saldo_af)||0;
   if(!qtde||qtde<=0){ _recSetMsg('Informe uma quantidade recebida maior que zero.','err'); return; }
+  if(!Number.isInteger(qtde)){ _recSetMsg('O recebimento físico exige uma quantidade inteira.','err'); return; }
   if(qtde>saldo){
     _recSetMsg(`Quantidade recebida (${qtde}) excede o saldo da AF (${saldo}).`,'err');
     return;
@@ -2585,10 +2587,14 @@ async function salvarRecebimento(){
     const off=Number(window._recUnidadeOffset)||0;
     const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map((r,i)=>({
       entrega_id:entregaId, item_id:row.item_id, unidade_seq:off+i+1,
+      quantidade:1,
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim()||null,
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()||null,
       nota_fiscal_id:nf.id||null, recebido_em:dataRec, recebido_por:recPor
-    })):[];
+    })):Array.from({length:qtde},(_,i)=>({
+      entrega_id:entregaId,item_id:row.item_id,unidade_seq:off+i+1,quantidade:1,
+      patrimonio:null,numero_serie:null,nota_fiscal_id:nf.id||null,recebido_em:dataRec,recebido_por:recPor
+    }));
     const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
     const patch={
@@ -2601,7 +2607,7 @@ async function salvarRecebimento(){
     const {error}=await sb.from('itens_entregas').update(patch).eq('id',entregaId);
     if(error) throw error;
     // grava as unidades (o trigger sincroniza patrimonio/numero_serie agregados em itens_entregas)
-    if(unidades.length){ const {error:eu}=await sb.from('itens_entregas_unidades').insert(unidades); if(eu) throw eu; }
+    if(unidades.length){ const {error:eu}=await sb.from('itens_entregas_unidades').upsert(unidades,{onConflict:'entrega_id,unidade_seq'}); if(eu) throw eu; }
     const patrimonioWB=unidades.map(u=>u.patrimonio).filter(Boolean)[0]||null;
     await _recWriteBackEmenda(row,empenho,nf,patrimonioWB);
     document.getElementById('modal-recebimento').classList.remove('active');
@@ -2746,7 +2752,7 @@ function _recLoteColetarItens(){
     const saldo=Number(row.saldo_af)||0;
     if(qtd<=0) throw new Error(`Informe a quantidade recebida para ${row.unidade||row.item}.`);
     if(qtd>saldo) throw new Error(`A quantidade de ${row.unidade||row.item} excede o saldo da AF (${saldo}).`);
-    if(possui==='sim'&&!Number.isInteger(qtd)) throw new Error(`A quantidade de ${row.unidade||row.item} deve ser inteira para informar os patrimônios.`);
+    if(!Number.isInteger(qtd)) throw new Error(`A quantidade de ${row.unidade||row.item} deve ser inteira para gerar as unidades físicas.`);
     const unidades=possui==='sim'?[...card.querySelectorAll('.recl-u-row')].map((el,i)=>({
       patrimonio:(el.querySelector('.recl-u-patr')?.value||'').trim(),
       numero_serie:(el.querySelector('.recl-u-serie')?.value||'').trim()||null,

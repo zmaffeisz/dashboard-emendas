@@ -851,6 +851,11 @@ async function gerarLicitacaoItensSelecionados(){
   }
 }
 function emTogglePorEmenda(em){ _emExpand[em]=!_emExpand[em]; renderEmPorEmenda(); }
+function _emMovimentacaoIndicador(r){
+  if(!r?._temMovimentacao) return '';
+  const atual=r._unidadeAtual?` Localização atual: ${_sanEsc(r._unidadeAtual)}.`:'';
+  return `<span class="em-movement-marker" title="Este item possui movimentação no Inventário.${atual} A unidade desta coluna é a unidade originalmente cadastrada na Emenda.">*</span>`;
+}
 function renderEmPorEmenda(){
   const box=document.getElementById('em-view-por-emenda'); if(!box) return;
   const grupos={};
@@ -890,7 +895,7 @@ function renderEmPorEmenda(){
         h+=`<tr onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" title="Clique para ver os detalhes deste item" style="border-top:1px solid var(--border);cursor:pointer">
           ${_emPodeGerarLicitacao()?`<td onclick="event.stopPropagation()" style="padding:8px;text-align:center">${_emCheckboxLicitacao(i)}</td>`:''}
           <td style="padding:8px 14px">${_sanEsc(i.item||'—')}</td>
-          <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}</td>
+          <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}${_emMovimentacaoIndicador(i)}</td>
           <td style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap">${Number(i.vl_unitario_cadastrado)>0?fmtFull(i.vl_unitario_cadastrado):'—'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--blue)">${Number(i.valor_licitacao_unit)>0?fmtFull(i.valor_licitacao_unit):'—'}</td>
@@ -1417,7 +1422,7 @@ function renderTable(){
     <td>${tipoBadge(r.tipo)}</td>
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td class="em-parlamentar-cell" style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
-    <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}</td>
+    <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}${_emMovimentacaoIndicador(r)}</td>
     <td class="td-trunc em-item-cell" title="${r.item}">${r.item||"—"}</td>
     <td style="text-align:right">${r.qtde||"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>

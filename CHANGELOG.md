@@ -2,6 +2,18 @@
 
 ## Em desenvolvimento
 
+- **Movimentações por unidade física no Inventário:** cada item agora possui estado atual e
+  linha do tempo próprios para transferência, empréstimo, devolução e baixa, sempre com
+  documento comprobatório privado. A ficha “Vida do item” foi reorganizada em Visão geral,
+  Aquisição e origem e Histórico e movimentações. Na aba Emendas, a unidade beneficiada
+  original permanece inalterada; um asterisco discreto apenas sinaliza que a unidade física
+  possui movimentação registrada.
+- **Inventário estritamente unitário:** toda quantidade recebida passa a ser materializada
+  como uma linha por unidade física, independentemente de patrimônio ou número de série.
+  As execuções históricas de ATA antes consolidadas são desmembradas, mantendo o pedido e
+  sua quantidade agregada como histórico. Novos recebimentos de aquisição e ATA, inclusive
+  em lote e sem patrimônio, também geram somente unidades de quantidade 1.
+
 - **“Ver tudo” unificado entre Emendas e Inventário:** os dois pontos de entrada agora
   abrem a mesma ficha completa do item, combinando planejamento, execução, fornecedor,
   empenho, nota fiscal, AF, patrimônio, série, recebimento, entrega e anexos da unidade

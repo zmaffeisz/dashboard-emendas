@@ -53,6 +53,7 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260813213230 | `corrigir_validacao_planejamento_ata` — validação da correspondência entre item licitado e item formalizado da Ata |
 | 20260813213648 | `liberar_fluxo_publico_planejamento_ata` — leitura limitada do planejamento pela aba pública de Emendas |
 | 20260813213831 | `corrigir_reabertura_planejamento_ata` — reabre o planejamento ao excluir uma requisição ainda removível |
+| 20260814193014 | `individualizar_inventario_unidades_fisicas` — materializa uma linha por unidade recebida, inclusive sem patrimônio/série, e protege quantidade física igual a 1 |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -101,6 +102,7 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `rls_auto_enable()` | | Habilita RLS automaticamente (hardening). |
 | `registrar_reajuste_item_ata(...)` | item, vigência, percentual, novo valor e observação | Registra uma versão de preço do item sem sobrescrever o valor original. |
 | `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
+| `registrar_movimentacao_inventario(...)` | unidade física, tipo, data, destino/responsáveis e documento | Acrescenta o evento e atualiza atomicamente o estado corrente do item. |
 | `_sync_entrega_agregado()` | trigger | Mantém `itens_entregas.patrimonio/numero_serie` agregados a partir de `itens_entregas_unidades`. |
 | `_unidade_key(p text)` | | Normalização de chave de unidade. |
 
@@ -124,6 +126,9 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
   como agregação (`string_agg`) das unidades. Mantém a UI antiga funcionando sem duplicar dado.
 - **ON DELETE CASCADE** de `itens_entregas_unidades.entrega_id` → ao apagar a entrega,
   apagam-se as unidades.
+- **`trg_sincronizar_inventario_unidade_*`** cria/atualiza o estado inicial quando uma
+  unidade física nasce em aquisição ou ATA. **`trg_proteger_inventario_*`** bloqueia
+  alteração direta do estado e do histórico fora do RPC transacional.
 - Demais relações usam FK padrão (ver lista completa §7).
 
 ## 6. RLS (Row Level Security) {#rls}
@@ -139,6 +144,9 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
   notas fiscais, entregas, patrimônios/séries e ATAs. Nos catálogos auxiliares,
   `secretarias` e `status_opcoes` expõem somente os registros referenciados por esse
   fluxo público. Escritas e a navegação das demais abas continuam restritas.
+- `inventario_unidades`, `inventario_movimentacoes` e o bucket privado
+  `inventario-movimentacoes` exigem usuário autenticado e permissões das abas Inventário ou
+  Emendas para leitura; somente quem edita Inventário registra operações.
 
 > Recomenda-se rodar `get_advisors` (security/performance) periodicamente — ver [SECURITY.md](SECURITY.md).
 

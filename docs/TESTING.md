@@ -41,6 +41,17 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 - [ ] Registrar recebimento/NF quando aplicável (aba **Controle de Entregas**).
 - [ ] Recebimento por unidade física (`itens_entregas_unidades`): patrimônio/série por
       unidade.
+- [ ] Recebimento sem patrimônio/série: ainda assim gerar uma linha física por unidade,
+      sempre com quantidade 1, tanto em Aquisições quanto em ATAs.
+- [ ] Inventário legado: nenhuma linha pode representar quantidade maior que 1; conferir
+      que execuções históricas foram expandidas pela quantidade recebida.
+- [ ] Transferir uma unidade física com termo: o Inventário deve mostrar a nova localização,
+      a ficha deve acrescentar o evento e a aba Emendas deve manter a unidade beneficiada
+      original, exibindo somente o asterisco de movimentação.
+- [ ] Emprestar e devolver uma unidade: bloquear nova transferência/baixa enquanto estiver
+      emprestada; após a devolução, manter os dois eventos e voltar para `ATIVO`.
+- [ ] Dar baixa: manter o item consultável como `BAIXADO`, com motivo/documento, e bloquear
+      qualquer movimentação posterior.
 
 ### Notas Fiscais (anti-duplicidade)
 - [ ] Cadastrar NF uma vez (`notas_fiscais.valor_total`).
