@@ -102,6 +102,15 @@
 .metric-warning{border-left-color:var(--amber)}
 .metric-danger{border-left-color:var(--red)}
 .metric-neutral{border-left-color:var(--text3)}
+.fiscalizacao-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+.metric-sem-contrato{border-left-color:var(--text2)}
+.metric-dual-values{display:flex;align-items:flex-end;gap:18px}
+.metric-dual-values>div{display:flex;flex-direction:column;min-width:0}
+.metric-dual-values .metric-value{font-size:20px;line-height:1.15}
+.mcn-sem-contrato-option{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);cursor:pointer;color:var(--text)}
+.mcn-sem-contrato-option input{margin-top:2px;accent-color:var(--blue)}
+.mcn-sem-contrato-option span{display:flex;flex-direction:column;gap:2px;font-size:12px}
+.mcn-sem-contrato-option small{font-size:10px;font-weight:400;color:var(--text3)}
 /* Linha secundária de KPIs — mais compacta, para painéis com muitos indicadores (ex.: Contratos) */
 .metrics-secondary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1.125rem}
 .metrics-secondary .metric{padding:.6rem .75rem;box-shadow:none}
@@ -310,6 +319,9 @@ table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
 /* ── TABLET PAISAGEM (1024px) ── */
 @media(max-width:1024px) and (min-width:769px){
   .metrics{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .fiscalizacao-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .fiscalizacao-metrics .metric{padding:.65rem .7rem}
+  .fiscalizacao-metrics .metric-dual-values{gap:8px}
   .metrics-secondary{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
   .ct-contract-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }

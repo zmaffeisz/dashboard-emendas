@@ -299,6 +299,9 @@
 - **Chamados Antigos** = consulta do Google Sheets, **somente leitura** (não escrever).
 - Controle interno em `chamados_controle`, chave de negócio `protocolo`
   (upsert `onConflict: protocolo`).
+- Chamados de equipamento sem contrato de manutenção podem ser abertos normalmente e
+  seguem para Fiscalização. Nesses casos, `cpl_contrato` e `empresa` recebem o marcador
+  `SEM CONTRATO`, enquanto `contrato_id` permanece nulo para não criar vínculo fictício.
 - Abertura pública via RPC `abrir_chamado_publico` (sem login).
 
 ## 9. Permissões (resumo)

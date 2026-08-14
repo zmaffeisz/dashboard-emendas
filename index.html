@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
-<link rel="stylesheet" href="dashboard.css?v=20260807-emendas-item-width-1">
+<link rel="stylesheet" href="dashboard.css?v=20260814-chamados-sem-contrato-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
@@ -756,6 +756,10 @@
           </div>
           <div class="form-group full" id="mcn-cpl-wrap">
             <div class="form-label">Contrato / CPL * <span style="font-size:10px;color:var(--text3);font-weight:400">(obrigatório para status Aberto — somente SUEQ EQUIP)</span></div>
+            <label class="mcn-sem-contrato-option">
+              <input type="checkbox" id="mcn-sem-contrato" onchange="_mcnOnSemContratoChange()">
+              <span><strong>Chamado sem contrato de manutenção</strong><small>Enviar para Fiscalização identificado como SEM CONTRATO</small></span>
+            </label>
             <input type="text" id="mcn-cpl-busca" placeholder="🔍 Buscar por CPL, objeto ou empresa..." oninput="_filtrarCplModal()" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box">
             <select id="mcn-cpl" size="5" style="font-size:13px;padding:4px;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface);color:var(--text);width:100%;box-sizing:border-box">
               <option value="">Selecione o contrato...</option>
@@ -789,11 +793,12 @@
     </div>
 
     <!-- KPIs -->
-    <div class="metrics" style="margin-bottom:1rem">
+    <div class="metrics fiscalizacao-metrics" style="margin-bottom:1rem">
       <div class="metric"><div class="metric-label">Total OS</div><div class="metric-value" id="fm-total">—</div><div class="metric-sub">na seleção</div></div>
       <div class="metric metric-danger"><div class="metric-label">Não fiscalizados</div><div class="metric-value" id="fm-nao" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
       <div class="metric metric-warning"><div class="metric-label">Pendentes</div><div class="metric-value" id="fm-pend" style="color:var(--amber)">—</div><div class="metric-sub">em aberto</div></div>
       <div class="metric metric-success"><div class="metric-label">Conformes</div><div class="metric-value" id="fm-conf" style="color:var(--green)">—</div><div class="metric-sub">ok</div></div>
+      <div class="metric metric-sem-contrato"><div class="metric-label">Sem contrato</div><div class="metric-dual-values"><div><span class="metric-value" id="fm-sem-total">—</span><span class="metric-sub">chamados</span></div><div><span class="metric-value" id="fm-sem-pend">—</span><span class="metric-sub">pendentes</span></div></div></div>
     </div>
 
     <!-- Ações -->
@@ -3134,9 +3139,9 @@
 <script src="js/legacy/20-atas.js?v=20260807-detalhe-marca-modelo-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260807-servico-item-quantidade-zero-1"></script>
-<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260807-detalhe-marca-modelo-1"></script>
+<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260814-chamados-sem-contrato-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260813-editar-emenda-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260810-fiscalizacao-empresa-problema-2"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260814-chamados-sem-contrato-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

@@ -567,6 +567,7 @@ function mudarPlanilha(tipo){
 let chamadosNovosRows = [];
 let chamadosNovosCarregado = false;
 let _cnAtual = null;
+const CHAMADO_SEM_CONTRATO = "SEM CONTRATO";
 
 async function loadChamadosNovos(){
   document.getElementById("cn-loading").style.display="block";
@@ -705,6 +706,10 @@ async function enviarEmailChamadoNovo(id){
   const ctrl=getControleCN(r);
   const cpl=ctrl.cpl_contrato||ctrl.cpl||ctrl.contrato||"";
   const contratoId=ctrl.contrato_id||null;
+  if(cpl===CHAMADO_SEM_CONTRATO){
+    alert("Este chamado está identificado como SEM CONTRATO e não possui empresa contratada para envio por e-mail.");
+    return;
+  }
   if(!contratoId&&!cpl){
     alert("Este chamado ainda não possui uma CPL vinculada. Atualize o chamado para o status Aberto e selecione o contrato.");
     return;
@@ -768,6 +773,21 @@ function _mcnOnStatusChange(){
   if(v==="Aberto") _ensureContratosModal();
 }
 
+function _mcnOnSemContratoChange(){
+  const marcado=document.getElementById("mcn-sem-contrato")?.checked||false;
+  const busca=document.getElementById("mcn-cpl-busca");
+  const select=document.getElementById("mcn-cpl");
+  if(busca){
+    busca.disabled=marcado;
+    busca.placeholder=marcado?CHAMADO_SEM_CONTRATO:"🔍 Buscar por CPL, objeto ou empresa...";
+    if(marcado) busca.value="";
+  }
+  if(select){
+    select.disabled=marcado;
+    if(marcado) select.value="";
+  }
+}
+
 function abrirModalCN(id){
   const r=chamadosNovosRows.find(x=>x.id===id);
   if(!r) return;
@@ -781,6 +801,8 @@ function abrirModalCN(id){
   document.getElementById("mcn-cpl-wrap").style.display=(_st==="Inválido"||_st==="Pendente")?"none":"block";
   document.getElementById("mcn-motivo-invalido").value=(_st==="Inválido"?ctrl.motivo_invalido:"")||"";
   document.getElementById("mcn-motivo-pendente").value=(_st==="Pendente"?ctrl.motivo_invalido:"")||"";
+  document.getElementById("mcn-sem-contrato").checked=ctrl.cpl_contrato===CHAMADO_SEM_CONTRATO;
+  _mcnOnSemContratoChange();
 
   document.getElementById("mcn-msg").className="fmsg";
   // Carrega contratos e define o selecionado
@@ -801,8 +823,9 @@ async function salvarChamadoNovo(){
   // Validação: CPL obrigatório se Aberto
   const cplSel=document.getElementById("mcn-cpl");
   const cplVal=cplSel?.value||"";
-  if(_status==="Aberto" && !cplVal){
-    showMsg("mcn","Selecione o contrato (CPL) para salvar como Aberto.","err");
+  const semContrato=document.getElementById("mcn-sem-contrato")?.checked||false;
+  if(_status==="Aberto" && !cplVal && !semContrato){
+    showMsg("mcn","Selecione o contrato (CPL) ou marque o chamado como sem contrato.","err");
     btn.disabled=false;btn.textContent="Salvar";return;
   }
   // Validação: motivo obrigatório se Pendente
@@ -819,9 +842,9 @@ async function salvarChamadoNovo(){
     protocolo: chamadosNovosRows.find(r=>r.id===_cnAtual)?.protocolo,
     status:_status,
     motivo_invalido:_status==="Inválido"?document.getElementById("mcn-motivo-invalido").value||null:(_status==="Pendente"?motivoPendente:null),
-    cpl_contrato: (_status!=="Inválido"&&_status!=="Pendente")?cplVal||null:null,
-    contrato_id: (_status!=="Inválido"&&_status!=="Pendente")?contratoId:null,
-    empresa: (_status!=="Inválido"&&_status!=="Pendente")?empresaAuto:null,
+    cpl_contrato: (_status!=="Inválido"&&_status!=="Pendente")?(semContrato?CHAMADO_SEM_CONTRATO:cplVal||null):null,
+    contrato_id: (_status!=="Inválido"&&_status!=="Pendente"&&!semContrato)?contratoId:null,
+    empresa: (_status!=="Inválido"&&_status!=="Pendente")?(semContrato?CHAMADO_SEM_CONTRATO:empresaAuto):null,
   };
   const {error}=await sb.from("chamados_controle").upsert({...dados},{onConflict:"protocolo"});
   if(error){showMsg("mcn","Erro: "+error.message,"err");btn.disabled=false;btn.textContent="Salvar";return;}

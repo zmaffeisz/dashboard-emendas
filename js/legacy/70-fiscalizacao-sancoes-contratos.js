@@ -241,10 +241,14 @@ function _renderFiscalizacao(){
   const nao=rows.filter(r=>!r.situacao_os||r.situacao_os==='nao_fiscalizado').length;
   const pend=rows.filter(r=>r.situacao_os==='pendente').length;
   const conf=rows.filter(r=>r.situacao_os==='conforme').length;
+  const semContrato=rows.filter(r=>r.cpl_contrato==='SEM CONTRATO');
+  const semContratoPend=semContrato.filter(r=>r.situacao_os==='pendente').length;
   document.getElementById("fm-total").textContent=rows.length;
   document.getElementById("fm-nao").textContent=nao;
   document.getElementById("fm-pend").textContent=pend;
   document.getElementById("fm-conf").textContent=conf;
+  document.getElementById("fm-sem-total").textContent=semContrato.length;
+  document.getElementById("fm-sem-pend").textContent=semContratoPend;
   document.getElementById("fisc-count").textContent=`${rows.length} OS`;
   document.getElementById("fisc-body").innerHTML=rows.map(r=>{
     const ch=r._chamado||{};
@@ -578,6 +582,10 @@ async function gerarMedicaoFiscalizacao(){
   if(typeof _ensureContratosModal==='function') await _ensureContratosModal();
   const selecionadas=_fiscSelecionadasParaMedicao();
   if(!selecionadas.length){alert("Selecione ao menos uma OS para gerar a medicao.");return;}
+  if(selecionadas.some(r=>r.cpl_contrato==='SEM CONTRATO')){
+    alert("Chamados SEM CONTRATO podem ser fiscalizados normalmente, mas não geram medição ou nota fiscal de contrato.");
+    return;
+  }
   if(selecionadas.some(r=>!_fiscSituacaoPermiteMedicao(r.situacao_os))){
     alert("Gere medição apenas para OS já fiscalizadas como pendente, conforme, conforme com ressalva ou parcial.");
     return;

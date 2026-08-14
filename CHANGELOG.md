@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Chamados sem contrato:** chamados novos agora podem ser marcados como `SEM CONTRATO`
+  e seguir para Fiscalização sem criar vínculo fictício. A Fiscalização ganhou um card
+  compacto com o total desses chamados e quantos estão pendentes, mantendo os indicadores
+  na mesma linha em telas de trabalho.
 - **Documentações mensais por vários contratos:** o gerenciador do checklist agora cadastra
   cada documentação uma única vez e permite vinculá-la a vários contratos por seleção,
   mantendo também a opção de exibição em todos os contratos de manutenção. A ordem deixou
