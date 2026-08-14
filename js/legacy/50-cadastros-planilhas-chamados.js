@@ -1188,10 +1188,17 @@ async function _carregarFluxoEmendaItens(eiIds){
     if(it.modelo) (f.modelos||(f.modelos=new Set())).add(it.modelo);
     const itQtde=Number(it.qtde)||0;
     const temContratado=it.valor_contratado!==null&&it.valor_contratado!==undefined;
+    const itVlEstimado=Number(it.valor_estimado)||0;
     const itVlUnit=temContratado?Number(it.valor_contratado)||0:Number(it.valor_estimado)||0;
     f.qtde += itQtde;
     if(temContratado){ f.valor += itVlUnit * itQtde; f.valorComprometido += itVlUnit * itQtde; f.valorContratado += itVlUnit * itQtde; f.qtdeContratado += itQtde; }
     else { f.valorComprometido += itVlUnit * itQtde; f.valorLicitacao += itVlUnit * itQtde; f.qtdeLicitacao += itQtde; }
+    // Preserva o valor histórico da licitação mesmo depois que o item vira contrato.
+    // É usado somente na ficha detalhada; os totais e indicadores existentes não mudam.
+    if(itVlEstimado>0 && (f.valorLicitacaoDetalheUnit==null || itQtde>(f._qtdeLicitacaoDetalheRef||0))){
+      f.valorLicitacaoDetalheUnit=itVlEstimado;
+      f._qtdeLicitacaoDetalheRef=itQtde;
+    }
     // Armazena o valor unitário do item contratado para derivar vl_unitario na aba Emendas
     // Se houver apenas um item no fluxo, o unitário é direto; caso contrário, usamos o do maior qtde
     if(temContratado && itVlUnit>0){

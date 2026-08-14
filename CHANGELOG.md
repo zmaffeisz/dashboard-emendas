@@ -2,6 +2,12 @@
 
 ## Em desenvolvimento
 
+- **“Ver tudo” unificado entre Emendas e Inventário:** os dois pontos de entrada agora
+  abrem a mesma ficha completa do item, combinando planejamento, execução, fornecedor,
+  empenho, nota fiscal, AF, patrimônio, série, recebimento, entrega e anexos da unidade
+  física selecionada. A ficha mostra somente os valores unitários relevantes — planejado
+  da Emenda quando existir, licitado e executado — sem totais agregados do processo,
+  empenho ou lote.
 - **Chamados sem contrato:** chamados novos agora podem ser marcados como `SEM CONTRATO`
   e seguir para Fiscalização sem criar vínculo fictício. A Fiscalização ganhou um card
   compacto com o total desses chamados e quantos estão pendentes, mantendo os indicadores

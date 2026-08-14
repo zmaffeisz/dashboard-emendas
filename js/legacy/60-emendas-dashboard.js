@@ -97,6 +97,7 @@ async function loadData(){
         valor_licitacao:f?Number((f.valorLicitacao||0).toFixed(2)):0,
         valor_contratado:f?Number((f.valorContratado||0).toFixed(2)):0,
         valor_licitacao_unit:f&&f.qtdeLicitacao?Number((f.valorLicitacao/f.qtdeLicitacao).toFixed(2)):0,
+        valor_licitacao_detalhe_unit:f&&f.valorLicitacaoDetalheUnit?Number(f.valorLicitacaoDetalheUnit):0,
         valor_contratado_unit:f&&f.qtdeContratado?Number((f.valorContratado/f.qtdeContratado).toFixed(2)):0,
         // ── plano de trabalho aprovado (cadastrado/planejado) ──
         item_cadastrado:(i.item_cadastrado||"").toString().trim(),

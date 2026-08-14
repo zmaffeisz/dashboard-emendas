@@ -216,6 +216,13 @@
   entrega ficam disponíveis para download por link temporário, inclusive no modo público
   anônimo. Os buckets permanecem privados e a política libera somente arquivos vinculados
   a itens de Emendas expostos no fluxo público.
+- O detalhe **Ver tudo** é único para Emendas e Inventário. Independentemente da aba de
+  origem, a ficha combina os dados do planejamento e do fluxo real com os dados de
+  inventário da mesma unidade física, sem apresentar versões diferentes do modal.
+- Na ficha de uma unidade física, os valores do item são sempre unitários e separados por
+  etapa: planejado na Emenda (quando informado), licitado (`itens.valor_estimado`) e
+  executado/contratado (`itens.valor_contratado`). Totais agregados do lote, do empenho ou
+  do processo não são exibidos nessa ficha.
 - No recebimento em lote, a NF e seu anexo são gravados uma única vez. Cada item conserva
   seu vínculo próprio com unidade, AF e empenho em `nota_fiscal_itens`; os itens precisam
   pertencer ao mesmo contrato, fornecedor e processo e representar o mesmo produto
