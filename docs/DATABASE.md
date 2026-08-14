@@ -185,7 +185,7 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | itens_status_historico | item_id / status_id | itens / status_opcoes |
 | nota_fiscal_itens | nota_fiscal_id / item_id / emenda_id / emenda_item_id / empenho_id | respectivas |
 | notas_fiscais | contrato_id / emenda_id / fornecedor_id / processo_id | respectivas |
-| nf_checklist_documentos | contrato_id | contratos.id (nulo = item global da seção) |
+| nf_checklist_documento_contratos | documento_id / contrato_id | nf_checklist_documentos / contratos |
 | nf_checklist_marcacoes | contrato_id / documento_id | contratos / nf_checklist_documentos |
 | pessoas | usuario_id | profiles.id |
 | sancao_itens | emenda_item_id / sancao_id | emenda_itens / sancoes_solicitadas |

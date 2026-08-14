@@ -2284,20 +2284,33 @@
 
 <!-- Gerenciador de documentos do checklist -->
 <div class="modal-overlay" id="modal-nf-checklist" style="overflow-y:auto;padding:1rem">
-  <div class="modal-box" style="width:min(680px,96vw);max-width:96vw;max-height:90vh;overflow-y:auto;box-sizing:border-box">
-    <div class="modal-title">Documentos do checklist mensal</div>
-    <div class="nf-modal-help">Itens globais aparecem em todos os contratos de manutenção. Também é possível criar um item somente para um contrato.</div>
+  <div class="modal-box" style="width:min(760px,96vw);max-width:96vw;max-height:90vh;overflow-y:auto;box-sizing:border-box">
+    <div class="modal-title">Documentações do checklist mensal</div>
+    <div class="nf-modal-help">Cadastre cada documentação uma única vez e escolha os contratos em que ela deve aparecer. A ordem de exibição é definida automaticamente.</div>
     <div class="form-grid nf-checklist-form">
       <div class="form-group full"><div class="form-label">Documento *</div><input id="nfck-nome" type="text" maxlength="120" placeholder="Ex.: Nota fiscal, certidão, relatório de serviços"></div>
-      <div class="form-group"><div class="form-label">Aplicar em</div><select id="nfck-contrato"><option value="">Todos os contratos de manutenção</option></select></div>
-      <div class="form-group"><div class="form-label">Ordem</div><input id="nfck-ordem" type="number" min="0" step="1" value="0"></div>
       <div class="form-group full"><div class="form-label">Descrição</div><input id="nfck-descricao" type="text" maxlength="240" placeholder="Orientação opcional"></div>
+      <div class="form-group full">
+        <div class="form-label">Exibir esta documentação em</div>
+        <div class="nf-checklist-scope-options">
+          <label><input type="radio" name="nfck-escopo" value="selecionados" checked onchange="atualizarEscopoDocumentoChecklistNF()"> Contratos selecionados</label>
+          <label><input type="radio" name="nfck-escopo" value="todos" onchange="atualizarEscopoDocumentoChecklistNF()"> Todos os contratos de manutenção</label>
+        </div>
+      </div>
+      <div class="form-group full" id="nfck-contratos-wrap">
+        <div class="nf-checklist-contract-toolbar">
+          <div class="form-label">Contratos <span id="nfck-selecionados">0 selecionados</span></div>
+          <input id="nfck-busca-contrato" type="search" placeholder="Buscar contrato, processo ou empresa" oninput="renderContratosDocumentoChecklistNF()">
+        </div>
+        <div id="nfck-contratos" class="nf-checklist-contract-list"></div>
+      </div>
     </div>
     <div class="form-actions nf-checklist-actions">
-      <button class="btn-primary" id="nfck-adicionar" onclick="salvarDocumentoChecklistNF()">Adicionar documento</button>
+      <button class="btn-primary" id="nfck-adicionar" onclick="salvarDocumentoChecklistNF()">Salvar documentação</button>
+      <button class="btn-secondary" id="nfck-cancelar-edicao" style="display:none" onclick="limparFormularioDocumentoChecklistNF()">Cancelar edição</button>
       <span id="nfck-msg" class="fmsg"></span>
     </div>
-    <div class="nf-checklist-list-title">Itens ativos</div>
+    <div class="nf-checklist-list-title">Documentações cadastradas</div>
     <div id="nfck-lista" class="nf-checklist-manager-list"></div>
     <div class="form-actions"><button class="btn-secondary" onclick="fecharGerenciadorChecklistNF()">Fechar</button></div>
   </div>

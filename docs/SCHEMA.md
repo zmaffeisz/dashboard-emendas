@@ -208,14 +208,16 @@ Três tabelas separam claramente os níveis de valor:
 | `notas_fiscais` (20 col.) | **uma linha por NF** | `valor_total` (valor total da NF, **uma única vez**) |
 | `nota_fiscal_itens` (11 col.) | **rateio por item** | `valor_unitario`, `valor_total`, `quantidade` |
 | `itens_entregas_unidades` | por unidade física | **sem campo de valor** — só referencia `nota_fiscal_id` |
-| `nf_checklist_documentos` | item configurável global/por contrato | sem valor; define o documento esperado |
+| `nf_checklist_documentos` | catálogo de documentações do checklist | sem valor; define nome, descrição, ordem automática e escopo global |
+| `nf_checklist_documento_contratos` | documentação + contratos selecionados | vínculo N:N, sem valor |
 | `nf_checklist_marcacoes` | contrato + documento + competência mensal | `concluido`, responsável e data da marcação |
 
 `notas_fiscais` referencia: `fornecedor_id`, `contrato_id`, `processo_id`, `emenda_id`.
 `nota_fiscal_itens` referencia: `nota_fiscal_id`, `item_id`, `emenda_id`, `emenda_item_id`, `empenho_id`.
-`nf_checklist_documentos` pode referenciar `contrato_id`; itens sem contrato valem para
-todos os contratos elegíveis da mesma seção. `nf_checklist_marcacoes` referencia o contrato
-e o documento e possui unicidade por competência mensal.
+`nf_checklist_documentos.aplica_todos` define os itens globais da seção. Quando esse campo
+é falso, os contratos que recebem a documentação ficam em
+`nf_checklist_documento_contratos`. `nf_checklist_marcacoes` referencia o contrato e o
+documento e possui unicidade por competência mensal.
 
 `notas_fiscais.medicao_id` possui índice único parcial: uma medição pode estar vinculada a
 no máximo uma NF. Como cada NF também guarda apenas um `medicao_id`, o vínculo é 1:1.

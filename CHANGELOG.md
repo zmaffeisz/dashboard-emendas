@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Documentações mensais por vários contratos:** o gerenciador do checklist agora cadastra
+  cada documentação uma única vez e permite vinculá-la a vários contratos por seleção,
+  mantendo também a opção de exibição em todos os contratos de manutenção. A ordem deixou
+  de ser digitada pelo usuário e passa a ser calculada automaticamente; os vínculos e as
+  marcações mensais já existentes são preservados.
 - **Emenda planejada para futura Ata:** itens de Emenda podem ser vinculados a itens/lotes
   de uma Ata de Registro de Preços ainda em licitação sem criar reserva, requisição, AF ou
   consumo de saldo. Ao gerar a Ata, o usuário decide vínculo a vínculo se cria a
