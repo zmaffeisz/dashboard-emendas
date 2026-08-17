@@ -661,6 +661,10 @@ function _ataDetalheCampo(label,valor){
   return `<div class="ata-exec-detail-field"><span>${_sanEsc(label)}</span><strong>${_sanEsc(String(valor))}</strong></div>`;
 }
 
+function _ataOrigemRecursoLabel(origem){
+  return ({emenda:'Emenda parlamentar',recurso_proprio:'Recurso próprio',carona:'Carona'})[origem]||origem||'Não informada';
+}
+
 function _renderHistoricoReajustesExecAta(execId){
   const registros=atasExecReajustes
     .filter(r=>r.status==='ATIVO'&&String(r.ata_execucao_id)===String(execId))
@@ -672,7 +676,7 @@ function _renderHistoricoReajustesExecAta(execId){
       const regra=atasReajustes.find(x=>String(x.id)===String(r.ata_reajuste_id))||{};
       return `<div style="font-size:11px;color:var(--text2);line-height:1.55">
         <strong style="color:var(--text)">Reajuste ${regra.data_vigencia?`desde ${fmtDate(regra.data_vigencia)}`:''}</strong>
-        · ${r.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'}
+        · ${_ataOrigemRecursoLabel(r.origem_recurso)}
         · diferença ${fmtFull(r.valor_reajuste_total)}
         · empenho ${_sanEsc(r.empenho||'—')}
         · NF ${_sanEsc(r.nota_fiscal||'—')}
@@ -690,7 +694,7 @@ function _renderDetalheExecAta(exec){
   const emendaCab=em.emendas||{};
   const empenhos=[...new Set([exec.empenho,...detalhe.empenhos.map(v=>v.empenhos?.numero+(v.empenhos?.ano?'/'+v.empenhos.ano:''))].filter(Boolean))].join('; ');
   const resumo=[
-    ['Origem do recurso',exec.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'],
+    ['Origem do recurso',_ataOrigemRecursoLabel(exec.origem_recurso)],
     ['Empresa',exec.empresa],['CNPJ',exec.cnpj],['Contrato / ATA',exec.sim],['Processo / CPL',exec.cpl],
     ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Unidade',exec.unidade],['Quantidade',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
     ['Empenho(s)',empenhos],['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],
@@ -723,7 +727,7 @@ function verTudoUnidadeExecAta(execId,unidadeId){
     ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Patrimônio',u.patrimonio],['Número de série',u.numero_serie],['Sequência da unidade',u.unidade_seq],
     ['Unidade de destino',exec.unidade],['Empresa / Fornecedor',exec.empresa],['CNPJ',exec.cnpj],['Processo / CPL',exec.cpl],
     ['Contrato / ATA',exec.sim],['Quantidade da execução',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
-    ['Origem do recurso',exec.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'],['Empenho',exec.empenho],
+    ['Origem do recurso',_ataOrigemRecursoLabel(exec.origem_recurso)],['Empenho',exec.empenho],
     ['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],['Data do recebimento',u.recebido_em||exec.dt_entrega],
     ['Recebido por',u.recebido_por],['Nota fiscal',nf.numero||exec.nf],['Data da NF',nf.data_emissao],['Valor da NF',nf.valor_total?_fmtBRL(nf.valor_total):''],
     ['Emenda',ec.emenda?`${ec.emenda}${ec.ano?'/'+ec.ano:''}`:''],['Parlamentar',ec.parlamentar],['Item da Emenda',em.item],
@@ -1534,7 +1538,7 @@ async function abrirModalNovaExec(){
   itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
   document.getElementById("ne2-cpl").value="";
   document.getElementById("ne2-sim").value="";
-  ["ne2-unidade","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["ne2-unidade","ne2-codigo-siam-secretaria","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   // Fase 12: popular emendas e voltar à origem padrão (emenda)
   if(!_neEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar,unidade,unidade_id').order('ano',{ascending:false}); _neEmendasCache=data||[]; }
   document.getElementById("ne2-emenda").innerHTML='<option value="">Selecione a emenda...</option>'+_neEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join("");
@@ -1547,12 +1551,17 @@ async function abrirModalNovaExec(){
 let _neEmendasCache=[];
 function _neOrigem(){ return document.querySelector('input[name="ne2-origem"]:checked')?.value||'emenda'; }
 function neOrigemChange(){
-  const emenda=_neOrigem()==='emenda';
+  const origem=_neOrigem();
+  const emenda=origem==='emenda';
+  const carona=origem==='carona';
   document.getElementById("ne2-emenda-wrap").style.display=emenda?'':'none';
   document.getElementById("ne2-emenda-item-wrap").style.display=emenda?'':'none';
+  document.getElementById("ne2-unidade-wrap").classList.toggle('full',!carona);
+  document.getElementById("ne2-codigo-siam-secretaria-wrap").style.display=carona?'':'none';
   const uni=document.getElementById("ne2-unidade");
   uni.readOnly=emenda; uni.style.background=emenda?'var(--surface2)':'';
   document.getElementById("ne2-unidade-auto").style.display=emenda?'block':'none';
+  if(!carona) document.getElementById("ne2-codigo-siam-secretaria").value='';
   if(!emenda){ uni.value=''; }
 }
 async function _neEmendaItensJaUsados(ids,{incluirPlanejamento=true}={}){
@@ -1687,9 +1696,11 @@ async function salvarNovaExec(){
   const unidade=document.getElementById("ne2-unidade").value.trim();
   const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
   const origem=_neOrigem();
+  const codigoSiamSecretaria=document.getElementById("ne2-codigo-siam-secretaria").value.trim();
   const emendaId=document.getElementById("ne2-emenda").value||null;
   const emendaItemId=document.getElementById("ne2-emenda-item").value||null;
   if(!at||!unidade||!qtde){showMsg("ne2","Selecione o item da ATA e preencha Unidade e Quantidade (*)","err");return}
+  if(origem==='carona'&&!codigoSiamSecretaria){showMsg("ne2","Informe o Código SIAM da secretaria (*)","err");return}
   if(origem==='emenda' && (!emendaId||!emendaItemId)){showMsg("ne2","Selecione a emenda e o item da emenda (*)","err");return}
   if(origem==='emenda' && emendaItemId){
     const usados=await _neEmendaItensJaUsados([emendaItemId],{incluirPlanejamento:false});
@@ -1712,12 +1723,14 @@ async function salvarNovaExec(){
   const dados={ata_item_id:at.id,unidade,qtde,
     valor:parseFloat(document.getElementById("ne2-valor").value)||0,
     origem_recurso:origem,
+    codigo_siam_secretaria:origem==='carona'?codigoSiamSecretaria:null,
     emenda_id:origem==='emenda'?emendaId:null,
     emenda_item_id:origem==='emenda'?emendaItemId:null,
     data_af:document.getElementById("ne2-data-af").value||null,
     dt_entrega:document.getElementById("ne2-dt-entrega").value||null
   };
-  const {data,error}=await sb.rpc("criar_solicitacao_ata_execucao",{
+  const rpcNome=origem==='carona'?'criar_solicitacao_ata_execucao_carona':'criar_solicitacao_ata_execucao';
+  const rpcArgs={
     p_ata_item_id:dados.ata_item_id,
     p_unidade:dados.unidade,
     p_qtde:dados.qtde,
@@ -1727,7 +1740,9 @@ async function salvarNovaExec(){
     p_emenda_item_id:dados.emenda_item_id,
     p_data_af:dados.data_af,
     p_dt_entrega:dados.dt_entrega
-  });
+  };
+  if(origem==='carona') rpcArgs.p_codigo_siam_secretaria=dados.codigo_siam_secretaria;
+  const {data,error}=await sb.rpc(rpcNome,rpcArgs);
   btn.disabled=false;btn.textContent="Salvar";
   if(error){showMsg("ne2","Erro: "+error.message,"err");return;}
   const salvo=Array.isArray(data)?data[0]:data;

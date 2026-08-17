@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Pedidos de Carona em Atas de RP:** a nova origem de recurso **Carona** pode ser
+  selecionada ao criar uma solicitação de item de ATA. O modal segue o fluxo de Recurso
+  próprio, sem vínculo com Emenda, e exige o **Código SIAM** da secretaria solicitante ao
+  lado da unidade. A origem e o código são preservados separadamente para regras e
+  relatórios futuros.
 - **Movimentações por unidade física no Inventário:** cada item agora possui estado atual e
   linha do tempo próprios para transferência, empréstimo, devolução e baixa, sempre com
   documento comprobatório privado. A ficha “Vida do item” foi reorganizada em Visão geral,
