@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Aceite de Carona sem valor global da Ata:** o PDF mantém somente o valor unitário e o
+  valor total autorizado da solicitação, sem exibir o valor global do instrumento.
+- **Correção de PDF do aceite de Carona:** textos vindos do cadastro com quebras de linha
+  são normalizados antes da geração. Isso evita o espaçamento inválido que interrompia a
+  renderização do documento antes da tabela e das assinaturas.
 - **Solicitante da Carona em cópia na AF:** o comando Preparar e-mail do Controle de
   Entregas inclui em Cc o e-mail cadastrado do solicitante quando a execução de ATA veio de
   Carona, tanto individualmente quanto em lote, sem duplicar destinatários.

@@ -743,16 +743,20 @@ function _ataDataExtenso(data=new Date()){
   return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'long',year:'numeric'}).format(data);
 }
 
+function _ataTextoPdf(valor){
+  return String(valor??'').replace(/\s+/g,' ').trim();
+}
+
 function montarTextoAceiteCarona(exec){
   const quantidade=Number(exec?.qtde)||0;
   const total=Number(exec?.valor)||0;
   const unitario=quantidade?total/quantidade:(Number(exec?.valor_unit_registrado)||0);
   const ata=_ataNumeroDocumento(exec?.sim,'ata');
   const cpl=_ataNumeroDocumento(exec?.cpl,'cpl');
-  const unidade=String(exec?.unidade||'').trim()||'unidade solicitante';
-  const codigo=String(exec?.codigo_siam_secretaria||'').trim()||'não informado';
-  const item=String(exec?.item||'').trim()||'item registrado';
-  const marca=String(exec?.marca_modelo||'').trim();
+  const unidade=_ataTextoPdf(exec?.unidade)||'unidade solicitante';
+  const codigo=_ataTextoPdf(exec?.codigo_siam_secretaria)||'não informado';
+  const item=_ataTextoPdf(exec?.item)||'item registrado';
+  const marca=_ataTextoPdf(exec?.marca_modelo);
   const qtdTexto=_ataQuantidadeAceite(quantidade);
   const unidadeTexto=quantidade===1?'unidade':'unidades';
   return 'Considerando a solicitação apresentada pela '+unidade+', identificada pelo Código SIAM nº '+codigo+
@@ -787,7 +791,6 @@ async function _ataCriarPdfAceiteCarona(exec,secretario,fiscal,opcoes={}){
   const quantidade=Number(exec.qtde)||0;
   const total=Number(exec.valor)||0;
   const unitario=quantidade?total/quantidade:(Number(exec.valor_unit_registrado)||0);
-  const valorAta=Number(exec.contrato?.valor_atual_num??exec.contrato?.valor_total_num??exec.contrato?.valor_inicial_num)||0;
   const cnpj=_ataFormatarCnpj(exec.cnpj);
   const texto=montarTextoAceiteCarona(exec);
   const setFonte=(tamanho=9,estilo='normal',cor=[20,20,20])=>{
@@ -805,21 +808,23 @@ async function _ataCriarPdfAceiteCarona(exec,secretario,fiscal,opcoes={}){
 
   setFonte(10,'normal');
   const linhasTexto=pdf.splitTextToSize(texto,largura);
-  pdf.text(linhasTexto,x,92,{align:'justify',maxWidth:largura,lineHeightFactor:1.42});
+  // O alinhamento justificado do jsPDF produz `Infinity Tw` quando um dado contém
+  // quebra de linha e cria uma linha com uma única palavra. O texto é normalizado
+  // acima e renderizado à esquerda para manter o PDF válido em qualquer leitor.
+  pdf.text(linhasTexto,x,92,{maxWidth:largura,lineHeightFactor:1.42});
   let y=92+(linhasTexto.length*5.05)+7;
 
   const detalhes=[
-    ['Unidade solicitante',exec.unidade],
-    ['Código SIAM da unidade',exec.codigo_siam_secretaria],
-    ['E-mail do solicitante',exec.email_solicitante],
+    ['Unidade solicitante',_ataTextoPdf(exec.unidade)],
+    ['Código SIAM da unidade',_ataTextoPdf(exec.codigo_siam_secretaria)],
+    ['E-mail do solicitante',_ataTextoPdf(exec.email_solicitante)],
     ['Processo / CPL','CPL nº '+cpl],
     ['Ata de Registro de Preços','Ata nº '+ata],
-    ['Item',exec.item+(exec.marca_modelo?' - '+exec.marca_modelo:'')],
+    ['Item',[_ataTextoPdf(exec.item),_ataTextoPdf(exec.marca_modelo)].filter(Boolean).join(' - ')],
     ['Quantidade',_ataQuantidadeAceite(quantidade)+' '+(quantidade===1?'unidade':'unidades')],
     ['Valor unitário',fmtFull(unitario)],
     ['Valor total autorizado',fmtFull(total)],
-    ['Valor global da Ata',valorAta?fmtFull(valorAta):''],
-    ['Fornecedor',exec.empresa],
+    ['Fornecedor',_ataTextoPdf(exec.empresa)],
     ['CNPJ',cnpj],
     ['Empenho',exec.empenho],
     ['AF',exec.af_numero]
@@ -828,7 +833,7 @@ async function _ataCriarPdfAceiteCarona(exec,secretario,fiscal,opcoes={}){
   detalhes.forEach(([label,valor])=>{
     const labelLargura=42;
     setFonte(8.1,'normal');
-    const linhas=pdf.splitTextToSize(String(valor),largura-labelLargura-4);
+    const linhas=pdf.splitTextToSize(_ataTextoPdf(valor),largura-labelLargura-4);
     const altura=Math.max(7,linhas.length*3.6+3);
     pdf.setFillColor(247,247,247);
     pdf.setDrawColor(190,190,190);
@@ -848,13 +853,13 @@ async function _ataCriarPdfAceiteCarona(exec,secretario,fiscal,opcoes={}){
   pdf.line(esquerda,assinaturaY,esquerda+coluna,assinaturaY);
   pdf.line(direita,assinaturaY,direita+coluna,assinaturaY);
   setFonte(9,'bold');
-  const fiscalLinhas=pdf.splitTextToSize(fiscal,coluna-4);
-  const secretarioLinhas=pdf.splitTextToSize(secretario.nome,coluna-4);
+  const fiscalLinhas=pdf.splitTextToSize(_ataTextoPdf(fiscal),coluna-4);
+  const secretarioLinhas=pdf.splitTextToSize(_ataTextoPdf(secretario.nome),coluna-4);
   pdf.text(fiscalLinhas,esquerda+coluna/2,assinaturaY+5,{align:'center'});
   pdf.text(secretarioLinhas,direita+coluna/2,assinaturaY+5,{align:'center'});
   setFonte(9,'normal');
   pdf.text('Fiscal de Contrato',esquerda+coluna/2,assinaturaY+5+(fiscalLinhas.length*4),{align:'center'});
-  pdf.text(String(secretario.cargo||''),direita+coluna/2,assinaturaY+5+(secretarioLinhas.length*4),{align:'center',maxWidth:coluna});
+  pdf.text(_ataTextoPdf(secretario.cargo),direita+coluna/2,assinaturaY+5+(secretarioLinhas.length*4),{align:'center',maxWidth:coluna});
 
   const nomeArquivo=('aceite_carona_ata_'+ata+'_siam_'+exec.codigo_siam_secretaria+'_'+_ataHojeISO()+'.pdf')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_');
