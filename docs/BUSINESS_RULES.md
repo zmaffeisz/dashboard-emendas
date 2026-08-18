@@ -272,6 +272,12 @@
 
 - Ao renovar uma ATA com **reiniciar saldo**, nenhuma execução histórica é apagada. A renovação grava `atas_itens.saldo_reiniciado_em` para todos os itens do contrato; o saldo do ciclo renovado considera somente solicitações a partir desse marco.
 
+- Uma Ata de RP pode ser renovada **uma única vez**. A grade de itens identifica todas as
+  linhas de uma ata que já possua segunda vigência ou histórico de prorrogação/renovação,
+  exibe **JÁ RENOVADA · LIMITE ATINGIDO** em cada item e não oferece novamente a ação de
+  prorrogar. O salvamento também revalida o histórico no banco para bloquear uma tela
+  desatualizada.
+
 - Uma solicitação de ATA pode ser excluída antes da AF somente se não houver AF/data/previsão, NF, recebimento, patrimônio, entrega na unidade, termo, unidade física ou sanção. `obs_prazo` isolada, inclusive de importação, é apenas informativa e não bloqueia a exclusão.
 
 - AF de **aquisição** gera `itens_entregas` (autorizada vs. recebida).

@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Aviso e limite de renovação nas Atas de RP:** cada item de uma ata que já utilizou sua
+  única renovação passa a exibir **JÁ RENOVADA · LIMITE ATINGIDO**. A ação de prorrogar é
+  removida dessas linhas e o salvamento reconsulta as vigências e o histórico antes de
+  aceitar a operação, evitando uma segunda renovação por tela desatualizada.
 - **Pedidos de Carona em Atas de RP:** a nova origem de recurso **Carona** pode ser
   selecionada ao criar uma solicitação de item de ATA. O modal segue o fluxo de Recurso
   próprio, sem vínculo com Emenda, e exige o **Código SIAM** da secretaria solicitante ao

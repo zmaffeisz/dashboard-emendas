@@ -1,6 +1,8 @@
 // ═══ ATAS ═══
 let atasReajustes=[];
 let atasExecReajustes=[];
+let atasVigencias=[];
+let atasHistoricoRenovacoes=[];
 
 function _ataHojeISO(){
   const d=new Date();
@@ -40,13 +42,16 @@ async function loadAtas(){
   document.getElementById("atas-loading").style.display="block";
   document.getElementById("atas-main").style.display="none";
   try{
-    const [r1,r2,r3,r4,r5,r6]=await Promise.all([
+    const [r1,r2,r3,r4,r5,r6,r7,r8]=await Promise.all([
       sb.from("atas_itens").select("*").order("created_at"),
       sb.from("atas_execucao").select("*").order("created_at",{ascending:false}),
       sb.from("contratos").select("*").eq("tipo_instrumento","ATA"),
       sb.from("fornecedores").select("id,razao_social,cnpj_normalizado"),
       sb.from("atas_item_reajustes").select("*").order("data_vigencia"),
-      sb.from("atas_execucao_reajustes").select("*").eq("status","ATIVO").order("criado_em",{ascending:false})
+      sb.from("atas_execucao_reajustes").select("*").eq("status","ATIVO").order("criado_em",{ascending:false}),
+      sb.from("contratos_vigencias").select("contrato_id,numero,data_inicio,data_fim,created_at"),
+      sb.from("contratos_historico").select("contrato_id,tipo,data_evento,vigencia_nova_fim,created_at")
+        .or("tipo.ilike.%prorroga%,tipo.ilike.%renova%")
     ]);
     if(r1.error) throw r1.error;
     if(r2.error) throw r2.error;
@@ -54,8 +59,12 @@ async function loadAtas(){
     if(r4.error) throw r4.error;
     if(r5.error) throw r5.error;
     if(r6.error) throw r6.error;
+    if(r7.error) throw r7.error;
+    if(r8.error) throw r8.error;
     atasReajustes=r5.data||[];
     atasExecReajustes=r6.data||[];
+    atasVigencias=r7.data||[];
+    atasHistoricoRenovacoes=r8.data||[];
     const fornecedorPorId=new Map((r4.data||[]).map(f=>[String(f.id),f]));
     atasContratos=(r3.data||[])
       .map(c=>{
@@ -66,9 +75,28 @@ async function loadAtas(){
       };
     });
     const contratoPorId=new Map(atasContratos.map(c=>[String(c.id),c]));
+    const renovacaoPorContrato=new Map();
+    atasContratos.forEach(contrato=>{
+      const contratoId=String(contrato.id);
+      const vigencias=atasVigencias
+        .filter(v=>String(v.contrato_id)===contratoId)
+        .sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)||String(a.data_inicio||a.created_at||'').localeCompare(String(b.data_inicio||b.created_at||'')));
+      const historicos=atasHistoricoRenovacoes
+        .filter(h=>String(h.contrato_id)===contratoId)
+        .sort((a,b)=>String(b.data_evento||b.created_at||'').localeCompare(String(a.data_evento||a.created_at||'')));
+      const segundaVigencia=vigencias.find(v=>Number(v.numero)>=2)||(vigencias.length>=2?vigencias[1]:null);
+      const historico=historicos[0]||null;
+      if(segundaVigencia||historico){
+        renovacaoPorContrato.set(contratoId,{
+          data:historico?.data_evento||segundaVigencia?.data_inicio||null,
+          ate:historico?.vigencia_nova_fim||segundaVigencia?.data_fim||contrato.vencimento||null
+        });
+      }
+    });
     atasItens=(r1.data||[]).map(r=>{
       const contrato=contratoPorId.get(String(r.contrato_id));
       if(!contrato) return null;
+      const renovacao=renovacaoPorContrato.get(String(r.contrato_id))||null;
       // Um contrato encerrado prevalece para todos os itens. Enquanto estiver vigente,
       // cada item da ATA controla o seu próprio status de renovação/encerramento.
       const statusContrato=(contrato.status||"VIGENTE").trim();
@@ -89,6 +117,9 @@ async function loadAtas(){
       data_base_reajuste:contrato.data_base_reajuste||null,
       vencimento:(contrato.vencimento||"").trim(),
       status:statusItem,
+      ata_renovada:!!renovacao,
+      renovada_em:renovacao?.data||null,
+      renovada_ate:renovacao?.ate||null,
       saldo_reiniciado_em:r.saldo_reiniciado_em||null,
       empresa:contrato.empresa,
       prazo_entrega:parseInt(r.prazo_entrega)||0,
@@ -421,7 +452,10 @@ function filtrarAtas(){
     return`<tr>
       <td style="font-size:11px;white-space:nowrap">${r.cpl}</td>
       <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
-      <td class="td-trunc" title="${r.item}" style="max-width:220px">${r.item}</td>
+      <td class="td-trunc" title="${r.item}" style="max-width:220px">
+        ${r.item}
+        ${r.ata_renovada?`<div style="margin-top:4px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);font-size:9px;white-space:nowrap" title="Esta Ata de RP já utilizou sua única renovação${r.renovada_ate?` e está vigente até ${fmtDate(r.renovada_ate)}`:''}.">✓ JÁ RENOVADA · LIMITE ATINGIDO</span></div>`:''}
+      </td>
       <td style="font-size:11px">${r.marca||"—"}</td>
       <td style="text-align:right">${r.qtde_contratada}</td>
       <td style="text-align:right">
@@ -444,7 +478,7 @@ function filtrarAtas(){
         <button onclick="abrirModalEditAta('${r.id}')" class="btn-secondary btn-compact" title="Adicionar solicitação">✏️ Solicitação</button>
         ${kebabMenuHtml([
           podeEditar('atas')?{label:'📈 Reajustar',onclick:`abrirReajusteItemAta('${r.id}')`,title:'Registrar novo valor para este item a partir de uma data'}:null,
-          {label:'🔄 Prorrogar',onclick:`renovarAta('${r.id}')`,title:'Prorrogar vigência do contrato'},
+          !r.ata_renovada?{label:'🔄 Prorrogar',onclick:`renovarAta('${r.id}')`,title:'Prorrogar vigência do contrato (permitido uma única vez)'}:null,
           {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
           _isAdmin()?{label:'✏️ Editar',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Editar dados do contrato (fiscalização, seção, empresa, objeto...)'}:null,
           podeEditar('contratos')?{label:'🔗 Vinculações',onclick:`_ataAbrirEmailContrato('${r.contrato_id}')`,title:'Configurar e-mail e prefixo de chamado'}:null,
@@ -1118,6 +1152,10 @@ function renovarAta(itemId){
   if(bloquearSeVisualiz('atas')) return;
   const at=_resolverAtaItemRef(itemId);
   if(!at) return;
+  if(at.ata_renovada){
+    alert(`Esta Ata de RP já foi renovada${at.renovada_ate?` até ${fmtDate(at.renovada_ate)}`:''}. A renovação é permitida uma única vez.`);
+    return;
+  }
   _renovarItemId=at.id;
   const vencAtual=at.vencimento||"";
   document.getElementById("rv-info").textContent=`${at.cpl} · ${at.sim} · ${at.item}`;
@@ -1165,6 +1203,19 @@ async function salvarRenovacao(){
   btn.disabled=true;btn.textContent="Salvando...";
   const reiniciarSaldo=document.getElementById("rv-reiniciar").checked;
   try{
+    // Revalida no banco imediatamente antes de salvar para evitar uma segunda
+    // renovação quando a tela estiver desatualizada em outra sessão.
+    const [vigenciasRes,historicoRes]=await Promise.all([
+      sb.from("contratos_vigencias").select("id,numero").eq("contrato_id",at.contrato_id).limit(2),
+      sb.from("contratos_historico").select("id,tipo").eq("contrato_id",at.contrato_id)
+        .or("tipo.ilike.%prorroga%,tipo.ilike.%renova%").limit(1)
+    ]);
+    if(vigenciasRes.error) throw vigenciasRes.error;
+    if(historicoRes.error) throw historicoRes.error;
+    const vigencias=vigenciasRes.data||[];
+    const jaRenovada=vigencias.some(v=>Number(v.numero)>=2)||vigencias.length>=2||(historicoRes.data||[]).length>0;
+    if(jaRenovada) throw new Error("Esta Ata de RP já foi renovada. A renovação é permitida uma única vez.");
+
     const {error:errContrato}=await sb.from("contratos")
       .update({vencimento:novaFormatada,status:novoStatus})
       .eq("id",at.contrato_id);
@@ -1181,7 +1232,7 @@ async function salvarRenovacao(){
       contrato_id:at.contrato_id,
       tipo:"Prorrogação de ATA",
       data_evento:novaData,
-      obs:`Nova data fim: ${novaFormatada}; saldo ${reiniciarSaldo?`reiniciado em ${novaData}, com histórico preservado`:"mantido"}${alterarValor?`; valor unitário: ${novoValor}`:""}`
+      obs:`Nova data fim: ${novaFormatada}; saldo ${reiniciarSaldo?`reiniciado em ${novaData}, com histórico preservado`:"mantido"}`
     });
     if(errHist) throw errHist;
     await Promise.all([loadAtas(),contratosCarregado?loadContratos():Promise.resolve()]);
