@@ -1127,6 +1127,7 @@ async function loadItensEntregas(){
     out.push({
       tipo:'ATA', exec_id:r.id, ata_item_id:r.ata_item_id||null, emenda_id:r.emenda_id||null, emenda_item_id:r.emenda_item_id||null, processo:r.cpl||ai.cpl||'', contrato:r.sim||ai.sim||'', contrato_id:ai.contrato_id||null,
       empresa:ai.empresa||'', item:r.item||ai.item||'', marca:ai.marca||'', modelo:'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:empAta,
+      origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
       valor_item:(Number(r.valor)&&Number(r.qtde))?(Number(r.valor)/Number(r.qtde)):(Number(ai.valor_unit)||0),
@@ -1403,6 +1404,28 @@ function _ceAdvLockKey(r){
   const numero=String(r?.contrato||'').trim();
   return numero?`numero:${numero}`:'';
 }
+function _ceSepararEmails(...fontes){
+  const unicos=new Map();
+  fontes.flatMap(fonte=>Array.isArray(fonte)?fonte:[fonte]).forEach(fonte=>{
+    String(fonte||'').split(/[;,]/).map(email=>email.trim()).filter(Boolean).forEach(email=>{
+      const chave=email.toLowerCase();
+      if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(chave)&&!unicos.has(chave)) unicos.set(chave,email);
+    });
+  });
+  return [...unicos.values()];
+}
+function _ceCcEmailAF(rows,emailsPara=[]){
+  const destinatarios=new Set(_ceSepararEmails(emailsPara).map(email=>email.toLowerCase()));
+  const solicitantes=(rows||[])
+    .filter(row=>row?.tipo==='ATA'&&String(row.origem_recurso||'').toLowerCase()==='carona')
+    .map(row=>row.email_solicitante);
+  return _ceSepararEmails(
+    'sueq.equipamentos@sorocaba.sp.gov.br',
+    'patrimonio@sorocaba.sp.gov.br',
+    solicitantes
+  ).filter(email=>!destinatarios.has(email.toLowerCase()));
+}
+window._ceCcEmailAF=_ceCcEmailAF;
 async function abrirEmailAF(key){
   const row=entregasRows.find(r=>_ceRowKey(r)===key);
   if(!row?.af_numero||!row.contrato_id){ if(window.toast) toast('AF ou contrato não encontrado.','error'); return; }
@@ -1413,7 +1436,8 @@ async function abrirEmailAF(key){
   const contrato=c?.numero_contrato||row.contrato||'—', cpl=row.processo||c?.cpl||'—', empresa=c?.prestador||row.empresa||'—';
   const assunto=`Autorização de Fornecimento – AF ${row.af_numero} – CPL ${cpl}`;
   const corpo=['Prezado(a),','',`Encaminhamos, em anexo, a Autorização de Fornecimento nº ${row.af_numero}, referente ao CPL ${cpl} e ao Contrato SIAM nº ${contrato}.`,'','Resumo do pedido:','',`Fornecedor: ${empresa}`,`Empenho: ${row.empenho||'—'}`,'','Itens autorizados:',`• ${row.item||'Item'} — Quantidade: ${qtd||'—'} | Valor: ${total?fmtFull(total):'—'} | Empenho: ${row.empenho||'—'}`,'',`Valor total: ${total?fmtFull(total):'—'}`,`Data limite para entrega: ${row.limiteISO?fmtDate(row.limiteISO):'—'}`,'','A entrega deverá ser realizada exclusivamente mediante agendamento prévio com o Almoxarifado de Bens (Patrimônio), pelo e-mail patrimonio@sorocaba.sp.gov.br ou telefone (15) 3333-1974.','','Não realizar a entrega sem agendamento prévio.','',`Lembramos que a nota fiscal deverá informar o CPL ${cpl}, o Contrato SIAM nº ${contrato}, o empenho e os dados bancários para pagamento.`,'','Atenciosamente,','','Secretaria da Saúde','Prefeitura de Sorocaba'].join('\r\n');
-  window.location.href=`mailto:${encodeURIComponent(para.join(','))}?cc=${encodeURIComponent('sueq.equipamentos@sorocaba.sp.gov.br,patrimonio@sorocaba.sp.gov.br')}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  const cc=_ceCcEmailAF([row],para);
+  window.location.href=`mailto:${encodeURIComponent(para.join(','))}?cc=${encodeURIComponent(cc.join(','))}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   if(window.toast) toast('E-mail preparado. Anexe o PDF da AF antes de enviar.','success');
 }
 async function abrirEmailAFsLote(){
@@ -1431,7 +1455,8 @@ async function abrirEmailAFsLote(){
   const empenhos=[...new Set(rows.map(r=>r.empenho).filter(Boolean))], total=rows.reduce((s,r)=>s+(Number(r.qtde)||0)*(Number(r.valor_item)||0),0);
   const corpo=['Prezado(a),','',`Encaminhamos, em anexo, a Autorização de Fornecimento nº ${primeiro.af_numero}, referente ao CPL ${cpl} e ao Contrato SIAM nº ${contrato}.`,'','Resumo do pedido:','',`Fornecedor: ${c?.prestador||primeiro.empresa||'—'}`,`Empenhos: ${empenhos.join(', ')}`,'','Itens autorizados:',...itens,'',`Valor total: ${total?fmtFull(total):'—'}`,`Data limite para entrega: ${primeiro.limiteISO?fmtDate(primeiro.limiteISO):'—'}`,'','A entrega deverá ser realizada exclusivamente mediante agendamento prévio com o Almoxarifado de Bens (Patrimônio), pelo e-mail patrimonio@sorocaba.sp.gov.br ou telefone (15) 3333-1974.','','Não realizar a entrega sem agendamento prévio.','',`Lembramos que a nota fiscal deverá informar o CPL ${cpl}, o Contrato SIAM nº ${contrato}, os respectivos empenhos e os dados bancários para pagamento.`,'','Atenciosamente,','','Secretaria da Saúde','Prefeitura de Sorocaba'].join('\r\n');
   const assunto=`Autorização de Fornecimento – AF ${primeiro.af_numero} – CPL ${cpl}`;
-  window.location.href=`mailto:${encodeURIComponent(para.join(','))}?cc=${encodeURIComponent('sueq.equipamentos@sorocaba.sp.gov.br,patrimonio@sorocaba.sp.gov.br')}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  const cc=_ceCcEmailAF(rows,para);
+  window.location.href=`mailto:${encodeURIComponent(para.join(','))}?cc=${encodeURIComponent(cc.join(','))}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   if(window.toast) toast('E-mail preparado. Anexe o PDF da AF antes de enviar.','success');
 }
 window.abrirEmailAF=abrirEmailAF;

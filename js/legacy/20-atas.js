@@ -154,6 +154,7 @@ async function loadAtas(){
       obs_prazo:(r.obs_prazo||"").trim(),
       origem_recurso:(r.origem_recurso||"").trim(),
       codigo_siam_secretaria:(r.codigo_siam_secretaria||"").trim(),
+      email_solicitante:(r.email_solicitante||"").trim(),
       emenda_id:r.emenda_id||null,
       emenda_item_id:r.emenda_item_id||null,
       af_numero:(r.af_numero||"").trim(),
@@ -507,7 +508,7 @@ function filtrarAtas(){
     const rEncerrado=r.status&&r.status.toUpperCase().startsWith("ENCERRADO");
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
-    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,_ataOrigemRecursoLabel(r.origem_recurso)].join(' '),busca)) return false;
+    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,r.email_solicitante,_ataOrigemRecursoLabel(r.origem_recurso)].join(' '),busca)) return false;
     return true;
   });
   // Ordenação execuções (padrão: data_af mais recente no topo)
@@ -570,7 +571,7 @@ function filtrarExecs(){
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
     if(_filtroPendentes&&r.dt_entrega) return false;
-    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,_ataOrigemRecursoLabel(r.origem_recurso),r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
+    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,r.email_solicitante,_ataOrigemRecursoLabel(r.origem_recurso),r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
     return true;
   });
   // Ordenação
@@ -810,6 +811,7 @@ async function _ataCriarPdfAceiteCarona(exec,secretario,fiscal,opcoes={}){
   const detalhes=[
     ['Unidade solicitante',exec.unidade],
     ['Código SIAM da unidade',exec.codigo_siam_secretaria],
+    ['E-mail do solicitante',exec.email_solicitante],
     ['Processo / CPL','CPL nº '+cpl],
     ['Ata de Registro de Preços','Ata nº '+ata],
     ['Item',exec.item+(exec.marca_modelo?' - '+exec.marca_modelo:'')],
@@ -924,7 +926,7 @@ function _renderDetalheExecAta(exec){
   const resumo=[
     ['Origem do recurso',_ataOrigemRecursoLabel(exec.origem_recurso)],
     ['Empresa',exec.empresa],['CNPJ',exec.cnpj],['Contrato / ATA',exec.sim],['Processo / CPL',exec.cpl],
-    ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Unidade',exec.unidade],['Quantidade',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
+    ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Unidade',exec.unidade],['Código SIAM',exec.codigo_siam_secretaria],['E-mail do solicitante',exec.email_solicitante],['Quantidade',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
     ['Empenho(s)',empenhos],['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],
     ['Recebimento',exec.dt_entrega],['Nota fiscal',exec.nf],['Possui patrimônio',exec.possui_patrimonio===true?'Sim':exec.possui_patrimonio===false?'Não':'Não informado'],
     ['Entrega na unidade',exec.data_entrega_unidade],['Responsável na unidade',exec.termo_responsavel],['Cargo',exec.termo_cargo],
@@ -955,7 +957,7 @@ function verTudoUnidadeExecAta(execId,unidadeId){
     ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Patrimônio',u.patrimonio],['Número de série',u.numero_serie],['Sequência da unidade',u.unidade_seq],
     ['Unidade de destino',exec.unidade],['Empresa / Fornecedor',exec.empresa],['CNPJ',exec.cnpj],['Processo / CPL',exec.cpl],
     ['Contrato / ATA',exec.sim],['Quantidade da execução',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
-    ['Origem do recurso',_ataOrigemRecursoLabel(exec.origem_recurso)],['Empenho',exec.empenho],
+    ['Origem do recurso',_ataOrigemRecursoLabel(exec.origem_recurso)],['Código SIAM',exec.codigo_siam_secretaria],['E-mail do solicitante',exec.email_solicitante],['Empenho',exec.empenho],
     ['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],['Data do recebimento',u.recebido_em||exec.dt_entrega],
     ['Recebido por',u.recebido_por],['Nota fiscal',nf.numero||exec.nf],['Data da NF',nf.data_emissao],['Valor da NF',nf.valor_total?_fmtBRL(nf.valor_total):''],
     ['Emenda',ec.emenda?`${ec.emenda}${ec.ano?'/'+ec.ano:''}`:''],['Parlamentar',ec.parlamentar],['Item da Emenda',em.item],
@@ -1789,7 +1791,7 @@ async function abrirModalNovaExec(){
   itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
   document.getElementById("ne2-cpl").value="";
   document.getElementById("ne2-sim").value="";
-  ["ne2-unidade","ne2-secretaria","ne2-codigo-siam-secretaria","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["ne2-unidade","ne2-secretaria","ne2-codigo-siam-secretaria","ne2-email-solicitante","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   // Fase 12: popular emendas e voltar à origem padrão (emenda)
   if(!_neEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar,unidade,unidade_id').order('ano',{ascending:false}); _neEmendasCache=data||[]; }
   document.getElementById("ne2-emenda").innerHTML='<option value="">Selecione a emenda...</option>'+_neEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join("");
@@ -1832,6 +1834,7 @@ function neOrigemChange(){
   document.getElementById("ne2-emenda-item-wrap").style.display=emenda?'':'none';
   document.getElementById("ne2-unidade-wrap").classList.toggle('full',!carona);
   document.getElementById("ne2-codigo-siam-secretaria-wrap").style.display=carona?'':'none';
+  document.getElementById("ne2-email-solicitante-wrap").style.display=carona?'':'none';
   const uni=document.getElementById("ne2-unidade");
   const secretaria=document.getElementById("ne2-secretaria");
   document.getElementById("ne2-unidade-label").textContent=carona?'Secretaria solicitante *':'Unidade *';
@@ -1840,6 +1843,7 @@ function neOrigemChange(){
   uni.readOnly=emenda; uni.style.background=emenda?'var(--surface2)':'';
   document.getElementById("ne2-unidade-auto").style.display=emenda?'block':'none';
   if(!carona) document.getElementById("ne2-codigo-siam-secretaria").value='';
+  if(!carona) document.getElementById("ne2-email-solicitante").value='';
   if(!emenda){ uni.value=''; }
   if(!carona) secretaria.value='';
   if(carona) _neCarregarSecretariasCarona();
@@ -1981,11 +1985,15 @@ async function salvarNovaExec(){
     :document.getElementById("ne2-unidade").value).trim();
   const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
   const codigoSiamSecretaria=document.getElementById("ne2-codigo-siam-secretaria").value.trim();
+  const emailSolicitanteEl=document.getElementById("ne2-email-solicitante");
+  const emailSolicitante=emailSolicitanteEl.value.trim().toLowerCase();
   const emendaId=document.getElementById("ne2-emenda").value||null;
   const emendaItemId=document.getElementById("ne2-emenda-item").value||null;
   if(origem==='carona'&&!secretariaCarona){showMsg("ne2","Selecione a secretaria solicitante no cadastro central (*)","err");return}
   if(!at||!unidade||!qtde){showMsg("ne2",`Selecione o item da ATA e preencha ${origem==='carona'?'Secretaria':'Unidade'} e Quantidade (*)`,"err");return}
   if(origem==='carona'&&!codigoSiamSecretaria){showMsg("ne2","Informe o Código SIAM da secretaria (*)","err");return}
+  if(origem==='carona'&&!emailSolicitante){showMsg("ne2","Informe o e-mail do solicitante (*)","err");return}
+  if(origem==='carona'&&!emailSolicitanteEl.checkValidity()){showMsg("ne2","Informe um e-mail válido para o solicitante.","err");return}
   if(origem==='emenda' && (!emendaId||!emendaItemId)){showMsg("ne2","Selecione a emenda e o item da emenda (*)","err");return}
   if(origem==='emenda' && emendaItemId){
     const usados=await _neEmendaItensJaUsados([emendaItemId],{incluirPlanejamento:false});
@@ -2009,6 +2017,7 @@ async function salvarNovaExec(){
     valor:parseFloat(document.getElementById("ne2-valor").value)||0,
     origem_recurso:origem,
     codigo_siam_secretaria:origem==='carona'?codigoSiamSecretaria:null,
+    email_solicitante:origem==='carona'?emailSolicitante:null,
     emenda_id:origem==='emenda'?emendaId:null,
     emenda_item_id:origem==='emenda'?emendaItemId:null,
     data_af:document.getElementById("ne2-data-af").value||null,
@@ -2026,7 +2035,10 @@ async function salvarNovaExec(){
     p_data_af:dados.data_af,
     p_dt_entrega:dados.dt_entrega
   };
-  if(origem==='carona') rpcArgs.p_codigo_siam_secretaria=dados.codigo_siam_secretaria;
+  if(origem==='carona'){
+    rpcArgs.p_codigo_siam_secretaria=dados.codigo_siam_secretaria;
+    rpcArgs.p_email_solicitante=dados.email_solicitante;
+  }
   const {data,error}=await sb.rpc(rpcNome,rpcArgs);
   btn.disabled=false;btn.textContent="Salvar";
   if(error){showMsg("ne2","Erro: "+error.message,"err");return;}
@@ -2042,6 +2054,7 @@ async function salvarNovaExec(){
   const rowATA={tipo:'ATA',exec_id:execId,ata_item_id:at.id,emenda_id:origem==='emenda'?emendaId:null,emenda_item_id:emendaItemVinculado,
     processo:at.cpl||'',contrato:at.sim||'',
     empresa:at.empresa||'',item:at.item||'',
+    origem_recurso:origem,email_solicitante:dados.email_solicitante||'',
     unidade,af_numero:'',af_dataISO:_toISODate(dados.data_af),
     qtde,limiteISO:'',recebido:false,cancelado:false,prazo_entrega_dias:at.prazo_entrega||at.prazo_entrega_dias||null,
     _ataPendenteAF:true,status:'aguardando AF',_novaExec:true};

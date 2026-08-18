@@ -158,8 +158,9 @@
   exclusivamente entre os registros ativos do cadastro central `secretarias`, exibidos
   como **SIGLA — Nome**; esse mesmo rótulo é preservado como unidade de destino da
   solicitação. O **Código SIAM** da secretaria é obrigatório e informado somente nesse
-  fluxo. A origem e o código são preservados em `atas_execucao.origem_recurso` e
-  `atas_execucao.codigo_siam_secretaria` para regras e relatórios futuros.
+  fluxo. O **e-mail do solicitante** também é obrigatório. A origem, o código e o e-mail
+  são preservados em `atas_execucao.origem_recurso`, `atas_execucao.codigo_siam_secretaria`
+  e `atas_execucao.email_solicitante` para documentos, contato e relatórios futuros.
 - Cada solicitação com origem **Carona** pode emitir um aceite de adesão em PDF usando o
   timbrado institucional da SES. O aceite lê os dados atuais do pedido, identifica a unidade
   e seu Código SIAM, e apresenta duas assinaturas: o usuário emissor como **Fiscal de
@@ -308,6 +309,10 @@
 - Após emitir AF, o Controle de Entregas deve disponibilizar **Baixar AF em PDF** com os
   dados oficiais da autorização: número/data da AF, processo, contrato/ATA, fornecedor,
   CNPJ, empenho, item, quantidade, valores, unidade/local de entrega, prazo e responsável.
+- Ao usar **Preparar e-mail** em uma AF de ATA cuja origem seja **Carona**, o endereço
+  `atas_execucao.email_solicitante` entra em **Cc** junto aos endereços institucionais já
+  usados. No preparo em lote, todos os solicitantes de Carona selecionados entram uma única
+  vez, sem duplicar endereços que já estejam em **Para** ou **Cc**.
 - **Nascimento da unidade física:** quantidades agregadas são permitidas durante
   planejamento, licitação, contratação, solicitação de ATA, AF e execução ainda não
   recebida. No recebimento com NF, cada unidade nasce como uma linha independente em

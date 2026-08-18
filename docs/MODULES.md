@@ -93,6 +93,9 @@ Ciclo de vida do item após a contratação:
 - **PDF de AF**: depois da emissão, a linha deve oferecer **Baixar AF em PDF** com dados do
   processo, contrato/ATA, fornecedor, CNPJ, empenho, item, quantidades, valores, prazo e
   responsável.
+- **E-mail da AF**: `abrirEmailAF` e `abrirEmailAFsLote` mantêm os destinatários
+  institucionais e incluem em **Cc** o `email_solicitante` das execuções de ATA originadas
+  por Carona, eliminando duplicidades.
 - **Recebimento**: `abrirRecebimento` → quantidade recebida, NF, patrimônio/série.
   O lote recebido é materializado **por unidade física** em `itens_entregas_unidades` ou
   `atas_execucao_unidades`: uma linha por unidade, com patrimônio/série opcionais e NF

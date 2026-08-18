@@ -2,6 +2,12 @@
 
 ## Em desenvolvimento
 
+- **Solicitante da Carona em cópia na AF:** o comando Preparar e-mail do Controle de
+  Entregas inclui em Cc o e-mail cadastrado do solicitante quando a execução de ATA veio de
+  Carona, tanto individualmente quanto em lote, sem duplicar destinatários.
+- **Contato do solicitante em Caronas:** a nova solicitação de Ata com origem Carona agora
+  exige um e-mail válido do solicitante, gravado no pedido e exibido nos detalhes e no PDF
+  de aceite.
 - **Aceite de adesão para Carona em Atas de RP:** solicitações com origem Carona ganharam
   uma ação para baixar o aceite em PDF no novo timbrado da Secretaria da Saúde. O documento
   reúne unidade solicitante, Código SIAM, CPL, Ata, item, quantidade, valores, fornecedor e

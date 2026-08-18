@@ -134,6 +134,7 @@ Execução/entrega por item de ata, por unidade (AF, NF, datas, termo).
 | `empenho`, `nf` | text | nº de empenho / nota fiscal |
 | `origem_recurso` | text | `emenda`, `recurso_proprio` ou `carona` |
 | `codigo_siam_secretaria` | text | Código da secretaria no SIAM; preenchido somente para `carona` |
+| `email_solicitante` | text | E-mail de contato obrigatório do solicitante; preenchido somente para `carona` |
 | `termo_arquivo` | text | arquivo de termo (Storage) |
 
 ### `atas_item_reajustes`
