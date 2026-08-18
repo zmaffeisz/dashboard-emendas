@@ -313,6 +313,11 @@
   `atas_execucao.email_solicitante` entra em **Cc** junto aos endereços institucionais já
   usados. No preparo em lote, todos os solicitantes de Carona selecionados entram uma única
   vez, sem duplicar endereços que já estejam em **Para** ou **Cc**.
+- Após o recebimento administrativo de uma execução de ATA com origem **Carona**, a subaba
+  **Confirmação de Entrega na Unidade** oferece um e-mail de aviso ao solicitante cadastrado,
+  com cópia para `sueq.equipamentos@sorocaba.sp.gov.br`. O texto informa a Ata, a NF como
+  anexa, o item e a quantidade, e orienta o agendamento da retirada com o Almoxarifado de
+  Bens pelo e-mail `patrimonio@sorocaba.sp.gov.br` ou telefone `(15) 3333-1974`.
 - **Nascimento da unidade física:** quantidades agregadas são permitidas durante
   planejamento, licitação, contratação, solicitação de ATA, AF e execução ainda não
   recebida. No recebimento com NF, cada unidade nasce como uma linha independente em

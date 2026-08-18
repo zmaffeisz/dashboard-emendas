@@ -38,6 +38,10 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 - [ ] Confirmar entrega na unidade (data, responsável, termo) e voltar para **Emendas**:
       o item deve mostrar status derivado do fluxo, data de entrega, empenho/NF/patrimônio
       quando existirem; item sem AF deve aparecer como "aguardando AF".
+- [ ] Em um recebimento de ATA originado por **Carona**, conferir na subaba **Confirmação de
+      Entrega na Unidade** o botão de e-mail; o destinatário deve ser o solicitante cadastrado,
+      com cópia para `sueq.equipamentos@sorocaba.sp.gov.br`, e o corpo deve trazer Ata, NF
+      marcada como anexa, item, quantidade e os contatos do Almoxarifado.
 - [ ] Registrar recebimento/NF quando aplicável (aba **Controle de Entregas**).
 - [ ] Recebimento por unidade física (`itens_entregas_unidades`): patrimônio/série por
       unidade.

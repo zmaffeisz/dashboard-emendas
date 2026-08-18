@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Aviso de retirada para Carona:** recebimentos de ATA originados por Carona exibem, na
+  subaba **Confirmação de Entrega na Unidade**, um botão para preparar o e-mail ao
+  solicitante cadastrado, com cópia para a SUEQ. O texto informa Ata, NF anexa, item,
+  quantidade e os contatos do Almoxarifado para agendamento da retirada.
 - **Aceite de Carona sem valor global da Ata:** o PDF mantém somente o valor unitário e o
   valor total autorizado da solicitação, sem exibir o valor global do instrumento.
 - **Correção de PDF do aceite de Carona:** textos vindos do cadastro com quebras de linha

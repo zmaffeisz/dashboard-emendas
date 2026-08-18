@@ -2900,6 +2900,51 @@ function _confBadge(status){
   const ok=status==='confirmado';
   return `<span class="badge" style="background:${ok?'var(--green-bg)':'var(--amber-bg)'};color:${ok?'var(--green-text)':'var(--amber-text)'}">${ok?'Confirmado':'Pendente'}</span>`;
 }
+function _confNumeroDocumento(valor,tipo){
+  const texto=String(valor||'').trim();
+  if(tipo==='nf') return texto.replace(/^\s*(?:nota\s+fiscal|nf)\s*(?:n[º°o.]?\s*)?/i,'').trim()||'—';
+  if(tipo==='ata') return texto.replace(/^\s*(?:ata\s*)?(?:siam\s*)?(?:n[º°o.]?\s*)?/i,'').trim()||'—';
+  return texto||'—';
+}
+function montarEmailRetiradaCarona(row){
+  const ata=_confNumeroDocumento(row?.contrato,'ata');
+  const nf=_confNumeroDocumento(row?.nota_fiscal,'nf');
+  const quantidade=Number(row?.qtde)||0;
+  const quantidadeTexto=quantidade?`${quantidade} ${quantidade===1?'unidade':'unidades'}`:'—';
+  return {
+    para:_ceSepararEmails(row?.email_solicitante),
+    cc:['sueq.equipamentos@sorocaba.sp.gov.br'],
+    assunto:`Item disponível para retirada – Carona à Ata nº ${ata} – NF nº ${nf}`,
+    corpo:[
+      'Prezado(a),','',
+      `Informamos que o item solicitado por meio de adesão (Carona) à Ata de Registro de Preços nº ${ata} foi recebido e encontra-se disponível para retirada.`,'',
+      'Dados do recebimento:','',
+      `NF nº ${nf} (anexa)`,
+      `Item: ${String(row?.item||'—').trim()||'—'}`,
+      `Quantidade: ${quantidadeTexto}`,'',
+      'Para verificar a disponibilidade e agendar a retirada dos itens, solicitamos que entre em contato com o Almoxarifado de Bens (Patrimônio) pelo e-mail patrimonio@sorocaba.sp.gov.br ou pelo telefone (15) 3333-1974.','',
+      'A retirada deverá ser previamente agendada com o Almoxarifado.','',
+      'Atenciosamente,','',
+      'Secretaria da Saúde',
+      'Prefeitura de Sorocaba'
+    ].join('\r\n')
+  };
+}
+function prepararEmailRetiradaCarona(encodedId){
+  const id=decodeURIComponent(encodedId||'');
+  const row=confirmacaoRows.find(r=>r.tipo==='ATA'&&String(r.id)===String(id));
+  if(!row||String(row.origem_recurso||'').toLowerCase()!=='carona'){
+    if(window.toast) toast('Recebimento de Carona não encontrado.','error');
+    return;
+  }
+  const email=montarEmailRetiradaCarona(row);
+  if(!email.para.length){
+    if(window.toast) toast('O e-mail do solicitante não está cadastrado nesta Carona.','error');
+    return;
+  }
+  window.location.href=`mailto:${encodeURIComponent(email.para.join(','))}?cc=${encodeURIComponent(email.cc.join(','))}&subject=${encodeURIComponent(email.assunto)}&body=${encodeURIComponent(email.corpo)}`;
+  if(window.toast) toast('E-mail preparado. Anexe a NF antes de enviar.','success');
+}
 function _confSetMsg(txt,tipo){
   const msg=document.getElementById('cu-msg'); if(!msg) return;
   msg.textContent=txt||''; msg.className='fmsg '+(tipo||'');
@@ -2970,7 +3015,8 @@ async function loadConfirmacoes(){
     rows.push({
       tipo:'ATA', id:r.id, processo:r.cpl||ai.cpl||ai.contratos?.cpl||'', contrato:r.sim||ai.sim||ai.contratos?.numero_contrato||'', empresa:ai.empresa||ai.contratos?.prestador||'',
       item:r.item||ai.item||emInfo.item||'', unidade:r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'', qtde:Number(r.qtde)||0, patrimonio:emInfo.patrimonio||r.patrimonio||'',
-      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, data_recebimento:dataRec,
+      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, af_numero:r.af_numero||'', data_recebimento:dataRec,
+      origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
       termo_responsavel:r.termo_responsavel||'', termo_cargo:r.termo_cargo||'', confirmacao_obs:r.confirmacao_obs||'',
       emenda_item_id:r.emenda_item_id||null
@@ -3007,6 +3053,10 @@ function renderConfirmacoes(){
       const pode=_confPodeEditarRow(r);
       const selecionavel=_confSelecionavel(r), key=_confKey(r), marcado=_confSelecionados.has(key);
       const btn=pode?`<button onclick="abrirConfirmacaoUnidade('${r.tipo}','${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">${r.data_entrega_unidade?'Editar':'Confirmar'}</button>`:'—';
+      const emailCarona=r.tipo==='ATA'&&String(r.origem_recurso||'').toLowerCase()==='carona'
+        ?`<button onclick="prepararEmailRetiradaCarona('${encodeURIComponent(String(r.id))}')" title="Preparar aviso de retirada para o solicitante da Carona" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid #7c3aed;background:#f5f3ff;color:#6d28d9;cursor:pointer;white-space:nowrap">✉ E-mail</button>`
+        :'';
+      const acoes=[emailCarona,btn==='—'?'':btn].filter(Boolean).join(' ')||'—';
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:6px 8px;text-align:center"><input type="checkbox" ${marcado?'checked':''} ${selecionavel?'':'disabled'} onchange="_confToggle('${encodeURIComponent(key)}',this.checked)" title="${selecionavel?'Selecionar para confirmação coletiva':'Somente pendências editáveis podem ser selecionadas'}" style="width:15px;height:15px;accent-color:var(--green);cursor:${selecionavel?'pointer':'not-allowed'}"></td>
         <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
@@ -3021,7 +3071,7 @@ function renderConfirmacoes(){
         <td style="padding:6px 8px">${_sanEsc(r.termo_responsavel||'—')}${r.termo_cargo?('<br><span style="color:var(--text3)">'+_sanEsc(r.termo_cargo)+'</span>'):''}</td>
         <td style="padding:6px 8px">${termo}</td>
         <td style="padding:6px 8px">${_confBadge(_confStatus(r))}</td>
-        <td style="padding:6px 8px">${btn}</td>
+        <td style="padding:6px 8px;white-space:nowrap">${acoes}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   _confAtualizarSelecaoUI();
@@ -3221,6 +3271,8 @@ window._confToggleVisiveis=_confToggleVisiveis;
 window.abrirConfirmacaoSelecionados=abrirConfirmacaoSelecionados;
 window.abrirConfirmacaoUnidade=abrirConfirmacaoUnidade;
 window.salvarConfirmacaoUnidade=salvarConfirmacaoUnidade;
+window.montarEmailRetiradaCarona=montarEmailRetiradaCarona;
+window.prepararEmailRetiradaCarona=prepararEmailRetiradaCarona;
 window.abrirTermoEntrega=abrirTermoEntrega;
 window.removerTermosEntrega=removerTermosEntrega;
 
