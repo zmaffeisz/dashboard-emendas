@@ -2,6 +2,15 @@
 
 ## Em desenvolvimento
 
+- **Aceite de adesão para Carona em Atas de RP:** solicitações com origem Carona ganharam
+  uma ação para baixar o aceite em PDF no novo timbrado da Secretaria da Saúde. O documento
+  reúne unidade solicitante, Código SIAM, CPL, Ata, item, quantidade, valores, fornecedor e
+  demais dados disponíveis, com assinatura do usuário emissor como Fiscal de Contrato e do
+  secretário vigente cadastrado no sistema.
+- **Cadastro central do Secretário:** a aba Cadastros ganhou uma ficha institucional única
+  para nome, cargo, secretaria/órgão, ato de nomeação, e-mail e telefone do secretário
+  vigente. A ficha pode ser lida pelas telas autenticadas para geração de documentos e
+  alterada somente por administrador, evitando nomes e cargos fixos espalhados pelo sistema.
 - **Aviso e limite de renovação nas Atas de RP:** cada item de uma ata que já utilizou sua
   única renovação passa a exibir **JÁ RENOVADA · LIMITE ATINGIDO**. A ação de prorrogar é
   removida dessas linhas e o salvamento reconsulta as vigências e o histórico antes de

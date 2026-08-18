@@ -19,7 +19,7 @@
 | Contratos em execução | `contratos` (**matriz**), `contratos_vigencias`, `contratos_historico`, `fornecedores` | cadastro de contrato | edição (admin) |
 | Licitações em andamento | `processos`, `vw_processos_resumo`, `itens` | processos | status por item |
 | Sanções | `sancoes_solicitadas`, `sancao_itens`, `sancoes_administrativas` | a partir de execução/contrato | solicitação/aplicação |
-| Cadastros | `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `secoes`, `pessoas` | cadastros-mestre | **admin** |
+| Cadastros | `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `secoes`, `pessoas`, `secretario_atual` | cadastros-mestre | **admin** |
 | Usuários | `profiles`, `user_tab_permissions` | Auth/cadastro | **admin** |
 | Planilhas | importações/exports | — | export/import |
 
@@ -158,12 +158,19 @@ de emenda. Geração de documento (`abrirModalSolicitacaoSancao`,
 
 ## 14. Cadastros (admin)
 Cadastros-mestre: `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `secoes`,
-`secretarias`, `pessoas`. Inclui fila de **revisão/moderação/dedup** de cadastros criados inline
+`secretarias`, `pessoas` e a ficha única `secretario_atual`. Inclui fila de
+**revisão/moderação/dedup** de cadastros criados inline. Documentos que precisarem dos dados
+do secretário vigente devem chamar `await obterSecretarioAtual()` em vez de repetir nome ou
+cargo no código.
 
 Na aba **Licitações**, o acompanhamento manual do item combina uma secretaria do cadastro
 institucional e um texto livre de situação (máximo de 55 caracteres); os estados automáticos
 continuam sob controle do sistema e a data **Desde** é mantida.
 (`carregarRevisao`). Apenas admin.
+
+Na aba **Atas Rp**, solicitações de execução com `origem_recurso = 'carona'` exibem a ação
+`emitirAceiteCarona`, que gera diretamente um PDF no timbrado SES e consulta
+`obterSecretarioAtual()` para compor a assinatura institucional.
 
 ## 15. Usuários (admin)
 Gestão de `profiles` e `user_tab_permissions` (caixinhas ver/editar por aba), aprovação de

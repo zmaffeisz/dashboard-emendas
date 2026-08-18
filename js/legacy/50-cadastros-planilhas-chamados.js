@@ -3,12 +3,29 @@ const CADASTRO_DEFS = {
   pessoas:       {tabela:'pessoas',       titulo:'👤 Pessoas',       temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'cargo',l:'Cargo'},{c:'orgao',l:'Órgão/Seção'},{c:'email',l:'E-mail'},{c:'telefone',l:'Telefone'}]},
   parlamentares: {tabela:'parlamentares', titulo:'🏛️ Parlamentares', temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true}]},
   secretarias:   {tabela:'secretarias',   titulo:'🏛️ Secretarias',  temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo',req:true}]},
+  secretario:    {tabela:'secretario_atual', titulo:'👔 Secretário', temAtivo:false, ordem:'id', unico:true, campos:[{c:'nome',l:'Nome completo',req:true},{c:'cargo',l:'Cargo',valorNovo:'Secretário Municipal da Saúde'},{c:'secretaria',l:'Secretaria/órgão',valorNovo:'Secretaria Municipal da Saúde'},{c:'ato_nomeacao',l:'Ato de nomeação'},{c:'email',l:'E-mail',tipoInput:'email'},{c:'telefone',l:'Telefone',tipoInput:'tel'}]},
   secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'}]},
   unidades:      {tabela:'unidades',      titulo:'🏥 Unidades',      temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'endereco',l:'Endereço'},{c:'telefone',l:'Telefone'}]},
   fornecedores:  {tabela:'fornecedores',  titulo:'🏭 Empresas',      temAtivo:false, ordem:'razao_social', campos:[{c:'razao_social',l:'Razão social',req:true},{c:'cnpj_normalizado',l:'CNPJ (só dígitos)'},{c:'nome_fantasia',l:'Nome fantasia'}]},
   status_opcoes: {tabela:'status_opcoes', titulo:'🏷️ Status',        temAtivo:true,  ordem:'ordem',        campos:[{c:'contexto',l:'Contexto (processo/item)',req:true},{c:'nome',l:'Nome',req:true},{c:'ordem',l:'Ordem',tipo:'int'}]},
 };
 let _cadAtual=null;
+let _secretarioAtualCache;
+
+// Ponto único para documentos obterem a ficha institucional vigente.
+// Use: const secretario = await obterSecretarioAtual();
+async function obterSecretarioAtual(opcoes={}){
+  if(!opcoes.recarregar && _secretarioAtualCache!==undefined) return _secretarioAtualCache;
+  const {data,error}=await sb.from('secretario_atual')
+    .select('id,nome,cargo,secretaria,ato_nomeacao,email,telefone,atualizado_em')
+    .eq('id',1)
+    .maybeSingle();
+  if(error) throw error;
+  _secretarioAtualCache=data||null;
+  return _secretarioAtualCache;
+}
+window.obterSecretarioAtual=obterSecretarioAtual;
+
 async function carregarCadastros(){
   _cadAtual=null;
   document.getElementById('cad-lista').style.display='none';
@@ -36,9 +53,10 @@ async function abrirCadastroLista(ent){
   const {data,error}=await sb.from(def.tabela).select('*').order(def.ordem,{nullsFirst:false});
   const tb=document.getElementById('cad-tbody');
   if(error){ tb.innerHTML=`<tr><td colspan="9" style="padding:10px;color:var(--red)">Erro: ${_sanEsc(error.message)}</td></tr>`; return; }
-  const inp=(f,v)=>`<td style="padding:4px 6px"><input data-field="${f.c}" value="${_sanEsc(v??'')}" placeholder="${f.l}" style="width:100%;min-width:90px;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>`;
+  const inp=(f,v)=>`<td style="padding:4px 6px"><input type="${f.tipoInput||'text'}" data-field="${f.c}" value="${_sanEsc(v??'')}" placeholder="${f.l}" style="width:100%;min-width:90px;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>`;
   const cellAtivo=(checked)=>def.temAtivo?`<td style="text-align:center"><input type="checkbox" data-field="ativo" ${checked?'checked':''}></td>`:'<td></td>';
-  const novo=`<tr data-novo="1" style="background:var(--surface2)">${def.campos.map(f=>inp(f,'')).join('')}${cellAtivo(true)}<td style="padding:4px 6px"><button onclick="cadastroSalvar('${ent}',this)" style="font-size:12px;padding:5px 10px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">+ Adicionar</button></td></tr>`;
+  const podeAdicionar=!def.unico||!(data||[]).length;
+  const novo=podeAdicionar?`<tr data-novo="1" style="background:var(--surface2)">${def.campos.map(f=>inp(f,f.valorNovo||'')).join('')}${cellAtivo(true)}<td style="padding:4px 6px"><button onclick="cadastroSalvar('${ent}',this)" style="font-size:12px;padding:5px 10px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">+ Adicionar</button></td></tr>`:'';
   const linhas=(data||[]).map(r=>`<tr data-id="${r.id}" style="border-bottom:1px solid var(--border)">${def.campos.map(f=>inp(f,r[f.c])).join('')}${cellAtivo(r.ativo!==false)}<td style="padding:4px 6px"><button onclick="cadastroSalvar('${ent}',this)" style="font-size:12px;padding:5px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">Salvar</button></td></tr>`).join('');
   tb.innerHTML=novo+linhas;
 }
@@ -59,6 +77,7 @@ async function cadastroSalvar(ent, btn){
   const res=id ? await sb.from(def.tabela).update(dados).eq('id',id) : await sb.from(def.tabela).insert(dados);
   btn.disabled=false;
   if(res.error){ toast('Erro: '+res.error.message,'error'); return; }
+  if(ent==='secretario') _secretarioAtualCache=undefined;
   toast(id?'Atualizado!':'Adicionado!','success');
   abrirCadastroLista(ent);
 }

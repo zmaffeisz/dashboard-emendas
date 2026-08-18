@@ -160,6 +160,10 @@
   solicitação. O **Código SIAM** da secretaria é obrigatório e informado somente nesse
   fluxo. A origem e o código são preservados em `atas_execucao.origem_recurso` e
   `atas_execucao.codigo_siam_secretaria` para regras e relatórios futuros.
+- Cada solicitação com origem **Carona** pode emitir um aceite de adesão em PDF usando o
+  timbrado institucional da SES. O aceite lê os dados atuais do pedido, identifica a unidade
+  e seu Código SIAM, e apresenta duas assinaturas: o usuário emissor como **Fiscal de
+  Contrato** e o nome/cargo da ficha única `secretario_atual`.
 - `contratos.data_base_reajuste` é uma informação contratual opcional para todos os tipos
   de instrumento. Ela é exibida nos detalhes e, nas ATAs, também na lista de itens, mas
   não cria reajuste automaticamente.

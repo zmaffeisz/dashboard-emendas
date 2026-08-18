@@ -153,6 +153,7 @@ async function loadAtas(){
       nf:(r.nf||"").trim(),
       obs_prazo:(r.obs_prazo||"").trim(),
       origem_recurso:(r.origem_recurso||"").trim(),
+      codigo_siam_secretaria:(r.codigo_siam_secretaria||"").trim(),
       emenda_id:r.emenda_id||null,
       emenda_item_id:r.emenda_item_id||null,
       af_numero:(r.af_numero||"").trim(),
@@ -165,6 +166,7 @@ async function loadAtas(){
       created_at:r.created_at||null,
       empresa:ata.empresa||"",
       cnpj:ata.cnpj_fornecedor||ata.contrato?.cnpj||"",
+      valor_unit_registrado:Number(ata.valor_unit)||0,
       contrato:ata.contrato||null
     };}).filter(Boolean);
     popularFiltrosAtas();
@@ -505,7 +507,7 @@ function filtrarAtas(){
     const rEncerrado=r.status&&r.status.toUpperCase().startsWith("ENCERRADO");
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
-    if(busca&&!matchBusca(r.item+" "+r.cpl+" "+r.sim+" "+r.unidade,busca)) return false;
+    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,_ataOrigemRecursoLabel(r.origem_recurso)].join(' '),busca)) return false;
     return true;
   });
   // Ordenação execuções (padrão: data_af mais recente no topo)
@@ -568,7 +570,7 @@ function filtrarExecs(){
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
     if(_filtroPendentes&&r.dt_entrega) return false;
-    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
+    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,_ataOrigemRecursoLabel(r.origem_recurso),r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
     return true;
   });
   // Ordenação
@@ -625,6 +627,9 @@ function _renderExecRows(execRows){
         ?`<button type="button" class="btn-secondary btn-compact btn-action-square" disabled title="Esta execução já recebeu o reajuste aplicável" aria-label="Execução reajustada">✓</button>`
         :`<button type="button" class="btn-secondary btn-compact btn-action-square" onclick="event.stopPropagation();abrirReajusteExecucaoAta('${_sanEsc(r.id)}')" title="Reajustar esta execução" aria-label="Reajustar esta execução">📈</button>`)
       :'';
+    const aceiteBtn=String(r.origem_recurso||'').toLowerCase()==='carona'
+      ?`<button type="button" class="btn-secondary btn-compact" onclick="event.stopPropagation();emitirAceiteCarona('${_sanEsc(r.id)}',this)" title="Gerar PDF do aceite de adesão para esta Carona">📄 Aceite</button>`
+      :'';
     return `<tr class="ata-exec-row${aberta?' ata-exec-row-open':''}" data-exec-id="${_sanEsc(r.id)}" onclick="toggleDetalheExecAta('${_sanEsc(r.id)}',event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDetalheExecAta('${_sanEsc(r.id)}',event)}" role="button" tabindex="0" aria-expanded="${aberta?'true':'false'}" title="Clique para ${aberta?'recolher':'ver todos os detalhes'}">
     ${_renderSancaoExecCheckbox(r)}
     <td style="font-size:11px">${_sanEsc(r.cpl)}</td>
@@ -639,7 +644,7 @@ function _renderExecRows(execRows){
     <td style="font-size:11px;white-space:nowrap">${r.dt_entrega?_sanEsc(r.dt_entrega):'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
     ${prazoCel}
     <td style="font-size:11px">${_sanEsc(r.nf||"—")}</td>
-    <td style="white-space:nowrap"><div style="display:flex;gap:4px;align-items:center">${reajusteBtn}${excluirBtn}</div></td>
+    <td style="white-space:nowrap"><div style="display:flex;gap:4px;align-items:center">${aceiteBtn}${reajusteBtn}${excluirBtn}</div></td>
   </tr>${detalhe}`;
   }).join("");
   window._execRowsFiltered=execRows;
@@ -698,6 +703,195 @@ function _ataDetalheCampo(label,valor){
 function _ataOrigemRecursoLabel(origem){
   return ({emenda:'Emenda parlamentar',recurso_proprio:'Recurso próprio',carona:'Carona'})[origem]||origem||'Não informada';
 }
+
+function _ataNumeroExtensoFeminino(valor){
+  const n=Math.trunc(Number(valor));
+  if(!Number.isFinite(n)||n<0||n>999) return '';
+  const unidades=['zero','uma','duas','três','quatro','cinco','seis','sete','oito','nove'];
+  const especiais=['dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+  const dezenas=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+  const centenas=['','cento','duzentas','trezentas','quatrocentas','quinhentas','seiscentas','setecentas','oitocentas','novecentas'];
+  if(n<10) return unidades[n];
+  if(n<20) return especiais[n-10];
+  if(n<100) return dezenas[Math.floor(n/10)]+(n%10?' e '+unidades[n%10]:'');
+  if(n===100) return 'cem';
+  return centenas[Math.floor(n/100)]+(n%100?' e '+_ataNumeroExtensoFeminino(n%100):'');
+}
+
+function _ataQuantidadeAceite(valor){
+  const n=Number(valor)||0;
+  const numero=Number.isInteger(n)?String(n).padStart(2,'0'):n.toLocaleString('pt-BR');
+  const extenso=Number.isInteger(n)?_ataNumeroExtensoFeminino(n):'';
+  return extenso?numero+' ('+extenso+')':numero;
+}
+
+function _ataNumeroDocumento(valor,tipo){
+  let texto=String(valor||'').trim();
+  if(tipo==='cpl') texto=texto.replace(/^cpl\s*(?:n[º°o.]?\s*)?/i,'');
+  else texto=texto.replace(/^(?:ata(?:\s+de\s+rp)?|siam)\s*(?:n[º°o.]?\s*)?/i,'');
+  return texto.trim()||'—';
+}
+
+function _ataFormatarCnpj(valor){
+  const digitos=String(valor||'').replace(/\D/g,'');
+  if(digitos.length!==14) return String(valor||'').trim();
+  return digitos.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+}
+
+function _ataDataExtenso(data=new Date()){
+  return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'long',year:'numeric'}).format(data);
+}
+
+function montarTextoAceiteCarona(exec){
+  const quantidade=Number(exec?.qtde)||0;
+  const total=Number(exec?.valor)||0;
+  const unitario=quantidade?total/quantidade:(Number(exec?.valor_unit_registrado)||0);
+  const ata=_ataNumeroDocumento(exec?.sim,'ata');
+  const cpl=_ataNumeroDocumento(exec?.cpl,'cpl');
+  const unidade=String(exec?.unidade||'').trim()||'unidade solicitante';
+  const codigo=String(exec?.codigo_siam_secretaria||'').trim()||'não informado';
+  const item=String(exec?.item||'').trim()||'item registrado';
+  const marca=String(exec?.marca_modelo||'').trim();
+  const qtdTexto=_ataQuantidadeAceite(quantidade);
+  const unidadeTexto=quantidade===1?'unidade':'unidades';
+  return 'Considerando a solicitação apresentada pela '+unidade+', identificada pelo Código SIAM nº '+codigo+
+    ', AUTORIZO a adesão à Ata de Registro de Preços nº '+ata+', decorrente da CPL nº '+cpl+
+    ', para o fornecimento de '+qtdTexto+' '+unidadeTexto+' do item "'+item+'"'+
+    (marca?', marca/modelo '+marca:'')+', pelo valor unitário registrado de '+fmtFull(unitario)+
+    ' e valor total autorizado de '+fmtFull(total)+
+    ', com destinação à unidade solicitante, nas condições, especificações e demais valores registrados na referida Ata.';
+}
+window.montarTextoAceiteCarona=montarTextoAceiteCarona;
+
+let _ataTimbradoAceitePromise=null;
+function _ataCarregarTimbradoAceite(){
+  if(_ataTimbradoAceitePromise) return _ataTimbradoAceitePromise;
+  _ataTimbradoAceitePromise=new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>reject(new Error('Não foi possível carregar o timbrado da Secretaria da Saúde.'));
+    img.src='assets/timbrado-ses/timbrado-ses-fundo.png';
+  });
+  return _ataTimbradoAceitePromise;
+}
+
+async function _ataCriarPdfAceiteCarona(exec,secretario,fiscal,opcoes={}){
+  await ensureLib('jspdf');
+  const [{jsPDF},timbrado]=[window.jspdf,await _ataCarregarTimbradoAceite()];
+  const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+  pdf.addImage(timbrado,'PNG',0,0,210,297,undefined,'FAST');
+  const x=30, largura=150;
+  const ata=_ataNumeroDocumento(exec.sim,'ata');
+  const cpl=_ataNumeroDocumento(exec.cpl,'cpl');
+  const quantidade=Number(exec.qtde)||0;
+  const total=Number(exec.valor)||0;
+  const unitario=quantidade?total/quantidade:(Number(exec.valor_unit_registrado)||0);
+  const valorAta=Number(exec.contrato?.valor_atual_num??exec.contrato?.valor_total_num??exec.contrato?.valor_inicial_num)||0;
+  const cnpj=_ataFormatarCnpj(exec.cnpj);
+  const texto=montarTextoAceiteCarona(exec);
+  const setFonte=(tamanho=9,estilo='normal',cor=[20,20,20])=>{
+    pdf.setFont('helvetica',estilo);
+    pdf.setFontSize(tamanho);
+    pdf.setTextColor(...cor);
+  };
+
+  setFonte(12,'bold');
+  pdf.text('ACEITE DE ADESÃO À ATA DE REGISTRO DE PREÇOS',105,54,{align:'center'});
+  setFonte(9,'bold');
+  pdf.text('Assunto: Autorização para adesão (Carona) à Ata de RP nº '+ata,x,68);
+  setFonte(9,'normal');
+  pdf.text('Sorocaba, '+_ataDataExtenso()+'.',x+largura,79,{align:'right'});
+
+  setFonte(10,'normal');
+  const linhasTexto=pdf.splitTextToSize(texto,largura);
+  pdf.text(linhasTexto,x,92,{align:'justify',maxWidth:largura,lineHeightFactor:1.42});
+  let y=92+(linhasTexto.length*5.05)+7;
+
+  const detalhes=[
+    ['Unidade solicitante',exec.unidade],
+    ['Código SIAM da unidade',exec.codigo_siam_secretaria],
+    ['Processo / CPL','CPL nº '+cpl],
+    ['Ata de Registro de Preços','Ata nº '+ata],
+    ['Item',exec.item+(exec.marca_modelo?' - '+exec.marca_modelo:'')],
+    ['Quantidade',_ataQuantidadeAceite(quantidade)+' '+(quantidade===1?'unidade':'unidades')],
+    ['Valor unitário',fmtFull(unitario)],
+    ['Valor total autorizado',fmtFull(total)],
+    ['Valor global da Ata',valorAta?fmtFull(valorAta):''],
+    ['Fornecedor',exec.empresa],
+    ['CNPJ',cnpj],
+    ['Empenho',exec.empenho],
+    ['AF',exec.af_numero]
+  ].filter(([,valor])=>valor!=null&&String(valor).trim()!==''&&String(valor).trim()!=='—');
+
+  detalhes.forEach(([label,valor])=>{
+    const labelLargura=42;
+    setFonte(8.1,'normal');
+    const linhas=pdf.splitTextToSize(String(valor),largura-labelLargura-4);
+    const altura=Math.max(7,linhas.length*3.6+3);
+    pdf.setFillColor(247,247,247);
+    pdf.setDrawColor(190,190,190);
+    pdf.rect(x,y,labelLargura,altura,'FD');
+    pdf.rect(x+labelLargura,y,largura-labelLargura,altura);
+    setFonte(8.1,'bold');
+    pdf.text(label,x+2,y+4.7);
+    setFonte(8.1,'normal');
+    pdf.text(linhas,x+labelLargura+2,y+4.7);
+    y+=altura;
+  });
+
+  const assinaturaY=Math.min(242,Math.max(220,y+17));
+  const coluna=68, esquerda=32, direita=110;
+  pdf.setDrawColor(60,60,60);
+  pdf.setLineWidth(.25);
+  pdf.line(esquerda,assinaturaY,esquerda+coluna,assinaturaY);
+  pdf.line(direita,assinaturaY,direita+coluna,assinaturaY);
+  setFonte(9,'bold');
+  const fiscalLinhas=pdf.splitTextToSize(fiscal,coluna-4);
+  const secretarioLinhas=pdf.splitTextToSize(secretario.nome,coluna-4);
+  pdf.text(fiscalLinhas,esquerda+coluna/2,assinaturaY+5,{align:'center'});
+  pdf.text(secretarioLinhas,direita+coluna/2,assinaturaY+5,{align:'center'});
+  setFonte(9,'normal');
+  pdf.text('Fiscal de Contrato',esquerda+coluna/2,assinaturaY+5+(fiscalLinhas.length*4),{align:'center'});
+  pdf.text(String(secretario.cargo||''),direita+coluna/2,assinaturaY+5+(secretarioLinhas.length*4),{align:'center',maxWidth:coluna});
+
+  const nomeArquivo=('aceite_carona_ata_'+ata+'_siam_'+exec.codigo_siam_secretaria+'_'+_ataHojeISO()+'.pdf')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_');
+  if(opcoes.salvar!==false) pdf.save(nomeArquivo);
+  return pdf;
+}
+
+async function emitirAceiteCarona(execId,btn){
+  const exec=atasExec.find(r=>String(r.id)===String(execId));
+  if(!exec){ toast('Solicitação de Carona não encontrada.','error'); return; }
+  if(String(exec.origem_recurso||'').toLowerCase()!=='carona'){
+    toast('O aceite de adesão está disponível somente para solicitações de Carona.','error');
+    return;
+  }
+  if(!String(exec.codigo_siam_secretaria||'').trim()){
+    toast('Informe o Código SIAM da unidade solicitante antes de emitir o aceite.','error');
+    return;
+  }
+  const fiscal=String(currentProfile?.nome||'').trim();
+  if(!fiscal){
+    toast('Cadastre seu nome completo no perfil antes de emitir o aceite.','error');
+    return;
+  }
+  const textoOriginal=btn?.textContent||'📄 Aceite';
+  if(btn){btn.disabled=true;btn.textContent='Gerando...';}
+  try{
+    const secretario=await obterSecretarioAtual({recarregar:true});
+    if(!secretario?.nome||!secretario?.cargo){
+      throw new Error('Cadastre o nome e o cargo do Secretário na aba Cadastros antes de emitir o aceite.');
+    }
+    await _ataCriarPdfAceiteCarona(exec,secretario,fiscal);
+    toast('PDF do aceite gerado.','success');
+  }catch(e){
+    toast(e.message||'Não foi possível gerar o aceite.','error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=textoOriginal;}
+  }
+}
+window.emitirAceiteCarona=emitirAceiteCarona;
 
 function _renderHistoricoReajustesExecAta(execId){
   const registros=atasExecReajustes

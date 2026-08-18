@@ -281,6 +281,7 @@ no máximo uma NF. Como cada NF também guarda apenas um `medicao_id`, o víncul
 | `profiles` (6) | perfil do usuário: `papel`, `aprovado`. |
 | `user_tab_permissions` (6) | permissões por aba (`tab_key`, `can_view`, `can_edit`). |
 | `pessoas` (10), `secoes` (6), `secretarias` | cadastros auxiliares e institucionais. |
+| `secretario_atual` | ficha institucional única (`id = 1`) do secretário vigente; leitura autenticada para documentos e escrita somente por admin. |
 | `inventario_ac` (17) | inventário; FK `emenda_item_id`, `unidade_id`. |
 
 ## 8. Views
