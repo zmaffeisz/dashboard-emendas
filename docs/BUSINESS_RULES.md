@@ -318,6 +318,11 @@
   com cópia para `sueq.equipamentos@sorocaba.sp.gov.br`. O texto informa a Ata, a NF como
   anexa, o item e a quantidade, e orienta o agendamento da retirada com o Almoxarifado de
   Bens pelo e-mail `patrimonio@sorocaba.sp.gov.br` ou telefone `(15) 3333-1974`.
+- Execuções de ATA com origem **Carona** não integram o Inventário da Saúde, pois os bens
+  pertencem ao órgão solicitante. O recebimento continua individualizado em
+  `atas_execucao_unidades` para preservar NF, quantidade e rastreabilidade operacional,
+  mas não cria `inventario_unidades`, não aparece na aba **Inventário** e não admite
+  transferência, empréstimo, devolução ou baixa pelo sistema da Saúde.
 - **Nascimento da unidade física:** quantidades agregadas são permitidas durante
   planejamento, licitação, contratação, solicitação de ATA, AF e execução ainda não
   recebida. No recebimento com NF, cada unidade nasce como uma linha independente em

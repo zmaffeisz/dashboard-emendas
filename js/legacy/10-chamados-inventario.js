@@ -75,6 +75,9 @@ async function loadChamados(){
 }
 
 let inventarioRows=[], inventarioCarregado=false, _invFiltered=[];
+function _invExecucaoAtaIntegraInventario(execucao){
+  return String(execucao?.origem_recurso||'').trim().toLowerCase()!=='carona';
+}
 async function loadInventario(){
   document.getElementById('inv-loading').style.display='block';
   document.getElementById('inv-main').style.display='none';
@@ -91,6 +94,9 @@ async function loadInventario(){
     ]);
     if(e1) throw e1;
     if(e2) throw e2;
+    // Caronas pertencem ao órgão solicitante: o recebimento e suas unidades físicas
+    // permanecem registrados na execução da Ata, mas não integram o Inventário da Saúde.
+    const atInventario=(at||[]).filter(_invExecucaoAtaIntegraInventario);
     const rows=[];
     const aqUnidadesPorEntrega={};
     const aqEntregaIds=[...new Set((aq||[]).map(r=>r.id).filter(Boolean))];
@@ -168,7 +174,7 @@ async function loadInventario(){
       }
     });
     const ataEmendaInfo={};
-    const ataEmendaIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
+    const ataEmendaIds=[...new Set(atInventario.map(r=>r.emenda_item_id).filter(Boolean))];
     if(ataEmendaIds.length){
       const {data:emInfo}=await sb.from('emenda_itens')
         .select('id,item,emenda,unidade_beneficiada,unidade_entrega,empenho,nota_fiscal,patrimonio,emendas:emenda_id(emenda,ano,parlamentar)')
@@ -176,7 +182,7 @@ async function loadInventario(){
       (emInfo||[]).forEach(e=>{ ataEmendaInfo[String(e.id)]=e; });
     }
     const ataItemInfo={};
-    const ataItemIds=[...new Set((at||[]).map(r=>r.ata_item_id).filter(Boolean))];
+    const ataItemIds=[...new Set(atInventario.map(r=>r.ata_item_id).filter(Boolean))];
     if(ataItemIds.length){
       const {data:aiInfo}=await sb.from('atas_itens')
         .select('id,cpl,sim,item,marca_modelo,empresa,valor_unit,contratos(cpl,numero_contrato,prestador)')
@@ -184,7 +190,7 @@ async function loadInventario(){
       (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
     }
     const ataUnidadesPorExec={};
-    const ataExecIds=[...new Set((at||[]).map(r=>r.id).filter(Boolean))];
+    const ataExecIds=[...new Set(atInventario.map(r=>r.id).filter(Boolean))];
     for(const ids of _chunkArray(ataExecIds,200)){
       const {data:uns}=await sb.from('atas_execucao_unidades')
         .select('id,exec_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
@@ -192,7 +198,7 @@ async function loadInventario(){
         .order('unidade_seq',{ascending:true});
       (uns||[]).forEach(u=>{ (ataUnidadesPorExec[String(u.exec_id)]=ataUnidadesPorExec[String(u.exec_id)]||[]).push(u); });
     }
-    (at||[]).forEach(r=>{
+    atInventario.forEach(r=>{
       const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
       const em=emInfo.emendas||{};
       const ai=ataItemInfo[String(r.ata_item_id||'')]||{};
@@ -1186,6 +1192,7 @@ function abrirDetalheInvRow(inv){
   _abrirDetalheItemUnificado(_invEmendaDoInventario(inv),inv);
 }
 window.loadInventario=loadInventario;
+window._invExecucaoAtaIntegraInventario=_invExecucaoAtaIntegraInventario;
 window.filtrarInventario=filtrarInventario;
 window.clearAllInv=clearAllInv;
 window.abrirDetalheInv=abrirDetalheInv;

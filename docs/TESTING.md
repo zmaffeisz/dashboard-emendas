@@ -42,6 +42,9 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
       Entrega na Unidade** o botão de e-mail; o destinatário deve ser o solicitante cadastrado,
       com cópia para `sueq.equipamentos@sorocaba.sp.gov.br`, e o corpo deve trazer Ata, NF
       marcada como anexa, item, quantidade e os contatos do Almoxarifado.
+- [ ] Após receber e confirmar uma execução de ATA com origem **Carona**, conferir que ela
+      continua visível nas execuções e na confirmação, mas não aparece na aba **Inventário**
+      e não possui linha em `inventario_unidades`.
 - [ ] Registrar recebimento/NF quando aplicável (aba **Controle de Entregas**).
 - [ ] Recebimento por unidade física (`itens_entregas_unidades`): patrimônio/série por
       unidade.

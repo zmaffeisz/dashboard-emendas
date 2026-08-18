@@ -54,6 +54,7 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260813213648 | `liberar_fluxo_publico_planejamento_ata` — leitura limitada do planejamento pela aba pública de Emendas |
 | 20260813213831 | `corrigir_reabertura_planejamento_ata` — reabre o planejamento ao excluir uma requisição ainda removível |
 | 20260814193014 | `individualizar_inventario_unidades_fisicas` — materializa uma linha por unidade recebida, inclusive sem patrimônio/série, e protege quantidade física igual a 1 |
+| 20260818202216 | `excluir_caronas_do_inventario` — preserva o recebimento operacional de Caronas, mas impede sua incorporação e movimentação no Inventário da Saúde |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de

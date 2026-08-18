@@ -68,6 +68,9 @@ unidade, mesmo sem patrimônio/série; `inventario_ac` permanece apenas como leg
 planilha. `inventario_unidades` mantém o estado corrente e `inventario_movimentacoes` mantém
 o histórico documental imutável de transferências, empréstimos, devoluções e baixas. O modal
 “Vida do item” reúne estado atual, aquisição/origem e linha do tempo sem reescrever a Emenda.
+Execuções de ATA com `origem_recurso = 'carona'` são excluídas dessa derivação: suas unidades
+permanecem registradas somente no fluxo operacional da Ata e não possuem estado ou
+movimentações no Inventário da Saúde.
 
 ## 8. Controle de Entregas (Itens)
 Ciclo de vida do item após a contratação:

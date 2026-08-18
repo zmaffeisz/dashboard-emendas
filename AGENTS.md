@@ -76,7 +76,10 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
   Patrimônio/série são atributos opcionais e nunca condição para individualizar. Aquisições
   usam `itens_entregas_unidades`; ATAs usam `atas_execucao_unidades`. O registro pai mantém
   a quantidade agregada e o histórico do lote/pedido; cada linha física passa a ter vida e
-  histórico próprios.
+  histórico próprios. **Exceção de titularidade:** execuções de ATA com
+  `origem_recurso = 'carona'` preservam essas linhas apenas como registro operacional do
+  recebimento; não criam `inventario_unidades`, não aparecem na aba **Inventário** e não
+  recebem movimentações, pois os bens pertencem ao órgão solicitante.
 - **Movimentação não reescreve origem:** transferência, empréstimo, devolução e baixa criam
   eventos imutáveis em `inventario_movimentacoes` e atualizam apenas o estado corrente em
   `inventario_unidades`. A unidade beneficiada mostrada na aba **Emendas** é a fotografia do

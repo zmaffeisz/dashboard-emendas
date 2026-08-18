@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Caronas fora do Inventário:** recebimentos de ATA com origem Carona permanecem
+  registrados nas execuções, NF e confirmação da unidade, mas não aparecem na aba
+  Inventário, não criam estado em `inventario_unidades` e não podem receber movimentações
+  patrimoniais da Saúde.
 - **Aviso de retirada para Carona:** recebimentos de ATA originados por Carona exibem, na
   subaba **Confirmação de Entrega na Unidade**, um botão para preparar o e-mail ao
   solicitante cadastrado, com cópia para a SUEQ. O texto informa Ata, NF anexa, item,

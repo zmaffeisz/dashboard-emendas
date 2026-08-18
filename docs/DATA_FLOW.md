@@ -42,7 +42,7 @@
 | Status detalhado da licitação | `itens.status_lic_id` (`emenda_itens.status_id` é categoria/fallback) | aba Licitações (por item) | Emenda (somente leitura) |
 | Contrato (matriz) | aba **Contratos** (`contratos`) | editar contrato (admin) | Atas, Itens, Empenhos, Chamados, Sanções |
 | Ata (itens) | espelhada ao salvar contrato ATA (`atas_itens`) | aba **Atas Rp** | Execução de ata, Itens |
-| Execução de ata | aba **Atas Rp** (`atas_execucao`) | AF/entrega/termo | Saldo, Inventário |
+| Execução de ata | aba **Atas Rp** (`atas_execucao`) | AF/entrega/termo | Saldo, Inventário — exceto Carona |
 | Planejamento de Emenda para futura Ata | Licitações (`ata_planejamento_emendas`) | vínculo no item/lote de processo `ATA DE RP` | Emendas e conversão opcional ao gerar a Ata; não reserva nem executa |
 | AF / entrega | aba **Itens** (`itens_entregas`) | modal AF / recebimento / confirmação na unidade | Emendas, Saldo, NF, Inventário |
 | Recebimento por unidade | aba **Itens** (`itens_entregas_unidades`) | modal recebimento | agregado em `itens_entregas` (trigger) |
@@ -110,7 +110,9 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
 7. **Movimentação física** — após o nascimento, `inventario_unidades` guarda localização e
    situação atuais; `inventario_movimentacoes` acrescenta transferência, empréstimo,
    devolução ou baixa com documento. A unidade beneficiada de `emenda_itens` não é alterada:
-   Emendas mostra apenas um marcador e a ficha detalhada consulta o histórico.
+   Emendas mostra apenas um marcador e a ficha detalhada consulta o histórico. Unidades de
+   execuções com origem **Carona** permanecem apenas no fluxo da Ata e não entram nessas
+   tabelas de inventário ou movimentação.
 8. **Saldo** — `vw_emendas_saldo` reflete `total_executado` (soma de `vl_total`) e
    `saldo_remanescente = valor_cedido − comprometido`.
 

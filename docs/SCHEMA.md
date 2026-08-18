@@ -206,10 +206,11 @@ armazenar valor** (evita duplicidade).
 
 ### `inventario_unidades`
 
-Uma linha de estado por unidade física de aquisição ou ATA. Guarda `unidade_origem_*` como
-fotografia imutável, `unidade_atual_*`, `situacao_atual` (`ATIVO`, `EMPRESTADO`, `BAIXADO`),
-responsável e eventual previsão de devolução. A chave única é
-`(origem_tipo, unidade_fisica_id)`.
+Uma linha de estado por unidade física de aquisição ou ATA própria da Saúde. Execuções de
+ATA com `origem_recurso = 'carona'` não geram linha nesta tabela; suas unidades permanecem
+somente em `atas_execucao_unidades`. Guarda `unidade_origem_*` como fotografia imutável,
+`unidade_atual_*`, `situacao_atual` (`ATIVO`, `EMPRESTADO`, `BAIXADO`), responsável e
+eventual previsão de devolução. A chave única é `(origem_tipo, unidade_fisica_id)`.
 
 ### `inventario_movimentacoes`
 
