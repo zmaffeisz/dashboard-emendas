@@ -1876,7 +1876,12 @@
             <div class="form-label">SIM</div>
             <input type="text" id="ne2-sim" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
           </div>
-          <div class="form-group full" id="ne2-unidade-wrap"><div class="form-label">Unidade *</div><input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU"><div id="ne2-unidade-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Preenchida automaticamente pela emenda.</div></div>
+          <div class="form-group full" id="ne2-unidade-wrap">
+            <div class="form-label" id="ne2-unidade-label">Unidade *</div>
+            <input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU">
+            <select id="ne2-secretaria" style="display:none"><option value="">Selecione a secretaria...</option></select>
+            <div id="ne2-unidade-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Preenchida automaticamente pela emenda.</div>
+          </div>
           <div class="form-group" id="ne2-codigo-siam-secretaria-wrap" style="display:none"><div class="form-label">Código SIAM *</div><input type="text" id="ne2-codigo-siam-secretaria" placeholder="ex: 1234" maxlength="50"></div>
           <div class="form-group"><div class="form-label">Qtde *</div><input type="number" id="ne2-qtde" placeholder="ex: 2" oninput="calcValorExec()"></div>
           <div class="form-group"><div class="form-label">Valor total (R$)</div><input type="number" id="ne2-valor" placeholder="Calculado automaticamente" step="0.01" readonly title="Calculado pelo valor vigente do item na data da solicitação"></div>

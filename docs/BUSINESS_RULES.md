@@ -154,9 +154,11 @@
   mostrar item, quantidade e unidade para evitar vínculo errado.
 - Na solicitação/execução de ATA, **Carona** identifica pedidos de outras secretarias que
   aderem à ATA. Nesta etapa, o formulário e as validações são iguais aos de **Recurso
-  próprio**: não há vínculo com `emendas` e a unidade é informada manualmente. O **Código
-  SIAM** da secretaria é obrigatório e informado somente nesse fluxo. A origem e o código
-  são preservados em `atas_execucao.origem_recurso` e
+  próprio**: não há vínculo com `emendas`. A secretaria solicitante deve ser escolhida
+  exclusivamente entre os registros ativos do cadastro central `secretarias`, exibidos
+  como **SIGLA — Nome**; esse mesmo rótulo é preservado como unidade de destino da
+  solicitação. O **Código SIAM** da secretaria é obrigatório e informado somente nesse
+  fluxo. A origem e o código são preservados em `atas_execucao.origem_recurso` e
   `atas_execucao.codigo_siam_secretaria` para regras e relatórios futuros.
 - `contratos.data_base_reajuste` é uma informação contratual opcional para todos os tipos
   de instrumento. Ela é exibida nos detalhes e, nas ATAs, também na lista de itens, mas

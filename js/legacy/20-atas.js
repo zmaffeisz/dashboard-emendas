@@ -1584,12 +1584,18 @@ function calcValorExec(){
 
 async function abrirModalNovaExec(){
   if(bloquearSeVisualiz('atas')) return;
+  // Recarrega a lista a cada abertura para refletir imediatamente alterações
+  // feitas no cadastro central de Secretarias durante a mesma sessão.
+  _neSecretariasCaronaCache=[];
+  _neSecretariasCaronaCarregadas=false;
+  const secretariaSel=document.getElementById('ne2-secretaria');
+  if(secretariaSel){ secretariaSel.disabled=false; secretariaSel.innerHTML='<option value="">Selecione a secretaria...</option>'; }
   const itensUnicos=atasItens.filter(r=>!String(r.status||"").toUpperCase().startsWith("ENCERRADO")).sort((a,b)=>a.item.localeCompare(b.item,'pt-BR'));
   const itemSel=document.getElementById("ne2-item");
   itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
   document.getElementById("ne2-cpl").value="";
   document.getElementById("ne2-sim").value="";
-  ["ne2-unidade","ne2-codigo-siam-secretaria","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["ne2-unidade","ne2-secretaria","ne2-codigo-siam-secretaria","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   // Fase 12: popular emendas e voltar à origem padrão (emenda)
   if(!_neEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar,unidade,unidade_id').order('ano',{ascending:false}); _neEmendasCache=data||[]; }
   document.getElementById("ne2-emenda").innerHTML='<option value="">Selecione a emenda...</option>'+_neEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join("");
@@ -1600,7 +1606,30 @@ async function abrirModalNovaExec(){
   document.getElementById("modal-nova-exec").classList.add("active");
 }
 let _neEmendasCache=[];
+let _neSecretariasCaronaCache=[];
+let _neSecretariasCaronaCarregadas=false;
 function _neOrigem(){ return document.querySelector('input[name="ne2-origem"]:checked')?.value||'emenda'; }
+function _neSecretariaCaronaLabel(secretaria){
+  return [secretaria?.sigla,secretaria?.nome].filter(Boolean).join(' — ');
+}
+async function _neCarregarSecretariasCarona(){
+  const sel=document.getElementById('ne2-secretaria');
+  if(!sel||_neSecretariasCaronaCarregadas) return;
+  sel.disabled=true;
+  sel.innerHTML='<option value="">Carregando secretarias...</option>';
+  const {data,error}=await sb.from('secretarias').select('id,sigla,nome').eq('ativo',true).order('sigla');
+  if(error){
+    sel.innerHTML='<option value="">Não foi possível carregar as secretarias</option>';
+    showMsg('ne2','Erro ao carregar o cadastro central de Secretarias: '+error.message,'err');
+    return;
+  }
+  _neSecretariasCaronaCache=data||[];
+  _neSecretariasCaronaCarregadas=true;
+  sel.innerHTML='<option value="">Selecione a secretaria...</option>'+_neSecretariasCaronaCache.map(s=>
+    `<option value="${_sanEsc(String(s.id))}">${_sanEsc(_neSecretariaCaronaLabel(s))}</option>`
+  ).join('');
+  sel.disabled=false;
+}
 function neOrigemChange(){
   const origem=_neOrigem();
   const emenda=origem==='emenda';
@@ -1610,10 +1639,16 @@ function neOrigemChange(){
   document.getElementById("ne2-unidade-wrap").classList.toggle('full',!carona);
   document.getElementById("ne2-codigo-siam-secretaria-wrap").style.display=carona?'':'none';
   const uni=document.getElementById("ne2-unidade");
+  const secretaria=document.getElementById("ne2-secretaria");
+  document.getElementById("ne2-unidade-label").textContent=carona?'Secretaria solicitante *':'Unidade *';
+  uni.style.display=carona?'none':'';
+  secretaria.style.display=carona?'':'none';
   uni.readOnly=emenda; uni.style.background=emenda?'var(--surface2)':'';
   document.getElementById("ne2-unidade-auto").style.display=emenda?'block':'none';
   if(!carona) document.getElementById("ne2-codigo-siam-secretaria").value='';
   if(!emenda){ uni.value=''; }
+  if(!carona) secretaria.value='';
+  if(carona) _neCarregarSecretariasCarona();
 }
 async function _neEmendaItensJaUsados(ids,{incluirPlanejamento=true}={}){
   const set=new Set();
@@ -1744,13 +1779,18 @@ async function salvarNovaAta(){
 async function salvarNovaExec(){
   if(bloquearSeVisualiz('atas')) return;
   const at=_resolverAtaItemRef(document.getElementById("ne2-item").value);
-  const unidade=document.getElementById("ne2-unidade").value.trim();
-  const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
   const origem=_neOrigem();
+  const secretariaId=document.getElementById("ne2-secretaria").value;
+  const secretariaCarona=_neSecretariasCaronaCache.find(s=>String(s.id)===String(secretariaId))||null;
+  const unidade=(origem==='carona'
+    ?_neSecretariaCaronaLabel(secretariaCarona)
+    :document.getElementById("ne2-unidade").value).trim();
+  const qtde=parseFloat(document.getElementById("ne2-qtde").value)||0;
   const codigoSiamSecretaria=document.getElementById("ne2-codigo-siam-secretaria").value.trim();
   const emendaId=document.getElementById("ne2-emenda").value||null;
   const emendaItemId=document.getElementById("ne2-emenda-item").value||null;
-  if(!at||!unidade||!qtde){showMsg("ne2","Selecione o item da ATA e preencha Unidade e Quantidade (*)","err");return}
+  if(origem==='carona'&&!secretariaCarona){showMsg("ne2","Selecione a secretaria solicitante no cadastro central (*)","err");return}
+  if(!at||!unidade||!qtde){showMsg("ne2",`Selecione o item da ATA e preencha ${origem==='carona'?'Secretaria':'Unidade'} e Quantidade (*)`,"err");return}
   if(origem==='carona'&&!codigoSiamSecretaria){showMsg("ne2","Informe o Código SIAM da secretaria (*)","err");return}
   if(origem==='emenda' && (!emendaId||!emendaItemId)){showMsg("ne2","Selecione a emenda e o item da emenda (*)","err");return}
   if(origem==='emenda' && emendaItemId){
