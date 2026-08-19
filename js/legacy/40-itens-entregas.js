@@ -1011,9 +1011,29 @@ async function loadItensEntregas(){
   const wrap=document.getElementById('entregas-wrap'); if(!wrap) return;
   wrap.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando controle de prazos...</div>';
   const out=[];
+  const {data:observacoesHistorico,error:eObservacoes}=await sb.from('entregas_observacoes')
+    .select('id,item_id,item_entrega_id,ata_execucao_id,texto,autor_id,autor_nome,created_at,updated_by,updated_by_nome,updated_at,migrada')
+    .order('created_at',{ascending:true});
+  if(eObservacoes) console.warn('Histórico de observações:',eObservacoes.message);
+  const _obsPorItem={}, _obsPorEntrega={}, _obsPorExec={};
+  (observacoesHistorico||[]).forEach(o=>{
+    const mapa=o.item_entrega_id?_obsPorEntrega:(o.ata_execucao_id?_obsPorExec:_obsPorItem);
+    const id=o.item_entrega_id||o.ata_execucao_id||o.item_id;
+    if(id) (mapa[String(id)]=mapa[String(id)]||[]).push(o);
+  });
+  const {data:prazosHistorico,error:ePrazos}=await sb.from('entregas_prazos_historico')
+    .select('id,item_entrega_id,ata_execucao_id,prazo_anterior,prazo_novo,observacao,alterado_em,created_at')
+    .order('created_at',{ascending:true});
+  if(ePrazos) console.warn('Histórico de prazos:',ePrazos.message);
+  const _prazosPorEntrega={}, _prazosPorExec={};
+  (prazosHistorico||[]).forEach(h=>{
+    const mapa=h.item_entrega_id?_prazosPorEntrega:_prazosPorExec;
+    const id=h.item_entrega_id||h.ata_execucao_id;
+    if(id) (mapa[String(id)]=mapa[String(id)]||[]).push(h);
+  });
   // Aquisições: itens_entregas + item + processo/contrato/fornecedor/unidade/documentos
   const {data:aq,error:e1}=await sb.from('itens_entregas')
-    .select('*, empenhos(numero,ano), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
+    .select('*, empenhos(numero,ano), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
   const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
@@ -1064,6 +1084,10 @@ async function loadItensEntregas(){
       unidade:it.unidades?.nome||'', af_numero:r.af_numero||'',
       af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
       saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
+      observacoes:_obsPorEntrega[String(r.id)]||[],
+      prazo_entrega_dias:it.prazo_entrega_dias,
+      prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
+      prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
       data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
       recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,
@@ -1130,6 +1154,9 @@ async function loadItensEntregas(){
       origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
+      observacoes:_obsPorExec[String(r.id)]||[],
+      prazoOriginalISO:(r.prazo_entrega_dias||ai.prazo_entrega)!=null?_addDiasISO(_toISODate(r.data_af),Number(r.prazo_entrega_dias||ai.prazo_entrega)):'',
+      prazosHistorico:_prazosPorExec[String(r.id)]||[],
       valor_item:(Number(r.valor)&&Number(r.qtde))?(Number(r.valor)/Number(r.qtde)):(Number(ai.valor_unit)||0),
       nota_fiscal:r.nf||emInfo.nota_fiscal||'', possui_patrimonio:r.possui_patrimonio, patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta, controle_obs:r.controle_obs||'',
       empenho_vinculado:!!empAta,
@@ -1192,6 +1219,10 @@ async function loadItensEntregas(){
         unidade:it.unidades?.nome||'', af_numero:r.af_numero||'',
         af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
         saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
+        observacoes:_obsPorEntrega[String(r.id)]||[],
+        prazo_entrega_dias:it.prazo_entrega_dias,
+        prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
+        prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
         data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
         recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
         empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
@@ -1218,6 +1249,7 @@ async function loadItensEntregas(){
         empresa:it.fornecedores?.razao_social||'', item:it.descricao||'',
         marca:it.marca||'', modelo:it.modelo||'', unidade:it.unidades?.nome||'',
         af_numero:'', af_dataISO:'', qtde:saldoAut, prazo_entrega_dias:it.prazo_entrega_dias,
+        observacoes:_obsPorItem[String(it.id)]||[],
         empenho_vinculado:emps.length>0, empenho:emps.filter(Boolean).join(', '), controle_obs:it.controle_obs||'',
         limiteISO:'', recebido:false, cancelado:false, status:'aguardando AF'
       });
@@ -1236,6 +1268,10 @@ async function loadItensEntregas(){
       empresa:it.fornecedores?.razao_social||'',item:it.descricao||'(item '+r.item_id+')',
       unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
+      observacoes:_obsPorEntrega[String(r.id)]||[],
+      prazo_entrega_dias:it.prazo_entrega_dias,
+      prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
+      prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
@@ -1256,6 +1292,10 @@ async function loadItensEntregas(){
       empresa:it.fornecedores?.razao_social||'',item:it.descricao||'(item '+r.item_id+')',
       unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
+      observacoes:_obsPorEntrega[String(r.id)]||[],
+      prazo_entrega_dias:it.prazo_entrega_dias,
+      prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
+      prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
@@ -1263,6 +1303,17 @@ async function loadItensEntregas(){
   entregasRows=out;
   itensEntregasCarregado=true;
   renderItensEntregas();
+}
+function _prazoEntregaHistoricoHtml(r){
+  const atual=_toISODate(r.limiteISO);
+  if(!atual) return '—';
+  const historico=Array.isArray(r.prazosHistorico)?r.prazosHistorico:[];
+  const original=_toISODate(historico[0]?.prazo_anterior||r.prazoOriginalISO);
+  const alterado=historico.length>0||(original&&original!==atual);
+  if(!alterado) return `<strong>${fmtDate(atual)}</strong>`;
+  const total=historico.length||1;
+  const eventos=historico.length?historico:[{prazo_anterior:original,prazo_novo:atual}];
+  return `<div style="min-width:128px"><strong>${fmtDate(atual)}</strong><div style="font-size:10px;color:var(--amber-text);font-weight:700;margin-top:2px">PRORROGADO · ${total}</div><details style="margin-top:2px"><summary style="font-size:10px;color:var(--blue);cursor:pointer;white-space:nowrap">Ver histórico</summary><div style="margin-top:5px;padding:6px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);font-size:10px;line-height:1.45;white-space:normal;min-width:190px"><div><b>Prazo original:</b> ${original?fmtDate(original):'não identificado'}</div>${eventos.map((h,i)=>{const novo=_toISODate(h.prazo_novo);const obs=String(h.observacao||'').trim();return `<div style="margin-top:4px"><b>${i+1}º novo prazo:</b> ${novo?fmtDate(novo):'—'}${obs?`<br><span style="color:var(--text3)">${_sanEsc(obs)}</span>`:''}</div>`;}).join('')}</div></details></div>`;
 }
 function renderItensEntregas(){
   const wrap=document.getElementById('entregas-wrap'); if(!wrap) return;
@@ -1336,8 +1387,10 @@ function renderItensEntregas(){
           ?`${r.qtde_recebida||0}<br><span style="color:var(--text3)">saldo AF ${r.saldo_af}</span><br><span style="color:var(--text3)">saldo item ${r.saldo_item}</span>`
           :(r.recebido?'sim':'—');
       }
-      const obs=(r.controle_obs||'').trim();
-      const obsBtn=pode?`<button onclick="abrirObservacaoEntrega('${_ceRowKey(r)}')" title="${_sanEsc(obs||'Adicionar observação')}" aria-label="Observação" style="width:28px;height:28px;padding:0;border-radius:6px;border:1px solid ${obs?'var(--blue)':'var(--border)'};background:${obs?'var(--blue-bg)':'var(--surface)'};color:${obs?'var(--blue)':'var(--text2)'};cursor:pointer;font-size:10px;font-weight:700">Obs</button>`:'';
+      const observacoes=Array.isArray(r.observacoes)?r.observacoes:[];
+      const obsTotal=observacoes.length;
+      const obsUltima=observacoes[obsTotal-1]?.texto||'';
+      const obsBtn=pode?`<button onclick="abrirObservacaoEntrega('${_ceRowKey(r)}')" title="${_sanEsc(obsUltima||'Adicionar observação')}" aria-label="Observações (${obsTotal})" style="height:28px;padding:0 7px;border-radius:6px;border:1px solid ${obsTotal?'var(--blue)':'var(--border)'};background:${obsTotal?'var(--blue-bg)':'var(--surface)'};color:${obsTotal?'var(--blue)':'var(--text2)'};cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap">Obs${obsTotal?' · '+obsTotal:''}</button>`:'';
       if(obsBtn) acoes=acoes==='—'?`<div style="display:flex;gap:4px;flex-wrap:wrap">${obsBtn}</div>`:acoes.replace('</div>',obsBtn+'</div>');
       return `<tr style="border-bottom:1px solid var(--border)${rowBg}">
       <td style="padding:6px 8px;text-align:center">${_ceAdvCheckbox(r)}</td>
@@ -1352,7 +1405,7 @@ function renderItensEntregas(){
       <td style="padding:6px 8px;text-align:right">${r.qtde??'—'}</td>
       <td style="padding:6px 8px;text-align:right;white-space:nowrap">${recInfo}</td>
       <td style="padding:6px 8px;white-space:nowrap;color:var(--text3)">${docs}</td>
-      <td style="padding:6px 8px;white-space:nowrap">${r.limiteISO?fmtDate(r.limiteISO):'—'}${r.entregaISO?('<br><span style="color:var(--text3)">entregue '+fmtDate(r.entregaISO)+'</span>'):''}</td>
+      <td style="padding:6px 8px;vertical-align:top">${_prazoEntregaHistoricoHtml(r)}${r.entregaISO?('<br><span style="color:var(--text3)">entregue '+fmtDate(r.entregaISO)+'</span>'):''}</td>
       <td style="padding:6px 8px">${_prazoBadge(r.status,dias)}</td>
       <td style="padding:6px 8px">${acoes}</td>
     </tr>`;}).join('')}</tbody></table>`;
@@ -1360,40 +1413,106 @@ function renderItensEntregas(){
   _ceCompactarAcoes(wrap);
 }
 
-let _ceObsRowKey='';
+let _ceObsRowKey='', _ceObsEditId='';
+function _ceObsDataHora(valor){
+  if(!valor) return '';
+  const data=new Date(valor);
+  if(Number.isNaN(data.getTime())) return '';
+  return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(data);
+}
+function _ceObsRow(){ return entregasRows.find(r=>_ceRowKey(r)===_ceObsRowKey); }
+function _ceObsRender(){
+  const row=_ceObsRow();
+  const lista=document.getElementById('ceobs-lista');
+  if(!row||!lista) return;
+  const observacoes=[...(row.observacoes||[])].sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  if(!observacoes.length){
+    lista.innerHTML='<div style="padding:10px 12px;border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--text3);font-size:12px">Nenhuma observação registrada.</div>';
+    return;
+  }
+  lista.innerHTML=observacoes.map((o,idx)=>{
+    const data=o.migrada?'data original não disponível':(_ceObsDataHora(o.created_at)||'data não informada');
+    const editada=o.updated_at?`<div style="font-size:10px;color:var(--text3);margin-top:5px">Editada por ${_sanEsc(o.updated_by_nome||'Administrador')} em ${_sanEsc(_ceObsDataHora(o.updated_at)||'data não informada')}</div>`:'';
+    const editar=_isAdmin()?`<button type="button" onclick="editarObservacaoEntrega('${o.id}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--blue);cursor:pointer">Editar</button>`:'';
+    return `<div style="padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="font-size:10px;color:var(--text3)"><b style="color:var(--text2)">${idx+1}. ${_sanEsc(o.autor_nome||'Usuário')}</b> · ${_sanEsc(data)}</div>${editar}</div><div style="font-size:12px;color:var(--text);white-space:pre-wrap;margin-top:5px;line-height:1.45">${_sanEsc(o.texto||'')}</div>${editada}</div>`;
+  }).join('');
+  lista.scrollTop=lista.scrollHeight;
+}
 function abrirObservacaoEntrega(rowKey){
   if(bloquearSeVisualiz('itens')) return;
   const row=entregasRows.find(r=>_ceRowKey(r)===rowKey);
   if(!row) return;
   _ceObsRowKey=rowKey;
+  _ceObsEditId='';
   document.getElementById('ceobs-info').textContent=`${row.item||'Item'} · ${row.unidade||'—'}`;
-  document.getElementById('ceobs-texto').value=row.controle_obs||'';
+  document.getElementById('ceobs-texto').value='';
+  document.getElementById('ceobs-form-label').textContent='Nova observação';
+  document.getElementById('ceobs-salvar').textContent='Adicionar observação';
+  document.getElementById('ceobs-cancelar-edicao').style.display='none';
   document.getElementById('ceobs-msg').textContent='';
   document.getElementById('ceobs-msg').className='fmsg';
+  _ceObsRender();
   document.getElementById('modal-observacao-entrega').classList.add('active');
+}
+function editarObservacaoEntrega(id){
+  if(!_isAdmin()){ alert('Somente administradores podem editar observações já salvas.'); return; }
+  const row=_ceObsRow();
+  const obs=(row?.observacoes||[]).find(o=>String(o.id)===String(id));
+  if(!obs) return;
+  _ceObsEditId=obs.id;
+  document.getElementById('ceobs-texto').value=obs.texto||'';
+  document.getElementById('ceobs-form-label').textContent='Editar observação (somente administrador)';
+  document.getElementById('ceobs-salvar').textContent='Salvar alteração';
+  document.getElementById('ceobs-cancelar-edicao').style.display='inline-flex';
+  document.getElementById('ceobs-msg').textContent='';
+  document.getElementById('ceobs-texto').focus();
+}
+function cancelarEdicaoObservacaoEntrega(){
+  _ceObsEditId='';
+  document.getElementById('ceobs-texto').value='';
+  document.getElementById('ceobs-form-label').textContent='Nova observação';
+  document.getElementById('ceobs-salvar').textContent='Adicionar observação';
+  document.getElementById('ceobs-cancelar-edicao').style.display='none';
+  document.getElementById('ceobs-msg').textContent='';
 }
 async function salvarObservacaoEntrega(){
   if(bloquearSeVisualiz('itens')) return;
-  const row=entregasRows.find(r=>_ceRowKey(r)===_ceObsRowKey);
+  const row=_ceObsRow();
   if(!row) return;
-  const texto=document.getElementById('ceobs-texto').value.trim()||null;
-  const alvo=row.tipo==='ATA'
-    ?{tabela:'atas_execucao',id:row.exec_id}
-    :row.entrega_id
-      ?{tabela:'itens_entregas',id:row.entrega_id}
-      :{tabela:'itens',id:row.item_id};
+  const texto=document.getElementById('ceobs-texto').value.trim();
   const btn=document.getElementById('ceobs-salvar'); const msg=document.getElementById('ceobs-msg');
+  const editando=!!_ceObsEditId;
+  if(!texto){ msg.textContent='Escreva a observação antes de salvar.'; msg.className='fmsg err'; return; }
+  if(_ceObsEditId&&!_isAdmin()){ msg.textContent='Somente administradores podem editar observações.'; msg.className='fmsg err'; return; }
   btn.disabled=true; btn.textContent='Salvando...';
-  const {data,error}=await sb.from(alvo.tabela).update({controle_obs:texto}).eq('id',alvo.id).select('id,controle_obs');
-  btn.disabled=false; btn.textContent='Salvar observação';
+  let data,error;
+  if(_ceObsEditId){
+    ({data,error}=await sb.from('entregas_observacoes').update({texto}).eq('id',_ceObsEditId).select('*').single());
+  }else{
+    const payload={texto};
+    if(row.tipo==='ATA') payload.ata_execucao_id=row.exec_id;
+    else if(row.entrega_id) payload.item_entrega_id=row.entrega_id;
+    else payload.item_id=row.item_id;
+    ({data,error}=await sb.from('entregas_observacoes').insert(payload).select('*').single());
+  }
+  btn.disabled=false;
+  btn.textContent=editando?'Salvar alteração':'Adicionar observação';
   if(error){ msg.textContent='Erro: '+error.message; msg.className='fmsg err'; return; }
-  if(!data?.length){ msg.textContent='A observação não foi salva. Verifique sua permissão.'; msg.className='fmsg err'; return; }
-  row.controle_obs=texto||'';
+  if(!data?.id){ msg.textContent='A observação não foi salva. Verifique sua permissão.'; msg.className='fmsg err'; return; }
+  if(editando){
+    row.observacoes=(row.observacoes||[]).map(o=>String(o.id)===String(data.id)?data:o);
+  }else{
+    row.observacoes=[...(row.observacoes||[]),data];
+  }
+  cancelarEdicaoObservacaoEntrega();
+  msg.textContent=editando?'✓ Observação atualizada pelo administrador.':'✓ Nova observação adicionada ao histórico.';
+  msg.className='fmsg ok';
+  _ceObsRender();
   renderItensEntregas();
-  msg.textContent='✓ Observação salva.'; msg.className='fmsg ok';
-  setTimeout(()=>document.getElementById('modal-observacao-entrega').classList.remove('active'),650);
 }
 window.abrirObservacaoEntrega=abrirObservacaoEntrega;
+window.editarObservacaoEntrega=editarObservacaoEntrega;
+window.cancelarEdicaoObservacaoEntrega=cancelarEdicaoObservacaoEntrega;
 window.salvarObservacaoEntrega=salvarObservacaoEntrega;
 
 // ── Advertência multi-item no Controle de Entregas (mesmo contrato) ──

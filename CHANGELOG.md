@@ -2,6 +2,16 @@
 
 ## Em desenvolvimento
 
+- **Linha do tempo de observações no Controle de Entregas:** cada anotação agora cria um
+  registro permanente com data, hora e autor, exibido em ordem cronológica no modal. Novas
+  anotações não substituem as anteriores; somente administradores podem editar um registro
+  já salvo, e a edição também identifica quem alterou e quando. As 35 observações legadas
+  existentes foram preservadas como registros anteriores sem data original conhecida.
+- **Histórico de prazos no Controle de Entregas:** a data limite vigente não apaga mais o
+  prazo anterior. A tabela mostra quando houve prorrogação, o prazo original e cada novo
+  prazo, com observação; alterações futuras são registradas automaticamente no banco. Os
+  registros anteriores ainda identificáveis pela AF, prazo do item e observação de
+  prorrogação também foram recuperados.
 - **Caronas fora do Inventário:** recebimentos de ATA com origem Carona permanecem
   registrados nas execuções, NF e confirmação da unidade, mas não aparecem na aba
   Inventário, não criam estado em `inventario_unidades` e não podem receber movimentações

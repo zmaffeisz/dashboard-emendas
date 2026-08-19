@@ -292,6 +292,15 @@
   como "aguardando AF". Após emitir AF, o item **permanece** nesta subaba com os botões
   **Receber** e **Prazo**. O item só sai da subaba e entra em **Confirmação de Entrega na
   Unidade** após o recebimento interno ser confirmado (saldo da AF <= 0).
+- A alteração da data limite de uma aquisição ou execução de ATA preserva uma linha
+  imutável em `entregas_prazos_historico`, com prazo anterior, novo prazo, observação,
+  usuário e data. A listagem mantém a data vigente em destaque e permite consultar o prazo
+  original e todas as prorrogações anteriores.
+- As observações do Controle de Entregas são cumulativas e permanentes em
+  `entregas_observacoes`: cada salvamento cria uma nova linha com autor e data/hora. Usuários
+  com edição na aba podem acrescentar anotações, mas somente administradores aprovados
+  podem editar uma anotação existente. Não há exclusão pela aplicação, e o recebimento do
+  item não limpa mais esse histórico.
 - A subaba **Confirmação de Entrega na Unidade** lista apenas aquisições que já passaram
   pelo recebimento interno (`qtde_recebida > 0` ou `data_recebimento` preenchida). O
   empenho exibido pode vir da entrega ou ser herdado de `empenho_itens`/`empenhos` pelo

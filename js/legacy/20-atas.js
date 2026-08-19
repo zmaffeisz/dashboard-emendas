@@ -1656,11 +1656,11 @@ async function excluirExec(execId){
 let _prorrogarExecId=null, _prorrogarEntregaId=null;
 function abrirModalProrrogarPrazo(execId){
   if(!podeEditar('atas')&&!podeEditar('itens')){ alert('⛔ Você não tem permissão para alterar esta execução.'); return; }
-  const r=(atasExec||[]).find(x=>String(x.id)===String(execId))
-    || entregasRows.find(x=>String(x.exec_id)===String(execId));
+  const r=entregasRows.find(x=>String(x.exec_id)===String(execId))
+    || (atasExec||[]).find(x=>String(x.id)===String(execId));
   if(!r) return;
   _prorrogarExecId=r.id||r.exec_id; _prorrogarEntregaId=null;
-  document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade}`;
+  document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade} · prazo atual ${r?.prev_entrega||r?.limiteISO?fmtDate(r?.prev_entrega||r?.limiteISO):'não informado'}`;
   document.getElementById("pp-data").value=r?.prev_entrega||r?.limiteISO||"";
   document.getElementById("pp-obs").value="";
   document.getElementById("pp-msg").className="fmsg";
@@ -1671,7 +1671,7 @@ function abrirModalProrrogarPrazoAquisicao(entregaId){
   const r=entregasRows.find(x=>String(x.entrega_id)===String(entregaId));
   if(!r) return;
   _prorrogarEntregaId=r.entrega_id; _prorrogarExecId=null;
-  document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade}`;
+  document.getElementById("pp-info").textContent=`${r.item} · ${r.unidade} · prazo atual ${r.limiteISO?fmtDate(r.limiteISO):'não informado'}`;
   document.getElementById("pp-data").value=r.limiteISO||"";
   document.getElementById("pp-obs").value="";
   document.getElementById("pp-msg").className="fmsg";
@@ -1684,28 +1684,35 @@ async function salvarProrrogarPrazo(){
   if(!data){showMsg("pp","Informe a nova data (*)","err");return}
   const btn=document.querySelector("#modal-prorrogar-prazo .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  const obsPrazo=obs?"Prorrogado: "+obs:"";
   if(_prorrogarEntregaId){
     const r=entregasRows.find(x=>String(x.entrega_id)===String(_prorrogarEntregaId));
     if(!r){btn.disabled=false;btn.textContent="Salvar";return;}
-    const {data:salvo,error}=await sb.from("itens_entregas").update({data_limite_entrega:data}).eq("id",r.entrega_id).select("id,data_limite_entrega");
+    const prazoAnterior=r.limiteISO;
+    const {data:salvo,error}=await sb.rpc("prorrogar_prazo_entrega",{p_item_entrega_id:r.entrega_id,p_ata_execucao_id:null,p_novo_prazo:data,p_observacao:obs||null});
     btn.disabled=false;btn.textContent="Salvar";
     if(error){showMsg("pp","Erro: "+error.message,"err");return;}
-    if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
-    Object.assign(r,{limiteISO:data,status:_prazoStatus(data,r.recebido,r.cancelado)});
+    if(!salvo){showMsg("pp","Informe uma data diferente do prazo atual.","err");return;}
+    Object.assign(r,{limiteISO:data,prazoOriginalISO:r.prazoOriginalISO||prazoAnterior,status:_prazoStatus(data,r.recebido,r.cancelado)});
+    r.prazosHistorico=[...(r.prazosHistorico||[]),{prazo_anterior:prazoAnterior,prazo_novo:data,observacao:obs}];
     renderItensEntregas();
   }else{
-    const r=(atasExec||[]).find(x=>String(x.id)===String(_prorrogarExecId))
-      || entregasRows.find(x=>String(x.exec_id)===String(_prorrogarExecId));
+    const r=entregasRows.find(x=>String(x.exec_id)===String(_prorrogarExecId))
+      || (atasExec||[]).find(x=>String(x.id)===String(_prorrogarExecId));
     if(!r){btn.disabled=false;btn.textContent="Salvar";return;}
     const execId=r.id||r.exec_id;
-    const {data:salvo,error}=await sb.from("atas_execucao").update({prev_entrega:data,obs_prazo:obsPrazo||null}).eq("id",execId).select("id,prev_entrega,obs_prazo");
+    const prazoAnterior=r.prev_entrega||r.limiteISO;
+    const obsPrazo=obs?"Prorrogado: "+obs:(r.obs_prazo||"");
+    const {data:salvo,error}=await sb.rpc("prorrogar_prazo_entrega",{p_item_entrega_id:null,p_ata_execucao_id:execId,p_novo_prazo:data,p_observacao:obs||null});
     btn.disabled=false;btn.textContent="Salvar";
     if(error){showMsg("pp","Erro: "+error.message,"err");return;}
-    if(!salvo?.length){showMsg("pp","O prazo não foi salvo. Verifique sua permissão.","err");return;}
-    Object.assign(r,{prev_entrega:data,limiteISO:data,obs_prazo:obsPrazo,status:_prazoStatus(data,r.recebido,false)});
+    if(!salvo){showMsg("pp","Informe uma data diferente do prazo atual.","err");return;}
+    Object.assign(r,{prev_entrega:data,limiteISO:data,obs_prazo:obsPrazo,prazoOriginalISO:r.prazoOriginalISO||prazoAnterior,status:_prazoStatus(data,r.recebido,false)});
+    r.prazosHistorico=[...(r.prazosHistorico||[]),{prazo_anterior:prazoAnterior,prazo_novo:data,observacao:obs}];
     const ataRow=entregasRows.find(x=>String(x.exec_id)===String(execId));
-    if(ataRow&&ataRow!==r) Object.assign(ataRow,{limiteISO:data,obs_prazo:obsPrazo,status:_prazoStatus(data,ataRow.recebido,false)});
+    if(ataRow&&ataRow!==r){
+      Object.assign(ataRow,{limiteISO:data,obs_prazo:obsPrazo,prazoOriginalISO:ataRow.prazoOriginalISO||prazoAnterior,status:_prazoStatus(data,ataRow.recebido,false)});
+      ataRow.prazosHistorico=[...(ataRow.prazosHistorico||[]),{prazo_anterior:prazoAnterior,prazo_novo:data,observacao:obs}];
+    }
     const execRow=(atasExec||[]).find(x=>String(x.id)===String(execId));
     if(execRow&&execRow!==r) Object.assign(execRow,{prev_entrega:data,obs_prazo:obsPrazo});
     if(typeof filtrarExecs==="function") filtrarExecs();

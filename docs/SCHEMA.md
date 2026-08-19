@@ -204,6 +204,21 @@ armazenar valor** (evita duplicidade).
 | `patrimonio`, `numero_serie` | text | individuais e opcionais |
 | `recebido_em` | date | |
 
+### `entregas_prazos_historico`
+
+Histórico imutável das alterações da data limite no Controle de Entregas. Cada linha
+referencia exatamente uma AF de aquisição (`item_entrega_id`) ou uma execução de ATA
+(`ata_execucao_id`) e preserva `prazo_anterior`, `prazo_novo`, `observacao`,
+`alterado_por` e `alterado_em`. Triggers registram também alterações feitas fora da tela.
+
+### `entregas_observacoes`
+
+Linha do tempo permanente das anotações do Controle de Entregas. Cada registro referencia
+exatamente uma origem (`item_id`, `item_entrega_id` ou `ata_execucao_id`), preserva seção,
+texto, autor e instante de criação. Inserções são permitidas aos editores do domínio;
+alterações são restritas a administradores aprovados, com `updated_by`,
+`updated_by_nome` e `updated_at`. A aplicação não possui exclusão dessas linhas.
+
 ### `inventario_unidades`
 
 Uma linha de estado por unidade física de aquisição ou ATA própria da Saúde. Execuções de
