@@ -142,7 +142,9 @@ async function loadAtas(){
       cpl:ata.cpl,
       sim:ata.sim,
       item:ata.item,
-      marca_modelo:ata.marca,
+      // A execução preserva a marca vigente no momento do pedido. Apostilamentos
+      // atualizam esta fotografia somente enquanto o recebimento não ocorreu.
+      marca_modelo:(r.marca_modelo||ata.marca||'').trim(),
       unidade:(r.unidade||"").trim(),
       qtde:Number(r.qtde)||0,
       valor:Number(r.valor)||0,
@@ -465,6 +467,7 @@ function filtrarAtas(){
     const vcor=dias<=0?"var(--red)":dias<=90?"var(--amber)":"var(--green)";
     const pct=r.qtde_contratada?Math.round(exec/r.qtde_contratada*100):0;
     const stColor=r.status==="VIGENTE"?"var(--green)":r.status==="ENCERRADO"?"var(--red)":"var(--amber)";
+    const temPedidoAberto=atasExec.some(e=>String(e.ata_item_id)===String(r.id)&&!_ataExecRecebida(e));
     return`<tr>
       <td style="font-size:11px;white-space:nowrap">${r.cpl}</td>
       <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
@@ -488,11 +491,15 @@ function filtrarAtas(){
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
         ${(r.status&&r.status.toUpperCase().startsWith("ENCERRADO"))||!podeEdAtas?`
-        <button onclick="verExecsItem('${r.id}')" class="btn-secondary btn-compact" title="Ver solicitações deste item">📋 Solicitações</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="verExecsItem('${r.id}')" class="btn-secondary btn-compact" title="Ver solicitações deste item">📋 Solicitações</button>
+          ${podeEdAtas&&temPedidoAberto?`<button onclick="abrirTrocaMarcaItemAta('${r.id}')" class="btn-secondary btn-compact" title="Trocar a marca dos pedidos ainda não recebidos">🏷️ Trocar marca</button>`:''}
+        </div>
         `:`
         <div style="display:flex;align-items:center;gap:6px">
         <button onclick="abrirModalEditAta('${r.id}')" class="btn-secondary btn-compact" title="Adicionar solicitação">✏️ Solicitação</button>
         ${kebabMenuHtml([
+          podeEditar('atas')?{label:'🏷️ Trocar marca',onclick:`abrirTrocaMarcaItemAta('${r.id}')`,title:'Registrar apostilamento de troca de marca/modelo'}:null,
           podeEditar('atas')?{label:'📈 Reajustar',onclick:`abrirReajusteItemAta('${r.id}')`,title:'Registrar novo valor para este item a partir de uma data'}:null,
           !r.ata_renovada?{label:'🔄 Prorrogar',onclick:`renovarAta('${r.id}')`,title:'Prorrogar vigência do contrato (permitido uma única vez)'}:null,
           {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
@@ -1250,6 +1257,175 @@ async function salvarReajusteItemAta(){
   showMsg('ar','✓ Reajuste registrado. Novas solicitações usarão o valor conforme a vigência.','ok');
   await loadAtas();
   setTimeout(()=>document.getElementById('modal-ata-reajuste').classList.remove('active'),900);
+}
+
+let _ataTrocaMarcaItemId=null;
+let _ataTrocaMarcaExecucoes=[];
+
+function _ataRenderHistoricoMarcas(rows){
+  const wrap=document.getElementById('atm-historico');
+  if(!wrap) return;
+  if(!rows?.length){
+    wrap.innerHTML='<div style="font-size:11px;color:var(--text3)">Nenhuma troca de marca registrada para este item.</div>';
+    return;
+  }
+  wrap.innerHTML=rows.map(r=>`<div style="padding:7px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-size:11px">
+    <div style="font-weight:600;color:var(--text)">${_sanEsc(r.marca_modelo_anterior||'—')} → ${_sanEsc(r.marca_modelo_nova||'—')}</div>
+    <div style="margin-top:2px;color:var(--text2)">${_sanEsc(r.apostilamento||'Apostilamento')} · ${r.data_apostilamento?fmtDate(r.data_apostilamento):'sem data'} · ${Number(r.execucoes_atualizadas)||0} pedido(s) atualizado(s)</div>
+    ${r.observacoes?`<div style="margin-top:3px;color:var(--text3)">${_sanEsc(r.observacoes)}</div>`:''}
+  </div>`).join('');
+}
+
+function _ataTrocaMarcaSelecionados(){
+  return [...document.querySelectorAll('#atm-execucoes .atm-exec-check:checked')].map(el=>el.value);
+}
+
+function _ataAtualizarResumoSelecaoMarca(){
+  const checks=[...document.querySelectorAll('#atm-execucoes .atm-exec-check')];
+  const selecionados=new Set(checks.filter(el=>el.checked).map(el=>String(el.value)));
+  const qtde=_ataTrocaMarcaExecucoes
+    .filter(r=>selecionados.has(String(r.id)))
+    .reduce((s,r)=>s+(Number(r.qtde)||0),0);
+  const resumo=document.getElementById('atm-selecao-resumo');
+  if(resumo) resumo.textContent=selecionados.size
+    ?`${selecionados.size} pedido(s) selecionado(s) · ${qtde} unidade(s)`
+    :'Nenhum pedido existente selecionado; a nova marca valerá somente para pedidos futuros.';
+  const todos=document.getElementById('atm-selecionar-todos');
+  if(todos){
+    todos.checked=checks.length>0&&selecionados.size===checks.length;
+    todos.indeterminate=selecionados.size>0&&selecionados.size<checks.length;
+    todos.disabled=!checks.length;
+  }
+}
+
+function _ataToggleExecucoesMarca(marcar){
+  document.querySelectorAll('#atm-execucoes .atm-exec-check').forEach(el=>{el.checked=!!marcar;});
+  _ataAtualizarResumoSelecaoMarca();
+}
+
+function _ataRenderExecucoesMarca(rows){
+  const wrap=document.getElementById('atm-execucoes');
+  if(!wrap) return;
+  _ataTrocaMarcaExecucoes=rows||[];
+  if(!_ataTrocaMarcaExecucoes.length){
+    wrap.innerHTML='<div style="font-size:11px;color:var(--text3);padding:8px 0">Não há pedidos abertos para este item. A troca valerá somente para pedidos futuros.</div>';
+    _ataAtualizarResumoSelecaoMarca();
+    return;
+  }
+  wrap.innerHTML=_ataTrocaMarcaExecucoes.map(r=>{
+    const af=r.af_numero?`AF ${r.af_numero}`:'Aguardando AF';
+    const previsao=r.prev_entrega?` · previsão ${fmtDate(r.prev_entrega)}`:'';
+    return `<label style="display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);cursor:pointer">
+      <input type="checkbox" class="atm-exec-check" value="${_sanEsc(r.id)}" checked onchange="_ataAtualizarResumoSelecaoMarca()" style="margin-top:2px;accent-color:var(--blue)">
+      <span style="min-width:0;flex:1;font-size:11px">
+        <strong style="display:block;color:var(--text);font-size:12px">${_sanEsc(r.unidade||'Unidade não informada')} · ${Number(r.qtde)||0} unidade(s)</strong>
+        <span style="display:block;margin-top:2px;color:var(--text2)">${_sanEsc(af)}${previsao}</span>
+        <span style="display:block;margin-top:2px;color:var(--text3)">Marca atual: ${_sanEsc(r.marca_modelo||'—')}</span>
+      </span>
+    </label>`;
+  }).join('');
+  _ataAtualizarResumoSelecaoMarca();
+}
+
+async function abrirTrocaMarcaItemAta(itemId){
+  if(bloquearSeVisualiz('atas')) return;
+  const item=_resolverAtaItemRef(itemId);
+  if(!item) return;
+  _ataTrocaMarcaItemId=item.id;
+  document.getElementById('atm-info').innerHTML=`<b>${_sanEsc(item.item||'Item')}</b><br>${_sanEsc(item.cpl||'—')} · ${_sanEsc(item.sim||'—')}`;
+  document.getElementById('atm-atual').value=item.marca||'';
+  document.getElementById('atm-nova').value='';
+  document.getElementById('atm-apostilamento').value='';
+  document.getElementById('atm-data').value=_ataHojeISO();
+  document.getElementById('atm-obs').value='';
+  showMsg('atm','','');
+  _ataRenderHistoricoMarcas(null);
+  _ataTrocaMarcaExecucoes=[];
+  document.getElementById('atm-execucoes').innerHTML='<div style="font-size:11px;color:var(--text3);padding:8px 0"><span class="spinner"></span> Consultando pedidos abertos...</div>';
+  document.getElementById('atm-selecao-resumo').textContent='';
+  const todos=document.getElementById('atm-selecionar-todos');
+  todos.checked=false; todos.indeterminate=false; todos.disabled=true;
+  document.getElementById('modal-ata-troca-marca').classList.add('active');
+  const [historicoRes,execRes]=await Promise.all([
+    sb.from('atas_item_marca_apostilamentos')
+      .select('marca_modelo_anterior,marca_modelo_nova,apostilamento,data_apostilamento,observacoes,execucoes_atualizadas')
+      .eq('ata_item_id',item.id)
+      .order('data_apostilamento',{ascending:false})
+      .order('criado_em',{ascending:false})
+      .limit(5),
+    sb.from('atas_execucao')
+      .select('id,unidade,qtde,af_numero,data_af,prev_entrega,dt_entrega,marca_modelo,created_at')
+      .eq('ata_item_id',item.id)
+      .order('created_at',{ascending:true})
+  ]);
+  if(String(_ataTrocaMarcaItemId)!==String(item.id)) return;
+  if(historicoRes.error){
+    document.getElementById('atm-historico').innerHTML=`<div style="font-size:11px;color:var(--red)">Não foi possível carregar o histórico: ${_sanEsc(historicoRes.error.message)}</div>`;
+  }else{
+    _ataRenderHistoricoMarcas(historicoRes.data||[]);
+  }
+  if(execRes.error){
+    document.getElementById('atm-execucoes').innerHTML=`<div style="font-size:11px;color:var(--red)">Não foi possível carregar os pedidos: ${_sanEsc(execRes.error.message)}</div>`;
+    return;
+  }
+  const execucoes=execRes.data||[];
+  const recebidas=new Set();
+  for(const ids of _chunkArray(execucoes.map(r=>r.id).filter(Boolean),200)){
+    const {data,error}=await sb.from('atas_execucao_unidades')
+      .select('exec_id')
+      .in('exec_id',ids)
+      .not('recebido_em','is',null);
+    if(error){
+      document.getElementById('atm-execucoes').innerHTML=`<div style="font-size:11px;color:var(--red)">Não foi possível confirmar os recebimentos: ${_sanEsc(error.message)}</div>`;
+      return;
+    }
+    (data||[]).forEach(u=>recebidas.add(String(u.exec_id)));
+  }
+  if(String(_ataTrocaMarcaItemId)!==String(item.id)) return;
+  _ataRenderExecucoesMarca(execucoes.filter(r=>!_ataExecRecebida(r)&&!recebidas.has(String(r.id))));
+}
+
+async function salvarTrocaMarcaItemAta(){
+  if(bloquearSeVisualiz('atas')) return;
+  const nova=document.getElementById('atm-nova').value.trim();
+  const apostilamento=document.getElementById('atm-apostilamento').value.trim();
+  const dataApostilamento=document.getElementById('atm-data').value;
+  if(!nova||!apostilamento||!dataApostilamento){
+    showMsg('atm','Preencha a nova marca/modelo, a referência e a data do apostilamento.','err');
+    return;
+  }
+  const execucaoIds=_ataTrocaMarcaSelecionados();
+  const confirmar=await uiConfirm(`A nova marca/modelo será aplicada aos pedidos futuros e a ${execucaoIds.length} pedido(s) aberto(s) selecionado(s). Pedidos não selecionados e pedidos já recebidos manterão a marca anterior.\n\nDeseja continuar?`);
+  if(!confirmar) return;
+  const btn=document.getElementById('atm-salvar');
+  const label=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='Salvando...';
+  showMsg('atm','Registrando apostilamento...','');
+  try{
+    const {data,error}=await sb.rpc('registrar_troca_marca_item_ata_seletiva',{
+      p_ata_item_id:_ataTrocaMarcaItemId,
+      p_marca_modelo_nova:nova,
+      p_apostilamento:apostilamento,
+      p_data_apostilamento:dataApostilamento,
+      p_execucao_ids:execucaoIds,
+      p_observacoes:document.getElementById('atm-obs').value.trim()||null
+    });
+    if(error) throw error;
+    const resultado=Array.isArray(data)?data[0]:data;
+    const atualizadas=Number(resultado?.execucoes_atualizadas)||0;
+    await loadAtas();
+    itensEntregasCarregado=false;
+    if(window._activeTab==='itens'&&typeof loadItensEntregas==='function') await loadItensEntregas();
+    showMsg('atm',`✓ Marca alterada. ${atualizadas} pedido(s) ainda não recebido(s) atualizado(s).`,'ok');
+    if(window.toast) toast(`Marca alterada em ${atualizadas} pedido(s) pendente(s).`,'success');
+    setTimeout(()=>document.getElementById('modal-ata-troca-marca').classList.remove('active'),1300);
+  }catch(e){
+    showMsg('atm','Erro: '+e.message,'err');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=label;
+  }
 }
 
 function aerOrigemChange(){
@@ -2066,7 +2242,7 @@ async function salvarNovaExec(){
   const emendaItemVinculado=origem==='emenda'?(salvo.emenda_item_id||emendaItemId):null;
   const rowATA={tipo:'ATA',exec_id:execId,ata_item_id:at.id,emenda_id:origem==='emenda'?emendaId:null,emenda_item_id:emendaItemVinculado,
     processo:at.cpl||'',contrato:at.sim||'',
-    empresa:at.empresa||'',item:at.item||'',
+    empresa:at.empresa||'',item:at.item||'',marca:at.marca||'',modelo:'',
     origem_recurso:origem,email_solicitante:dados.email_solicitante||'',
     unidade,af_numero:'',af_dataISO:_toISODate(dados.data_af),
     qtde,limiteISO:'',recebido:false,cancelado:false,prazo_entrega_dias:at.prazo_entrega||at.prazo_entrega_dias||null,

@@ -1150,7 +1150,7 @@ async function loadItensEntregas(){
     const seriesAta=[...new Set(unidadesAta.map(u=>String(u.numero_serie||'').trim()).filter(Boolean))].join('; ');
     out.push({
       tipo:'ATA', exec_id:r.id, ata_item_id:r.ata_item_id||null, emenda_id:r.emenda_id||null, emenda_item_id:r.emenda_item_id||null, processo:r.cpl||ai.cpl||'', contrato:r.sim||ai.sim||'', contrato_id:ai.contrato_id||null,
-      empresa:ai.empresa||'', item:r.item||ai.item||'', marca:ai.marca||'', modelo:'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:empAta,
+      empresa:ai.empresa||'', item:r.item||ai.item||'', marca:r.marca_modelo||ai.marca||'', modelo:'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:empAta,
       origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,

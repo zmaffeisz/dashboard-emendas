@@ -1070,7 +1070,7 @@ async function _fetchItensFlowData(eiIds){
 async function _fetchAtaFlowData(eiIds){
   const _ataExecByEiid={}, _ataItemPlaceholder={};
   const execChunks=await Promise.all(_chunkArray(eiIds,200).map(slice=>
-    sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf").in("emenda_item_id",slice)
+    sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,marca_modelo,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf").in("emenda_item_id",slice)
   ));
   execChunks.forEach(({data:aex})=>{
     if(aex) aex.forEach(r=>{
@@ -1160,7 +1160,8 @@ async function _carregarFluxoEmendaItens(eiIds){
       if(!f.sim&&ai.sim) f.sim=ai.sim;
       if(!f.unidade&&r.unidade) f.unidade=r.unidade;
       if(!f.fornecedor) f.fornecedor="";
-      if(ai.marca_modelo) (f.marcasModelos||(f.marcasModelos=new Set())).add(ai.marca_modelo);
+      const marcaModelo=r.marca_modelo||ai.marca_modelo||'';
+      if(marcaModelo) (f.marcasModelos||(f.marcasModelos=new Set())).add(marcaModelo);
       const q=Number(r.qtde)||0; qAta+=q;
       const vl=Number(r.valor)||0; vAta+=vl;
       if(r.af_numero||r.data_af){

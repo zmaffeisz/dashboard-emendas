@@ -2,6 +2,13 @@
 
 ## Em desenvolvimento
 
+- **Troca de marca de item de ATA por apostilamento:** a ação **Trocar marca** registra
+  referência, data e observações do apostilamento, altera a marca/modelo vigente do item e
+  a propaga aos pedidos futuros e às solicitações ainda não recebidas selecionadas no
+  modal, inclusive com AF já emitida. O modal mostra unidade, quantidade, AF, previsão e
+  marca atual de cada pedido elegível. Itens encerrados continuam oferecendo a ação quando
+  possuem entregas abertas; solicitações recebidas preservam a marca anterior como
+  fotografia histórica.
 - **Busca pelo número/ano da emenda:** o filtro da aba Emendas agora pesquisa também pelo
   identificador exibido completo, como `66/2026`, aceitando trechos como `66/2`, além de
   continuar localizando por parlamentar, objeto, item e demais campos.

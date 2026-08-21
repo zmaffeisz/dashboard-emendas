@@ -31,6 +31,11 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
       `atas_itens`.
 - [ ] Abrir aba **Atas Rp** e confirmar que reflete alterações de Contratos (encerrar/
       prorrogar/editar) — reload automático.
+- [ ] Em um item de ATA com pedidos sem AF, com AF aguardando recebimento e já recebidos,
+      registrar **Trocar marca**, selecionar apenas parte dos pedidos abertos e confirmar:
+      a nova marca deve aparecer nos selecionados e em novos pedidos, enquanto os pedidos
+      não selecionados e recebidos conservam a marca anterior. Repetir em um item encerrado
+      com entrega aberta e conferir referência, data e quantidade no histórico.
 - [ ] Vincular empenho antes da AF e emitir AF (aba **Controle de Entregas**).
 - [ ] Após emitir AF de aquisição, confirmar que o item sai de **Controle de Entregas /
       Prazos** e aparece em **Confirmação de Entrega na Unidade** com AF e empenho

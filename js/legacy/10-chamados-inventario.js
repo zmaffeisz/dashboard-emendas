@@ -212,7 +212,7 @@ async function loadInventario(){
       const base={
         tipo:'ATA', id:r.id,
         item,
-        marca_modelo:ai.marca_modelo||'',
+        marca_modelo:r.marca_modelo||ai.marca_modelo||'',
         unidade,
         empresa, cnpj:'',
         processo,

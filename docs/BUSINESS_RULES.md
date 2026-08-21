@@ -187,6 +187,13 @@
   ATA/processo, empenho e NF identificados. Quando a fonte for **Recurso próprio**, não é
   criada linha em emenda. A mesma execução não pode receber duas vezes o mesmo reajuste.
 - Prorrogar uma ATA não altera mais seu preço; reajuste e prorrogação são fluxos distintos.
+- A troca de marca/modelo de um item de ATA exige apostilamento identificado e datado. A
+  nova marca passa a valer no item e nos pedidos futuros. Entre as solicitações ainda sem
+  recebimento administrativo, mesmo que já tenham AF, o usuário escolhe individualmente
+  quais receberão a nova marca. Itens encerrados mantêm essa ação enquanto houver entrega
+  aberta. O recebimento congela a fotografia de `atas_execucao.marca_modelo`; por isso
+  solicitações com `dt_entrega` ou unidade física recebida nunca são reescritas. O histórico
+  e os pedidos escolhidos ficam em `atas_item_marca_apostilamentos`.
 
 ## 5. Notas Fiscais (anti-duplicidade) {#notas-fiscais}
 

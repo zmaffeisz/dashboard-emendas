@@ -2023,6 +2023,37 @@
       </div>
     </div>
 
+    <!-- Modal Trocar Marca/Modelo por Apostilamento -->
+    <div class="modal-overlay" id="modal-ata-troca-marca">
+      <div class="modal-box" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto">
+        <div class="modal-title">🏷️ Trocar marca/modelo por apostilamento</div>
+        <div id="atm-info" style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+        <div style="background:var(--blue-bg);color:var(--blue-text);border-radius:var(--radius-sm);padding:.75rem .9rem;font-size:12px;margin-bottom:1rem">
+          A nova marca será usada nos pedidos futuros. Nos pedidos existentes, ela será aplicada somente aos pedidos ainda não recebidos que forem selecionados abaixo, inclusive quando a AF já tiver sido emitida. Pedidos já recebidos manterão a marca anterior.
+        </div>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Marca/modelo vigente</div><input type="text" id="atm-atual" readonly style="background:var(--surface2)"></div>
+          <div class="form-group full"><div class="form-label">Nova marca/modelo *</div><input type="text" id="atm-nova" placeholder="ex: NOVA MARCA / NOVO MODELO" autocomplete="off"></div>
+          <div class="form-group"><div class="form-label">Referência do apostilamento *</div><input type="text" id="atm-apostilamento" placeholder="ex: Apostilamento 01/2026" autocomplete="off"></div>
+          <div class="form-group"><div class="form-label">Data do apostilamento *</div><input type="date" id="atm-data"></div>
+          <div class="form-group full"><div class="form-label">Observações</div><textarea id="atm-obs" rows="3" placeholder="Motivo ou detalhes da substituição" style="resize:vertical"></textarea></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:1rem 0 6px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Pedidos abertos que receberão a nova marca</div>
+          <label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="atm-selecionar-todos" onchange="_ataToggleExecucoesMarca(this.checked)"> Selecionar todos</label>
+        </div>
+        <div id="atm-execucoes" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:3px"></div>
+        <div id="atm-selecao-resumo" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:1rem 0 6px">Histórico recente</div>
+        <div id="atm-historico" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div class="form-actions">
+          <button class="btn-primary" id="atm-salvar" onclick="salvarTrocaMarcaItemAta()">Registrar troca de marca</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-ata-troca-marca').classList.remove('active')">Cancelar</button>
+          <span id="atm-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal Editar Execução -->
     <div class="modal-overlay" id="modal-edit-exec">
       <div class="modal-box" style="width:480px">
@@ -3155,11 +3186,11 @@
 
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260821-datas-entrega-1"></script>
-<script src="js/legacy/10-chamados-inventario.js?v=20260818-carona-fora-inventario-1"></script>
-<script src="js/legacy/20-atas.js?v=20260821-busca-unificada-1"></script>
+<script src="js/legacy/10-chamados-inventario.js?v=20260821-troca-marca-ata-1"></script>
+<script src="js/legacy/20-atas.js?v=20260821-troca-marca-ata-2"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260818-email-retirada-carona-1"></script>
-<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260821-datas-entrega-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260821-troca-marca-ata-1"></script>
+<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260821-troca-marca-ata-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260821-busca-emenda-numero-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260814-chamados-sem-contrato-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
