@@ -1729,9 +1729,9 @@
         <div class="fg-label">Status <button onclick="clearF('fat-status')">✕</button></div>
         <select id="fat-status" onchange="filtrarAtas()"><option value="">Todos</option></select>
       </div>
-      <div class="fg">
-        <div class="fg-label">Buscar item <button onclick="clearF('fat-busca')">✕</button></div>
-        <input type="text" id="fat-busca" placeholder="item, marca..." oninput="filtrarAtas()">
+      <div class="fg" style="min-width:260px">
+        <div class="fg-label">Buscar Atas e execuções <button onclick="clearF('fat-busca')">✕</button></div>
+        <input type="text" id="fat-busca" placeholder="item, marca, empenho, unidade, NF..." oninput="filtrarAtas()">
       </div>
       <button class="clear-btn" onclick="clearAllAtas()">✕ Limpar</button>
     </div>
@@ -1753,6 +1753,7 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="table-hdr-count" id="atas-count">—</span>
+          <button onclick="exportarAtas()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar os itens de ATA filtrados para Excel">⬇ ATAs</button>
         </div>
       </div>
       <div class="table-wrap hidden-by-default" id="atas-itens-wrap">
@@ -1787,13 +1788,11 @@
           <span class="table-hdr-title">Execuções / Solicitações</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="exec-busca" placeholder="🔍 empenho, unidade, NF..." oninput="filtrarExecs()" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:200px;background:var(--surface);color:var(--text)">
           <button onclick="togglePendentes()" id="btn-pendentes" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer" title="Mostrar apenas itens aguardando entrega">⚠️ Pendentes</button>
           <span id="sancao-selecao-resumo" style="display:none;font-size:12px;color:var(--text2)"></span>
           <button id="btn-gerar-sancao" onclick="abrirModalSolicitacaoSancaoAta()" style="display:none;font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar sanção</button>
           <span class="table-hdr-count" id="exec-count">—</span>
-          <button onclick="exportarAtas()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar itens de ATA para Excel">⬇ ATAs</button>
-          <button onclick="exportarExecs()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar execuções para Excel">⬇ Execuções</button>
+          <button onclick="exportarExecs()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar as execuções filtradas para Excel">⬇ Execuções</button>
         </div>
       </div>
       <div class="table-wrap hidden-by-default" id="atas-execs-wrap">
@@ -3157,11 +3156,11 @@
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260821-datas-entrega-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260818-carona-fora-inventario-1"></script>
-<script src="js/legacy/20-atas.js?v=20260818-aceite-sem-valor-global-1"></script>
+<script src="js/legacy/20-atas.js?v=20260821-busca-unificada-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260818-email-retirada-carona-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260821-datas-entrega-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260821-datas-entrega-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260821-busca-emenda-numero-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260814-chamados-sem-contrato-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>

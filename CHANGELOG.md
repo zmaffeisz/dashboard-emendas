@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- **Busca pelo número/ano da emenda:** o filtro da aba Emendas agora pesquisa também pelo
+  identificador exibido completo, como `66/2026`, aceitando trechos como `66/2`, além de
+  continuar localizando por parlamentar, objeto, item e demais campos.
+- **Busca unificada e exportações nas Atas:** o filtro superior agora pesquisa ao mesmo
+  tempo os itens das Atas e suas execuções/solicitações, incluindo empenho, unidade, NF,
+  AF, item, marca, empresa, CPL e SIM. Cada card também passou a exibir apenas o seu botão
+  de Excel: Atas no card superior e Execuções no card inferior, sempre respeitando os
+  filtros ativos.
 - **Recebimento e entrega na unidade separados:** a aba Emendas e seus relatórios agora
   exibem em colunas próprias a data em que a empresa entregou o item à Secretaria e a data
   posterior de entrega/confirmação na unidade. A data da AF e a data do recebimento não

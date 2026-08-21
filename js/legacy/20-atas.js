@@ -392,6 +392,18 @@ function clearAllAtas(){
   filtrarAtas();
 }
 
+function _ataBuscaItemTexto(r){
+  return [r.item,r.marca,r.cpl,r.sim,r.empresa,r.status].filter(Boolean).join(' ');
+}
+
+function _ataBuscaExecTexto(r){
+  return [
+    r.item,r.marca_modelo,r.cpl,r.sim,r.empresa,r.unidade,
+    r.codigo_siam_secretaria,r.email_solicitante,_ataOrigemRecursoLabel(r.origem_recurso),
+    r.empenho,r.nf,r.af_numero,r.data_af,r.dt_entrega,r.prev_entrega
+  ].filter(Boolean).join(' ');
+}
+
 function filtrarAtas(){
   const podeEdAtas=podeEditar('atas');
   const cpl=document.getElementById("fat-cpl")?.value||"";
@@ -413,7 +425,7 @@ function filtrarAtas(){
     // "Todos" (st vazio) mostra vigentes e encerrados; "ENCERRADO" mostra só encerrados; outro valor filtra exato
     if(st==="ENCERRADO"&&!(r.status&&r.status.toUpperCase().startsWith("ENCERRADO"))) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
-    if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
+    if(busca&&!matchBusca(_ataBuscaItemTexto(r),busca)) return false;
     return true;
   });
   // Ordenação
@@ -442,6 +454,7 @@ function filtrarAtas(){
   document.getElementById("at-exec").textContent=totalExec;
   document.getElementById("at-vence").textContent=vencendo90;
   document.getElementById("atas-count").textContent=`${rows.length} itens`;
+  window._ataRowsFiltered=rows;
 
   const dias90=new Date();dias90.setDate(dias90.getDate()+90);
 
@@ -508,7 +521,7 @@ function filtrarAtas(){
     const rEncerrado=r.status&&r.status.toUpperCase().startsWith("ENCERRADO");
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
-    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,r.email_solicitante,_ataOrigemRecursoLabel(r.origem_recurso)].join(' '),busca)) return false;
+    if(busca&&!matchBusca(_ataBuscaExecTexto(r),busca)) return false;
     return true;
   });
   // Ordenação execuções (padrão: data_af mais recente no topo)
@@ -526,9 +539,6 @@ function filtrarAtas(){
     return _sortExecAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
   });
   _renderExecRows(execRows);
-  // Sincronizar busca de execuções
-  const buscaExec=document.getElementById('exec-busca')?.value||'';
-  if(buscaExec) filtrarExecs();
 }
 
 function parseDataBR(s){
@@ -553,7 +563,7 @@ function parseDataBR(s){
 }
 
 function filtrarExecs(){
-  const busca=document.getElementById("exec-busca")?.value||"";
+  const busca=document.getElementById("fat-busca")?.value||"";
   const cpl=document.getElementById("fat-cpl")?.value||"";
   const sim=document.getElementById("fat-sim")?.value||"";
   const st=document.getElementById("fat-status")?.value||"";
@@ -571,7 +581,7 @@ function filtrarExecs(){
     if(st==="ENCERRADO"&&!rEncerrado) return false;
     if(st&&st!=="ENCERRADO"&&r.status!==st) return false;
     if(_filtroPendentes&&r.dt_entrega) return false;
-    if(busca&&!matchBusca([r.item,r.cpl,r.sim,r.unidade,r.codigo_siam_secretaria,r.email_solicitante,_ataOrigemRecursoLabel(r.origem_recurso),r.empenho,r.nf,r.data_af,r.dt_entrega,r.prev_entrega].join(" "),busca)) return false;
+    if(busca&&!matchBusca(_ataBuscaExecTexto(r),busca)) return false;
     return true;
   });
   // Ordenação
@@ -1483,16 +1493,7 @@ function togglePendentes(){
 async function exportarAtas(){
   await ensureLib('xlsx');
   const colunas=["CPL","SIM","ITEM","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
-  const cpl=document.getElementById("fat-cpl")?.value||"";
-  const sim=document.getElementById("fat-sim")?.value||"";
-  const busca=document.getElementById("fat-busca")?.value||"";
-  const rows=atasItens.filter(r=>{
-    if(cpl&&r.cpl!==cpl) return false;
-    if(sim&&r.sim!==sim) return false;
-    if(busca&&!matchBusca(r.item+" "+r.marca+" "+r.cpl+" "+r.sim,busca)) return false;
-    if(!document.getElementById("fat-status")?.value||(document.getElementById("fat-status")?.value===r.status)) return true;
-    return !document.getElementById("fat-status")?.value;
-  });
+  const rows=window._ataRowsFiltered||atasItens;
   const dados=rows.map(r=>[r.cpl,r.sim,r.item,r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   const wb={SheetNames:["ATAs"],Sheets:{ATAs:ws}};

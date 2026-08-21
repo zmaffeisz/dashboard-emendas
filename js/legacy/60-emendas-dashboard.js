@@ -558,6 +558,17 @@ function clearAllFilters(){
   applyFilters();
 }
 
+function _emendaBuscaTexto(r){
+  const numeroAno=[r.emenda,r.ano]
+    .filter(v=>v!==null&&v!==undefined&&String(v).trim()!=="")
+    .join('/');
+  return [
+    numeroAno,r.emenda,r.ano,r.objeto,r.item,r.status_raw,r.unidade,r.cpl,
+    r.empenho,r.nota_fiscal,r.patrimonio,r.parlamentar,r.unidade_entrega,
+    r.ordem_pagamento
+  ].filter(Boolean).join(' ');
+}
+
 function applyFilters(){
   const get=id=>document.getElementById(id)?.value||"";
   const cpl=get("f-cpl").toLowerCase(),busca=get("f-busca").toLowerCase();
@@ -576,7 +587,7 @@ function applyFilters(){
     if(empenho&&!r.empenho.toLowerCase().includes(empenho)) return false;
     if(patrimonio&&!r.patrimonio.toLowerCase().includes(patrimonio)) return false;
     if(nf&&!r.nota_fiscal.toLowerCase().includes(nf)) return false;
-    if(busca&&!matchBusca([r.objeto,r.item,r.status_raw,r.unidade,r.cpl,r.empenho,r.nota_fiscal,r.patrimonio,r.emenda,r.parlamentar,r.unidade_entrega,r.ordem_pagamento].filter(Boolean).join(' '),busca)) return false;
+    if(busca&&!matchBusca(_emendaBuscaTexto(r),busca)) return false;
     if(semCplFilter&&r.cpl) return false;
     return true;
   });
