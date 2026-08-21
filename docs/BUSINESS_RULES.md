@@ -307,7 +307,10 @@
   item/contrato.
 - Confirmar a entrega na unidade grava `data_entrega_unidade`, responsável/cargo e termo em
   `itens_entregas`; a aba **Emendas** deve refletir esse item como entregue/confirmado na
-  unidade e preencher a data de entrega derivada.
+  unidade e preencher a data de entrega derivada. O recebimento interno pela Secretaria
+  (`data_recebimento` ou `dt_entrega`, nas ATAs) é um marco anterior e independente: deve
+  aparecer em campo próprio e nunca pode preencher a data de entrega na unidade. A data da
+  AF também nunca representa recebimento nem entrega.
 - AF de **ATA**: o botão "Emitir AF" no Controle de Entregas grava `af_numero`, `data_af`
   e `prev_entrega` em `atas_execucao`. O prazo de entrega não é digitado livremente na AF:
   ele é herdado de `atas_itens.prazo_entrega` (ou do item de origem vinculado) e a data

@@ -1323,7 +1323,8 @@ function _expandirLinhaEmendaPorUnidades(base, unidades){
     vl_total_cadastrado:vlUnitCad||base.vl_total_cadastrado,
     patrimonio:_unidadeFisicaLabel(u),
     nota_fiscal:u.nota_fiscal||base.nota_fiscal,
-    data_entrega:u.data_entrega||u.data_recebimento||base.data_entrega,
+    data_recebimento:u.data_recebimento||base.data_recebimento,
+    data_entrega:u.data_entrega||base.data_entrega,
     data_atualizacao:u.data_recebimento||base.data_atualizacao
   }));
 }

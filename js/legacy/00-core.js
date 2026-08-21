@@ -530,7 +530,8 @@ async function exportarExcel(){
     "VALOR UNITÁRIO (R$) EXECUTADO","VALOR TOTAL (R$) EXECUTADO",
     "PROCESSO SEI DA CONTRATAÇÃO","STATUS DA CONTRATAÇÃO",
     "NOTA FISCAL","Nº DE EMPENHO","Nº DE PATRIMONIO",
-    "UNIDADE DE ENTREGA","DATA DE ENTREGA NA UNIDADE","ORDEM DE PAGAMENTO"
+    "UNIDADE DE ENTREGA","DATA DE RECEBIMENTO PELA SECRETARIA",
+    "DATA DE ENTREGA NA UNIDADE","ORDEM DE PAGAMENTO"
   ];
   colunas.splice(8,0,"VALOR UNITARIO (R$) PLANEJADO","VALOR TOTAL (R$) PLANEJADO","VALOR UNITARIO (R$) LICITACAO","VALOR TOTAL (R$) LICITACAO");
   const dados=filtered.map(r=>[
@@ -541,7 +542,7 @@ async function exportarExcel(){
     r.vl_unitario, r.vl_total,
     r.cpl, r.status_raw,
     r.nota_fiscal, r.empenho, r.patrimonio,
-    r.unidade_entrega, r.data_entrega, r.ordem_pagamento
+    r.unidade_entrega, r.data_recebimento, r.data_entrega, r.ordem_pagamento
   ]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   ws['!cols']=colunas.map((_,i)=>({wch:Math.max(12,...dados.map(row=>String(row[i]||"").length))+2}));

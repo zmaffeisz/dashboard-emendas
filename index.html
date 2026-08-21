@@ -166,7 +166,8 @@
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('empenho')">Empenho <span class="sort-icon" id="si-empenho"></span></span><span class="hdr-filter-btn" id="hf-empenho" onclick="openHeaderFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('patrimonio')">Patrimônio <span class="sort-icon" id="si-patrimonio"></span></span><span class="hdr-filter-btn" id="hf-patrimonio" onclick="openHeaderFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('unidade_entrega')">Un. entrega <span class="sort-icon" id="si-unidade_entrega"></span></span><span class="hdr-filter-btn" id="hf-unidade_entrega" onclick="openHeaderFilter(event,'unidade_entrega')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('data_entrega')">Dt. entrega <span class="sort-icon" id="si-data_entrega"></span></span><span class="hdr-filter-btn" id="hf-data_entrega" onclick="openHeaderFilter(event,'data_entrega')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('data_recebimento')">Receb. Secretaria <span class="sort-icon" id="si-data_recebimento"></span></span><span class="hdr-filter-btn" id="hf-data_recebimento" onclick="openHeaderFilter(event,'data_recebimento')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('data_entrega')">Entrega na unidade <span class="sort-icon" id="si-data_entrega"></span></span><span class="hdr-filter-btn" id="hf-data_entrega" onclick="openHeaderFilter(event,'data_entrega')" title="Filtrar">▾</span></span></th>
               <th id="th-saldo-emenda" style="white-space:nowrap;display:none"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('saldo_emenda')">Saldo emenda <span class="sort-icon" id="si-saldo_emenda"></span></span><span class="hdr-filter-btn" id="hf-saldo_emenda" onclick="openHeaderFilter(event,'saldo_emenda')" title="Filtrar">▾</span></span></th>
             </tr>
           </thead>
@@ -311,7 +312,7 @@
       <div class="form-group"><div class="form-label">Patrimônio</div><input type="text" id="ei-patrimonio" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Unidade exibida</div><input type="text" id="ei-unidade" style="background:var(--surface);color:var(--text)"></div>
       <div class="form-group"><div class="form-label">Unidade de entrega</div><input type="text" id="ei-unidade-entrega" style="background:var(--surface);color:var(--text)"></div>
-      <div class="form-group"><div class="form-label">Data de entrega</div><input type="date" id="ei-data-entrega" style="background:var(--surface);color:var(--text)"></div>
+      <div class="form-group"><div class="form-label">Data de entrega na unidade</div><input type="date" id="ei-data-entrega" style="background:var(--surface);color:var(--text)"><div style="font-size:10px;color:var(--text3);margin-top:4px">Itens vinculados ao fluxo são confirmados no Controle de Entregas.</div></div>
     </div>
     <div class="form-actions">
       <button class="btn-primary" id="ei-salvar" onclick="salvarEditarItem()" style="background:var(--surface);color:var(--text);border:1px solid var(--border)">Salvar</button>
@@ -3154,13 +3155,13 @@
 </div>
 
 <script src="js/components/kebab-menu.js"></script>
-<script src="js/legacy/00-core.js?v=20260730-public-showcase"></script>
+<script src="js/legacy/00-core.js?v=20260821-datas-entrega-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260818-carona-fora-inventario-1"></script>
 <script src="js/legacy/20-atas.js?v=20260818-aceite-sem-valor-global-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260807-servico-item-quantidade-zero-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260818-email-retirada-carona-1"></script>
-<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260818-secretario-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260814-movimentacoes-inventario-1"></script>
+<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260821-datas-entrega-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260821-datas-entrega-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260814-chamados-sem-contrato-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>

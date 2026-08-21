@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Recebimento e entrega na unidade separados:** a aba Emendas e seus relatórios agora
+  exibem em colunas próprias a data em que a empresa entregou o item à Secretaria e a data
+  posterior de entrega/confirmação na unidade. A data da AF e a data do recebimento não
+  preenchem mais indevidamente a entrega na unidade; itens ainda em licitação ou aguardando
+  recebimento permanecem com esses campos vazios.
 - **Linha do tempo de observações no Controle de Entregas:** cada anotação agora cria um
   registro permanente com data, hora e autor, exibido em ordem cronológica no modal. Novas
   anotações não substituem as anteriores; somente administradores podem editar um registro

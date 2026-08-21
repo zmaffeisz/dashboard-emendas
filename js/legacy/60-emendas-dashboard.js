@@ -71,7 +71,13 @@ async function loadData(){
       const empenhoFlow=f&&f.empenhos?Array.from(f.empenhos).filter(Boolean).join("; "):"";
       const nfFlow=f&&f.notas?Array.from(f.notas).filter(Boolean).join("; "):"";
       const patrimonioFlow=f&&f.patrimonios?Array.from(f.patrimonios).filter(Boolean).join("; "):"";
-      const dataFluxo=f?(f.af.dataEntregaUnidade||f.af.dataRecebimento||f.af.afData||""):"";
+      // Recebimento pela Secretaria e entrega/confirmacao na unidade sao marcos distintos.
+      // Nunca use data da AF ou do recebimento como se fosse entrega na unidade.
+      const dataRecebimentoFluxo=f?(f.af.dataRecebimento||""):"";
+      const dataEntregaUnidadeFluxo=f?(f.af.dataEntregaUnidade||""):"";
+      const dataEntregaUnidadeFinal=f
+        ?dataEntregaUnidadeFluxo
+        :(i.data_entrega||"").toString().trim();
       const dataAtualizacaoFluxo=f?(f.af.dataEntregaUnidade||f.af.dataRecebimento||f.af.afData||""):"";
       const base={
         id:i.id,                       // uuid do item (chave para updates)
@@ -123,7 +129,8 @@ async function loadData(){
         empenho:empenhoFlow||(i.empenho||"").toString().trim(),
         patrimonio:patrimonioFlow||(i.patrimonio||"").toString().trim(),
         unidade_entrega:unidEntFinal,
-        data_entrega:dataFluxo||(i.data_entrega||"").toString().trim(),
+        data_recebimento:dataRecebimentoFluxo,
+        data_entrega:dataEntregaUnidadeFinal,
         ordem_pagamento:(i.ordem_pagamento||"").toString().trim(),
         data_atualizacao:dataAtualizacaoFluxo||(i.data_atualizacao||"").toString().trim(),
         _vinculadoLicitacao:!!f,
@@ -203,7 +210,8 @@ const HDR_FILTER_COLS = {
   empenho:{label:'Empenho', get:r=>r.empenho, disp:v=>v||'(vazio)'},
   patrimonio:{label:'Patrimônio', get:r=>r.patrimonio, disp:v=>v||'(vazio)'},
   unidade_entrega:{label:'Un. entrega', get:r=>r.unidade_entrega, disp:v=>v||'(vazio)'},
-  data_entrega:{label:'Dt. entrega', get:r=>r.data_entrega, disp:v=>v||'(vazio)'},
+  data_recebimento:{label:'Receb. Secretaria', get:r=>r.data_recebimento, disp:v=>v||'(vazio)'},
+  data_entrega:{label:'Entrega na unidade', get:r=>r.data_entrega, disp:v=>v||'(vazio)'},
   saldo_emenda:{label:'Saldo emenda', get:r=>_saldoEmendaValor(r.emenda_id), disp:v=>Number(v)||Number(v)===0?fmtFull(Number(v)):'(vazio)'},
 };
 let headerFilters = Object.fromEntries(Object.keys(HDR_FILTER_COLS).map(k=>[k,[]]));
@@ -1278,6 +1286,11 @@ function abrirEditarItem(id){
   document.getElementById('ei-planejado').innerHTML=`<strong>Item planejado:</strong> ${_sanEsc(r.item_cadastrado||'—')}<br><strong>Qtde planejada:</strong> ${_sanEsc(r.qtde_cadastrada||'—')} &nbsp;·&nbsp; <strong>Vl. unit. planejado:</strong> ${fmtFull(Number(r.vl_unitario_cadastrado)||0)} &nbsp;·&nbsp; <strong>Vl. total planejado:</strong> ${fmtFull(Number(r.vl_total_cadastrado)||0)}`;
   const valores={'ei-item':r.item,'ei-qtde':r.qtde,'ei-vl-unit':r.vl_unitario,'ei-cpl':r.cpl,'ei-status':r.status_raw,'ei-nf':r.nota_fiscal,'ei-empenho':r.empenho,'ei-patrimonio':r.patrimonio,'ei-unidade':r.unidade,'ei-unidade-entrega':r.unidade_entrega,'ei-data-entrega':r.data_entrega};
   Object.entries(valores).forEach(([campo,valor])=>document.getElementById(campo).value=valor??'');
+  const dataEntregaEl=document.getElementById('ei-data-entrega');
+  if(dataEntregaEl){
+    dataEntregaEl.disabled=!!r._vinculadoLicitacao;
+    dataEntregaEl.title=r._vinculadoLicitacao?'Registre a entrega na unidade pelo Controle de Entregas.':'';
+  }
   (function(){
     const sel=document.getElementById('ei-status-id'); if(!sel) return;
     const opts=window._catEmendaItem||[];
@@ -1294,6 +1307,7 @@ function fecharEditarItem(){
 }
 async function salvarEditarItem(){
   if(!_editItemId||!podeEditar('dashboard')) return;
+  const rowEditada=allRows.find(item=>String(item.id)===String(_editItemId));
   const item=document.getElementById('ei-item').value.trim();
   const qtde=_numeroEditarItem('ei-qtde'), vlUnit=_numeroEditarItem('ei-vl-unit');
   if(!item){showMsg('ei','Informe o item executado.','err');return;}
@@ -1307,13 +1321,16 @@ async function salvarEditarItem(){
     patrimonio:document.getElementById('ei-patrimonio').value.trim(),unidade_beneficiada:document.getElementById('ei-unidade').value.trim(),unidade_entrega:document.getElementById('ei-unidade-entrega').value.trim(),
     data_entrega:document.getElementById('ei-data-entrega').value||null
   };
+  // Em itens vinculados, a confirmacao pertence ao Controle de Entregas; nao replique
+  // a data derivada no campo legado de emenda_itens ao salvar outro dado do item.
+  if(rowEditada?._vinculadoLicitacao) delete payload.data_entrega;
   const btn=document.getElementById('ei-salvar'); btn.disabled=true; btn.textContent='Salvando...';
   const {error}=await sb.from('emenda_itens').update(payload).eq('id',_editItemId);
   if(error){showMsg('ei','Erro: '+error.message,'err');btn.disabled=false;btn.textContent='Salvar';return;}
   const unidadeResp=await sb.rpc('editar_emenda_item_unidade_cascade',{p_emenda_item_id:_editItemId,p_unidade:payload.unidade_beneficiada||null,p_unidade_entrega:payload.unidade_entrega||null});
   if(unidadeResp.error){showMsg('ei','Item salvo, mas erro ao atualizar vínculos de unidade: '+unidadeResp.error.message,'err');btn.disabled=false;btn.textContent='Salvar';return;}
-  const r=allRows.find(item=>String(item.id)===String(_editItemId));
-  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_id:payload.status_id,status_cat:(payload.status_id!=null&&window._catById&&window._catById[payload.status_id])?window._catById[payload.status_id]:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade:_preferUnidadeExec(payload.unidade_beneficiada,payload.unidade_entrega,payload.unidade_beneficiada),unidade_entrega:payload.unidade_entrega,data_entrega:payload.data_entrega||''});
+  const r=rowEditada;
+  if(r) Object.assign(r,{item:payload.item,qtde:String(payload.qtde),vl_unitario:payload.vl_unitario,vl_total:payload.vl_total,cpl:payload.cpl,status_raw:payload.status,status_id:payload.status_id,status_cat:(payload.status_id!=null&&window._catById&&window._catById[payload.status_id])?window._catById[payload.status_id]:catStatus(payload.status),nota_fiscal:payload.nota_fiscal,empenho:payload.empenho,patrimonio:payload.patrimonio,unidade:_preferUnidadeExec(payload.unidade_beneficiada,payload.unidade_entrega,payload.unidade_beneficiada),unidade_entrega:payload.unidade_entrega,...(Object.prototype.hasOwnProperty.call(payload,'data_entrega')?{data_entrega:payload.data_entrega||''}:{})});
   saldoEmendaCarregado=false;
   applyFilters();
   renderTable();
@@ -1437,6 +1454,7 @@ function renderTable(){
     <td style="font-size:11px">${r.empenho||"—"}</td>
     <td style="font-size:11px">${r.patrimonio||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.unidade_entrega||"—"}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.data_recebimento||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.data_entrega||"—"}</td>
     ${podeVerSaldo?`<td>${getSaldoEmenda(r.emenda_id)}</td>`:''}
   </tr>`;}).join("");
@@ -1627,8 +1645,8 @@ function setSearchType(type,btn){
 async function exportarConsulta(){
   if(!lastSearchResults.length){alert("Nenhum resultado para exportar.");return}
   await ensureLib('xlsx');
-  const colunas=["TIPO","EMENDA","PARLAMENTAR","UNIDADE BENEFICIADA","ITEM","QTDE","VALOR TOTAL","CPL / PROCESSO","STATUS","NOTA FISCAL","Nº EMPENHO","Nº PATRIMÔNIO","UNIDADE ENTREGA","DATA ENTREGA","ORDEM PAGAMENTO"];
-  const dados=lastSearchResults.map(r=>[r.tipo,r.emenda,r.parlamentar,r.unidade,r.item,r.qtde,r.vl_total,r.cpl,r.status_raw,r.nota_fiscal,r.empenho,r.patrimonio,r.unidade_entrega,r.data_entrega,r.ordem_pagamento]);
+  const colunas=["TIPO","EMENDA","PARLAMENTAR","UNIDADE BENEFICIADA","ITEM","QTDE","VALOR TOTAL","CPL / PROCESSO","STATUS","NOTA FISCAL","Nº EMPENHO","Nº PATRIMÔNIO","UNIDADE ENTREGA","DATA DE RECEBIMENTO PELA SECRETARIA","DATA DE ENTREGA NA UNIDADE","ORDEM PAGAMENTO"];
+  const dados=lastSearchResults.map(r=>[r.tipo,r.emenda,r.parlamentar,r.unidade,r.item,r.qtde,r.vl_total,r.cpl,r.status_raw,r.nota_fiscal,r.empenho,r.patrimonio,r.unidade_entrega,r.data_recebimento,r.data_entrega,r.ordem_pagamento]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   ws['!cols']=colunas.map((_,i)=>({wch:Math.max(12,...dados.map(row=>String(row[i]||"").length))+2}));
   const wb={SheetNames:["Consulta"],Sheets:{Consulta:ws}};
@@ -1664,7 +1682,8 @@ function doSearch(){
         ${ficha("Quantidade",r.qtde)}${ficha("Vl. unit. exec.",r.vl_unitario?fmtFull(r.vl_unitario):"")}${ficha("Vl. total exec.",r.vl_total?fmtFull(r.vl_total):"")}
         ${ficha("Nota fiscal",r.nota_fiscal)}${ficha("Nº empenho",r.empenho)}
         ${ficha("Nº patrimônio",r.patrimonio)}${ficha("Unidade de entrega",r.unidade_entrega)}
-        ${ficha("Data de entrega",r.data_entrega)}${ficha("Ordem de pagamento",r.ordem_pagamento)}
+        ${ficha("Recebimento pela Secretaria",r.data_recebimento)}${ficha("Entrega na unidade",r.data_entrega)}
+        ${ficha("Ordem de pagamento",r.ordem_pagamento)}
         ${ficha("Status",r.status_raw)}
       </div>
     </div>`).join("")+(results.length>20?`<div style="font-size:12px;color:var(--text3);padding:.5rem 0">${results.length} resultados — mostrando os 20 primeiros.</div>`:"");

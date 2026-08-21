@@ -100,8 +100,11 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    O vínculo de empenho pode nascer diretamente na subaba **Empenhos** ao selecionar o
    pedido da ATA; nesse caso o Controle de Entregas apenas libera **Emitir AF**, sem criar
    novo vínculo/rateio.
-5. **Recebimento e confirmação** — `itens_entregas.qtde_recebida`, `data_entrega_unidade`
-   e uma linha por unidade física em `itens_entregas_unidades` ou
+5. **Recebimento e confirmação** — o recebimento pela Secretaria fica em
+   `itens_entregas.data_recebimento` (ou `atas_execucao.dt_entrega`) e a confirmação da
+   entrega na unidade fica separadamente em `data_entrega_unidade`. A AF, o recebimento e a
+   entrega na unidade são três marcos distintos. O recebimento também cria uma linha por
+   unidade física em `itens_entregas_unidades` ou
    `atas_execucao_unidades`, inclusive quando patrimônio/série estiverem vazios. A
    quantidade agregada permanece apenas no registro pai. A **NF** é cadastrada **uma vez** em
    `notas_fiscais` (valor total) e rateada em `nota_fiscal_itens`.
