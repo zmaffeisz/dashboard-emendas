@@ -914,6 +914,11 @@ function _invStatusHtml(situacao){
   const cls={ATIVO:'ativo',EMPRESTADO:'emprestado',BAIXADO:'baixado'}[s]||'ativo';
   return `<span class="inv-status inv-status-${cls}">${_sanEsc(label)}</span>`;
 }
+function _invEntregueNaUnidade(em,inv){
+  // A unidade planejada da Emenda não é localização física. O estado atual só passa
+  // a existir na ficha depois da confirmação efetiva da entrega na unidade.
+  return !!(inv?.data_entrega_unidade||em?.data_entrega);
+}
 function _invCamposHtml(campos){
   const validos=(campos||[]).filter(([,v])=>_invTemValor(v));
   if(!validos.length) return '<div class="inv-empty-history">Nenhuma informação registrada nesta seção.</div>';
@@ -932,7 +937,10 @@ function _invHeroHtml(em,inv){
   if(inv?.patrimonio) meta.push(`<span>Patrimônio ${_sanEsc(inv.patrimonio)}</span>`);
   else if(inv?._unidadeFisica) meta.push(`<span>Unidade física ${_sanEsc(inv.id)}</span>`);
   if(inv?.numero_serie) meta.push(`<span>Série ${_sanEsc(inv.numero_serie)}</span>`);
-  return `<div class="inv-detail-hero"><div><div class="inv-detail-name">${_sanEsc(titulo)}</div><div class="inv-detail-meta">${meta.join('<span>•</span>')}</div></div><div class="inv-detail-location"><div class="inv-detail-location-label">Localização e situação atuais</div><div class="inv-detail-location-value">${_sanEsc(inv?.unidade||em?.unidade||'Ainda não incorporado ao inventário')}</div><div style="margin-top:7px">${inv?_invStatusHtml(inv.situacao_atual):'<span style="font-size:12px;color:var(--text3)">Somente dados da Emenda</span>'}</div></div></div>`;
+  const localizacao=_invEntregueNaUnidade(em,inv)
+    ?`<div class="inv-detail-location"><div class="inv-detail-location-label">Localização e situação atuais</div><div class="inv-detail-location-value">${_sanEsc(inv?.unidade||em?.unidade_entrega||'Localização não informada')}</div><div style="margin-top:7px">${inv?_invStatusHtml(inv.situacao_atual):''}</div></div>`
+    :'';
+  return `<div class="inv-detail-hero"><div><div class="inv-detail-name">${_sanEsc(titulo)}</div><div class="inv-detail-meta">${meta.join('<span>•</span>')}</div></div>${localizacao}</div>`;
 }
 function _invTabsHtml(tab,temInventario){
   const tabs=[['geral','Visão geral'],['aquisicao','Aquisição e origem'],['historico','Histórico e movimentações']];
@@ -940,10 +948,11 @@ function _invTabsHtml(tab,temInventario){
 }
 function _invVisaoGeralHtml(em,inv){
   const estado=inv?._estadoInventario||{};
+  const entregueNaUnidade=_invEntregueNaUnidade(em,inv);
   const campos=[
-    ['Situação atual',inv?_invStatusHtml(inv.situacao_atual):null],
-    ['Localização atual',_invTexto(inv?.unidade)],
-    ['Unidade de origem',_invTexto(inv?.unidade_origem,em?.unidade,inv?.unidade)],
+    ['Situação atual',entregueNaUnidade&&inv?_invStatusHtml(inv.situacao_atual):null],
+    ['Localização atual',entregueNaUnidade?_invTexto(inv?.unidade):null],
+    ['Unidade de origem',entregueNaUnidade?_invTexto(inv?.unidade_origem,inv?.unidade):null],
     ['Unidade cadastrada na Emenda',_invTexto(em?.unidade)],
     ['Patrimônio',_invTexto(inv?.patrimonio,em?.patrimonio)],
     ['Número de série',_invTexto(inv?.numero_serie)],
@@ -952,7 +961,7 @@ function _invVisaoGeralHtml(em,inv){
     ['Previsão de devolução',_invData(inv?.previsao_devolucao)],
     ['Última movimentação',estado.ultima_movimentacao_em?new Date(estado.ultima_movimentacao_em).toLocaleString('pt-BR'):null]
   ];
-  const aviso=em&&inv&&em.unidade&&inv.unidade&&em.unidade!==inv.unidade
+  const aviso=entregueNaUnidade&&em&&inv&&em.unidade&&inv.unidade&&em.unidade!==inv.unidade
     ?'<div style="margin:0 13px 13px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--blue-bg);color:var(--blue);font-size:12px">A unidade exibida na aba Emendas continua sendo a unidade originalmente cadastrada. A localização acima é a posição atual do bem.</div>'
     :'';
   return _invSecaoHtml('Estado do item',campos,aviso);

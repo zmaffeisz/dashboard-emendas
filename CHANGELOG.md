@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Localização física somente após a entrega:** a ficha “Vida do item” não usa mais a
+  unidade planejada da Emenda como localização ou situação atuais. Esses dados aparecem
+  somente depois da confirmação da entrega na unidade; a unidade planejada permanece no
+  histórico de origem.
 - **Colunas compactas no Controle de Entregas:** as colunas Processo/CPL e Contrato/SIM
   agora ocupam menos espaço, preservando o conteúdo completo ao passar o cursor.
 - **Ficha completa na aba Empenhos:** cada linha agora é clicável e abre uma visão
