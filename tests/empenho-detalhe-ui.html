@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Teste — ficha completa de empenho</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../dashboard.css">
+</head>
+<body style="padding:24px;background:var(--bg)">
+  <main style="max-width:980px;margin:auto">
+    <button id="abrir" class="emp-numero-link">17346 / 2026</button>
+    <div id="resultado" style="margin-top:14px;font-weight:700"></div>
+  </main>
+  <script>
+    function _sanEsc(v){const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML;}
+    function fmtFull(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+    function _itemFonteLabel(v){return v==='emenda'?'Emenda':(v||'—');}
+    const empenhosRows=[];
+    (async()=>{
+      const source=await fetch('../js/legacy/40-itens-entregas.js').then(r=>r.text());
+      const start=source.indexOf('// Ficha consolidada e somente leitura de um empenho.');
+      const end=source.indexOf('/* ── select pesquisável genérico ── */',start);
+      if(start<0||end<0) throw new Error('Bloco da ficha de empenho não localizado.');
+      (0,eval)(source.slice(start,end));
+      const detalhe={
+        empenho:{id:'emp-1',numero:'17346',ano:2026,status:'emitido',valor_empenhado:4272,valor_anulado:0,fonte_tipo:'emenda',fonte_descricao:'EM 660/2026',data_emissao:'2026-07-20',numero_despesa:'1221',contrato_id:429,emenda_id:'em-1',updated_at:'2026-08-25'},
+        vinculos:[{id:'v-1',item_id:'it-1',empenho_id:'emp-1',quantidade_vinculada:8,valor_vinculado:4272}],
+        itens:[{id:'it-1',descricao:'Monitor pc',origem:'aquisicao',qtde:8,marca:'DATEN',modelo:'DM215V',status:'contratado',contrato_id:429,processo_id:323,emenda_id:'em-1',unidade_destino_id:83}],
+        execucoes:[],ataItens:[],emendaItens:[],
+        contratos:[{id:429,tipo_instrumento:'CONTRATO',cpl:'422/2024',numero_contrato:'089/2026',prestador:'DATEN TECNOLOGIA LTDA',objeto:'Aquisição de Monitor de Computador',status:'VIGENTE',valor_atual_num:4272,processo_id:323,fornecedor_id:177,data_assinatura:'2026-07-15'}],
+        processos:[{id:323,identificador:'422/2024',sc:'3047/2026',objeto:'Aquisição de Monitor de Computador',status:'em andamento',valor_estimado:4272}],
+        emendas:[{id:'em-1',tipo:'MUNICIPAL',emenda:'660',ano:2026,parlamentar:'Henri José Arida',valor_cedido:30000,unidade:'Zoonoses',sei_emenda:'17723/2026',objeto:'Investimento para equipamentos'}],
+        fornecedores:[{id:177,razao_social:'DATEN TECNOLOGIA LTDA',cnpj_normalizado:'04602789000101'}],
+        unidades:[{id:83,nome:'Zoonoses'}],
+        entregas:[{id:'ent-1',item_id:'it-1',af_numero:'SIAM 3047/2026',af_data:'2026-07-06',data_limite_entrega:'2026-09-15',qtde_autorizada:8,qtde_recebida:null,status:'af_emitida'}],
+        rateiosNf:[{id:'r-1',nota_fiscal_id:'nf-1',item_id:'it-1',quantidade:8,valor_total:4272}],
+        notas:[{id:'nf-1',numero:'8440',serie:'1',data_emissao:'2026-08-20',data_recebimento:'2026-08-22',valor_total:4272,status:'recebida',arquivo_url:'https://example.com/nf.pdf'}]
+      };
+      _empDetCarregar=async()=>detalhe;
+      document.getElementById('abrir').addEventListener('click',ev=>abrirDetalheEmpenho('emp-1',ev));
+      document.getElementById('abrir').click();
+      await new Promise(resolve=>setTimeout(resolve,30));
+      const modal=document.getElementById('modal-empenho-detalhe');
+      const texto=modal?.textContent||'';
+      const secoes=['Contrato(s)','Processo(s)','Emenda(s)','Itens vinculados','Autorizações e entregas','Notas fiscais','Documentos relacionados'];
+      const ok=modal?.classList.contains('active')
+        && secoes.every(s=>texto.includes(s))
+        && texto.includes('Monitor pc')
+        && texto.includes('DATEN TECNOLOGIA LTDA')
+        && texto.includes('Emenda 660 / 2026')
+        && texto.includes('SIAM 3047/2026')
+        && texto.includes('NF 8440')
+        && texto.includes('R$ 4.272,00');
+      const resultado=document.getElementById('resultado');
+      resultado.textContent=ok?'PASSOU: a ficha abriu e reuniu todas as relações esperadas.':'FALHOU: a ficha está incompleta.';
+      resultado.style.color=ok?'var(--green)':'var(--red)';
+    })().catch(err=>{
+      const resultado=document.getElementById('resultado');
+      resultado.textContent='FALHOU: '+err.message;
+      resultado.style.color='var(--red)';
+    });
+  </script>
+</body>
+</html>

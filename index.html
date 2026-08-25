@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
-  <link rel="stylesheet" href="dashboard.css?v=20260825-ocorrencias-licitacao-2">
+  <link rel="stylesheet" href="dashboard.css?v=20260825-detalhe-empenho-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
@@ -1251,7 +1251,7 @@
       <button id="emp-novo-btn" onclick="abrirModalEmpenho()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">+ Novo empenho</button>
       <span id="emp-count" style="font-size:12px;color:var(--text3)"></span>
     </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Cadastre os empenhos e vincule a itens de contratos. O <b>saldo</b> desconta conforme o valor vinculado aos itens.</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Clique em um empenho para ver a ficha completa com contrato, processo, Emenda, itens, entregas e documentos. O <b>saldo</b> desconta conforme o valor vinculado aos itens.</div>
     <div id="empenhos-wrap" style="overflow-x:auto"></div>
   </div>
 </div>
@@ -3189,10 +3189,10 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260825-ocorrencias-licitacao-1"></script>
 <script src="js/legacy/20-atas.js?v=20260821-troca-marca-ata-2"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260825-ocorrencias-licitacao-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260825-ocorrencias-licitacao-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260825-controle-colunas-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260825-ocorrencias-licitacao-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260814-chamados-sem-contrato-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260825-empenho-rotulos-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

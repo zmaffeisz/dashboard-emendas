@@ -2,6 +2,15 @@
 
 ## Em desenvolvimento
 
+- **Colunas compactas no Controle de Entregas:** as colunas Processo/CPL e Contrato/SIM
+  agora ocupam menos espaço, preservando o conteúdo completo ao passar o cursor.
+- **Ficha completa na aba Empenhos:** cada linha agora é clicável e abre uma visão
+  consolidada, somente leitura, com identificação e valores do empenho, fornecedor,
+  contratos, processos, Emendas, itens e rateios, AFs, recebimentos, notas fiscais e
+  documentos relacionados. As ações de editar e excluir continuam separadas.
+- **Rótulos do rateio de empenho por item:** os campos de quantidade e valor no vínculo
+  de empenho do contrato agora exibem descrições completas à esquerda dos controles, sem
+  usar textos internos como rótulos.
 - **Itens fracassados ou desertos em licitações:** a aba Licitações em andamento ganhou
   uma ação definitiva por item, com resultado, número do pregão, lote, data, observação e
   documento comprobatório obrigatório. O item fica bloqueado contra edição, exclusão,

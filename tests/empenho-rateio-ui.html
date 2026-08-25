@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Teste — rótulos do empenho por item</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../dashboard.css">
+</head>
+<body style="padding:24px;background:var(--bg)">
+  <main id="fixture" style="max-width:640px;margin:auto"></main>
+  <div id="resultado" style="max-width:640px;margin:12px auto;font-weight:700"></div>
+  <script>
+    (async()=>{
+      const source=await fetch('../js/legacy/70-fiscalizacao-sancoes-contratos.js').then(r=>r.text());
+      const start=source.indexOf('function _ncEmpItemHtml');
+      const end=source.indexOf('function _ncEmpGrupoHtml',start);
+      if(start<0||end<0) throw new Error('Função de empenho não localizada.');
+      (0,eval)(source.slice(start,end));
+      const fixture=document.getElementById('fixture');
+      fixture.innerHTML=_ncEmpItemHtml('teste');
+      document.getElementById('nci-emp-sec-teste').style.display='block';
+      document.getElementById('nci-emp-picker-teste').style.display='block';
+      const labels=[...document.querySelectorAll('.nci-emp-rateio label')];
+      const inputs=[...document.querySelectorAll('.nci-emp-rateio input')];
+      const textos=labels.map(l=>l.textContent.trim());
+      const semPlaceholder=inputs.every(i=>!i.hasAttribute('placeholder'));
+      const aEsquerda=labels.every((l,i)=>l.getBoundingClientRect().right<=inputs[i].getBoundingClientRect().left);
+      const ok=textos[0]==='Qtde de itens referente a este empenho'
+        && textos[1]==='Valor total do empenho para este item'
+        && semPlaceholder && aEsquerda;
+      const resultado=document.getElementById('resultado');
+      resultado.textContent=ok?'PASSOU: rótulos externos, à esquerda e campos sem placeholder.':'FALHOU';
+      resultado.style.color=ok?'var(--green)':'var(--red)';
+    })().catch(e=>{
+      const resultado=document.getElementById('resultado');
+      resultado.textContent='FALHOU: '+e.message;
+      resultado.style.color='var(--red)';
+    });
+  </script>
+</body>
+</html>

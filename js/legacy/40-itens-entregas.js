@@ -113,8 +113,8 @@ function renderEmpenhos(){
       <th style="width:115px;padding:7px 8px">Número</th><th style="width:80px;padding:7px 8px">Despesa</th><th style="width:150px;padding:7px 8px">Fonte</th><th style="width:330px;padding:7px 8px">Contrato</th><th style="width:130px;padding:7px 8px">Emenda</th><th style="width:115px;padding:7px 8px;text-align:right">Valor</th><th style="width:115px;padding:7px 8px;text-align:right">Vinculado</th><th style="width:105px;padding:7px 8px;text-align:right">Saldo</th><th style="width:120px;padding:7px 8px"></th>
     </tr></thead><tbody>${rows.map(e=>{
       const saldoCor=e._saldo<0?'var(--red)':(e._saldo===0?'var(--text3)':'var(--green)');
-      return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:6px 8px;white-space:nowrap"><b>${_sanEsc(e.numero||'—')}</b>${e.ano?(' / '+e.ano):''}</td>
+      return `<tr class="emp-list-row" tabindex="0" role="button" aria-label="Ver detalhes do empenho ${_sanEsc(e.numero||'')} ${e.ano||''}" onclick="abrirDetalheEmpenho('${e.id}',event)" onkeydown="_empDetalheTecla(event,'${e.id}')">
+      <td style="padding:6px 8px;white-space:nowrap"><button type="button" class="emp-numero-link" onclick="abrirDetalheEmpenho('${e.id}',event)"><b>${_sanEsc(e.numero||'—')}</b>${e.ano?(' / '+e.ano):''}</button></td>
       <td style="padding:6px 8px">${_sanEsc(e.numero_despesa||'—')}</td>
       <td style="padding:6px 8px">${_itemFonteLabel(e.fonte_tipo)}${e.fonte_descricao?(' · '+_sanEsc(e.fonte_descricao)):''}</td>
       <td style="padding:6px 8px;white-space:nowrap">${e._contrato?_sanEsc(e._contrato):'—'}</td>
@@ -122,8 +122,252 @@ function renderEmpenhos(){
       <td style="padding:6px 8px;text-align:right;white-space:nowrap">${fmtFull(e.valor_empenhado)}</td>
       <td style="padding:6px 8px;text-align:right;white-space:nowrap">${fmtFull(e._vinc)}</td>
       <td style="padding:6px 8px;text-align:right;white-space:nowrap;color:${saldoCor};font-weight:600">${fmtFull(e._saldo)}</td>
-      <td style="padding:6px 8px;white-space:nowrap">${podeEd?`<button onclick="abrirModalEmpenho('${e.id}')" style="font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">Editar</button> <button onclick="excluirEmpenho('${e.id}')" style="font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>`:''}</td>
+      <td style="padding:6px 8px;white-space:nowrap">${podeEd?`<button data-emp-action onclick="event.stopPropagation();abrirModalEmpenho('${e.id}')" style="font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">Editar</button> <button data-emp-action onclick="event.stopPropagation();excluirEmpenho('${e.id}')" style="font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>`:''}</td>
     </tr>`;}).join('')}</tbody></table>`;
+}
+
+// Ficha consolidada e somente leitura de um empenho.
+function _empDetalheTecla(ev,id){
+  if((ev.key==='Enter'||ev.key===' ')&&!ev.target.closest('[data-emp-action]')){
+    ev.preventDefault();
+    abrirDetalheEmpenho(id,ev);
+  }
+}
+function _empDetEnsureModal(){
+  let modal=document.getElementById('modal-empenho-detalhe');
+  if(modal) return modal;
+  modal=document.createElement('div');
+  modal.className='modal-overlay';
+  modal.id='modal-empenho-detalhe';
+  modal.innerHTML=`<div class="modal-box emp-det-modal" role="dialog" aria-modal="true" aria-labelledby="emp-det-titulo">
+    <div class="emp-det-modal-head">
+      <div>
+        <div class="emp-det-eyebrow">Ficha completa do empenho</div>
+        <div id="emp-det-titulo" class="emp-det-modal-title">Empenho</div>
+      </div>
+      <button type="button" class="emp-det-close" onclick="fecharDetalheEmpenho()" aria-label="Fechar">×</button>
+    </div>
+    <div id="emp-det-body" class="emp-det-body"></div>
+  </div>`;
+  modal.addEventListener('click',ev=>{ if(ev.target===modal) fecharDetalheEmpenho(); });
+  document.body.appendChild(modal);
+  if(!window._empDetEscBound){
+    window._empDetEscBound=true;
+    document.addEventListener('keydown',ev=>{ if(ev.key==='Escape'&&document.getElementById('modal-empenho-detalhe')?.classList.contains('active')) fecharDetalheEmpenho(); });
+  }
+  return modal;
+}
+function fecharDetalheEmpenho(){
+  document.getElementById('modal-empenho-detalhe')?.classList.remove('active');
+}
+async function _empDetByIds(tabela,colunas,ids,campo='id'){
+  const unicos=[...new Set((ids||[]).filter(v=>v!==null&&v!==undefined&&v!==''))];
+  if(!unicos.length) return [];
+  const {data,error}=await sb.from(tabela).select(colunas).in(campo,unicos);
+  if(error) throw new Error(`${tabela}: ${error.message}`);
+  return data||[];
+}
+async function _empDetCarregar(id){
+  const [empRes,vincRes,entRes,nfiRes]=await Promise.all([
+    sb.from('empenhos').select('*').eq('id',id).maybeSingle(),
+    sb.from('empenho_itens').select('*').eq('empenho_id',id).order('created_at'),
+    sb.from('itens_entregas').select('*').eq('empenho_id',id).order('created_at',{ascending:false}),
+    sb.from('nota_fiscal_itens').select('*').eq('empenho_id',id).order('created_at',{ascending:false})
+  ]);
+  const falha=[['empenhos',empRes],['empenho_itens',vincRes],['itens_entregas',entRes],['nota_fiscal_itens',nfiRes]].find(([,r])=>r.error);
+  if(falha) throw new Error(`${falha[0]}: ${falha[1].error.message}`);
+  const empenho=empRes.data||empenhosRows.find(e=>String(e.id)===String(id));
+  if(!empenho) throw new Error('Empenho não encontrado ou sem permissão de visualização.');
+  const vinculos=vincRes.data||[], entregas=entRes.data||[], rateiosNf=nfiRes.data||[];
+  const itemIds=[...vinculos.map(v=>v.item_id),...entregas.map(v=>v.item_id),...rateiosNf.map(v=>v.item_id)];
+  const execIds=vinculos.map(v=>v.exec_id);
+  const nfIds=[...rateiosNf.map(v=>v.nota_fiscal_id),...entregas.map(v=>v.nota_fiscal_id)];
+  const [itens,execucoes,notas]=await Promise.all([
+    _empDetByIds('itens','id,processo_id,origem,fonte_tipo,emenda_id,emenda_item_id,fonte_descricao,descricao,qtde,valor_estimado,unidade_destino_id,contrato_id,fornecedor_id,valor_contratado,ata_item_id,status,marca,modelo,observacoes',itemIds),
+    _empDetByIds('atas_execucao','id,ata_item_id,emenda_id,emenda_item_id,cpl,sim,item,unidade,qtde,valor,empenho,data_af,af_numero,prev_entrega,dt_entrega,nf,obs_prazo,origem_recurso,data_entrega_unidade,termo_arquivo,confirmacao_obs,marca_modelo',execIds),
+    _empDetByIds('notas_fiscais','id,numero,serie,chave_acesso,fornecedor_id,contrato_id,processo_id,emenda_id,data_emissao,data_recebimento,valor_total,valor_bruto,valor_liquido,retencoes,competencia,status,arquivo_url,observacoes,valor_glosa,valor_aprovado',nfIds)
+  ]);
+  const ataItemIds=[...itens.map(i=>i.ata_item_id),...execucoes.map(e=>e.ata_item_id)];
+  const emendaItemIds=[...vinculos.map(v=>v.emenda_item_id),...itens.map(i=>i.emenda_item_id),...execucoes.map(e=>e.emenda_item_id),...rateiosNf.map(v=>v.emenda_item_id)];
+  const [ataItens,emendaItens]=await Promise.all([
+    _empDetByIds('atas_itens','id,contrato_id,cpl,sim,item,marca_modelo,qtde_contratada,valor_unit,status_contrato,empresa,prazo_entrega,vencimento',ataItemIds),
+    _empDetByIds('emenda_itens','id,emenda_id,emenda,item,qtde,vl_unitario,vl_total,cpl,processo_id,status,nota_fiscal,empenho,unidade_beneficiada,unidade_entrega,data_entrega,ordem_pagamento,item_cadastrado,qtde_cadastrada,vl_unitario_cadastrado,vl_total_cadastrado,comprovante_pagamento',emendaItemIds)
+  ]);
+  const contratoIds=[empenho.contrato_id,...itens.map(i=>i.contrato_id),...ataItens.map(a=>a.contrato_id),...notas.map(n=>n.contrato_id)];
+  const contratos=await _empDetByIds('contratos','id,prestador,cpl,objeto,numero_contrato,cnpj,cnpj_fornecedor,data_inicio,data_assinatura,vigencia_atual,vencimento,status,fonte,valor_inicial_num,valor_atual_num,valor_mensal_num,valor_total_num,fornecedor_id,tipo_instrumento,processo_id',contratoIds);
+  const processoIds=[empenho.processo_id,...itens.map(i=>i.processo_id),...emendaItens.map(i=>i.processo_id),...contratos.map(c=>c.processo_id),...notas.map(n=>n.processo_id)];
+  const emendaIds=[empenho.emenda_id,...vinculos.map(v=>v.emenda_id),...itens.map(i=>i.emenda_id),...execucoes.map(e=>e.emenda_id),...emendaItens.map(i=>i.emenda_id),...rateiosNf.map(v=>v.emenda_id),...notas.map(n=>n.emenda_id)];
+  const fornecedorIds=[empenho.fornecedor_id,...itens.map(i=>i.fornecedor_id),...contratos.map(c=>c.fornecedor_id),...notas.map(n=>n.fornecedor_id)];
+  const unidadeIds=itens.map(i=>i.unidade_destino_id);
+  const [processos,emendas,fornecedores,unidades]=await Promise.all([
+    _empDetByIds('processos','id,identificador,tipo,natureza,objeto,modalidade,status,secao,valor_estimado,observacao,sc,link_publico_sei',processoIds),
+    _empDetByIds('emendas','id,tipo,emenda,numero,parlamentar,sei_emenda,sei,valor_cedido,unidade,ano,objeto',emendaIds),
+    _empDetByIds('fornecedores','id,cnpj_normalizado,razao_social,nome_fantasia,ativo',fornecedorIds),
+    _empDetByIds('unidades','id,nome,endereco,telefone,ativo',unidadeIds)
+  ]);
+  return {empenho,vinculos,entregas,rateiosNf,itens,execucoes,notas,ataItens,emendaItens,contratos,processos,emendas,fornecedores,unidades};
+}
+function _empDetMap(rows){ return Object.fromEntries((rows||[]).map(r=>[String(r.id),r])); }
+function _empDetDate(v){
+  if(!v) return '—';
+  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?`${m[3]}/${m[2]}/${m[1]}`:_sanEsc(String(v));
+}
+function _empDetQty(v){
+  if(v===null||v===undefined||v==='') return '—';
+  const n=Number(v); return Number.isFinite(n)?n.toLocaleString('pt-BR',{maximumFractionDigits:3}):_sanEsc(String(v));
+}
+function _empDetCnpj(v){
+  const d=String(v||'').replace(/\D/g,'');
+  return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):(v||'—');
+}
+function _empDetBadge(status){
+  const s=String(status||'Não informado');
+  const k=s.toLowerCase();
+  const cls=/cancel|anulad|vencid|problema|atras/.test(k)?'danger':/entreg|recebid|vigente|pago|conclu/.test(k)?'success':/aguard|pend|emitid|af_/.test(k)?'warning':'neutral';
+  return `<span class="emp-det-badge ${cls}">${_sanEsc(s.replaceAll('_',' '))}</span>`;
+}
+function _empDetLink(url,rotulo='Abrir documento'){
+  const valor=String(url||'').trim(); if(!valor) return '';
+  try{
+    const u=new URL(valor,window.location.href);
+    if(!['http:','https:'].includes(u.protocol)) return `<span class="emp-det-muted">${_sanEsc(rotulo)} indisponível</span>`;
+    return `<a class="emp-det-doc-link" href="${_sanEsc(u.href)}" target="_blank" rel="noopener noreferrer">↗ ${_sanEsc(rotulo)}</a>`;
+  }catch(_){ return `<span class="emp-det-muted">${_sanEsc(rotulo)} indisponível</span>`; }
+}
+function _empDetEmpty(texto){ return `<div class="emp-det-empty">${_sanEsc(texto)}</div>`; }
+function _empDetLabel(rotulo,valor,classe=''){
+  const exib=(valor===null||valor===undefined||valor==='')?'—':valor;
+  return `<div class="emp-det-field ${classe}"><span>${_sanEsc(rotulo)}</span><strong>${exib}</strong></div>`;
+}
+function _empDetRender(d){
+  const e=d.empenho, itens=_empDetMap(d.itens), execs=_empDetMap(d.execucoes), ataItens=_empDetMap(d.ataItens), emendaItens=_empDetMap(d.emendaItens);
+  const contratos=_empDetMap(d.contratos), processos=_empDetMap(d.processos), emendas=_empDetMap(d.emendas), fornecedores=_empDetMap(d.fornecedores), unidades=_empDetMap(d.unidades), notas=_empDetMap(d.notas);
+  const vinculado=d.vinculos.reduce((s,v)=>s+(Number(v.valor_vinculado)||0),0);
+  const empenhado=Number(e.valor_empenhado)||0, anulado=Number(e.valor_anulado)||0, saldo=empenhado-anulado-vinculado;
+  const fornecedor=fornecedores[String(e.fornecedor_id)]||fornecedores[String(contratos[String(e.contrato_id)]?.fornecedor_id)]||null;
+  const arquivos=[e.arquivo_url?`<div class="emp-det-doc-card"><b>Documento do empenho</b>${_empDetLink(e.arquivo_url,'Abrir documento do empenho')}</div>`:''];
+  document.getElementById('emp-det-titulo').innerHTML=`Empenho ${_sanEsc(e.numero||'—')}${e.ano?` / ${e.ano}`:''} ${_empDetBadge(e.status)}`;
+
+  const contratosHtml=d.contratos.length?d.contratos.map(c=>{
+    const p=processos[String(c.processo_id)];
+    return `<article class="emp-det-rel-card">
+      <div class="emp-det-rel-title"><span>${_sanEsc(c.tipo_instrumento==='ATA'?'Ata':'Contrato')}</span>${_empDetBadge(c.status)}</div>
+      <h4>${[c.cpl,c.numero_contrato].filter(Boolean).map(_sanEsc).join(' · ')||'Sem número informado'}</h4>
+      <p>${_sanEsc(c.objeto||'Objeto não informado')}</p>
+      <div class="emp-det-rel-grid">
+        ${_empDetLabel('Fornecedor',_sanEsc(c.prestador||fornecedores[String(c.fornecedor_id)]?.razao_social||'—'))}
+        ${_empDetLabel('CNPJ',_sanEsc(_empDetCnpj(c.cnpj_fornecedor||c.cnpj||fornecedores[String(c.fornecedor_id)]?.cnpj_normalizado)))}
+        ${_empDetLabel('Assinatura',_empDetDate(c.data_assinatura))}
+        ${_empDetLabel('Vigência',_sanEsc(c.vigencia_atual||c.vencimento||'—'))}
+        ${p?_empDetLabel('Processo',_sanEsc(p.identificador||'—')):''}
+        ${_empDetLabel('Valor atual',fmtFull(c.valor_atual_num??c.valor_total_num??c.valor_inicial_num))}
+      </div>
+    </article>`;
+  }).join(''):_empDetEmpty('Nenhum contrato relacionado foi encontrado.');
+
+  const processosHtml=d.processos.length?d.processos.map(p=>`<article class="emp-det-rel-card compact">
+    <div class="emp-det-rel-title"><span>Processo</span>${_empDetBadge(p.status)}</div>
+    <h4>${_sanEsc(p.identificador||'Sem identificador')}</h4>
+    <p>${_sanEsc(p.objeto||'Objeto não informado')}</p>
+    <div class="emp-det-rel-grid">
+      ${_empDetLabel('SC',_sanEsc(p.sc||'—'))}${_empDetLabel('Modalidade',_sanEsc(p.modalidade||'—'))}
+      ${_empDetLabel('Tipo / natureza',_sanEsc([p.tipo,p.natureza].filter(Boolean).join(' · ')||'—'))}
+      ${_empDetLabel('Valor estimado',fmtFull(p.valor_estimado))}
+    </div>
+    ${p.link_publico_sei?`<div class="emp-det-rel-actions">${_empDetLink(p.link_publico_sei,'Abrir processo no SEI')}</div>`:''}
+  </article>`).join(''):_empDetEmpty('Nenhum processo relacionado foi encontrado.');
+
+  const emendasHtml=d.emendas.length?d.emendas.map(em=>`<article class="emp-det-rel-card compact emenda">
+    <div class="emp-det-rel-title"><span>${_sanEsc(em.tipo||'Emenda')}</span></div>
+    <h4>Emenda ${_sanEsc(em.emenda||em.numero||'—')}${em.ano?` / ${em.ano}`:''}</h4>
+    <p>${_sanEsc(em.objeto||'Objeto não informado')}</p>
+    <div class="emp-det-rel-grid">
+      ${_empDetLabel('Parlamentar',_sanEsc(em.parlamentar||'—'))}${_empDetLabel('Valor cedido',fmtFull(em.valor_cedido))}
+      ${_empDetLabel('Unidade',_sanEsc(em.unidade||'—'))}${_empDetLabel('SEI da emenda',_sanEsc(em.sei_emenda||em.sei||'—'))}
+    </div>
+  </article>`).join(''):_empDetEmpty('Nenhuma emenda relacionada foi encontrada.');
+
+  const linhasItens=d.vinculos.map(v=>{
+    const it=itens[String(v.item_id)], ex=execs[String(v.exec_id)], ai=ataItens[String(ex?.ata_item_id||it?.ata_item_id)], emi=emendaItens[String(v.emenda_item_id||ex?.emenda_item_id||it?.emenda_item_id)];
+    const desc=it?.descricao||ex?.item||ai?.item||emi?.item||emi?.item_cadastrado||'Item não identificado';
+    const origem=ex?'Pedido de ATA':(it?.origem==='ata'?'Item de ATA':'Aquisição');
+    const cid=it?.contrato_id||ai?.contrato_id||e.contrato_id, c=contratos[String(cid)];
+    const pid=it?.processo_id||emi?.processo_id||c?.processo_id, p=processos[String(pid)];
+    const emid=v.emenda_id||it?.emenda_id||ex?.emenda_id||emi?.emenda_id||e.emenda_id, em=emendas[String(emid)];
+    const unidade=unidades[String(it?.unidade_destino_id)]?.nome||ex?.unidade||emi?.unidade_beneficiada||'—';
+    const marca=[it?.marca,it?.modelo].filter(Boolean).join(' · ')||ex?.marca_modelo||ai?.marca_modelo||'';
+    const status=it?.status||(ex?.data_entrega_unidade?'Entregue na unidade':ex?.dt_entrega?'Recebido':ex?.af_numero?'AF emitida':ai?.status_contrato)||'Vinculado';
+    return `<tr>
+      <td><b>${_sanEsc(desc)}</b><small>${_sanEsc(origem)}${marca?` · ${_sanEsc(marca)}`:''}</small></td>
+      <td class="num">${_empDetQty(v.quantidade_vinculada??ex?.qtde)}</td>
+      <td class="money">${fmtFull(v.valor_vinculado??ex?.valor)}</td>
+      <td>${c?_sanEsc([c.cpl,c.numero_contrato].filter(Boolean).join(' · ')):'—'}<small>${p?_sanEsc(p.identificador||''):''}</small></td>
+      <td>${em?_sanEsc(`Emenda ${em.emenda||em.numero||'—'}${em.ano?'/'+em.ano:''}`):'—'}<small>${_sanEsc(unidade)}</small></td>
+      <td>${_empDetBadge(status)}${ex?.af_numero?`<small>AF ${_sanEsc(ex.af_numero)}</small>`:''}</td>
+    </tr>`;
+  }).join('');
+  const itensHtml=linhasItens?`<div class="emp-det-table-wrap"><table class="emp-det-table"><thead><tr><th>Item</th><th class="num">Qtde vinculada</th><th class="money">Valor vinculado</th><th>Contrato / processo</th><th>Emenda / unidade</th><th>Situação</th></tr></thead><tbody>${linhasItens}</tbody></table></div>`:_empDetEmpty('Este empenho ainda não possui itens vinculados.');
+
+  const afRows=[
+    ...d.entregas.map(ent=>{const it=itens[String(ent.item_id)]; return {item:it?.descricao||'Item não identificado',af:ent.af_numero,data:ent.af_data,prev:ent.data_limite_entrega,aut:ent.qtde_autorizada,rec:ent.qtde_recebida,receb:ent.data_recebimento,unidade:ent.data_entrega_unidade,status:ent.status,nf:ent.nota_fiscal,termo:ent.termo_arquivo};}),
+    ...d.execucoes.filter(ex=>ex.af_numero||ex.dt_entrega||ex.nf).map(ex=>({item:ex.item||'Pedido de ATA',af:ex.af_numero,data:ex.data_af,prev:ex.prev_entrega,aut:ex.qtde,rec:ex.dt_entrega?ex.qtde:null,receb:ex.dt_entrega,unidade:ex.data_entrega_unidade,status:ex.data_entrega_unidade?'Entregue na unidade':ex.dt_entrega?'Recebido':ex.af_numero?'AF emitida':'Pedido',nf:ex.nf,termo:ex.termo_arquivo}))
+  ];
+  const afHtml=afRows.length?`<div class="emp-det-table-wrap"><table class="emp-det-table"><thead><tr><th>Item</th><th>AF</th><th>Emissão / prazo</th><th class="num">Autorizado / recebido</th><th>Recebimento / unidade</th><th>Situação</th></tr></thead><tbody>${afRows.map(r=>`<tr>
+    <td><b>${_sanEsc(r.item)}</b>${r.nf?`<small>NF ${_sanEsc(r.nf)}</small>`:''}</td><td>${_sanEsc(r.af||'—')}</td>
+    <td>${_empDetDate(r.data)}<small>Prazo: ${_empDetDate(r.prev)}</small></td><td class="num">${_empDetQty(r.aut)} / ${_empDetQty(r.rec)}</td>
+    <td>${_empDetDate(r.receb)}<small>Na unidade: ${_empDetDate(r.unidade)}</small></td><td>${_empDetBadge(r.status)}${r.termo?`<small>${_empDetLink(r.termo,'Termo de entrega')}</small>`:''}</td>
+  </tr>`).join('')}</tbody></table></div>`:_empDetEmpty('Nenhuma autorização de fornecimento ou entrega relacionada foi encontrada.');
+
+  const nfCentrais=d.notas.map(n=>{
+    const rateios=d.rateiosNf.filter(r=>String(r.nota_fiscal_id)===String(n.id));
+    return `<tr><td><b>NF ${_sanEsc(n.numero||'—')}</b>${n.serie?`<small>Série ${_sanEsc(n.serie)}</small>`:''}</td><td>${_empDetDate(n.data_emissao)}<small>Recebida: ${_empDetDate(n.data_recebimento)}</small></td><td class="money">${fmtFull(n.valor_total)}</td><td class="money">${fmtFull(rateios.reduce((s,r)=>s+(Number(r.valor_total)||0),0))}<small>${rateios.length} item(ns) rateado(s)</small></td><td>${_empDetBadge(n.status)}${n.arquivo_url?`<small>${_empDetLink(n.arquivo_url,'Abrir nota fiscal')}</small>`:''}</td></tr>`;
+  }).join('');
+  const nfLegadas=[...new Set([...d.entregas.map(x=>x.nota_fiscal),...d.execucoes.map(x=>x.nf)].filter(Boolean))].filter(num=>!d.notas.some(n=>String(n.numero)===String(num)));
+  const nfHtml=(nfCentrais||nfLegadas.length)?`<div class="emp-det-table-wrap"><table class="emp-det-table"><thead><tr><th>Documento</th><th>Datas</th><th class="money">Valor total da NF</th><th class="money">Rateado neste empenho</th><th>Situação / arquivo</th></tr></thead><tbody>${nfCentrais}${nfLegadas.map(n=>`<tr><td><b>NF ${_sanEsc(n)}</b><small>Registro anterior</small></td><td>—</td><td class="money">—</td><td class="money">—</td><td>${_empDetBadge('Vinculada')}</td></tr>`).join('')}</tbody></table></div>`:_empDetEmpty('Nenhuma nota fiscal relacionada foi encontrada.');
+
+  arquivos.push(...d.notas.filter(n=>n.arquivo_url).map(n=>`<div class="emp-det-doc-card"><b>NF ${_sanEsc(n.numero||'—')}</b>${_empDetLink(n.arquivo_url,'Abrir nota fiscal')}</div>`));
+  const comprovantes=[...new Set(d.emendaItens.map(i=>i.comprovante_pagamento).filter(Boolean))];
+  arquivos.push(...comprovantes.map((url,idx)=>`<div class="emp-det-doc-card"><b>Comprovante de pagamento${comprovantes.length>1?' '+(idx+1):''}</b>${_empDetLink(url,'Abrir comprovante')}</div>`));
+  const documentosHtml=arquivos.filter(Boolean).length?`<div class="emp-det-doc-grid">${arquivos.filter(Boolean).join('')}</div>`:_empDetEmpty('Nenhum arquivo foi anexado aos registros relacionados.');
+
+  return `<div class="emp-det-hero">
+    <div><span class="emp-det-eyebrow">Visão consolidada</span><h3>${_sanEsc(e.numero||'—')}${e.ano?` / ${e.ano}`:''}</h3><p>${_sanEsc(e.fonte_descricao||_itemFonteLabel(e.fonte_tipo)||'Fonte não informada')}</p></div>
+    <div class="emp-det-hero-side">${_empDetBadge(e.status)}<span>Emitido em ${_empDetDate(e.data_emissao)}</span></div>
+  </div>
+  <div class="emp-det-summary">
+    <div><span>Valor empenhado</span><strong>${fmtFull(empenhado)}</strong></div><div><span>Valor anulado</span><strong>${fmtFull(anulado)}</strong></div>
+    <div><span>Vinculado aos itens</span><strong>${fmtFull(vinculado)}</strong></div><div class="${saldo<0?'negative':saldo>0?'positive':''}"><span>Saldo disponível</span><strong>${fmtFull(saldo)}</strong></div>
+  </div>
+  <section class="emp-det-section"><h3>Identificação</h3><div class="emp-det-fields">
+    ${_empDetLabel('Número da despesa',_sanEsc(e.numero_despesa||'—'))}${_empDetLabel('Fonte',_sanEsc(_itemFonteLabel(e.fonte_tipo)))}
+    ${_empDetLabel('Fornecedor',_sanEsc(fornecedor?.razao_social||contratos[String(e.contrato_id)]?.prestador||'—'))}${_empDetLabel('CNPJ',_sanEsc(_empDetCnpj(fornecedor?.cnpj_normalizado)))}
+    ${_empDetLabel('Origem no sistema',_sanEsc([e.origem_sistema,e.origem_codigo].filter(Boolean).join(' · ')||'Cadastro manual'))}${_empDetLabel('Última atualização',_empDetDate(e.updated_at||e.ultima_sincronizacao))}
+    ${e.observacoes?_empDetLabel('Observações',_sanEsc(e.observacoes),'wide'):''}
+  </div></section>
+  <section class="emp-det-section"><h3>Contrato(s)</h3><div class="emp-det-card-grid">${contratosHtml}</div></section>
+  <section class="emp-det-section"><h3>Processo(s)</h3><div class="emp-det-card-grid">${processosHtml}</div></section>
+  <section class="emp-det-section"><h3>Emenda(s)</h3><div class="emp-det-card-grid">${emendasHtml}</div></section>
+  <section class="emp-det-section"><h3>Itens vinculados <span>${d.vinculos.length}</span></h3>${itensHtml}</section>
+  <section class="emp-det-section"><h3>Autorizações e entregas <span>${afRows.length}</span></h3>${afHtml}</section>
+  <section class="emp-det-section"><h3>Notas fiscais <span>${d.notas.length+nfLegadas.length}</span></h3>${nfHtml}</section>
+  <section class="emp-det-section"><h3>Documentos relacionados</h3>${documentosHtml}</section>`;
+}
+async function abrirDetalheEmpenho(id,ev){
+  if(ev?.target?.closest?.('[data-emp-action]')) return;
+  ev?.stopPropagation?.();
+  const modal=_empDetEnsureModal(), body=document.getElementById('emp-det-body');
+  modal.classList.add('active');
+  document.getElementById('emp-det-titulo').textContent='Carregando empenho...';
+  body.innerHTML='<div class="emp-det-loading"><span class="spinner"></span><span>Reunindo contrato, processo, Emenda, itens, entregas e documentos...</span></div>';
+  try{
+    const detalhe=await _empDetCarregar(id);
+    if(!modal.classList.contains('active')) return;
+    body.innerHTML=_empDetRender(detalhe);
+    modal.querySelector('.emp-det-modal')?.scrollTo({top:0});
+  }catch(err){
+    body.innerHTML=`<div class="emp-det-error"><b>Não foi possível carregar a ficha completa.</b><span>${_sanEsc(err?.message||String(err))}</span><button type="button" class="btn-secondary" onclick="abrirDetalheEmpenho('${_sanEsc(id)}')">Tentar novamente</button></div>`;
+  }
 }
 /* ── select pesquisável genérico ── */
 const _s2Data={};
@@ -1349,7 +1593,7 @@ function renderItensEntregas(){
   if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item encontrado. Itens aguardando AF e itens com AF emitida (aguardando recebimento) aparecem aqui. Após o recebimento total, passam para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
   wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px;width:28px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="ce-selecionar-visiveis" onchange="_ceAdvToggleVisiveis(this.checked)" aria-label="Selecionar pendências visíveis" style="width:15px;height:15px;accent-color:#EF9F27;cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
+      <th style="padding:7px 8px;width:28px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="ce-selecionar-visiveis" onchange="_ceAdvToggleVisiveis(this.checked)" aria-label="Selecionar pendências visíveis" style="width:15px;height:15px;accent-color:#EF9F27;cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px;width:115px;min-width:115px;max-width:115px">Processo/CPL</th><th style="padding:7px 8px;width:120px;min-width:120px;max-width:120px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
       const dias=_diasRestantes(r.limiteISO);
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
@@ -1395,8 +1639,8 @@ function renderItensEntregas(){
       return `<tr style="border-bottom:1px solid var(--border)${rowBg}">
       <td style="padding:6px 8px;text-align:center">${_ceAdvCheckbox(r)}</td>
       <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
-      <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.processo||'—')}</td>
-      <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.contrato||'—')}</td>
+      <td title="${_sanEsc(r.processo||'—')}" style="padding:6px 8px;width:115px;min-width:115px;max-width:115px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_sanEsc(r.processo||'—')}</td>
+      <td title="${_sanEsc(r.contrato||'—')}" style="padding:6px 8px;width:120px;min-width:120px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_sanEsc(r.contrato||'—')}</td>
       <td style="padding:6px 8px">${_sanEsc(r.empresa||'—')}</td>
       <td style="padding:6px 8px">${_sanEsc(r.item||'—')}</td>
       <td style="padding:6px 8px">${_sanEsc(r.unidade||'—')}</td>

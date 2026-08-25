@@ -83,6 +83,13 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
 5. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`
    sempre que lida (não há valor "congelado" duplicado).
 
+Na aba **Empenhos**, a linha de cada empenho abre uma ficha consolidada somente leitura.
+Ela parte de `empenhos` e percorre `empenho_itens` para reunir aquisições em `itens` e
+pedidos em `atas_execucao`, preservando os vínculos com contratos, processos, Emendas,
+unidades, AFs/recebimentos e o rateio de notas em `nota_fiscal_itens`. A ficha não cria
+uma nova fonte de verdade: os valores e estados continuam vindo das tabelas de origem e
+respeitam a RLS da sessão autenticada.
+
 ## 4. Exemplo de fluxo ponta a ponta
 
 > **Cenário:** emenda parlamentar para aquisição de equipamentos via ATA de RP.

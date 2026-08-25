@@ -1991,9 +1991,11 @@ function _ncEmpItemHtml(sid){
           <select id="nci-emp-emenda-${sid}" title="Emenda (opcional)" style="flex:1;min-width:160px;${inp}"></select>
         </div>
       </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
-        <input type="number" id="nci-emp-qtde-${sid}" placeholder="Qtde deste item" step="any" style="flex:1;min-width:90px;${inp}">
-        <input type="number" id="nci-emp-vlitem-${sid}" placeholder="Valor deste item R$" step="any" style="flex:1;min-width:110px;${inp}">
+      <div class="nci-emp-rateio" style="margin-bottom:6px">
+        <label for="nci-emp-qtde-${sid}">Qtde de itens referente a este empenho</label>
+        <input type="number" id="nci-emp-qtde-${sid}" aria-label="Qtde de itens referente a este empenho" step="any" style="${inp}">
+        <label for="nci-emp-vlitem-${sid}">Valor total do empenho para este item</label>
+        <input type="number" id="nci-emp-vlitem-${sid}" aria-label="Valor total do empenho para este item" step="any" style="${inp}">
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <button type="button" onclick="_ncVinculEmp('${sid}')" style="font-size:11px;padding:4px 12px;border-radius:4px;border:none;background:var(--blue);color:#fff;cursor:pointer">Vincular</button>
