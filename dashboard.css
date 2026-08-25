@@ -409,3 +409,28 @@ table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
 .ata-exec-units-table tbody tr:hover td{background:var(--blue-bg)!important}
 .ata-exec-consolidated{padding:12px;border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--text2);font-size:12px;background:var(--surface)}
 @media(max-width:760px){.ata-exec-detail-grid{grid-template-columns:1fr}.ata-exec-detail-panel{padding:12px}.ata-exec-units-wrap{max-height:360px}}
+#modal-licitacao-ocorrencia .lic-oco-tipo,
+#modal-licitacao-ocorrencia .lic-oco-lote{
+  width:100%;
+  min-height:32px;
+  padding:6px 9px;
+  border:1px solid var(--border);
+  border-radius:5px;
+  background:var(--surface);
+  color:var(--text);
+  -webkit-text-fill-color:var(--text);
+}
+#modal-licitacao-ocorrencia .lic-oco-tipo:disabled,
+#modal-licitacao-ocorrencia .lic-oco-lote:disabled{
+  background:var(--surface2);
+  color:var(--text2);
+  -webkit-text-fill-color:var(--text2);
+  opacity:1;
+  cursor:not-allowed;
+}
+#modal-licitacao-ocorrencia .lic-oco-lote::placeholder{
+  color:var(--text3);
+  -webkit-text-fill-color:var(--text3);
+  opacity:1;
+}
+@media(max-width:700px){.lic-oco-item{grid-template-columns:28px 1fr!important}.lic-oco-item .lic-oco-tipo,.lic-oco-item .lic-oco-lote{grid-column:2}}

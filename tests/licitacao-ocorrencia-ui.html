@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste UI — ocorrências de licitação</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../dashboard.css">
+</head>
+<body>
+  <main style="padding:24px"><h1>Teste do modal de ocorrência</h1><div id="resultado">Executando…</div></main>
+  <script>
+    const _sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const podeEditar=()=>true;
+  </script>
+  <script src="../js/legacy/30-usuarios-licitacoes.js"></script>
+  <script>
+    try{
+      _licOcorrenciasByItem={"encerrado":{id:"o1",item_id:"encerrado",tipo:"FRACASSADO"}};
+      _licitacoesCache=[{id:1,identificador:"CPL 100/2026",objeto:"Aquisição de teste"}];
+      _cpItens=[
+        {id:"livre-1",processo_id:1,descricao:"Item livre 1",qtde:2},
+        {id:"livre-2",processo_id:1,descricao:"Item livre 2",qtde:1},
+        {id:"contratado",processo_id:1,descricao:"Item contratado",qtde:1,contrato_id:10},
+        {id:"encerrado",processo_id:1,descricao:"Item encerrado",qtde:1}
+      ];
+      abrirModalOcorrenciaLicitacao(1);
+      const modal=document.getElementById('modal-licitacao-ocorrencia');
+      const rows=[...modal.querySelectorAll('.lic-oco-item')];
+      if(!modal.classList.contains('active')) throw new Error('modal não abriu');
+      if(rows.length!==2) throw new Error(`esperados 2 itens elegíveis; encontrados ${rows.length}`);
+      const check=rows[0].querySelector('.lic-oco-check');
+      check.checked=true; licOcorrenciaToggleItem(check);
+      if(rows[0].querySelector('.lic-oco-tipo').disabled||rows[0].querySelector('.lic-oco-lote').disabled) throw new Error('campos do item selecionado permaneceram bloqueados');
+      document.getElementById('resultado').textContent='PASSOU: modal abriu, itens terminais/contratados foram excluídos e os controles do item selecionado foram habilitados.';
+      document.getElementById('resultado').style.color='green';
+    }catch(e){
+      document.getElementById('resultado').textContent='FALHOU: '+e.message;
+      document.getElementById('resultado').style.color='red';
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

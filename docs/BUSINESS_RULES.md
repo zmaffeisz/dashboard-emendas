@@ -56,6 +56,18 @@
 
 ## 3. Licitação / status por item
 
+- **Fracasso ou deserção encerra definitivamente o item licitado.** O registro exige
+  resultado (`FRACASSADO` ou `DESERTO`), número do pregão, número do lote, data e documento
+  comprobatório. Depois de registrado, o item não pode ser editado, excluído, contratado,
+  vinculado a contrato ou reaberto; o evento e seus vínculos também são imutáveis.
+- O encerramento guarda uma fotografia da descrição, processo, quantidade e valor
+  licitado. Na Emenda, o valor planejado e o valor licitado continuam visíveis para
+  prestação de contas; o valor do encerramento aparece como execução negativa e deixa de
+  integrar o total comprometido, devolvendo exatamente esse montante ao saldo remanescente.
+  O negativo é um indicador contábil do recurso liberado, não um pagamento negativo.
+- Se o item estava apenas planejado para uma futura Ata, os vínculos com as Emendas são
+  preservados no evento e os planejamentos ativos são cancelados, sem apagar o histórico.
+
 - Para processos de natureza **ATA DE RP**, um item/lote pode receber vínculos de
   planejamento com itens de Emendas. O vínculo é registrado em
   `ata_planejamento_emendas` e não cria requisição, AF, reserva orçamentária nem consumo

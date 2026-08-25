@@ -3810,11 +3810,17 @@ async function _ncCarregarItensProcesso(processoId){
   if(!wrap||!lista) return;
   wrap.style.display='block';
   lista.innerHTML='<div style="font-size:12px;color:var(--text3)"><span class="spinner"></span> Carregando itens...</div>';
-  const {data,error}=await sb.from('itens')
-    .select('id,descricao,qtde,valor_estimado,valor_contratado,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,grupo_item_id,unidade_destino_id,prazo_entrega_dias,processo_id,origem,marca,modelo,status,contrato_id,unidades(nome),emendas(emenda,ano)')
-    .eq('processo_id',processoId).order('created_at');
+  const [{data,error},{data:ocorrencias,error:erroOcorrencias}]=await Promise.all([
+    sb.from('itens')
+      .select('id,descricao,qtde,valor_estimado,valor_contratado,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,grupo_item_id,unidade_destino_id,prazo_entrega_dias,processo_id,origem,marca,modelo,status,contrato_id,unidades(nome),emendas(emenda,ano)')
+      .eq('processo_id',processoId).order('created_at'),
+    sb.from('licitacao_item_ocorrencias').select('item_id,tipo,numero_lote').eq('processo_id',processoId)
+  ]);
   if(error){ lista.innerHTML='<div style="font-size:12px;color:var(--red)">Erro ao carregar itens: '+_sanEsc(error.message)+'</div>'; return; }
-  const itens=data||[];
+  if(erroOcorrencias){ lista.innerHTML='<div style="font-size:12px;color:var(--red)">Erro ao verificar itens encerrados: '+_sanEsc(erroOcorrencias.message)+'</div>'; return; }
+  const encerradosPorId=Object.fromEntries((ocorrencias||[]).map(o=>[String(o.item_id),o]));
+  const itensEncerrados=(data||[]).filter(it=>encerradosPorId[String(it.id)]);
+  const itens=(data||[]).filter(it=>!encerradosPorId[String(it.id)]);
   const procAtual=window._gerarContratoProcesso||{};
   const servTrimestral=_ncServicoTrimestralFixo(procAtual);
   const itensServico=(typeof _procServicoMensalItensFromValor==='function')?_procServicoMensalItensFromValor(servTrimestral?procAtual.servico_trimestral_itens:procAtual.servico_mensal_itens):[];
@@ -3842,8 +3848,16 @@ async function _ncCarregarItensProcesso(processoId){
     return;
   }
   window._ncItensCache=Object.fromEntries(itens.map(it=>[String(it.id),it]));
-  if(!itens.length){ lista.innerHTML='<div style="font-size:12px;color:var(--text3)">Este processo não possui itens cadastrados. O contrato será salvo sem vínculo de itens.</div>'; return; }
+  if(!itens.length){
+    lista.innerHTML=itensEncerrados.length
+      ?'<div style="font-size:12px;color:var(--red);background:var(--red-bg);padding:10px;border-radius:6px">Todos os itens disponíveis foram encerrados como FRACASSADO/DESERTO e não podem gerar contrato.</div>'
+      :'<div style="font-size:12px;color:var(--text3)">Este processo não possui itens cadastrados.</div>';
+    return;
+  }
   _ncRenderItensAgrupados(itens,lista);
+  if(itensEncerrados.length){
+    lista.insertAdjacentHTML('afterbegin',`<div style="font-size:11px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:6px;margin-bottom:8px">${itensEncerrados.length} item(ns) FRACASSADO/DESERTO foram bloqueados e não aparecem para seleção.</div>`);
+  }
   await _ncCarregarPlanejamentosAta(processoId,wrap);
 }
 
@@ -3937,6 +3951,12 @@ async function _ncVincularItens(contratoId, fornecedorId){
   const rows=[...lista.querySelectorAll('.nc-item-row')];
   const cache=window._ncItensCache||{};
   window._ncVincularItensMap={};
+  const idsMarcados=rows.filter(r=>r.dataset.serviceJson!=='1'&&r.querySelector('.nci-chk')?.checked&&r.dataset.jacont!=='1').map(r=>r.dataset.id).filter(Boolean);
+  if(idsMarcados.length){
+    const {data:bloqueados,error:eBloq}=await sb.from('licitacao_item_ocorrencias').select('item_id,tipo').in('item_id',idsMarcados);
+    if(eBloq) throw eBloq;
+    if((bloqueados||[]).length) throw new Error('Há item FRACASSADO/DESERTO na seleção. Reabra o processo e selecione apenas itens disponíveis.');
+  }
   // Itens de serviço periódico ainda vivem só como JSON no processo até o 1º contrato.
   // Materializa TODOS aqui (marcados e não marcados) como linhas reais em `itens`,
   // para que os não selecionados sobrem com contrato_id=null e continuem disponíveis

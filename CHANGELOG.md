@@ -2,6 +2,12 @@
 
 ## Em desenvolvimento
 
+- **Itens fracassados ou desertos em licitações:** a aba Licitações em andamento ganhou
+  uma ação definitiva por item, com resultado, número do pregão, lote, data, observação e
+  documento comprobatório obrigatório. O item fica bloqueado contra edição, exclusão,
+  contrato ou reaproveitamento; na aba Emendas, o histórico planejado e licitado é
+  preservado, o valor aparece negativamente na execução e volta ao saldo disponível, com
+  destaque visual vermelho e acesso ao documento.
 - **Troca de marca de item de ATA por apostilamento:** a ação **Trocar marca** registra
   referência, data e observações do apostilamento, altera a marca/modelo vigente do item e
   a propaga aos pedidos futuros e às solicitações ainda não recebidas selecionadas no

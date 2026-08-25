@@ -388,6 +388,7 @@ const STATUS_MAP = {
   "AGUARDANDO RESERVA":{color:"#EF9F27",label:"Aguard. reserva"},
   "AGUARDANDO AF":{color:"#EF9F27",label:"Aguard. AF"},
   "FRACASSADO":{color:"#E24B4A",label:"Fracassado"},
+  "DESERTO":{color:"#E24B4A",label:"Deserto"},
   "SEGOV":{color:"#D4537E",label:"SEGOV"},
   "PREGÃO AGENDADO":{color:"#7F77DD",label:"Pregão agendado"},
   "CANCELADO":{color:"#5F5E5A",label:"Cancelado"},
@@ -406,6 +407,7 @@ function catStatus(s){
   if(u.includes("ADQUIRIDO/ENTREGUE")||u.includes("ADQUIRIDO / ENTREGUE")||u.includes("ADQUIRIDO EM 20")) return "ENTREGUE";
   if(u.includes("CANCELADO")||u.includes("ITEM CANCELADO")||u.includes("ITEM REMOVIDO")||u.includes("ITEM PREJUDICADO")||u.includes("SEM SALDO")) return "CANCELADO";
   if(u.includes("FRACASSADO")) return "FRACASSADO";
+  if(u.includes("DESERTO")) return "DESERTO";
   if(u.includes("AGUARDANDO AF")) return "AGUARDANDO AF";
   if(u.includes("AF EMITIDA")||u.includes("AGUARDANDO ENTREGA")||u.includes("AGUARDANDO CONFIRMACAO")) return "AF EMITIDA";
   if(u.includes("AGUARDANDO RESERVA")||u.includes("RESERVA SOLICITADA")) return "AGUARDANDO RESERVA";

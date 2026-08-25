@@ -51,6 +51,14 @@ Regras-chave:
   condicionada a `can_access_tab(<aba>, 'edit')`.
 - `anon` revogado das tabelas do ciclo de itens — acesso anônimo só pela RPC
   `abrir_chamado_publico` (chamado público).
+- As tabelas `licitacao_item_ocorrencias` e
+  `licitacao_item_ocorrencia_emendas` usam RLS por seção e permissão de Licitações,
+  Contratos ou Dashboard. A gravação passa pela RPC autenticada
+  `registrar_licitacao_itens_ocorrencias`; triggers fixam os dados históricos e impedem
+  alterações ou exclusões posteriores do item, evento e vínculos.
+- O bucket privado `licitacao-ocorrencias` aceita PDF/JPEG/PNG/WEBP de até 10 MB. O
+  cliente abre anexos por URL assinada; uploads exigem permissão de edição e um documento
+  já vinculado a uma ocorrência não pode ser substituído nem apagado.
 
 ## 5. Exposição de segredos
 

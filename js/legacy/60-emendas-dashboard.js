@@ -54,14 +54,19 @@ async function loadData(){
       const vlUnitStored=num(i.vl_unitario);
       const qtdeExec=num(i.qtde);
       const fluxoContratado=!!(f&&(f.temContrato||f._ataSolicitada));
+      const fluxoOcorrencia=!!(f&&f.temOcorrencia);
       // Quando o item já está no fluxo, a etapa real prevalece sobre os campos legados
       // de emenda_itens. Itens apenas em licitação não são execução; ao contratar/usar
       // ATA, o valor do fluxo passa a ser a fonte exibida como executado.
-      const vlUnitExec=fluxoContratado
+      const vlUnitExec=fluxoOcorrencia
+        ? Number(((Number(f.valorContratado)||0)-(Number(f.valorOcorrencia)||0))/Math.max(qtdeExec||Number(f.qtde)||1,1)).toFixed(2)
+        : fluxoContratado
         ? Number(f.valorUnit)||0
         : (f&&f.temProcesso?0:vlUnitStored);
       const vlTotalCalc=vlUnitExec>0&&qtdeExec>0?Number((vlUnitExec*qtdeExec).toFixed(2)):0;
-      const vlTotalFinal=fluxoContratado
+      const vlTotalFinal=fluxoOcorrencia
+        ? Number(((Number(f.valorContratado)||0)-(Number(f.valorOcorrencia)||0)).toFixed(2))
+        : fluxoContratado
         ? Number((Number(f.valorContratado)||Number(f.valor)||0).toFixed(2))
         : (f&&f.temProcesso?0:(vlTotalStored||vlTotalCalc));
       const statusStored=(i.status||"").toString().trim();
@@ -105,6 +110,7 @@ async function loadData(){
         valor_licitacao_unit:f&&f.qtdeLicitacao?Number((f.valorLicitacao/f.qtdeLicitacao).toFixed(2)):0,
         valor_licitacao_detalhe_unit:f&&f.valorLicitacaoDetalheUnit?Number(f.valorLicitacaoDetalheUnit):0,
         valor_contratado_unit:f&&f.qtdeContratado?Number((f.valorContratado/f.qtdeContratado).toFixed(2)):0,
+        valor_ocorrencia_negativo:f?-Number((f.valorOcorrencia||0).toFixed(2)):0,
         // ── plano de trabalho aprovado (cadastrado/planejado) ──
         item_cadastrado:(i.item_cadastrado||"").toString().trim(),
         qtde_cadastrada:(i.qtde_cadastrada!=null?i.qtde_cadastrada:"").toString().trim(),
@@ -125,6 +131,8 @@ async function loadData(){
         _status_derivado:!!statusFlow,
         _temContrato:!!(f&&f.temContrato),
         _temProcesso:!!(f&&f.temProcesso),
+        _temOcorrencia:fluxoOcorrencia,
+        ocorrencias_licitacao:(f&&f.ocorrencias)||[],
         nota_fiscal:nfFlow||(i.nota_fiscal||"").toString().trim(),
         empenho:empenhoFlow||(i.empenho||"").toString().trim(),
         patrimonio:patrimonioFlow||(i.patrimonio||"").toString().trim(),
@@ -132,7 +140,7 @@ async function loadData(){
         data_recebimento:dataRecebimentoFluxo,
         data_entrega:dataEntregaUnidadeFinal,
         ordem_pagamento:(i.ordem_pagamento||"").toString().trim(),
-        data_atualizacao:dataAtualizacaoFluxo||(i.data_atualizacao||"").toString().trim(),
+        data_atualizacao:(fluxoOcorrencia?(f.ocorrencias||[]).map(o=>o.data_ocorrencia).filter(Boolean).sort().pop():'')||dataAtualizacaoFluxo||(i.data_atualizacao||"").toString().trim(),
         _vinculadoLicitacao:!!f,
       };
       return _expandirLinhaEmendaPorUnidades(base,(f&&f.unidades)||[]);
@@ -721,8 +729,9 @@ function _emStatusLabel(i){
   return i.status_licitacao||i.status_raw||i.status_cat||'—';
 }
 function _emStatusChip(i){
+  if(i?._temOcorrencia) return _emStatusBadge(i);
   const c=i.status_cat||'';
-  const cor=/ENTREGUE/i.test(c)?'var(--green)':(/(FRACASS|CANCEL|SUSPEN)/i.test(c)?'var(--red)':'var(--text2)');
+  const cor=/ENTREGUE/i.test(c)?'var(--green)':(/(FRACASS|DESERT|CANCEL|SUSPEN)/i.test(c)?'var(--red)':'var(--text2)');
   return `<span style="font-size:11px;font-weight:600;color:${cor}">${_sanEsc(_emStatusLabel(i))}</span>`;
 }
 function _emProcessoHtml(item){
@@ -741,7 +750,19 @@ function _emProcessoHtml(item){
 function _emStatusBadge(i){
   const c=i.status_cat||'';
   const info=STATUS_MAP[c]||{color:'#888'};
-  return `<span class="badge" style="background:${info.color}22;color:${info.color}">${_sanEsc(_emStatusLabel(i))}</span>`;
+  const ocorrencia=(i.ocorrencias_licitacao||[])[0];
+  const detalhe=ocorrencia?` title="Pregão ${_sanEsc(ocorrencia.numero_pregao||'—')} · lote ${_sanEsc(ocorrencia.numero_lote||'—')} · ${_sanEsc(ocorrencia.data_ocorrencia||'—')}"`:'';
+  const doc=ocorrencia?.documento_path?` <button type="button" onclick="event.stopPropagation();abrirDocumentoOcorrenciaEmenda(decodeURIComponent('${encodeURIComponent(ocorrencia.documento_path)}'))" title="Abrir ${_sanEsc(ocorrencia.documento_nome||'documento comprobatório')}" style="font-size:10px;padding:2px 5px;border:1px solid var(--red);border-radius:4px;background:var(--surface);color:var(--red);cursor:pointer">📎</button>`:'';
+  return `<span class="badge" style="background:${info.color}22;color:${info.color}"${detalhe}>${_sanEsc(_emStatusLabel(i))}</span>${doc}`;
+}
+async function abrirDocumentoOcorrenciaEmenda(path){
+  if(!path) return;
+  const nova=window.open('','_blank','noopener');
+  try{
+    const {data,error}=await sb.storage.from('licitacao-ocorrencias').createSignedUrl(path,300);
+    if(error||!data?.signedUrl) throw error||new Error('Link não gerado.');
+    if(nova) nova.location=data.signedUrl; else window.open(data.signedUrl,'_blank','noopener');
+  }catch(e){ if(nova) nova.close(); if(window.toast) toast('Erro ao abrir documento: '+(e.message||e),'err'); }
 }
 let _emLicitacaoSelecionados=new Set();
 function _emPodeGerarLicitacao(){
@@ -911,15 +932,15 @@ function renderEmPorEmenda(){
     if(aberto){
       h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1280px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em">${_emPodeGerarLicitacao()?'<th style="padding:7px 8px;text-align:center">Selecionar</th>':''}<th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
       items.forEach(i=>{
-        h+=`<tr onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" title="Clique para ver os detalhes deste item" style="border-top:1px solid var(--border);cursor:pointer">
+        h+=`<tr onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" title="Clique para ver os detalhes deste item" style="border-top:1px solid var(--border);cursor:pointer;${i._temOcorrencia?'background:var(--red-bg)':''}">
           ${_emPodeGerarLicitacao()?`<td onclick="event.stopPropagation()" style="padding:8px;text-align:center">${_emCheckboxLicitacao(i)}</td>`:''}
-          <td style="padding:8px 14px">${_sanEsc(i.item||'—')}</td>
+          <td style="padding:8px 14px;${i._temOcorrencia?'color:var(--red);font-weight:800':''}">${_sanEsc(i.item||'—')}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}${_emMovimentacaoIndicador(i)}</td>
           <td style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap">${Number(i.vl_unitario_cadastrado)>0?fmtFull(i.vl_unitario_cadastrado):'—'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--blue)">${Number(i.valor_licitacao_unit)>0?fmtFull(i.valor_licitacao_unit):'—'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${Number(i.valor_contratado_unit)>0?fmtFull(i.valor_contratado_unit):'—'}</td>
-          <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${Number(i.vl_total)>0?fmtFull(i.vl_total):'—'}</td>
+          <td style="padding:8px;text-align:right;white-space:nowrap;color:${i._temOcorrencia?'var(--red)':'var(--green)'};font-weight:800">${Number(i.vl_total)!==0?fmtFull(i.vl_total):'—'}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.nota_fiscal||'â€”')}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.empenho||'â€”')}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.patrimonio||'â€”')}</td>
@@ -1075,6 +1096,7 @@ let saldoEmendasRows = [];
 function _valorComprometidoItem(r){
   const fluxo=Number(r?.valor_comprometido)||0;
   if(fluxo>0) return fluxo;
+  if(r?._temOcorrencia) return 0;
   const executado=Number(r?.vl_total)||0;
   return executado>0?executado:(Number(r?.vl_total_cadastrado)||0);
 }
@@ -1093,6 +1115,8 @@ function _saldoStatusBadge(status){
   const s=String(status||'Não iniciada');
   const estilo=s==='Executada'
     ?'background:var(--green-bg);color:var(--green-text)'
+    :/ocorr/i.test(s)
+      ?'background:var(--red-bg);color:var(--red-text);border:1px solid var(--red)'
     :s==='Em andamento'
       ?'background:var(--blue-bg);color:var(--blue-text)'
       :'background:var(--surface2);color:var(--text2);border:1px solid var(--border)';
@@ -1122,10 +1146,10 @@ function _renderSaldoDetalhesLegacy2(emendaId){
 function _renderSaldoDetalhes(emendaId){
   const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
   if(!itens.length) return '<div style="padding:12px;color:var(--text3)">Nenhum item encontrado para esta emenda.</div>';
-  const money=(v)=>Number(v)>0?fmtFull(v):'—';
+  const money=(v)=>Number(v)!==0?fmtFull(v):'—';
   return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="min-width:1400px;font-size:11px;background:var(--surface)">
     <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor unit. planejado</th><th style="text-align:right">Valor unit. licitação</th><th style="text-align:right">Valor unit. contratado</th><th style="text-align:right">Total executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
-    <tbody>${itens.map(r=>`<tr><td>${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${_emStatusBadge(r)}</td><td>${_sanEsc(r.cpl||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+    <tbody>${itens.map(r=>`<tr style="${r._temOcorrencia?'background:var(--red-bg)':''}"><td style="${r._temOcorrencia?'color:var(--red);font-weight:700':''}">${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:${r._temOcorrencia?'var(--red)':'var(--green)'};font-weight:700">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${_emStatusBadge(r)}</td><td>${_emProcessoHtml(r)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function toggleSaldoEmenda(emendaId,button){
   const detalhe=document.getElementById(_seDomId(emendaId));
@@ -1443,23 +1467,23 @@ function renderTable(){
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>{
     const actionId=String(r._unidade_row_id||r.id);
-    const podeEditarLinha=!r._unidadeFisica;
-    return `<tr>
+    const podeEditarLinha=!r._unidadeFisica&&!r._temOcorrencia;
+    return `<tr style="${r._temOcorrencia?'background:var(--red-bg)':''}">
     ${podeSelecionar?`<td style="text-align:center">${_emCheckboxLicitacao(r)}</td>`:''}
     <td style="white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" title="Ver tudo sobre este item" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">🔎 Ver tudo</button>${_isAdmin()&&podeEditarLinha?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" style="background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">✏️ Editar</button>`:''}${podeEditar('dashboard')&&podeEditarLinha?`<button onclick="excluirEmendaItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" title="Excluir item não executado e limpar vínculos" style="background:var(--surface);color:var(--red);border:1px solid var(--red-bg);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">🗑️ Excluir</button>`:''}</td>
     <td>${tipoBadge(r.tipo)}</td>
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td class="em-parlamentar-cell" style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}${_emMovimentacaoIndicador(r)}</td>
-    <td class="td-trunc em-item-cell" title="${r.item}">${r.item||"—"}</td>
+    <td class="td-trunc em-item-cell" title="${_sanEsc(r.item)}" style="${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.item||"—"}</td>
     <td style="text-align:right">${r.qtde||"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
-    <td class="em-vl-unit-exec" style="text-align:right;white-space:nowrap">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
-    <td style="text-align:right;white-space:nowrap">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
+    <td class="em-vl-unit-exec" style="text-align:right;white-space:nowrap;${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
+    <td style="text-align:right;white-space:nowrap;${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${_emProcessoHtml(r)}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>
     <td>${_emStatusBadge(r)}</td>
-    <td style="font-size:11px;max-width:240px;white-space:pre-wrap;word-break:break-word">${r.status_raw||"—"}</td>
+    <td style="font-size:11px;max-width:240px;white-space:pre-wrap;word-break:break-word;${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.status_raw||"—"}</td>
     <td style="font-size:11px;white-space:nowrap;color:var(--text3)">${r.data_atualizacao||"—"}</td>
     <td style="font-size:11px">${r.nota_fiscal||"—"}</td>
     <td style="font-size:11px">${r.empenho||"—"}</td>

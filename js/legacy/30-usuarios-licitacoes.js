@@ -177,6 +177,7 @@ let _licitacoesCache=[];
 let _procEditId=null;
 let _procSaldoCache={};
 let _procEditOldByEmenda={};
+let _licOcorrenciasByItem={};
 function _procLinkPublicoSeguro(valor){
   const texto=String(valor||'').trim();
   if(!texto) return '';
@@ -197,14 +198,17 @@ async function loadLicitacoes(){
   const box=document.getElementById('lic-lista');
   if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
   try{
-    const [proc,so,itens,secretarias,planejamentos]=await Promise.all([
+    const [proc,so,itens,secretarias,planejamentos,ocorrencias]=await Promise.all([
       sb.from('vw_processos_resumo').select('*').order('identificador'),
       sb.from('status_opcoes').select('id,nome,ordem,orgao,automatico').eq('contexto','licitacao').eq('ativo',true).order('ordem'),
       _cpFetchAllItens(),
       sb.from('secretarias').select('id,sigla,nome').eq('ativo',true).order('sigla'),
       sb.from('ata_planejamento_emendas')
         .select('id,processo_id,processo_item_id,emenda_id,emenda_item_id,quantidade_prevista,status,contrato_id,ata_item_id,ata_execucao_id,emendas(emenda,ano,parlamentar),emenda_itens(item,qtde,unidade_beneficiada,unidade_entrega)')
-        .neq('status','CANCELADO')
+        .neq('status','CANCELADO'),
+      sb.from('licitacao_item_ocorrencias')
+        .select('id,item_id,processo_id,tipo,numero_pregao,numero_lote,data_ocorrencia,observacao,documento_path,documento_nome,valor_unitario_snapshot,quantidade_snapshot,valor_total_snapshot,created_at')
+        .order('created_at',{ascending:false})
     ]);
     _licitacoesCache=proc.data||[];
     _cpStatusOpts=so.data||[]; _cpStatusById={}; _cpStatusOpts.forEach(s=>_cpStatusById[s.id]=s);
@@ -213,12 +217,17 @@ async function loadLicitacoes(){
     if(filtro) filtro.innerHTML='<option value="">Todas</option>'+_cpSecretarias.map(s=>`<option value="${s.sigla}">${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join('');
     _cpItens=itens||[];
     _ataPlanejamentosLicitacao=planejamentos.data||[];
+    _licOcorrenciasByItem={};
+    if(ocorrencias.error) throw ocorrencias.error;
+    (ocorrencias.data||[]).forEach(o=>{ _licOcorrenciasByItem[String(o.item_id)]=o; });
   }catch(e){ if(box) box.innerHTML='<div style="padding:1rem;color:var(--red)">Erro: '+_sanEsc(e.message||e)+'</div>'; return; }
   renderLicitacoes();
 }
 function filtrarLicitacoes(){ renderLicitacoes(); }
 function _licItemExecutado(i){ const s=_cpStatusById[i.status_lic_id]; return !!(s&&s.automatico); }
 function _licItemContratado(i){ return !!i.contrato_id; }
+function _licItemOcorrencia(i){ return i?_licOcorrenciasByItem[String(i.id)]||null:null; }
+function _licItemEncerrado(i){ return !!_licItemOcorrencia(i); }
 function renderLicitacoes(){
   const box=document.getElementById('lic-lista'); if(!box) return;
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
@@ -233,8 +242,9 @@ function renderLicitacoes(){
     const todosItens=porProc[p.id]||[];
     const itensServico=_procServicoPeriodicoItens(p);
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));            // pendentes + já contratados
-    const pendentes=naLic.filter(i=>!_licItemContratado(i));            // ainda nem viraram contrato
-    return {p, naLic, itensServico, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:todosItens.length>0 && naLic.length===0};
+    const pendentes=naLic.filter(i=>!_licItemContratado(i)&&!_licItemEncerrado(i));
+    const fullyContratado=naLic.length>0&&naLic.every(i=>_licItemContratado(i));
+    return {p, naLic, pendentes, itensServico, totContratado:naLic.filter(_licItemContratado).length, fullyContratado, gone:todosItens.length>0 && naLic.length===0};
   });
   const ocultos=info.filter(x=>x.fullyContratado).length;
   const base=info.filter(x=>{
@@ -249,14 +259,17 @@ function renderLicitacoes(){
   const _ocultos=incluirContratados?0:ocultos;
   const html=base.map(x=>{
     const p=x.p; mostrados++;
-    const podeExcluir=podeEd && !Number(p.n_contratos||0);
+    const podeExcluir=podeEd && !Number(p.n_contratos||0) && !x.naLic.some(_licItemEncerrado);
     const items=x.naLic;
-    const itensEditaveis=items.filter(i=>!_licItemExecutado(i)&&!_licItemContratado(i));
+    const itensEditaveis=items.filter(i=>!_licItemExecutado(i)&&!_licItemContratado(i)&&!_licItemEncerrado(i));
+    const itensComOcorrencia=items.filter(_licItemEncerrado);
     const itensServico=x.itensServico;
     const totalItensExibidos=items.length||itensServico.length;
     // Nesta aba, o contrato vinculado prevalece apenas na apresentação do processo.
     // O status original continua intacto no banco e nas demais telas/fluxos.
-    const roll=x.fullyContratado
+    const roll=itensComOcorrencia.length&&!itensEditaveis.length
+      ? {nome:[...new Set(itensComOcorrencia.map(i=>_licItemOcorrencia(i).tipo))].join(' / '),orgao:null,auto:false,ocorrencia:true}
+      : x.fullyContratado
       ? {nome:'CONTRATADO',orgao:null,auto:false,contratado:true}
       : ((items.length||itensServico.length)?_cpRollup(items.length?items:itensServico):{nome:'sem itens',orgao:null,auto:false});
     const aberto=!!_cpExpanded[p.id];
@@ -272,7 +285,8 @@ function renderLicitacoes(){
         ${_cpStatusBadge(roll)}
         <button onclick="abrirEditarProcesso(${p.id})" title="Editar processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
         ${podeExcluir?`<button onclick="excluirProcesso(${p.id})" title="Excluir processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">🗑️</button>`:''}
-        ${podeEd?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
+        ${podeEd&&itensEditaveis.length?`<button onclick="abrirModalOcorrenciaLicitacao(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">⚠ Fracassar/Desertar itens</button>`:''}
+        ${podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
       </div>`;
     if(aberto){
       if(podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))){
@@ -312,9 +326,12 @@ function renderLicitacoes(){
       }
       items.forEach(it=>{
         const cur=_cpStatusById[it.status_lic_id];
-        const exc=['fracassado','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
+        const ocorrencia=_licItemOcorrencia(it);
+        const exc=['fracassado','deserto','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
         let ctrl;
-        if(_licItemContratado(it)){
+        if(ocorrencia){
+          ctrl=`<div style="color:var(--red);font-weight:800">${_sanEsc(ocorrencia.tipo)} 🔒</div><div style="font-size:10px;color:var(--text2);margin-top:3px">Pregão ${_sanEsc(ocorrencia.numero_pregao)} · lote ${_sanEsc(ocorrencia.numero_lote)} · ${_sanEsc(_cpDataCurta(ocorrencia.data_ocorrencia)||'—')}</div><button type="button" onclick="abrirDocumentoOcorrenciaLicitacao('${ocorrencia.id}')" style="margin-top:4px;font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px;background:var(--surface);color:var(--red);cursor:pointer">📎 ${_sanEsc(ocorrencia.documento_nome||'Ver documento')}</button>`;
+        } else if(_licItemContratado(it)){
           ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)">✔ virou contrato</span> <span title="já gerou contrato — agora é gerido em Contratos em execução" style="color:var(--text3);cursor:help">🔒</span>`;
         } else if(cur&&cur.automatico){
           ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
@@ -330,12 +347,12 @@ function renderLicitacoes(){
           const estado=v.status==='REQUISITADO'?'requisição criada':(v.status==='ATA_VIGENTE_AGUARDANDO_REQUISICAO'?'Ata vigente — aguardando requisição':'planejamento');
           return `<div style="margin-top:5px;padding:5px 7px;border-left:3px solid var(--blue);background:rgba(55,138,221,.07);font-size:10px;color:var(--text2)"><b>Emenda ${_sanEsc(em.emenda||'?')}${em.ano?('/'+_sanEsc(em.ano)):''}</b> · ${_sanEsc(unidade)} · ${_sanEsc(ei.item||'item')} · previsão ${v.quantidade_prevista} · ${_sanEsc(estado)}${podeEd&&v.status==='PLANEJAMENTO'?` <button type="button" onclick="cancelarPlanejamentoEmendaAta('${v.id}')" style="margin-left:5px;border:0;background:none;color:var(--red);cursor:pointer;font-size:10px">cancelar</button>`:''}</div>`;
         }).join('');
-        const vincularAta=p.natureza==='ATA DE RP'&&podeEd&&!_licItemContratado(it)?` <button type="button" onclick="abrirPlanejamentoEmendaAta(${p.id},'${it.id}')" style="margin-left:6px;font-size:10px;padding:3px 7px;border:1px solid var(--blue);border-radius:4px;background:var(--surface);color:var(--blue);cursor:pointer">Vincular Emenda</button>`:'';
-        bloco+=`<tr style="border-top:1px solid var(--border)">
+        const vincularAta=p.natureza==='ATA DE RP'&&podeEd&&!_licItemContratado(it)&&!ocorrencia?` <button type="button" onclick="abrirPlanejamentoEmendaAta(${p.id},'${it.id}')" style="margin-left:6px;font-size:10px;padding:3px 7px;border:1px solid var(--blue);border-radius:4px;background:var(--surface);color:var(--blue);cursor:pointer">Vincular Emenda</button>`:'';
+        bloco+=`<tr style="border-top:1px solid var(--border);${ocorrencia?'background:var(--red-bg);color:var(--red-text)':''}">
           <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}${planosHtml}</td>
           <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
           <td style="padding:8px 8px">${ctrl}</td>
-          <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
+          <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)&&!ocorrencia?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(ocorrencia?.data_ocorrencia||it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">${ocorrencia?'encerrado definitivamente':`há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}`}</div></td>
         </tr>`;
       });
       bloco+=`</tbody></table>`;
@@ -346,6 +363,143 @@ function renderLicitacoes(){
   box.innerHTML=html||'<div style="padding:1rem;text-align:center;color:var(--text3)">Nenhuma licitação em andamento</div>';
   const cnt=document.getElementById('lic-count');
   if(cnt) cnt.textContent=mostrados+' em andamento'+(_ocultos?` · ${_ocultos} já contratada${_ocultos!==1?'s':''} oculta${_ocultos!==1?'s':''}`:'');
+}
+
+let _licOcorrenciaContext=null;
+const LIC_OCORRENCIA_BUCKET='licitacao-ocorrencias';
+function _licOcorrenciaEnsureModal(){
+  let modal=document.getElementById('modal-licitacao-ocorrencia');
+  if(modal) return modal;
+  modal=document.createElement('div');
+  modal.id='modal-licitacao-ocorrencia';
+  modal.className='modal-overlay';
+  modal.style.cssText='align-items:flex-start;padding:2rem 1rem;overflow-y:auto';
+  modal.innerHTML=`<div class="modal-box" style="width:min(900px,100%);max-width:900px">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px">
+      <div style="flex:1"><div class="modal-title" style="color:var(--red);margin-bottom:4px">Fracassar/Desertar itens</div><div id="lic-oco-processo" style="font-size:12px;color:var(--text2)"></div></div>
+      <button type="button" onclick="fecharModalOcorrenciaLicitacao()" style="font-size:18px;background:none;border:0;color:var(--text3);cursor:pointer">✕</button>
+    </div>
+    <div style="padding:10px 12px;border:1px solid var(--red);border-radius:8px;background:var(--red-bg);color:var(--red-text);font-size:12px;margin-bottom:12px"><b>Atenção:</b> esta ação é definitiva. Os itens selecionados não poderão ser alterados, excluídos ou vinculados a contrato. O histórico e o documento serão preservados.</div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Número do pregão *</div><input id="lic-oco-pregao" type="text" maxlength="100" placeholder="ex: 123/2026"></div>
+      <div class="form-group"><div class="form-label">Data da ocorrência *</div><input id="lic-oco-data" type="date"></div>
+      <div class="form-group full"><div class="form-label">Documento comprobatório * <span style="font-weight:400;color:var(--text3)">(PDF, JPG, PNG ou WEBP; até 10 MB)</span></div><input id="lic-oco-documento" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><textarea id="lic-oco-observacao" rows="2" maxlength="1000" placeholder="Contexto adicional para a prestação de contas"></textarea></div>
+    </div>
+    <div style="font-size:12px;font-weight:700;margin:10px 0 6px">Selecione os itens e informe o resultado e o lote</div>
+    <div id="lic-oco-itens" style="border:1px solid var(--border);border-radius:8px;overflow:hidden"></div>
+    <div id="lic-oco-msg" class="fmsg" style="margin-top:10px"></div>
+    <div class="modal-actions"><button type="button" onclick="fecharModalOcorrenciaLicitacao()">Cancelar</button><button type="button" class="btn-danger btn-solid" id="lic-oco-salvar" onclick="salvarOcorrenciaLicitacao()">Confirmar encerramento definitivo</button></div>
+  </div>`;
+  document.body.appendChild(modal);
+  return modal;
+}
+function _licOcorrenciaHoje(){ return new Date().toISOString().slice(0,10); }
+function _licOcorrenciaMsg(texto,tipo='err'){
+  const el=document.getElementById('lic-oco-msg'); if(!el) return;
+  el.textContent=texto||''; el.className='fmsg'+(texto?` ${tipo}`:'');
+}
+function abrirModalOcorrenciaLicitacao(processoId){
+  if(!podeEditar('contratos')){ alert('Sem permissão para encerrar itens da licitação.'); return; }
+  const processo=_licitacoesCache.find(p=>String(p.id)===String(processoId));
+  const itens=_cpItens.filter(i=>String(i.processo_id)===String(processoId)&&!_licItemExecutado(i)&&!_licItemContratado(i)&&!_licItemEncerrado(i));
+  if(!processo||!itens.length){ if(window.toast) toast('Não há itens disponíveis para fracassar/desertar.','info'); return; }
+  _licOcorrenciaContext={processo,itens};
+  const modal=_licOcorrenciaEnsureModal();
+  document.getElementById('lic-oco-processo').textContent=`${processo.identificador||('#'+processo.id)} — ${processo.objeto||'sem objeto'}`;
+  document.getElementById('lic-oco-pregao').value='';
+  document.getElementById('lic-oco-data').value=_licOcorrenciaHoje();
+  document.getElementById('lic-oco-documento').value='';
+  document.getElementById('lic-oco-observacao').value='';
+  document.getElementById('lic-oco-itens').innerHTML=itens.map(it=>`<div class="lic-oco-item" data-id="${it.id}" style="display:grid;grid-template-columns:28px minmax(220px,1fr) 145px 170px;gap:8px;align-items:center;padding:9px 11px;border-top:1px solid var(--border)">
+    <input type="checkbox" class="lic-oco-check" onchange="licOcorrenciaToggleItem(this)">
+    <div><div style="font-size:12px;font-weight:700">${_sanEsc(it.descricao||'—')}</div><div style="font-size:10px;color:var(--text3)">Qtde ${it.qtde??'—'}</div></div>
+    <select class="lic-oco-tipo" disabled><option value="FRACASSADO">FRACASSADO</option><option value="DESERTO">DESERTO</option></select>
+    <input class="lic-oco-lote" type="text" maxlength="100" placeholder="Nº do lote *" disabled>
+  </div>`).join('');
+  const primeira=document.querySelector('#lic-oco-itens .lic-oco-item'); if(primeira) primeira.style.borderTop='0';
+  _licOcorrenciaMsg('');
+  modal.classList.add('active');
+}
+function licOcorrenciaToggleItem(check){
+  const row=check.closest('.lic-oco-item'); if(!row) return;
+  row.querySelectorAll('select,input.lic-oco-lote').forEach(el=>{el.disabled=!check.checked;});
+  row.style.background=check.checked?'var(--red-bg)':'';
+}
+function fecharModalOcorrenciaLicitacao(){
+  document.getElementById('modal-licitacao-ocorrencia')?.classList.remove('active');
+  _licOcorrenciaContext=null;
+}
+function _licOcorrenciaMime(file){
+  if(['application/pdf','image/jpeg','image/png','image/webp'].includes(file?.type)) return file.type;
+  const ext=String(file?.name||'').split('.').pop().toLowerCase();
+  return ({pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'})[ext]||'';
+}
+function _licOcorrenciaNomeSeguro(nome){
+  return String(nome||'documento').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(-160)||'documento';
+}
+async function salvarOcorrenciaLicitacao(){
+  const ctx=_licOcorrenciaContext; if(!ctx) return;
+  const numeroPregao=document.getElementById('lic-oco-pregao').value.trim();
+  const data=document.getElementById('lic-oco-data').value;
+  const observacao=document.getElementById('lic-oco-observacao').value.trim();
+  const file=document.getElementById('lic-oco-documento').files?.[0];
+  const mime=_licOcorrenciaMime(file);
+  const selecionados=[...document.querySelectorAll('#lic-oco-itens .lic-oco-item')].filter(r=>r.querySelector('.lic-oco-check')?.checked).map(r=>({
+    item_id:r.dataset.id,
+    tipo:r.querySelector('.lic-oco-tipo').value,
+    numero_lote:r.querySelector('.lic-oco-lote').value.trim()
+  }));
+  if(!numeroPregao){ _licOcorrenciaMsg('Informe o número do pregão.'); return; }
+  if(!data){ _licOcorrenciaMsg('Informe a data da ocorrência.'); return; }
+  if(!file){ _licOcorrenciaMsg('Anexe o documento comprobatório.'); return; }
+  if(!mime){ _licOcorrenciaMsg('Formato inválido. Use PDF, JPG, PNG ou WEBP.'); return; }
+  if(file.size<=0||file.size>10485760){ _licOcorrenciaMsg('O documento deve ter até 10 MB.'); return; }
+  if(!selecionados.length){ _licOcorrenciaMsg('Selecione ao menos um item.'); return; }
+  if(selecionados.some(i=>!i.numero_lote)){ _licOcorrenciaMsg('Informe o número do lote de cada item selecionado.'); return; }
+  if(!await uiConfirm(`Encerrar definitivamente ${selecionados.length} item(ns) como FRACASSADO/DESERTO?\n\nEsta ação não poderá ser desfeita.`)) return;
+
+  const btn=document.getElementById('lic-oco-salvar');
+  const label=btn.textContent; btn.disabled=true; btn.textContent='Enviando documento...';
+  const uuid=(globalThis.crypto&&typeof globalThis.crypto.randomUUID==='function')?globalThis.crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const path=`${ctx.processo.id}/${uuid}-${_licOcorrenciaNomeSeguro(file.name)}`;
+  let enviado=false;
+  try{
+    const {error:uploadError}=await sb.storage.from(LIC_OCORRENCIA_BUCKET).upload(path,file,{contentType:mime,upsert:false});
+    if(uploadError) throw uploadError;
+    enviado=true; btn.textContent='Registrando ocorrências...';
+    const {error}=await sb.rpc('registrar_licitacao_itens_ocorrencias',{
+      p_processo_id:ctx.processo.id,
+      p_numero_pregao:numeroPregao,
+      p_data_ocorrencia:data,
+      p_observacao:observacao||null,
+      p_documento_path:path,
+      p_documento_nome:file.name,
+      p_documento_mime:mime,
+      p_documento_tamanho:file.size,
+      p_itens:selecionados
+    });
+    if(error) throw error;
+    fecharModalOcorrenciaLicitacao();
+    if(window.toast) toast(`${selecionados.length} item(ns) encerrado(s) definitivamente. O saldo das Emendas foi liberado.`,'ok');
+    await loadLicitacoes();
+    if(typeof loadData==='function') await loadData();
+  }catch(e){
+    if(enviado){ try{ await sb.storage.from(LIC_OCORRENCIA_BUCKET).remove([path]); }catch(_){} }
+    _licOcorrenciaMsg('Não foi possível concluir: '+(e.message||e));
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
+}
+async function abrirDocumentoOcorrenciaLicitacao(ocorrenciaId){
+  const ocorrencia=Object.values(_licOcorrenciasByItem).find(o=>String(o.id)===String(ocorrenciaId));
+  if(!ocorrencia?.documento_path){ if(window.toast) toast('Documento não localizado.','err'); return; }
+  const nova=window.open('','_blank','noopener');
+  try{
+    const {data,error}=await sb.storage.from(LIC_OCORRENCIA_BUCKET).createSignedUrl(ocorrencia.documento_path,300);
+    if(error||!data?.signedUrl) throw error||new Error('Link não gerado.');
+    if(nova) nova.location=data.signedUrl; else window.open(data.signedUrl,'_blank','noopener');
+  }catch(e){ if(nova) nova.close(); if(window.toast) toast('Erro ao abrir documento: '+(e.message||e),'err'); }
 }
 
 let _ataPlanContext=null, _ataPlanEmendas=[];
@@ -473,9 +627,9 @@ function _cpRollup(items){
   return {nome:'Vários', orgao:null, auto:false};
 }
 function _cpStatusBadge(r){
-  const cor = r.contratado ? 'var(--green)' : (r.nome==='Indefinido' ? 'var(--text3)' : (r.nome==='Vários' ? 'var(--text2)' : _cpOrgaoCor(r.orgao)));
+  const cor = r.ocorrencia ? 'var(--red)' : (r.contratado ? 'var(--green)' : (r.nome==='Indefinido' ? 'var(--text3)' : (r.nome==='Vários' ? 'var(--text2)' : _cpOrgaoCor(r.orgao))));
   const dot = r.auto?'<span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block;margin-right:5px"></span>':'';
-  return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;color:${cor};background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:20px">${dot}${_sanEsc(r.nome)}</span>`;
+  return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;color:${cor};background:${r.ocorrencia?'var(--red-bg)':'var(--surface2)'};border:1px solid ${r.ocorrencia?'var(--red)':'var(--border)'};padding:3px 9px;border-radius:20px">${dot}${_sanEsc(r.nome)}</span>`;
 }
 function _cpDesde(d){ if(!d) return ''; const dias=Math.floor((Date.now()-new Date(d).getTime())/86400000); return dias<=0?'hoje':('há '+dias+'d'); }
 function _cpDataInput(d){ return d?String(d).slice(0,10):''; }
@@ -528,7 +682,7 @@ async function cpBulkApply(pid){
   if(String(texto).trim().length>55){ alert('A situação pode ter no máximo 55 caracteres.'); return; }
   const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
   if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
-  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i));
+  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i) && !_licItemEncerrado(i));
   if(!alvos.length){ alert('Nenhum item editável neste processo (os já contratados/executados são controlados em outras abas).'); return; }
   if(!confirm(`Aplicar "${_cpSecretariaById[secretariaId]?.sigla} – ${String(texto).trim()}" desde ${desde.split('-').reverse().join('/')} a ${alvos.length} item(ns)?`)) return;
   try{
@@ -1168,7 +1322,8 @@ function _procValidarPrazosEntrega(natureza){
 
 function procAddItemRow(data,opcoes={}){
   data=data||{};
-  const locked=!!(data.fromEmenda || data.emenda_item_id); // item vindo da emenda: descrição/qtde/unidade/fonte fixas
+  const terminal=!!data.ocorrencia;
+  const locked=!!(terminal || data.fromEmenda || data.emenda_item_id); // item vindo da emenda: descrição/qtde/unidade/fonte fixas
   const lista=document.getElementById('proc-itens-lista');
   const div=document.createElement('div');
   div.className='proc-item-card';
@@ -1178,7 +1333,8 @@ function procAddItemRow(data,opcoes={}){
   div.dataset.emendaItemId=data.emenda_item_id||'';
   div.dataset.emendaNumero=data.emenda_numero||'';
   div.dataset.emendaSaldo=data.emenda_saldo_atual??'';
-  div.style.cssText='background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.6rem .75rem';
+  div.dataset.terminal=terminal?'1':'0';
+  div.style.cssText=`background:${terminal?'var(--red-bg)':'var(--surface2)'};border:1px solid ${terminal?'var(--red)':'var(--border)'};border-radius:var(--radius-sm);padding:.6rem .75rem`;
   const fonte=data.fonte_tipo||'';
   const isEm=fonte==='emenda';
   const showDesc=(fonte && fonte!=='emenda' && fonte!=='sem_emenda');
@@ -1186,16 +1342,18 @@ function procAddItemRow(data,opcoes={}){
   const ro=locked?'background:var(--surface2);opacity:.7;':'';
   const dis=locked?' disabled':'';
   const roAttr=locked?' readonly':'';
+  const termDis=terminal?' disabled':'';
   div.innerHTML=`
+    ${terminal?`<div style="color:var(--red);font-size:11px;font-weight:800;margin-bottom:6px">${_sanEsc(data.ocorrencia.tipo)} · pregão ${_sanEsc(data.ocorrencia.numero_pregao)} · lote ${_sanEsc(data.ocorrencia.numero_lote)} · item bloqueado definitivamente 🔒</div>`:''}
     <div style="display:flex;gap:8px;align-items:flex-start">
       <div style="flex:1"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Descrição *${locked?' <span style="text-transform:none;letter-spacing:0">· da emenda</span>':''}</div>
         <input type="text" class="pi-desc"${roAttr} placeholder="ex: AR CONDICIONADO 12000 BTU" value="${_sanEsc(String(data.descricao||'')).replace(/"/g,'&quot;')}" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
-      <button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>
+      ${terminal?'':`<button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>`}
     </div>
     <div style="display:grid;grid-template-columns:90px 130px 100px 1fr;gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor" placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
-      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo" min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" style="${inp}"></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor"${termDis} placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
+      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo"${termDis} min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
     </div>
     <div class="pi-fonte-row" style="display:grid;grid-template-columns:170px 1fr;gap:8px;margin-top:6px;align-items:end">
@@ -1304,9 +1462,13 @@ async function _carregarProcItens(processoId){
   _procItensLoaded=[];
   document.getElementById('proc-itens-lista').innerHTML='';
   if(processoId){
-    const {data}=await sb.from('itens').select('*').eq('processo_id',processoId).order('created_at');
-    (data||[]).forEach(it=>{ if(it.emenda_id){ const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0; _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor; } });
-    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); procAddItemRow({id:it.id, descricao:it.descricao, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao}); });
+    const [{data},{data:ocorrencias}]=await Promise.all([
+      sb.from('itens').select('*').eq('processo_id',processoId).order('created_at'),
+      sb.from('licitacao_item_ocorrencias').select('item_id,tipo,numero_pregao,numero_lote').eq('processo_id',processoId)
+    ]);
+    const ocorrenciaPorItem=Object.fromEntries((ocorrencias||[]).map(o=>[String(o.item_id),o]));
+    (data||[]).forEach(it=>{ if(it.emenda_id&&!ocorrenciaPorItem[String(it.id)]){ const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0; _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor; } });
+    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); procAddItemRow({id:it.id, descricao:it.descricao, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
   }
   _renderProcItensVazio();
   _recalcProcValorEstimado();
@@ -1318,6 +1480,10 @@ async function _persistProcItens(processoId, natureza){
   const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
   const current=[];
   for(const c of cards){
+    if(c.dataset.terminal==='1'){
+      if(c.dataset.itemId) current.push({id:c.dataset.itemId,skip:true,row:null});
+      continue;
+    }
     const g=cl=>c.querySelector('.'+cl);
     const descricao=(g('pi-desc').value||'').trim();
     const qtde=parseFloat(g('pi-qtde').value);
@@ -1351,7 +1517,7 @@ async function _persistProcItens(processoId, natureza){
   const atuais=current.filter(x=>x.id).map(x=>String(x.id));
   const toDelete=_procItensLoaded.filter(id=>!atuais.includes(id));
   if(toDelete.length){ const {error}=await sb.from('itens').delete().in('id',toDelete).is('contrato_id',null); if(error) throw error; }
-  const inserts=current.filter(x=>!x.id).map(x=>x.row);
+  const inserts=current.filter(x=>!x.id&&!x.skip).map(x=>x.row);
   if(inserts.length){ const {error}=await sb.from('itens').insert(inserts); if(error) throw error; }
-  for(const x of current.filter(x=>x.id)){ const {error}=await sb.from('itens').update(x.row).eq('id',x.id); if(error) throw error; }
+  for(const x of current.filter(x=>x.id&&!x.skip)){ const {error}=await sb.from('itens').update(x.row).eq('id',x.id); if(error) throw error; }
 }

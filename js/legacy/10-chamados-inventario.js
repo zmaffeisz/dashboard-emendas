@@ -957,6 +957,24 @@ function _invVisaoGeralHtml(em,inv){
     :'';
   return _invSecaoHtml('Estado do item',campos,aviso);
 }
+function _invOcorrenciasLicitacaoHtml(em){
+  const ocorrencias=em?.ocorrencias_licitacao||[];
+  if(!ocorrencias.length) return '';
+  return ocorrencias.map(o=>{
+    const campos=[
+      ['Resultado',`<span style="color:var(--red);font-weight:800">${_sanEsc(o.tipo||'FRACASSADO/DESERTO')}</span>`],
+      ['Número do pregão',_invTexto(o.numero_pregao)],
+      ['Lote do pregão',_invTexto(o.numero_lote)],
+      ['Data da ocorrência',_invData(o.data_ocorrencia)],
+      ['Quantidade encerrada',_invTexto(o.quantidade_snapshot)],
+      ['Valor unitário licitado',_invDinheiro(o.valor_unitario_snapshot)],
+      ['Valor liberado na Emenda',o.valor_total_snapshot!=null?`<span style="color:var(--red);font-weight:800">${_fmtBRL(-Math.abs(Number(o.valor_total_snapshot)||0))}</span>`:null],
+      ['Observação',_invTexto(o.observacao)]
+    ];
+    const extra=o.documento_path?`<div style="padding:0 13px 13px"><button type="button" class="btn-danger" onclick="abrirDocumentoOcorrenciaEmenda(decodeURIComponent('${encodeURIComponent(o.documento_path)}'))">📎 ${_sanEsc(o.documento_nome||'Abrir documento comprobatório')}</button></div>`:'';
+    return _invSecaoHtml('Ocorrência definitiva na licitação',campos,extra);
+  }).join('');
+}
 function _invAquisicaoHtml(em,inv){
   const emendaNumero=_invPrimeiro(em?.emenda,inv?.emenda);
   const emendaAno=_invPrimeiro(em?.ano,inv?.emenda_ano);
@@ -983,7 +1001,8 @@ function _invAquisicaoHtml(em,inv){
     ['Modelo',_invTexto(em?.modelo,inv?.modelo,inv?.marca_modelo)],
     ['Valor planejado unitário',_invDinheiroPositivo(em?.vl_unitario_cadastrado)],
     ['Valor licitado unitário',_invDinheiroPositivo(inv?.valor_licitacao_unit,em?.valor_licitacao_detalhe_unit,em?.valor_licitacao_unit)],
-    ['Valor executado unitário',_invDinheiroPositivo(inv?.valor_executado_unit,em?.valor_contratado_unit,em?.vl_unitario)]
+    ['Valor executado unitário',em?._temOcorrencia?_invDinheiro(em?.vl_unitario):_invDinheiroPositivo(inv?.valor_executado_unit,em?.valor_contratado_unit,em?.vl_unitario)],
+    ['Valor executado total',em?._temOcorrencia?_invDinheiro(em?.vl_total):null]
   ]);
   const recebimento=_invSecaoHtml('Recebimento e documentos',[
     ['Empenho',_invTexto(em?.empenho,inv?.empenho)],
@@ -1000,7 +1019,7 @@ function _invAquisicaoHtml(em,inv){
     ['Cargo',_invTexto(inv?.termo_cargo)],
     ['Observações',_invTexto(inv?.confirmacao_obs)]
   ],_invDocumentoAcoes(inv?.nota_fiscal_arquivo,inv?.termo_arquivo));
-  return origem+contratacao+recebimento;
+  return origem+_invOcorrenciasLicitacaoHtml(em)+contratacao+recebimento;
 }
 async function _invCarregarHistorico(inv,forcar=false){
   if(!inv?._inventario_unidade_id) return [];

@@ -55,6 +55,8 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260813213831 | `corrigir_reabertura_planejamento_ata` — reabre o planejamento ao excluir uma requisição ainda removível |
 | 20260814193014 | `individualizar_inventario_unidades_fisicas` — materializa uma linha por unidade recebida, inclusive sem patrimônio/série, e protege quantidade física igual a 1 |
 | 20260818202216 | `excluir_caronas_do_inventario` — preserva o recebimento operacional de Caronas, mas impede sua incorporação e movimentação no Inventário da Saúde |
+| 20260825133433 | `fluxo_itens_licitacao_fracassados_desertos` — eventos imutáveis de fracasso/deserção, documentos privados, bloqueio definitivo do item e reflexo no saldo da Emenda |
+| 20260825134011 | `indexar_criador_ocorrencias_licitacao` — índice da relação entre ocorrência e usuário autor |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -65,6 +67,11 @@ Listadas via `list_migrations` (ordem cronológica):
 
 ### `vw_emendas_saldo`
 Consolida o saldo de cada emenda a partir de `emenda_itens`:
+
+Desde a migration `fluxo_itens_licitacao_fracassados_desertos`, a view também desconta
+do comprometimento os itens encerrados, preserva seus valores históricos de licitação e
+expõe `total_ocorrencias_negativas` e `qtd_itens_ocorrencia`. O `total_executado` exibido
+é o contratado menos o valor encerrado, permitindo representar a liberação como negativo.
 
 ```sql
 SELECT e.id, e.emenda AS numero_emenda, e.ano, e.tipo, e.parlamentar,
