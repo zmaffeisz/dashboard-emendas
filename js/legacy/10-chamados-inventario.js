@@ -934,6 +934,7 @@ function _invHeroHtml(em,inv){
   const titulo=_invPrimeiro(em?.item,inv?.item,inv?.emenda_item_desc,'Item');
   const meta=[];
   if(inv?.tipo) meta.push(`<span class="badge">${_sanEsc(inv.tipo)}</span>`);
+  if(inv?._loteConsumo) meta.push('<span class="badge">Material de consumo · lote agregado</span>');
   if(inv?.patrimonio) meta.push(`<span>Patrimônio ${_sanEsc(inv.patrimonio)}</span>`);
   else if(inv?._unidadeFisica) meta.push(`<span>Unidade física ${_sanEsc(inv.id)}</span>`);
   if(inv?.numero_serie) meta.push(`<span>Série ${_sanEsc(inv.numero_serie)}</span>`);
@@ -944,12 +945,16 @@ function _invHeroHtml(em,inv){
 }
 function _invTabsHtml(tab,temInventario){
   const tabs=[['geral','Visão geral'],['aquisicao','Aquisição e origem'],['historico','Histórico e movimentações']];
-  return `<div class="inv-detail-tabs">${tabs.map(([id,label])=>`<button type="button" class="inv-detail-tab ${tab===id?'active':''}" onclick="mudarAbaDetalheInv('${id}')">${label}${id==='historico'&&!temInventario?' (ainda indisponível)':''}</button>`).join('')}</div>`;
+  const consumo=!!_invDetalheAtual.inv?._loteConsumo;
+  return `<div class="inv-detail-tabs">${tabs.map(([id,label])=>`<button type="button" class="inv-detail-tab ${tab===id?'active':''}" onclick="mudarAbaDetalheInv('${id}')">${label}${id==='historico'&&!temInventario?(consumo?' (não se aplica)':' (ainda indisponível)'):''}</button>`).join('')}</div>`;
 }
 function _invVisaoGeralHtml(em,inv){
   const estado=inv?._estadoInventario||{};
   const entregueNaUnidade=_invEntregueNaUnidade(em,inv);
   const campos=[
+    ['Tipo do material',inv?._loteConsumo?_invTexto('Material de consumo'):null],
+    ['Quantidade recebida no lote',inv?._loteConsumo?_invTexto(inv.qtde):null],
+    ['Situação do fluxo',inv?._loteConsumo?_invTexto('Concluído no recebimento administrativo'):null],
     ['Situação atual',entregueNaUnidade&&inv?_invStatusHtml(inv.situacao_atual):null],
     ['Localização atual',entregueNaUnidade?_invTexto(inv?.unidade):null],
     ['Unidade de origem',entregueNaUnidade?_invTexto(inv?.unidade_origem,inv?.unidade):null],
@@ -989,6 +994,7 @@ function _invAquisicaoHtml(em,inv){
   const emendaAno=_invPrimeiro(em?.ano,inv?.emenda_ano);
   const emendaHtml=emendaNumero?`${_sanEsc(emendaNumero)}${emendaAno?`/${_sanEsc(emendaAno)}`:''}`:null;
   const origem=_invSecaoHtml('Origem e Emenda',[
+    ['Tipo do material',inv?._loteConsumo?_invTexto('Material de consumo'):null],
     ['Item',_invTexto(em?.item,inv?.item,inv?.emenda_item_desc)],
     ['Item planejado',_invTexto(em?.item_cadastrado)],
     ['Emenda',emendaHtml],
@@ -998,7 +1004,7 @@ function _invAquisicaoHtml(em,inv){
     ['Unidade cadastrada na Emenda',_invTexto(em?.unidade)],
     ['Unidade da entrega original',_invTexto(inv?.unidade_origem,em?.unidade_entrega)],
     ['Quantidade planejada',_invTexto(em?.qtde_cadastrada)],
-    ['Quantidade física',inv?._unidadeFisica?'1':_invTexto(em?.qtde,inv?.qtde)]
+    [inv?._loteConsumo?'Quantidade recebida (lote)':'Quantidade física',inv?._unidadeFisica?'1':_invTexto(em?.qtde,inv?.qtde)]
   ]);
   const contratacao=_invSecaoHtml('Contratação e valores',[
     ['Tipo do instrumento',_invTexto(inv?.tipo)],
@@ -1011,7 +1017,7 @@ function _invAquisicaoHtml(em,inv){
     ['Valor planejado unitário',_invDinheiroPositivo(em?.vl_unitario_cadastrado)],
     ['Valor licitado unitário',_invDinheiroPositivo(inv?.valor_licitacao_unit,em?.valor_licitacao_detalhe_unit,em?.valor_licitacao_unit)],
     ['Valor executado unitário',em?._temOcorrencia?_invDinheiro(em?.vl_unitario):_invDinheiroPositivo(inv?.valor_executado_unit,em?.valor_contratado_unit,em?.vl_unitario)],
-    ['Valor executado total',em?._temOcorrencia?_invDinheiro(em?.vl_total):null]
+    ['Valor executado total',inv?._loteConsumo?_invDinheiro(inv?.valor_executado_total):(em?._temOcorrencia?_invDinheiro(em?.vl_total):null)]
   ]);
   const recebimento=_invSecaoHtml('Recebimento e documentos',[
     ['Empenho',_invTexto(em?.empenho,inv?.empenho)],
@@ -1085,6 +1091,11 @@ async function _invRenderDetalhe(){
   if(tab==='geral') corpo=_invVisaoGeralHtml(em,inv);
   else if(tab==='aquisicao') corpo=_invAquisicaoHtml(em,inv);
   else{
+    if(inv?._loteConsumo){
+      corpo='<div class="inv-empty-history">Material de consumo permanece em lote agregado e não possui movimentações patrimoniais individuais.</div>';
+      content.innerHTML=_invHeroHtml(em,inv)+_invTabsHtml(tab,false)+corpo;
+      return;
+    }
     if(inv?._inventario_unidade_id&&!Array.isArray(_invDetalheAtual.historico)){
       corpo='<div class="inv-empty-history"><span class="spinner"></span> Carregando histórico...</div>';
       content.innerHTML=_invHeroHtml(em,inv)+_invTabsHtml(tab,!!inv)+corpo;
@@ -1219,12 +1230,17 @@ function abrirDetalheInvRow(inv){
   if(!inv)return;
   _abrirDetalheItemUnificado(_invEmendaDoInventario(inv),inv);
 }
+function abrirDetalheLoteConsumoAta(em,inv){
+  if(!inv) return;
+  _abrirDetalheItemUnificado(em,{...inv,_loteConsumo:true,tipo_material:'CONSUMO'},'aquisicao');
+}
 window.loadInventario=loadInventario;
 window._invExecucaoAtaIntegraInventario=_invExecucaoAtaIntegraInventario;
 window.filtrarInventario=filtrarInventario;
 window.clearAllInv=clearAllInv;
 window.abrirDetalheInv=abrirDetalheInv;
 window.abrirMovimentacaoInv=abrirMovimentacaoInv;
+window.abrirDetalheLoteConsumoAta=abrirDetalheLoteConsumoAta;
 window.baixarArquivoStoragePrivado=baixarArquivoStoragePrivado;
 window.mudarAbaDetalheInv=mudarAbaDetalheInv;
 window.mostrarFormularioMovimentacaoInv=mostrarFormularioMovimentacaoInv;

@@ -367,7 +367,11 @@
   Patrimônio e número de série são atributos opcionais: sua ausência nunca mantém um bem
   permanente consolidado. Materiais de consumo não criam essas linhas, não entram no
   Inventário e são concluídos no recebimento administrativo pelo almoxarifado. O registro
-  pai preserva a quantidade e o histórico do lote/pedido.
+  pai preserva a quantidade e o histórico do lote/pedido. Na lista de execuções das Atas,
+  clicar nesse registro abre a ficha unificada **Vida do item** para o lote completo, com
+  dados da origem, contratação, recebimento e documentos; não habilita movimentações
+  patrimoniais. Bens permanentes preservam o detalhamento e a vida individual de cada
+  unidade física.
 - **Vida posterior da unidade física:** transferência, empréstimo, devolução e baixa nunca
   alteram nem apagam o recebimento original. Cada operação exige termo/documento, acrescenta
   uma linha imutável em `inventario_movimentacoes` e atualiza somente a localização/situação

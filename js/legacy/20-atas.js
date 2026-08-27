@@ -165,6 +165,7 @@ async function loadAtas(){
       termo_responsavel:r.termo_responsavel||"",
       termo_cargo:r.termo_cargo||"",
       confirmacao_obs:r.confirmacao_obs||"",
+      tipo_material:(r.tipo_material||"").trim().toUpperCase(),
       possui_patrimonio:r.possui_patrimonio,
       created_at:r.created_at||null,
       empresa:ata.empresa||"",
@@ -635,8 +636,12 @@ function _renderExecRows(execRows){
     else if(dias<=7) prazoCel=`<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
     else if(dias<=15) prazoCel=`<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
     else prazoCel=`<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
-    const aberta=_atasExecExpandidas.has(String(r.id));
+    const consumo=String(r.tipo_material||'').toUpperCase()==='CONSUMO';
+    const aberta=!consumo&&_atasExecExpandidas.has(String(r.id));
     const detalhe=aberta?_renderDetalheExecAta(r):'';
+    const acaoLinha=consumo
+      ?`abrirVidaConsumoExecAta('${_sanEsc(r.id)}',event)`
+      :`toggleDetalheExecAta('${_sanEsc(r.id)}',event)`;
     const excluirBtn=_execAtaPodeExcluir(r)?`<button type="button" onclick="event.stopPropagation();excluirExec('${_sanEsc(r.id)}')" class="btn-compact btn-action-square" style="border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação ainda sem AF" aria-label="Excluir solicitação ainda sem AF">🗑️</button>`:'';
     const temReajuste=atasExecReajustes.some(er=>er.status==='ATIVO'&&String(er.ata_execucao_id)===String(r.id));
     const reajustePendente=_ataReajustePendenteExec(r);
@@ -648,7 +653,7 @@ function _renderExecRows(execRows){
     const aceiteBtn=String(r.origem_recurso||'').toLowerCase()==='carona'
       ?`<button type="button" class="btn-secondary btn-compact" onclick="event.stopPropagation();emitirAceiteCarona('${_sanEsc(r.id)}',this)" title="Gerar PDF do aceite de adesão para esta Carona">📄 Aceite</button>`
       :'';
-    return `<tr class="ata-exec-row${aberta?' ata-exec-row-open':''}" data-exec-id="${_sanEsc(r.id)}" onclick="toggleDetalheExecAta('${_sanEsc(r.id)}',event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDetalheExecAta('${_sanEsc(r.id)}',event)}" role="button" tabindex="0" aria-expanded="${aberta?'true':'false'}" title="Clique para ${aberta?'recolher':'ver todos os detalhes'}">
+    return `<tr class="ata-exec-row${aberta?' ata-exec-row-open':''}" data-exec-id="${_sanEsc(r.id)}" onclick="${acaoLinha}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${acaoLinha}}" role="button" tabindex="0" ${consumo?'':`aria-expanded="${aberta?'true':'false'}"`} title="${consumo?'Abrir a vida deste lote de material de consumo':`Clique para ${aberta?'recolher':'ver todos os detalhes'}`}">
     ${_renderSancaoExecCheckbox(r)}
     <td style="font-size:11px">${_sanEsc(r.cpl)}</td>
     <td style="font-size:11px">${_sanEsc(r.sim)}</td>
@@ -708,9 +713,88 @@ async function _carregarDetalheExecAta(execId){
     if(error) throw error;
     (data||[]).forEach(n=>notas.set(String(n.id),n));
   }
+  let notaExec=[...notas.values()][0]||null;
+  if(!notaExec&&exec.nf){
+    const normalizado=typeof normalizarNumeroDocumento==='function'
+      ?normalizarNumeroDocumento(exec.nf)
+      :String(exec.nf).replace(/\D/g,'');
+    let consulta=sb.from('notas_fiscais').select('*').eq('numero_normalizado',normalizado);
+    if(exec.contrato_id) consulta=consulta.eq('contrato_id',exec.contrato_id);
+    const {data,error}=await consulta.order('created_at',{ascending:false}).limit(1).maybeSingle();
+    if(error) throw error;
+    notaExec=data||null;
+    if(notaExec) notas.set(String(notaExec.id),notaExec);
+  }
   const emenda=rEmenda.data||null;
   const empenhos=[...(rEmpExec.data||[]),...(rEmpEmenda.data||[])].filter((v,i,a)=>a.findIndex(x=>String(x.id)===String(v.id))===i);
-  return {unidades,notas,emenda,empenhos};
+  return {unidades,notas,notaExec,emenda,empenhos};
+}
+
+async function abrirVidaConsumoExecAta(execId,event){
+  if(event?.target?.closest?.('button,a,input,select,textarea,label')) return;
+  const exec=atasExec.find(r=>String(r.id)===String(execId));
+  if(!exec||String(exec.tipo_material||'').toUpperCase()!=='CONSUMO') return;
+  try{
+    let detalhe=_atasExecDetalhes.get(String(execId));
+    if(!detalhe){
+      detalhe=await _carregarDetalheExecAta(execId);
+      _atasExecDetalhes.set(String(execId),detalhe);
+    }
+    if(detalhe.erro) throw new Error(detalhe.erro);
+    const ei=detalhe.emenda||{};
+    const emenda=ei.emendas||{};
+    const quantidade=Number(exec.qtde)||0;
+    const nota=detalhe.notaExec||[...detalhe.notas.values()][0]||{};
+    const empenhos=[...new Set([exec.empenho,...detalhe.empenhos.map(v=>{
+      const emp=v.empenhos||{};
+      return emp.numero?(String(emp.numero)+(emp.ano?'/'+emp.ano:'')):'';
+    })].filter(Boolean))].join('; ');
+    const em={
+      id:exec.emenda_item_id||exec.id,
+      item:exec.item,
+      marca_modelo:exec.marca_modelo,
+      qtde:quantidade,
+      vl_unitario:quantidade?Number(exec.valor||0)/quantidade:null,
+      vl_total:Number(exec.valor)||null,
+      unidade:ei.unidade_beneficiada||ei.unidade_entrega||exec.unidade,
+      unidade_entrega:exec.unidade,
+      emenda:ei.emenda||emenda.emenda||'',
+      ano:emenda.ano||'',
+      parlamentar:emenda.parlamentar||'',
+      objeto:emenda.objeto||'',
+      cpl:exec.cpl,
+      contrato_sim:exec.sim,
+      fornecedor_fluxo:exec.empresa,
+      empenho:empenhos,
+      nota_fiscal:nota.numero||exec.nf
+    };
+    const inv={
+      tipo:'ATA', id:exec.id, _base_id:exec.id,
+      _loteConsumo:true, _unidadeFisica:false, tipo_material:'CONSUMO',
+      item:exec.item, marca_modelo:exec.marca_modelo,
+      unidade:exec.unidade, empresa:exec.empresa, cnpj:exec.cnpj,
+      processo:exec.cpl, contrato:exec.sim, qtde:quantidade,
+      valor_licitacao_unit:exec.valor_unit_registrado,
+      valor_executado_unit:quantidade?Number(exec.valor||0)/quantidade:null,
+      valor_executado_total:Number(exec.valor)||null,
+      empenho:empenhos,
+      nota_fiscal:nota.numero||exec.nf,
+      nota_fiscal_arquivo:nota.arquivo_url||'',
+      nf_data:nota.data_emissao||null,
+      nf_valor:nota.valor_total||null,
+      data_recebimento:exec.dt_entrega||null,
+      af_numero:exec.af_numero||'', af_data:exec.data_af||null,
+      emenda:em.emenda, emenda_ano:em.ano, parlamentar:em.parlamentar,
+      emenda_item_desc:ei.item||exec.item,
+      emenda_item_id:exec.emenda_item_id||null,
+      confirmacao_obs:exec.confirmacao_obs||exec.obs_prazo||''
+    };
+    if(typeof abrirDetalheLoteConsumoAta!=='function') throw new Error('O modal Vida do item não está disponível. Atualize a página e tente novamente.');
+    abrirDetalheLoteConsumoAta(em,inv);
+  }catch(e){
+    if(window.toast) toast('Não foi possível abrir a vida do item: '+(e.message||e),'error');
+    else alert('Não foi possível abrir a vida do item: '+(e.message||e));
+  }
 }
 
 function _ataDetalheCampo(label,valor){
@@ -993,6 +1077,7 @@ function verTudoUnidadeExecAta(execId,unidadeId){
 
 window.toggleDetalheExecAta=toggleDetalheExecAta;
 window.verTudoUnidadeExecAta=verTudoUnidadeExecAta;
+window.abrirVidaConsumoExecAta=abrirVidaConsumoExecAta;
 
 function _execAtaPodeExcluir(r){
   if(!r||!podeEditar('atas')) return false;
@@ -1044,6 +1129,9 @@ function _sancaoExecTitulo(r){
   return "Selecionar esta solicitação pendente";
 }
 function _renderSancaoExecCheckbox(r){
+  if(String(r?.tipo_material||'').toUpperCase()==='CONSUMO'){
+    return '<td style="text-align:center;color:var(--blue);font-size:13px" title="Abrir Vida do item">🔎</td>';
+  }
   const aberta=typeof _atasExecExpandidas!=='undefined'&&_atasExecExpandidas.has(String(r.id));
   return `<td style="text-align:center;color:var(--text3);font-size:16px"><span class="ata-exec-chevron${aberta?' open':''}">›</span></td>`;
 }

@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Vida do lote de consumo nas Atas:** clicar em uma execução classificada como material
+  de consumo abre diretamente a ficha unificada “Vida do item”, com o lote agregado, dados
+  da contratação, recebimento, NF e anexo. O comportamento expansível por unidade física
+  dos bens permanentes foi preservado.
+
 - **Anexo de NF mais resiliente:** a vinculação do PDF ou imagem à nota fiscal agora usa
   uma operação autenticada via `POST`, evitando falhas de navegador que bloqueavam a etapa
   `PATCH` depois de o arquivo já ter sido enviado. Em caso de erro, arquivo e cadastro
