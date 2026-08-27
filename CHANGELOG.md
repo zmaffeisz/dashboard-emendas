@@ -2,6 +2,8 @@
 
 ## Em desenvolvimento
 
+- **Atas — nova solicitação:** a origem do recurso deixa de vir marcada por padrão e
+  passa a ser uma escolha obrigatória antes de salvar.
 - **Contratos — fornecedor:** removida a exibição indevida do seletor técnico duplicado;
   permanece somente o campo pesquisável de empresa e o botão de cadastro.
 - **Hierarquia organizacional por divisão e seção:** o sistema agora cadastra Divisões

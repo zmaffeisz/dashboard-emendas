@@ -1981,11 +1981,12 @@ async function abrirModalNovaExec(){
   document.getElementById("ne2-cpl").value="";
   document.getElementById("ne2-sim").value="";
   ["ne2-unidade","ne2-secretaria","ne2-codigo-siam-secretaria","ne2-email-solicitante","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
-  // Fase 12: popular emendas e voltar à origem padrão (emenda)
+  // A origem deve ser escolhida explicitamente para evitar solicitações
+  // registradas com o tipo de recurso incorreto.
   if(!_neEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar,unidade,unidade_id').order('ano',{ascending:false}); _neEmendasCache=data||[]; }
   document.getElementById("ne2-emenda").innerHTML='<option value="">Selecione a emenda...</option>'+_neEmendasCache.map(e=>`<option value="${e.id}">${_sanEsc(e.emenda||'?')}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+_sanEsc(e.parlamentar)):''}</option>`).join("");
   document.getElementById("ne2-emenda-item").innerHTML='<option value="">Selecione...</option>';
-  const rb=document.querySelector('input[name="ne2-origem"][value="emenda"]'); if(rb) rb.checked=true;
+  document.querySelectorAll('input[name="ne2-origem"]').forEach(rb=>{rb.checked=false;});
   neOrigemChange();
   document.getElementById("ne2-msg").className="fmsg";
   document.getElementById("modal-nova-exec").classList.add("active");
@@ -1993,7 +1994,7 @@ async function abrirModalNovaExec(){
 let _neEmendasCache=[];
 let _neSecretariasCaronaCache=[];
 let _neSecretariasCaronaCarregadas=false;
-function _neOrigem(){ return document.querySelector('input[name="ne2-origem"]:checked')?.value||'emenda'; }
+function _neOrigem(){ return document.querySelector('input[name="ne2-origem"]:checked')?.value||''; }
 function _neSecretariaCaronaLabel(secretaria){
   return [secretaria?.sigla,secretaria?.nome].filter(Boolean).join(' — ');
 }
@@ -2167,6 +2168,7 @@ async function salvarNovaExec(){
   if(bloquearSeVisualiz('atas')) return;
   const at=_resolverAtaItemRef(document.getElementById("ne2-item").value);
   const origem=_neOrigem();
+  if(!origem){showMsg("ne2","Selecione a origem do recurso (*).","err");return;}
   const secretariaId=document.getElementById("ne2-secretaria").value;
   const secretariaCarona=_neSecretariasCaronaCache.find(s=>String(s.id)===String(secretariaId))||null;
   const unidade=(origem==='carona'
