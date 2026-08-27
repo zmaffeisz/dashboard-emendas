@@ -180,7 +180,7 @@ async function _empDetCarregar(id){
   if(!empenho) throw new Error('Empenho não encontrado ou sem permissão de visualização.');
   const vinculos=vincRes.data||[], entregas=entRes.data||[], rateiosNf=nfiRes.data||[];
   const itemIds=[...vinculos.map(v=>v.item_id),...entregas.map(v=>v.item_id),...rateiosNf.map(v=>v.item_id)];
-  const execIds=vinculos.map(v=>v.exec_id);
+  const execIds=[...vinculos.map(v=>v.exec_id),...rateiosNf.map(v=>v.exec_id)];
   const nfIds=[...rateiosNf.map(v=>v.nota_fiscal_id),...entregas.map(v=>v.nota_fiscal_id)];
   const [itens,execucoes,notas]=await Promise.all([
     _empDetByIds('itens','id,processo_id,origem,fonte_tipo,emenda_id,emenda_item_id,fonte_descricao,descricao,qtde,valor_estimado,unidade_destino_id,contrato_id,fornecedor_id,valor_contratado,ata_item_id,status,marca,modelo,observacoes',itemIds),
@@ -234,6 +234,11 @@ function _empDetLink(url,rotulo='Abrir documento'){
     if(!['http:','https:'].includes(u.protocol)) return `<span class="emp-det-muted">${_sanEsc(rotulo)} indisponível</span>`;
     return `<a class="emp-det-doc-link" href="${_sanEsc(u.href)}" target="_blank" rel="noopener noreferrer">↗ ${_sanEsc(rotulo)}</a>`;
   }catch(_){ return `<span class="emp-det-muted">${_sanEsc(rotulo)} indisponível</span>`; }
+}
+function _empDetStorageLink(bucket,path,rotulo='Abrir documento'){
+  const arquivo=String(path||'').trim();
+  if(!arquivo) return '';
+  return `<button type="button" class="emp-det-doc-link" onclick="baixarArquivoStoragePrivado('${_sanEsc(bucket)}','${encodeURIComponent(arquivo)}')">↓ ${_sanEsc(rotulo)}</button>`;
 }
 function _empDetEmpty(texto){ return `<div class="emp-det-empty">${_sanEsc(texto)}</div>`; }
 function _empDetLabel(rotulo,valor,classe=''){
@@ -316,17 +321,17 @@ function _empDetRender(d){
   const afHtml=afRows.length?`<div class="emp-det-table-wrap"><table class="emp-det-table"><thead><tr><th>Item</th><th>AF</th><th>Emissão / prazo</th><th class="num">Autorizado / recebido</th><th>Recebimento / unidade</th><th>Situação</th></tr></thead><tbody>${afRows.map(r=>`<tr>
     <td><b>${_sanEsc(r.item)}</b>${r.nf?`<small>NF ${_sanEsc(r.nf)}</small>`:''}</td><td>${_sanEsc(r.af||'—')}</td>
     <td>${_empDetDate(r.data)}<small>Prazo: ${_empDetDate(r.prev)}</small></td><td class="num">${_empDetQty(r.aut)} / ${_empDetQty(r.rec)}</td>
-    <td>${_empDetDate(r.receb)}<small>Na unidade: ${_empDetDate(r.unidade)}</small></td><td>${_empDetBadge(r.status)}${r.termo?`<small>${_empDetLink(r.termo,'Termo de entrega')}</small>`:''}</td>
+    <td>${_empDetDate(r.receb)}<small>Na unidade: ${_empDetDate(r.unidade)}</small></td><td>${_empDetBadge(r.status)}${r.termo?`<small>${_empDetStorageLink('termos-entrega',r.termo,'Baixar termo de entrega')}</small>`:''}</td>
   </tr>`).join('')}</tbody></table></div>`:_empDetEmpty('Nenhuma autorização de fornecimento ou entrega relacionada foi encontrada.');
 
   const nfCentrais=d.notas.map(n=>{
     const rateios=d.rateiosNf.filter(r=>String(r.nota_fiscal_id)===String(n.id));
-    return `<tr><td><b>NF ${_sanEsc(n.numero||'—')}</b>${n.serie?`<small>Série ${_sanEsc(n.serie)}</small>`:''}</td><td>${_empDetDate(n.data_emissao)}<small>Recebida: ${_empDetDate(n.data_recebimento)}</small></td><td class="money">${fmtFull(n.valor_total)}</td><td class="money">${fmtFull(rateios.reduce((s,r)=>s+(Number(r.valor_total)||0),0))}<small>${rateios.length} item(ns) rateado(s)</small></td><td>${_empDetBadge(n.status)}${n.arquivo_url?`<small>${_empDetLink(n.arquivo_url,'Abrir nota fiscal')}</small>`:''}</td></tr>`;
+    return `<tr><td><b>NF ${_sanEsc(n.numero||'—')}</b>${n.serie?`<small>Série ${_sanEsc(n.serie)}</small>`:''}</td><td>${_empDetDate(n.data_emissao)}<small>Recebida: ${_empDetDate(n.data_recebimento)}</small></td><td class="money">${fmtFull(n.valor_total)}</td><td class="money">${fmtFull(rateios.reduce((s,r)=>s+(Number(r.valor_total)||0),0))}<small>${rateios.length} item(ns) rateado(s)</small></td><td>${_empDetBadge(n.status)}${n.arquivo_url?`<small>${_empDetStorageLink('notas-fiscais',n.arquivo_url,'Baixar nota fiscal')}</small>`:''}</td></tr>`;
   }).join('');
   const nfLegadas=[...new Set([...d.entregas.map(x=>x.nota_fiscal),...d.execucoes.map(x=>x.nf)].filter(Boolean))].filter(num=>!d.notas.some(n=>String(n.numero)===String(num)));
   const nfHtml=(nfCentrais||nfLegadas.length)?`<div class="emp-det-table-wrap"><table class="emp-det-table"><thead><tr><th>Documento</th><th>Datas</th><th class="money">Valor total da NF</th><th class="money">Rateado neste empenho</th><th>Situação / arquivo</th></tr></thead><tbody>${nfCentrais}${nfLegadas.map(n=>`<tr><td><b>NF ${_sanEsc(n)}</b><small>Registro anterior</small></td><td>—</td><td class="money">—</td><td class="money">—</td><td>${_empDetBadge('Vinculada')}</td></tr>`).join('')}</tbody></table></div>`:_empDetEmpty('Nenhuma nota fiscal relacionada foi encontrada.');
 
-  arquivos.push(...d.notas.filter(n=>n.arquivo_url).map(n=>`<div class="emp-det-doc-card"><b>NF ${_sanEsc(n.numero||'—')}</b>${_empDetLink(n.arquivo_url,'Abrir nota fiscal')}</div>`));
+  arquivos.push(...d.notas.filter(n=>n.arquivo_url).map(n=>`<div class="emp-det-doc-card"><b>NF ${_sanEsc(n.numero||'—')}</b>${_empDetStorageLink('notas-fiscais',n.arquivo_url,'Baixar nota fiscal')}</div>`));
   const comprovantes=[...new Set(d.emendaItens.map(i=>i.comprovante_pagamento).filter(Boolean))];
   arquivos.push(...comprovantes.map((url,idx)=>`<div class="emp-det-doc-card"><b>Comprovante de pagamento${comprovantes.length>1?' '+(idx+1):''}</b>${_empDetLink(url,'Abrir comprovante')}</div>`));
   const documentosHtml=arquivos.filter(Boolean).length?`<div class="emp-det-doc-grid">${arquivos.filter(Boolean).join('')}</div>`:_empDetEmpty('Nenhum arquivo foi anexado aos registros relacionados.');
@@ -1052,10 +1057,12 @@ async function abrirVincularEmpenho(itemId, execId){
       ai=ait||{};
     }
     it={id:null,descricao:ex.item||ai.item||'item da ATA',qtde:ex.qtde,contrato_id:ai.contrato_id||null,emenda_id:ex.emenda_id||null,emenda_item_id:ex.emenda_item_id||null,processos:{identificador:ex.cpl||ai.cpl||''}};
-    if(ex.emenda_item_id){
-      const {data:jaAta}=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('emenda_item_id',ex.emenda_item_id).limit(1);
-      prev=Object.fromEntries((jaAta||[]).map(x=>[String(x.empenho_id),x]));
+    let {data:jaAta}=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('exec_id',execId).limit(1);
+    if((!jaAta||!jaAta.length)&&ex.emenda_item_id){
+      const legado=await sb.from('empenho_itens').select('empenho_id,quantidade_vinculada,valor_vinculado').eq('emenda_item_id',ex.emenda_item_id).is('exec_id',null).limit(1);
+      jaAta=legado.data||[];
     }
+    prev=Object.fromEntries((jaAta||[]).map(x=>[String(x.empenho_id),x]));
     document.getElementById('ve-info').innerHTML=`<b>${_sanEsc(it.descricao)}</b> · ATA · qtde ${it.qtde??'—'} · ${_sanEsc(ex.sim||ai.sim||ai.contratos?.numero_contrato||'')}`;
   }else{
     const {data}=await sb.from('itens').select('id,descricao,qtde,contrato_id,emenda_id,processos(identificador)').eq('id',itemId).single();
@@ -1097,22 +1104,12 @@ async function salvarVincularEmpenho(){
   if(isAta){
     if(!selected.length){ msg.textContent='Selecione um empenho para vincular.'; msg.classList.add('err'); return; }
     const btn=document.getElementById('ve-salvar'); btn.disabled=true;
-    const ex=_veContext.exec||{};
-    const emp=_veEmpenhos.find(e=>String(e.id)===String(selected[0].empenho_id));
-    const empTexto=emp?`${emp.numero}${emp.ano?('/'+emp.ano):''}`:'';
-    const {error:upErr}=await sb.from('atas_execucao').update({empenho:empTexto}).eq('id',_veContext.execId);
+    const {error:upErr}=await sb.rpc('vincular_documentos_execucao_ata',{
+      p_exec_id:_veContext.execId,
+      p_empenho_id:selected[0].empenho_id,
+      p_nota_fiscal_id:null
+    });
     if(upErr){ btn.disabled=false; msg.textContent='Erro: '+upErr.message; msg.classList.add('err'); return; }
-    if(ex.emenda_item_id){
-      const {data:antVinc}=await sb.from('empenho_itens').select('id,empenho_id').eq('emenda_item_id',ex.emenda_item_id);
-      const vinc={empenho_id:selected[0].empenho_id,item_id:null,emenda_id:ex.emenda_id||null,emenda_item_id:ex.emenda_item_id,quantidade_vinculada:selected[0].quantidade_vinculada||ex.qtde||null,valor_vinculado:selected[0].valor_vinculado||ex.valor||null};
-      const ins=await sb.from('empenho_itens').insert(vinc).select('id').single();
-      if(ins.error) console.error('vinculo empenho_itens ATA:',ins.error);
-      else if(antVinc?.length){
-        await sb.from('empenho_itens').delete().in('id',antVinc.map(x=>x.id));
-        for(const old of [...new Set(antVinc.map(x=>String(x.empenho_id)).filter(x=>x&&x!==String(selected[0].empenho_id)))]) await _recalcularSaldoEmpenho(old);
-      }
-    }
-    await _recalcularSaldoEmpenho(selected[0].empenho_id);
     btn.disabled=false;
     if(window.toast) toast('Empenho vinculado à ATA.','success');
     document.getElementById('modal-vincular-empenho').classList.remove('active');
@@ -2516,11 +2513,22 @@ async function _recCarregarDocs(row){
 async function _recCarregarEmpenhoHerdado(row){
   let emp=null;
   if(row.tipo==='ATA'){
-    if(row.emenda_item_id){
+    if(row.exec_id){
+      const {data:ei}=await sb.from('empenho_itens').select('empenho_id, empenhos(id,numero,ano)').eq('exec_id',row.exec_id).limit(1);
+      if(ei&&ei.length&&ei[0].empenhos) emp=ei[0].empenhos;
+    }
+    if(!emp&&row.emenda_item_id){
       const {data:ei}=await sb.from('empenho_itens').select('empenho_id, empenhos(id,numero,ano)').eq('emenda_item_id',row.emenda_item_id).limit(1);
       if(ei&&ei.length&&ei[0].empenhos) emp=ei[0].empenhos;
     }
-    if(!emp && row.empenho) emp={id:null,numero:row.empenho,ano:null};
+    if(!emp&&row.empenho&&row.contrato_id){
+      const partes=String(row.empenho).split('/');
+      const numero=normalizarNumeroDocumento(partes[0]);
+      const ano=Number(normalizarNumeroDocumento(partes[1]))||null;
+      const {data:candidatos}=await sb.from('empenhos').select('id,numero,ano').eq('contrato_id',row.contrato_id);
+      const unicos=(candidatos||[]).filter(e=>normalizarNumeroDocumento(e.numero)===numero&&(!ano||Number(e.ano)===ano));
+      if(unicos.length===1) emp=unicos[0];
+    }
     window._recEmpenhoHerdado=emp;
     const info=document.getElementById('rec-empenho-info');
     const hid=document.getElementById('rec-empenho-id-herdado');
@@ -2937,7 +2945,7 @@ async function salvarRecebimentoAta(){
     const nf=await _recObterOuCriarNF(row);
     const emp=await _recCarregarEmpenhoHerdado(row);
     const empNumero=emp?.numero||row.empenho||null;
-    if(!empNumero) throw new Error('Item sem empenho vinculado. Vincule o empenho antes do recebimento.');
+    if(!emp?.id) throw new Error('Item sem empenho relacionado. Vincule novamente o empenho antes do recebimento.');
     const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
@@ -2947,6 +2955,12 @@ async function salvarRecebimentoAta(){
     const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,tipo_material:tipoMaterial,possui_patrimonio:permanente?possuiPatrimonio:null};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
+    const {error:vinculoErro}=await sb.rpc('vincular_documentos_execucao_ata',{
+      p_exec_id:execId,
+      p_empenho_id:emp.id,
+      p_nota_fiscal_id:nf.id
+    });
+    if(vinculoErro) throw vinculoErro;
     const unidadesPayload=unidades.map((u,i)=>({
       exec_id:execId,
       ata_item_id:row.ata_item_id||null,

@@ -274,6 +274,10 @@
 - O mesmo pedido de ATA não pode gerar dois vínculos financeiros simultâneos em
   `empenho_itens`. Ao trocar o empenho do pedido, o vínculo anterior deve ser substituído e
   o saldo dos empenhos afetados recalculado.
+- Toda execução de ATA vinculada a empenho deve gravar `empenho_itens.exec_id`, inclusive
+  quando a origem for recurso próprio e não existir `emenda_item_id`. No recebimento, o
+  rateio da NF deve gravar o mesmo `exec_id` em `nota_fiscal_itens`; os números textuais em
+  `atas_execucao` são apenas a fotografia exibida e não substituem as chaves relacionais.
 - No "gerar contrato" o empenho considera **fonte + emenda** (memória do projeto, lote
   27/06). **A confirmar** comportamento exato.
 - No modal de gerar contrato, itens disponíveis cuja descrição seja equivalente

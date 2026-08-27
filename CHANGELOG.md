@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Empenhos de execuções de ATA:** o vínculo com empenho e nota fiscal deixa de existir
+  apenas como texto e passa a registrar também a execução em `empenho_itens` e
+  `nota_fiscal_itens`. A ficha completa volta a exibir item, AF/recebimento, NF e anexo;
+  vínculos históricos inequívocos são recuperados automaticamente.
+
 - **Vida do lote de consumo nas Atas:** clicar em uma execução classificada como material
   de consumo abre diretamente a ficha unificada “Vida do item”, com o lote agregado, dados
   da contratação, recebimento, NF e anexo. O comportamento expansível por unidade física

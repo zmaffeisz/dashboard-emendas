@@ -106,7 +106,9 @@ respeitam a RLS da sessão autenticada.
    a data limite vem de `data_af + prazo_entrega` herdado da ATA/licitação.
    O vínculo de empenho pode nascer diretamente na subaba **Empenhos** ao selecionar o
    pedido da ATA; nesse caso o Controle de Entregas apenas libera **Emitir AF**, sem criar
-   novo vínculo/rateio.
+   novo vínculo/rateio. A execução fica identificada por `empenho_itens.exec_id`, mesmo
+   sem origem em Emenda; no recebimento, `nota_fiscal_itens.exec_id` mantém a NF ligada ao
+   mesmo pedido para alimentar a ficha consolidada do empenho.
 5. **Recebimento e confirmação** — o recebimento pela Secretaria fica em
    `itens_entregas.data_recebimento` (ou `atas_execucao.dt_entrega`) e a confirmação da
    entrega na unidade fica separadamente em `data_entrega_unidade`. A AF, o recebimento e a
