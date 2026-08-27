@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Empréstimos e movimentações do Inventário:** corrigido o gatilho compartilhado de
+  proteção para validar `documento_path` somente no histórico de movimentações. A atualização
+  do estado atual do bem deixa de tentar acessar esse campo inexistente e o empréstimo pode
+  ser concluído atomicamente após o envio do termo.
+
 - **Inventário sem duplicação no recebimento em lote:** bens permanentes com patrimônio
   passam a preencher as unidades físicas já materializadas pelo banco, sem criar uma linha
   vazia adicional. As 24 unidades vazias geradas pelo conflito anterior foram removidas,

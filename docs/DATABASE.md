@@ -140,7 +140,9 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
   apagam-se as unidades.
 - **`trg_sincronizar_inventario_unidade_*`** cria/atualiza o estado inicial quando uma
   unidade física nasce em aquisição ou ATA. **`trg_proteger_inventario_*`** bloqueia
-  alteração direta do estado e do histórico fora do RPC transacional.
+  alteração direta do estado e do histórico fora do RPC transacional; a existência do
+  documento é validada somente no `INSERT` de `inventario_movimentacoes`, pois
+  `inventario_unidades` não possui `documento_path`.
 - **`trg_materializar_unidades_*`** cria linhas físicas somente quando `tipo_material =
   'PERMANENTE'`; **`trg_bloquear_unidade_fisica_consumo`** rejeita inserção direta de
   unidades para materiais de consumo.
