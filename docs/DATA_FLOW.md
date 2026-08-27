@@ -97,10 +97,11 @@ respeitam a RLS da sessão autenticada.
 1. **Emenda** — cadastra-se a emenda (`emendas.valor_cedido`) e seus itens em
    `emenda_itens` (com `vl_total_cadastrado` = planejado).
 2. **Licitação** — cria-se o `processo`; cada `emenda_itens.processo_id` aponta para ele.
-   O status de licitação evolui por item (`status_lic_id`).
+   O status de licitação evolui por item (`status_lic_id`). Quando informado, o código do
+   catálogo interno acompanha o item em `itens.codigo_siam`.
 3. **Contrato/ATA** — homologado, cria-se o registro em `contratos` com
    `tipo_instrumento = 'ATA'`, vinculado ao `processo_id` e `fornecedor_id`. Os itens são
-   **espelhados** para `atas_itens`.
+   **espelhados** para `atas_itens`, preservando também `codigo_siam`.
 4. **Execução da ata** — em `atas_execucao` registram-se unidade, quantidade, valor,
    empenho, AF, previsão e entrega. A AF só pode ser emitida depois de vínculo de empenho;
    a data limite vem de `data_af + prazo_entrega` herdado da ATA/licitação.

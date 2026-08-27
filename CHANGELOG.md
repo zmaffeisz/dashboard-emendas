@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Código SIAM por item:** itens de aquisição, ATA, material de consumo e serviços agora
+  aceitam o código opcional do catálogo interno já na geração da licitação. O código é
+  preservado na contratação, no espelhamento dos itens de ATA, nas buscas e nas exportações.
+
 - **Empenhos de execuções de ATA:** o vínculo com empenho e nota fiscal deixa de existir
   apenas como texto e passa a registrar também a execução em `empenho_itens` e
   `nota_fiscal_itens`. A ficha completa volta a exibir item, AF/recebimento, NF e anexo;

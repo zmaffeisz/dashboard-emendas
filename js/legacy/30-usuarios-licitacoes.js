@@ -275,7 +275,7 @@ function renderLicitacoes(){
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.map(i=>i.descricao)).concat(_procServicoPeriodicoItens(p).map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam])).concat(_procServicoPeriodicoItens(p).flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
   const _ocultos=incluirContratados?0:ocultos;
@@ -339,7 +339,7 @@ function renderLicitacoes(){
             ctrl=_sanEsc(_cpSituacao(it).nome);
           }
           bloco+=`<tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço ${periodoLabel}</span></td>
+            <td style="padding:8px 13px"><div>${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço ${periodoLabel}</span></div>${_procCodigoSiamHtml(it.codigo_siam)}</td>
             <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${qtd||''}</td>
             <td style="padding:8px 8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Unit. ${unit?fmtFull(unit):'—'} · ${trimestral?'Trimestral':'Mensal'} ${valorPeriodo?fmtFull(valorPeriodo):'—'}</div>${ctrl}</td>
             <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-serv-desde-${p.id}-${idx}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetServicoMensalItemDesde(${p.id},${idx},this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
@@ -371,7 +371,7 @@ function renderLicitacoes(){
         }).join('');
         const vincularAta=p.natureza==='ATA DE RP'&&podeEd&&!_licItemContratado(it)&&!ocorrencia?` <button type="button" onclick="abrirPlanejamentoEmendaAta(${p.id},'${it.id}')" style="margin-left:6px;font-size:10px;padding:3px 7px;border:1px solid var(--blue);border-radius:4px;background:var(--surface);color:var(--blue);cursor:pointer">Vincular Emenda</button>`:'';
         bloco+=`<tr style="border-top:1px solid var(--border);${ocorrencia?'background:var(--red-bg);color:var(--red-text)':''}">
-          <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}${planosHtml}</td>
+          <td style="padding:8px 13px"><div>${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}</div>${_procCodigoSiamHtml(it.codigo_siam)}${planosHtml}</td>
           <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
           <td style="padding:8px 8px">${ctrl}</td>
           <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)&&!ocorrencia?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(ocorrencia?.data_ocorrencia||it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">${ocorrencia?'encerrado definitivamente':`há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}`}</div></td>
@@ -605,7 +605,7 @@ async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
   while(true){
     const {data,error}=await sb.from('itens')
-      .select('id,processo_id,descricao,qtde,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla)')
+      .select('id,processo_id,descricao,codigo_siam,qtde,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla)')
       .not('processo_id','is',null).order('processo_id').range(from,from+size-1);
     if(error) throw error;
     all=all.concat(data||[]);
@@ -985,6 +985,21 @@ const PROC_TIPO_SERVICO_DEMANDA_NORM='servico por demanda/execucao';
 const PROC_FONTES=[['emenda','Emenda'],['recurso_proprio','Recurso próprio'],['outra','Outro']];
 const PROC_TIPO_SERVICO_MENSAL_FIXO='Serviço mensal valor fixo';
 const PROC_TIPO_SERVICO_TRIMESTRAL_FIXO='Serviço trimestral valor fixo';
+function _procCodigoSiam(valor){ return String(valor||'').trim().replace(/\s+/g,'')||null; }
+function _procCodigoSiamValido(valor){
+  const codigo=_procCodigoSiam(valor);
+  return !codigo || (codigo.length<=50 && /^[0-9.-]+$/.test(codigo));
+}
+function _procCodigoSiamInput(input){
+  if(!input) return;
+  const codigo=String(input.value||'').replace(/\s+/g,'').replace(/[^0-9.-]/g,'').slice(0,50);
+  if(input.value!==codigo) input.value=codigo;
+  input.style.borderColor=_procCodigoSiamValido(codigo)?'':'var(--red)';
+}
+function _procCodigoSiamHtml(valor){
+  const codigo=_procCodigoSiam(valor);
+  return codigo?`<span style="font-size:10px;color:var(--blue);font-weight:600;white-space:nowrap">SIAM ${_sanEsc(codigo)}</span>`:'';
+}
 function _procServicoMensalIds(){
   return ['proc-serv-mensal-meses','proc-serv-mensal-valor-mensal','proc-serv-mensal-valor-global'];
 }
@@ -1042,6 +1057,7 @@ function _procCarregarServicoMensalItens(p){
   if(itens.length){
     itens.forEach(item=>procAddServicoMensalItemRow({
       descricao:item.descricao||item.item||'',
+      codigo_siam:item.codigo_siam||'',
       quantidade:item.quantidade??item.qtde??p.servico_mensal_qtd_itens??'',
       valor_unitario:item.valor_unitario??item.valorItem??p.servico_mensal_valor_item??''
     }));
@@ -1138,6 +1154,7 @@ function procAddServicoMensalItemRow(item={}){
   if(item.status_lic_atualizado_em) row.dataset.statusLicAtualizadoEm=String(item.status_lic_atualizado_em);
   row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);min-width:0;max-width:100%;box-sizing:border-box;width:100%';
   row.innerHTML=`<div><div class="form-label">Item *</div><input type="text" class="smi-desc" placeholder="Descreva o item" value="${_sanEsc(String(item.descricao||'')).replace(/"/g,'&quot;')}" oninput="procRecalcServicoMensal()" onpaste="_procColarPlanilha(event)"></div>
+    <div><div class="form-label">Código SIAM <span style="font-weight:400;color:var(--text3)">(opcional)</span></div><input type="text" class="smi-siam" maxlength="50" inputmode="numeric" placeholder="000.00001.2491-01" value="${_sanEsc(String(item.codigo_siam||'')).replace(/"/g,'&quot;')}" oninput="_procCodigoSiamInput(this)"></div>
     <div><div class="form-label">Quantidade *</div><input type="number" class="smi-qtd" min="0" step="1" placeholder="ex: 2" value="${item.quantidade??''}" oninput="procRecalcServicoMensal()" onpaste="_procColarPlanilha(event)"></div>
     <div><div class="form-label">Valor unitário *</div><input type="number" class="smi-valor" min="0" step="0.01" placeholder="ex: 1500" value="${item.valor_unitario??''}" oninput="procRecalcServicoMensal()" onpaste="_procColarPlanilha(event)"></div>
     <button type="button" class="btn-secondary" onclick="procRemoveServicoMensalItemRow(this)" title="Remover item" style="font-size:12px;padding:7px 10px;width:100%">Remover</button>`;
@@ -1162,6 +1179,7 @@ function _procLerServicoMensal(){
     const valorPeriodo=quantidade!==null&&valorUnitario!==null?quantidade*valorUnitario:null;
     const item={
       descricao:(row.querySelector('.smi-desc')?.value||'').trim(),
+      codigo_siam:_procCodigoSiam(row.querySelector('.smi-siam')?.value),
       quantidade:Number.isFinite(quantidade)?quantidade:null,
       valor_unitario:Number.isFinite(valorUnitario)?valorUnitario:null,
       valor_mensal:Number.isFinite(valorPeriodo)?valorPeriodo:null
@@ -1198,7 +1216,7 @@ function _procLerServicoMensal(){
 function _procServicoMensalValido(d){
   return !!(d.servico_mensal_itens.length && d.servico_mensal_itens.every(item=>{
     const valorPeriodo=item.valor_trimestral??item.valor_mensal;
-    return item.descricao && Number.isFinite(item.quantidade) && item.quantidade>=0 && item.valor_unitario>0 && Number.isFinite(valorPeriodo) && valorPeriodo>=0;
+    return item.descricao && _procCodigoSiamValido(item.codigo_siam) && Number.isFinite(item.quantidade) && item.quantidade>=0 && item.valor_unitario>0 && Number.isFinite(valorPeriodo) && valorPeriodo>=0;
   }) && d.servico_mensal_meses>0 && d.servico_mensal_valor_mensal>0 && d.servico_mensal_valor_global>0);
 }
 function procRecalcServicoMensal(){
@@ -1367,9 +1385,11 @@ function procAddItemRow(data,opcoes={}){
   const termDis=terminal?' disabled':'';
   div.innerHTML=`
     ${terminal?`<div style="color:var(--red);font-size:11px;font-weight:800;margin-bottom:6px">${_sanEsc(data.ocorrencia.tipo)} · pregão ${_sanEsc(data.ocorrencia.numero_pregao)} · lote ${_sanEsc(data.ocorrencia.numero_lote)} · item bloqueado definitivamente 🔒</div>`:''}
-    <div style="display:flex;gap:8px;align-items:flex-start">
+    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
       <div style="flex:1"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Descrição *${locked?' <span style="text-transform:none;letter-spacing:0">· da emenda</span>':''}</div>
         <input type="text" class="pi-desc"${roAttr} placeholder="ex: AR CONDICIONADO 12000 BTU" value="${_sanEsc(String(data.descricao||'')).replace(/"/g,'&quot;')}" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
+      <div style="flex:0 1 200px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Código SIAM <span style="text-transform:none;letter-spacing:0">(opcional)</span></div>
+        <input type="text" class="pi-siam"${termDis} maxlength="50" inputmode="numeric" placeholder="000.00001.2491-01" value="${_sanEsc(String(data.codigo_siam||'')).replace(/"/g,'&quot;')}" oninput="_procCodigoSiamInput(this)" style="${inp}"></div>
       ${terminal?'':`<button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>`}
     </div>
     <div style="display:grid;grid-template-columns:90px 130px 100px 1fr;gap:8px;margin-top:6px">
@@ -1490,7 +1510,7 @@ async function _carregarProcItens(processoId){
     ]);
     const ocorrenciaPorItem=Object.fromEntries((ocorrencias||[]).map(o=>[String(o.item_id),o]));
     (data||[]).forEach(it=>{ if(it.emenda_id&&!ocorrenciaPorItem[String(it.id)]){ const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0; _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor; } });
-    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); procAddItemRow({id:it.id, descricao:it.descricao, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
+    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); procAddItemRow({id:it.id, descricao:it.descricao, codigo_siam:it.codigo_siam, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
   }
   _renderProcItensVazio();
   _recalcProcValorEstimado();
@@ -1508,6 +1528,7 @@ async function _persistProcItens(processoId, natureza){
     }
     const g=cl=>c.querySelector('.'+cl);
     const descricao=(g('pi-desc').value||'').trim();
+    const codigoSiam=_procCodigoSiam(g('pi-siam')?.value);
     const qtde=parseFloat(g('pi-qtde').value);
     const fonte_tipo=g('pi-fonte').value;
     const prazoNumero=Number(g('pi-prazo')?.value);
@@ -1520,6 +1541,7 @@ async function _persistProcItens(processoId, natureza){
       if(!descricao||!qtde||!fonte_tipo) throw new Error('Cada item precisa de descrição, quantidade e fonte de recurso.');
     }
     if(!ehDemanda&&!prazoEntrega) throw new Error(`O prazo de entrega do item "${descricao||'sem descrição'}" é obrigatório e deve ser maior que zero.`);
+    if(!_procCodigoSiamValido(codigoSiam)) throw new Error(`O Código SIAM do item "${descricao||'sem descrição'}" deve conter somente números, pontos e hífen.`);
     let emenda_id=null, emenda_item_id=null, fonte_descricao=null;
     if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){
       emenda_id=c.dataset.emendaId||null;
@@ -1529,7 +1551,7 @@ async function _persistProcItens(processoId, natureza){
     else if(!ehAta && !ehDemanda){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     current.push({id:c.dataset.itemId||null, row:{
       processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
-      grupo_item_id:c.dataset.grupo||null, descricao, qtde,
+      grupo_item_id:c.dataset.grupo||null, descricao, codigo_siam:codigoSiam, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
       prazo_entrega_dias:ehDemanda?null:prazoEntrega,
       unidade_destino_id:(!ehAta && !ehDemanda && g('pi-unidade').value)?Number(g('pi-unidade').value):null,

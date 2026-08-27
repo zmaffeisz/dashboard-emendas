@@ -115,6 +115,7 @@ Itens de uma ATA de registro de preços (fonte de verdade da execução das atas
 |---|---|---|
 | `id` | uuid (PK) | |
 | `contrato_id` | FK → `contratos.id` | ATA pai (na matriz de contratos) |
+| `codigo_siam` | text, nullable | código do item/serviço no catálogo interno SIAM |
 | `qtde_contratada` | numeric | |
 | `valor_unit` | numeric | **valor monetário** |
 | `status_contrato` | text | |
@@ -163,6 +164,7 @@ Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → en
 | `ata_item_id` | FK → `atas_itens.id` | origem na ata (espelhamento) |
 | `contrato_id` | FK → `contratos.id` | |
 | `processo_id` | FK → `processos.id` | |
+| `codigo_siam` | text, nullable | código do item/serviço no catálogo interno SIAM |
 | `fornecedor_id` | FK → `fornecedores.id` | |
 | `item_origem_id` | FK → `itens.id` (auto) | divisão/troca marca-modelo |
 | `status_lic_id` | FK → `status_opcoes.id` | status de licitação por item |

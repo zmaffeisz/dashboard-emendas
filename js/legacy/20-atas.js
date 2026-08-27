@@ -110,6 +110,7 @@ async function loadAtas(){
       cpl:(contrato.cpl||"").trim(),
       sim:(contrato.numero_contrato||"").trim(),
       item:(r.item||"").trim(),
+      codigo_siam:(r.codigo_siam||"").trim(),
       marca:(r.marca_modelo||"").trim(),
       qtde_contratada:Number(r.qtde_contratada)||0,
       valor_unit_original:Number(r.valor_unit)||0,
@@ -142,6 +143,7 @@ async function loadAtas(){
       cpl:ata.cpl,
       sim:ata.sim,
       item:ata.item,
+      codigo_siam:ata.codigo_siam,
       // A execução preserva a marca vigente no momento do pedido. Apostilamentos
       // atualizam esta fotografia somente enquanto o recebimento não ocorreu.
       marca_modelo:(r.marca_modelo||ata.marca||'').trim(),
@@ -396,12 +398,12 @@ function clearAllAtas(){
 }
 
 function _ataBuscaItemTexto(r){
-  return [r.item,r.marca,r.cpl,r.sim,r.empresa,r.status].filter(Boolean).join(' ');
+  return [r.item,r.codigo_siam,r.marca,r.cpl,r.sim,r.empresa,r.status].filter(Boolean).join(' ');
 }
 
 function _ataBuscaExecTexto(r){
   return [
-    r.item,r.marca_modelo,r.cpl,r.sim,r.empresa,r.unidade,
+    r.item,r.codigo_siam,r.marca_modelo,r.cpl,r.sim,r.empresa,r.unidade,
     r.codigo_siam_secretaria,r.email_solicitante,_ataOrigemRecursoLabel(r.origem_recurso),
     r.empenho,r.nf,r.af_numero,r.data_af,r.dt_entrega,r.prev_entrega
   ].filter(Boolean).join(' ');
@@ -472,8 +474,8 @@ function filtrarAtas(){
     return`<tr>
       <td style="font-size:11px;white-space:nowrap">${r.cpl}</td>
       <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
-      <td class="td-trunc" title="${r.item}" style="max-width:220px">
-        ${r.item}
+      <td class="td-trunc" title="${_sanEsc(r.item)}${r.codigo_siam?' · SIAM '+_sanEsc(r.codigo_siam):''}" style="max-width:220px">
+        ${_sanEsc(r.item)}${r.codigo_siam?`<div style="font-size:10px;color:var(--blue);font-weight:600">SIAM ${_sanEsc(r.codigo_siam)}</div>`:''}
         ${r.ata_renovada?`<div style="margin-top:4px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);font-size:9px;white-space:nowrap" title="Esta Ata de RP já utilizou sua única renovação${r.renovada_ate?` e está vigente até ${fmtDate(r.renovada_ate)}`:''}.">✓ JÁ RENOVADA · LIMITE ATINGIDO</span></div>`:''}
       </td>
       <td style="font-size:11px">${r.marca||"—"}</td>
@@ -657,7 +659,7 @@ function _renderExecRows(execRows){
     ${_renderSancaoExecCheckbox(r)}
     <td style="font-size:11px">${_sanEsc(r.cpl)}</td>
     <td style="font-size:11px">${_sanEsc(r.sim)}</td>
-    <td class="td-trunc" style="max-width:180px" title="${_sanEsc(r.item)}">${_sanEsc(r.item)}</td>
+    <td class="td-trunc" style="max-width:180px" title="${_sanEsc(r.item)}${r.codigo_siam?' · SIAM '+_sanEsc(r.codigo_siam):''}">${_sanEsc(r.item)}${r.codigo_siam?`<div style="font-size:10px;color:var(--blue);font-weight:600">SIAM ${_sanEsc(r.codigo_siam)}</div>`:''}</td>
     <td style="font-size:12px">${_sanEsc(r.unidade)}</td>
     <td style="text-align:right">${r.qtde}</td>
     <td style="text-align:right;font-size:11px">${r.valor?fmtFull(r.valor):"—"}</td>
@@ -1756,9 +1758,9 @@ function togglePendentes(){
 // ═══ EXPORTAR EXCEL ═══
 async function exportarAtas(){
   await ensureLib('xlsx');
-  const colunas=["CPL","SIM","ITEM","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
+  const colunas=["CPL","SIM","CODIGO_SIAM","ITEM","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
   const rows=window._ataRowsFiltered||atasItens;
-  const dados=rows.map(r=>[r.cpl,r.sim,r.item,r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
+  const dados=rows.map(r=>[r.cpl,r.sim,r.codigo_siam||'',r.item,r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   const wb={SheetNames:["ATAs"],Sheets:{ATAs:ws}};
   XLSX.writeFile(wb,"atas_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");
@@ -1766,9 +1768,9 @@ async function exportarAtas(){
 
 async function exportarExecs(){
   await ensureLib('xlsx');
-  const colunas=["CPL","SIM","ITEM","UNIDADE","QTDE","VALOR","EMPENHO","DATA_AF","PREV_ENTREGA","DT_ENTREGA","NF"];
+  const colunas=["CPL","SIM","CODIGO_SIAM","ITEM","UNIDADE","QTDE","VALOR","EMPENHO","DATA_AF","PREV_ENTREGA","DT_ENTREGA","NF"];
   const rows=window._execRowsFiltered||atasExec;
-  const dados=rows.map(r=>[r.cpl,r.sim,r.item,r.unidade,r.qtde,r.valor,r.empenho,r.data_af,r.prev_entrega,r.dt_entrega,r.nf]);
+  const dados=rows.map(r=>[r.cpl,r.sim,r.codigo_siam||'',r.item,r.unidade,r.qtde,r.valor,r.empenho,r.data_af,r.prev_entrega,r.dt_entrega,r.nf]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   const wb={SheetNames:["Execucoes"],Sheets:{Execucoes:ws}};
   XLSX.writeFile(wb,"execucoes_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");

@@ -4037,6 +4037,7 @@ function _ncMetaItemContrato(it){
   const fonteBase=it.fonte_tipo==='emenda'&&emendaCompleta?`Emenda ${_sanEsc(emendaCompleta)}`:_itemFonteLabel(it.fonte_tipo);
   const fonte=fonteBase+(it.fonte_descricao?(' · '+_sanEsc(it.fonte_descricao)):'');
   return [
+    (it.codigo_siam?('SIAM '+_sanEsc(it.codigo_siam)):null),
     (it.qtde!=null?('qtde '+it.qtde):null),
     (it.valor_estimado!=null?('un. est. '+fmtFull(it.valor_estimado)):null),
     fonte,
@@ -4138,7 +4139,7 @@ async function _ncCarregarItensProcesso(processoId){
   lista.innerHTML='<div style="font-size:12px;color:var(--text3)"><span class="spinner"></span> Carregando itens...</div>';
   const [{data,error},{data:ocorrencias,error:erroOcorrencias}]=await Promise.all([
     sb.from('itens')
-      .select('id,descricao,qtde,valor_estimado,valor_contratado,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,grupo_item_id,unidade_destino_id,prazo_entrega_dias,processo_id,origem,marca,modelo,status,contrato_id,unidades(nome),emendas(emenda,ano)')
+      .select('id,descricao,codigo_siam,qtde,valor_estimado,valor_contratado,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,grupo_item_id,unidade_destino_id,prazo_entrega_dias,processo_id,origem,marca,modelo,status,contrato_id,unidades(nome),emendas(emenda,ano)')
       .eq('processo_id',processoId).order('created_at'),
     sb.from('licitacao_item_ocorrencias').select('item_id,tipo,numero_lote').eq('processo_id',processoId)
   ]);
@@ -4306,6 +4307,7 @@ async function _ncVincularItens(contratoId, fornecedorId){
       processo_id:procAtual.id||null,
       origem:servTrimestral?'servico_trimestral':'servico_mensal',
       descricao:svc.descricao||'(sem descrição)',
+      codigo_siam:(typeof _procCodigoSiam==='function'?_procCodigoSiam(svc.codigo_siam):String(svc.codigo_siam||'').trim()||null),
       qtde:Number.isFinite(qtd)?qtd:null,
       valor_estimado:unit,
       contrato_id:marcado?contratoId:null,
@@ -4338,7 +4340,7 @@ async function _ncVincularItens(contratoId, fornecedorId){
         processo_id:base.processo_id, origem:base.origem||'aquisicao', fonte_tipo:base.fonte_tipo,
         fonte_descricao:base.fonte_descricao, emenda_id:base.emenda_id, emenda_item_id:base.emenda_item_id,
         grupo_item_id:base.grupo_item_id, unidade_destino_id:base.unidade_destino_id,
-        prazo_entrega_dias:base.prazo_entrega_dias, descricao:base.descricao, valor_estimado:base.valor_estimado,
+        prazo_entrega_dias:base.prazo_entrega_dias, descricao:base.descricao, codigo_siam:base.codigo_siam||null, valor_estimado:base.valor_estimado,
         qtde:qc, contrato_id:contratoId, fornecedor_id:fornecedorId||null, valor_contratado:valor,
         marca, modelo, status:'contratado', item_origem_id:id
       };
@@ -4360,14 +4362,14 @@ async function _ncVincularItens(contratoId, fornecedorId){
 // reaproveita atas_itens órfãos de criação parcial. Retorna nº de itens espelhados.
 async function _ncEspelharAta(contratoId){
   const {data:itens,error}=await sb.from('itens')
-    .select('id,descricao,qtde,valor_contratado,valor_estimado,prazo_entrega_dias,marca,modelo,ata_item_id')
+    .select('id,descricao,codigo_siam,qtde,valor_contratado,valor_estimado,prazo_entrega_dias,marca,modelo,ata_item_id')
     .eq('contrato_id',contratoId).eq('origem','ata');
   if(error) throw error;
   const pendentes=(itens||[]).filter(it=>!it.ata_item_id);
   if(!pendentes.length) return 0;
   // Idempotência: atas_itens já existentes neste contrato e quais já estão referenciados
   const {data:existentes,error:eEx}=await sb.from('atas_itens')
-    .select('id,item,qtde_contratada').eq('contrato_id',contratoId);
+    .select('id,item,codigo_siam,qtde_contratada').eq('contrato_id',contratoId);
   if(eEx) throw eEx;
   const jaReferenciados=new Set((itens||[]).map(it=>it.ata_item_id).filter(Boolean).map(String));
   const reutilizaveis=(existentes||[]).filter(a=>!jaReferenciados.has(String(a.id)));
@@ -4377,10 +4379,11 @@ async function _ncEspelharAta(contratoId){
     const qtd=(it.qtde!=null?Number(it.qtde):0);
     // recuperação de criação parcial: reaproveita atas_itens órfão equivalente
     let alvoId=null;
-    const idx=reutilizaveis.findIndex(a=>(a.item||'').trim()===desc && Number(a.qtde_contratada||0)===qtd);
+    const codigoSiam=String(it.codigo_siam||'').trim();
+    const idx=reutilizaveis.findIndex(a=>(a.item||'').trim()===desc && String(a.codigo_siam||'').trim()===codigoSiam && Number(a.qtde_contratada||0)===qtd);
     if(idx>=0){ alvoId=reutilizaveis[idx].id; reutilizaveis.splice(idx,1); }
     if(!alvoId){
-      const dados={contrato_id:contratoId,item:desc,marca_modelo:[it.marca,it.modelo].filter(Boolean).join(' ').trim(),
+      const dados={contrato_id:contratoId,item:desc,codigo_siam:codigoSiam||null,marca_modelo:[it.marca,it.modelo].filter(Boolean).join(' ').trim(),
         qtde_contratada:qtd,
         valor_unit:(it.valor_contratado!=null?Number(it.valor_contratado):(it.valor_estimado!=null?Number(it.valor_estimado):0)),
         prazo_entrega:(it.prazo_entrega_dias!=null?Number(it.prazo_entrega_dias):null)};
