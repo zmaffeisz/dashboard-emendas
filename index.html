@@ -1265,7 +1265,7 @@
     </div>
     <input type="hidden" id="emp-id">
     <div class="form-grid" style="grid-template-columns:1fr 100px 1fr">
-      <div class="form-group"><div class="form-label">Número do empenho *</div><input type="text" id="emp-numero" placeholder="ex: 10296/2026"></div>
+      <div class="form-group"><div class="form-label">Número do empenho *</div><input type="text" id="emp-numero" placeholder="ex: 10926" inputmode="numeric" maxlength="5" pattern="[0-9]{1,5}" oninput="normalizarNumeroEmpenho(this)"></div>
       <div class="form-group"><div class="form-label">Ano</div><input type="number" id="emp-ano" min="2000" step="1"></div>
       <div class="form-group"><div class="form-label">Número da despesa</div><input type="text" id="emp-despesa" placeholder="ex: 3.3.90.30"></div>
     </div>
@@ -3198,7 +3198,7 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260825-localizacao-apos-entrega-1"></script>
 <script src="js/legacy/20-atas.js?v=20260827-origem-execucao-obrigatoria-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260827-hierarquia-org-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260825-controle-colunas-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260827-validacao-numero-empenho-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260827-hierarquia-org-1"></script>

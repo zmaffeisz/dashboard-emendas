@@ -2,6 +2,8 @@
 
 ## Em desenvolvimento
 
+- **Empenhos:** o ano não é mais preenchido automaticamente; o número aceita somente
+  até cinco dígitos, sem barra ou ano embutido.
 - **Atas — nova solicitação:** a origem do recurso deixa de vir marcada por padrão e
   passa a ser uma escolha obrigatória antes de salvar.
 - **Contratos — fornecedor:** removida a exibição indevida do seletor técnico duplicado;

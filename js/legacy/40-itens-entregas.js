@@ -463,7 +463,7 @@ async function abrirModalEmpenho(id){
   document.getElementById('emp-modal-titulo').textContent=e?'Editar empenho':'Novo empenho';
   document.getElementById('emp-id').value=e?e.id:'';
   document.getElementById('emp-numero').value=e?.numero||'';
-  document.getElementById('emp-ano').value=e?.ano||new Date().getFullYear();
+  document.getElementById('emp-ano').value=e?.ano??'';
   document.getElementById('emp-despesa').value=e?.numero_despesa||'';
   document.getElementById('emp-fonte-tipo').value=e?.fonte_tipo||'';
   document.getElementById('emp-fonte-desc').value=e?.fonte_descricao||'';
@@ -479,6 +479,10 @@ async function abrirModalEmpenho(id){
   },{}):{};
   await _empContratoChange(prev);
   document.getElementById('modal-empenho').classList.add('active');
+}
+function normalizarNumeroEmpenho(el){
+  if(!el) return;
+  el.value=String(el.value||'').replace(/\D/g,'').slice(0,5);
 }
 async function _empContratoChange(prev){
   const wrap=document.getElementById('emp-itens-wrap');
@@ -575,7 +579,7 @@ async function salvarEmpenho(){
   const msg=document.getElementById('emp-msg'); msg.className='fmsg';
   const numero=document.getElementById('emp-numero').value.trim();
   const valor=_empNum('emp-valor');
-  if(!numero){ msg.textContent='Informe o número do empenho.'; msg.classList.add('err'); return; }
+  if(!/^\d{1,5}$/.test(numero)){ msg.textContent='Informe somente o número do empenho, com até 5 dígitos.'; msg.classList.add('err'); return; }
   if(valor==null){ msg.textContent='Informe o valor do empenho.'; msg.classList.add('err'); return; }
   const _cidVal=document.getElementById('emp-contrato').value;
   if(!_cidVal){ msg.textContent='Selecione um contrato.'; msg.classList.add('err'); return; }
