@@ -2,6 +2,8 @@
 
 ## Em desenvolvimento
 
+- **Contratos — fornecedor:** removida a exibição indevida do seletor técnico duplicado;
+  permanece somente o campo pesquisável de empresa e o botão de cadastro.
 - **Hierarquia organizacional por divisão e seção:** o sistema agora cadastra Divisões
   separadamente e vincula cada Seção a uma divisão. DAG reúne SAC, SACON, SECOMP, SMCP e
   SUEQ - EQUIP; DMMHF reúne MJ, SAMA, SEAP e SEMED. Chefias acessam e editam, conforme as
