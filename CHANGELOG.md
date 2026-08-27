@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Inventário sem duplicação no recebimento em lote:** bens permanentes com patrimônio
+  passam a preencher as unidades físicas já materializadas pelo banco, sem criar uma linha
+  vazia adicional. As 24 unidades vazias geradas pelo conflito anterior foram removidas,
+  preservando as 24 unidades identificadas e seus patrimônios.
+
 - **Código SIAM por item:** itens de aquisição, ATA, material de consumo e serviços agora
   aceitam o código opcional do catálogo interno já na geração da licitação. O código é
   preservado na contratação, no espelhamento dos itens de ATA, nas buscas e nas exportações.

@@ -113,7 +113,7 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `registrar_reajuste_item_ata(...)` | item, vigência, percentual, novo valor e observação | Registra uma versão de preço do item sem sobrescrever o valor original. |
 | `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
 | `registrar_movimentacao_inventario(...)` | unidade física, tipo, data, destino/responsáveis e documento | Acrescenta o evento e atualiza atomicamente o estado corrente do item. |
-| `registrar_recebimento_aquisicao_lote(...)` | nota e itens em JSONB | Valida/classifica o tipo de material e grava atomicamente NF, rateios e recebimentos. |
+| `registrar_recebimento_aquisicao_lote(...)` | nota e itens em JSONB | Valida/classifica o tipo de material e grava atomicamente NF, rateios e recebimentos; bens permanentes preenchem por `upsert` as sequências físicas materializadas pelo trigger, sem duplicá-las. |
 | `_sync_entrega_agregado()` | trigger | Mantém `itens_entregas.patrimonio/numero_serie` agregados a partir de `itens_entregas_unidades`. |
 | `_validar_classificacao_recebimento()` | trigger | Exige `PERMANENTE`/`CONSUMO`, restringe patrimônio a permanentes e impede fluxo de unidade para consumo. |
 | `_unidade_key(p text)` | | Normalização de chave de unidade. |

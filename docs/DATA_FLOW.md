@@ -65,7 +65,9 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    - Para ATA RP, o contrato gerado exige número apenas numérico, data de início e seção.
    - A execução/solicitação de ATA originada de Emenda só pode usar `emenda_item_id` ainda
      livre; item já vinculado fica bloqueado na seleção e também é barrado no salvamento.
-3. **Trigger de agregação** — `itens_entregas_unidades` → `_sync_entrega_agregado()`
+3. **Trigger de agregação** — `itens_entregas_unidades` → `_sync_entrega_agregado()`.
+   No recebimento em lote, as unidades com patrimônio preenchem por `upsert` as sequências
+   físicas já materializadas pelo recebimento pai; nunca são acrescentadas depois delas.
    atualiza `itens_entregas.patrimonio/numero_serie` sem duplicar dado.
 4. **Emendas como painel consolidado** — a aba Emendas lê o item cadastrado e agrega o
    fluxo de `itens`, `itens_entregas`, `itens_entregas_unidades`, `empenho_itens` e
