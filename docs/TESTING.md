@@ -51,10 +51,12 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
       continua visível nas execuções e na confirmação, mas não aparece na aba **Inventário**
       e não possui linha em `inventario_unidades`.
 - [ ] Registrar recebimento/NF quando aplicável (aba **Controle de Entregas**).
-- [ ] Recebimento por unidade física (`itens_entregas_unidades`): patrimônio/série por
-      unidade.
-- [ ] Recebimento sem patrimônio/série: ainda assim gerar uma linha física por unidade,
-      sempre com quantidade 1, tanto em Aquisições quanto em ATAs.
+- [ ] Recebimento de **bem permanente**: perguntar se possui patrimônio e gerar uma linha
+      física por unidade em `itens_entregas_unidades`/`atas_execucao_unidades`, sempre com
+      quantidade 1, mesmo quando patrimônio/série estiverem vazios.
+- [ ] Recebimento de **material de consumo**: ocultar patrimônio, não criar unidades físicas,
+      não listar em **Confirmação de Entrega na Unidade** nem no Inventário e manter a
+      quantidade aglutinada no registro pai.
 - [ ] Inventário legado: nenhuma linha pode representar quantidade maior que 1; conferir
       que execuções históricas foram expandidas pela quantidade recebida.
 - [ ] Transferir uma unidade física com termo: o Inventário deve mostrar a nova localização,

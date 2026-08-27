@@ -320,7 +320,11 @@
   com edição na aba podem acrescentar anotações, mas somente administradores aprovados
   podem editar uma anotação existente. Não há exclusão pela aplicação, e o recebimento do
   item não limpa mais esse histórico.
-- A subaba **Confirmação de Entrega na Unidade** lista apenas aquisições que já passaram
+- No recebimento administrativo, o usuário classifica obrigatoriamente o item como **Bem
+  permanente** ou **Material de consumo**. Somente para permanente aparece a pergunta
+  **Possui patrimônio?**. Permanentes geram uma linha física por unidade, mesmo quando ainda
+  não têm número patrimonial; consumos permanecem aglutinados na quantidade do registro pai.
+- A subaba **Confirmação de Entrega na Unidade** lista apenas bens permanentes que já passaram
   pelo recebimento interno (`qtde_recebida > 0` ou `data_recebimento` preenchida). O
   empenho exibido pode vir da entrega ou ser herdado de `empenho_itens`/`empenhos` pelo
   item/contrato.
@@ -354,12 +358,14 @@
   `atas_execucao_unidades` para preservar NF, quantidade e rastreabilidade operacional,
   mas não cria `inventario_unidades`, não aparece na aba **Inventário** e não admite
   transferência, empréstimo, devolução ou baixa pelo sistema da Saúde.
-- **Nascimento da unidade física:** quantidades agregadas são permitidas durante
+- **Nascimento da unidade física permanente:** quantidades agregadas são permitidas durante
   planejamento, licitação, contratação, solicitação de ATA, AF e execução ainda não
   recebida. No recebimento com NF, cada unidade nasce como uma linha independente em
   `itens_entregas_unidades` ou `atas_execucao_unidades`, sempre com quantidade 1.
-  Patrimônio e número de série são atributos opcionais: sua ausência nunca mantém o item
-  consolidado. O registro pai preserva a quantidade e o histórico do lote/pedido.
+  Patrimônio e número de série são atributos opcionais: sua ausência nunca mantém um bem
+  permanente consolidado. Materiais de consumo não criam essas linhas, não entram no
+  Inventário e são concluídos no recebimento administrativo pelo almoxarifado. O registro
+  pai preserva a quantidade e o histórico do lote/pedido.
 - **Vida posterior da unidade física:** transferência, empréstimo, devolução e baixa nunca
   alteram nem apagam o recebimento original. Cada operação exige termo/documento, acrescenta
   uma linha imutável em `inventario_movimentacoes` e atualiza somente a localização/situação

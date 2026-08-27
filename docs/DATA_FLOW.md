@@ -110,10 +110,11 @@ respeitam a RLS da sessão autenticada.
 5. **Recebimento e confirmação** — o recebimento pela Secretaria fica em
    `itens_entregas.data_recebimento` (ou `atas_execucao.dt_entrega`) e a confirmação da
    entrega na unidade fica separadamente em `data_entrega_unidade`. A AF, o recebimento e a
-   entrega na unidade são três marcos distintos. O recebimento também cria uma linha por
-   unidade física em `itens_entregas_unidades` ou
-   `atas_execucao_unidades`, inclusive quando patrimônio/série estiverem vazios. A
-   quantidade agregada permanece apenas no registro pai. A **NF** é cadastrada **uma vez** em
+   entrega na unidade são três marcos distintos para bens permanentes. No recebimento, o
+   usuário classifica o item: **PERMANENTE** cria uma linha por unidade física em
+   `itens_entregas_unidades` ou `atas_execucao_unidades`, inclusive quando patrimônio/série
+   estiverem vazios; **CONSUMO** permanece aglutinado no registro pai e encerra o fluxo no
+   almoxarifado, sem confirmação na unidade. A **NF** é cadastrada **uma vez** em
    `notas_fiscais` (valor total) e rateada em `nota_fiscal_itens`.
 6. **Emendas** — a aba Emendas reflete o estágio atual do item: aguardando AF, AF emitida,
    recebido aguardando confirmação, ou adquirido/entregue na unidade.

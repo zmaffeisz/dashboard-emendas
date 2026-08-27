@@ -119,7 +119,7 @@ Itens de uma ATA de registro de preços (fonte de verdade da execução das atas
 | `valor_unit` | numeric | **valor monetário** |
 | `status_contrato` | text | |
 
-### `atas_execucao` (24 colunas)
+### `atas_execucao`
 Execução/entrega por item de ata, por unidade (AF, NF, datas, termo).
 
 | Campo | Tipo | Observação |
@@ -132,6 +132,7 @@ Execução/entrega por item de ata, por unidade (AF, NF, datas, termo).
 | `af_numero` | text | nº da Autorização de Fornecimento da ATA (migration `atas_execucao_af_numero`) |
 | `data_af`, `prev_entrega`, `dt_entrega` | text | datas da AF/entrega |
 | `empenho`, `nf` | text | nº de empenho / nota fiscal |
+| `tipo_material` | text | `PERMANENTE`, `CONSUMO` ou `null` no histórico não classificado |
 | `origem_recurso` | text | `emenda`, `recurso_proprio` ou `carona` |
 | `codigo_siam_secretaria` | text | Código da secretaria no SIAM; preenchido somente para `carona` |
 | `email_solicitante` | text | E-mail de contato obrigatório do solicitante; preenchido somente para `carona` |
@@ -169,7 +170,7 @@ Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → en
 | `qtde` | numeric | |
 | `valor_estimado`, `valor_contratado` | numeric | **valores monetários** |
 
-### `itens_entregas` (25 colunas)
+### `itens_entregas`
 Autorização de Fornecimento (AF) / recebimento agregado por item.
 
 | Campo | Tipo | Observação |
@@ -180,6 +181,7 @@ Autorização de Fornecimento (AF) / recebimento agregado por item.
 | `nota_fiscal_id` | FK → `notas_fiscais.id` | |
 | `af_numero`, `af_data`, `data_limite_entrega` | — | AF |
 | `qtde_autorizada`, `qtde_recebida` | numeric | |
+| `tipo_material` | text | `PERMANENTE`, `CONSUMO` ou `null` no histórico não classificado |
 | `patrimonio`, `numero_serie` | text | **agregado/legado** (preenchido por trigger a partir de `itens_entregas_unidades`) |
 | `status` | text | |
 
@@ -188,8 +190,9 @@ confirmação de entrega na unidade. Linhas com `af_numero` alimentam a subaba
 **Confirmação de Entrega na Unidade** e o painel consolidado de **Emendas**.
 
 ### `itens_entregas_unidades` (15 colunas)
-**Uma linha por unidade física recebida, sempre com quantidade 1.** Patrimônio e número
-de série são opcionais e não condicionam a criação da linha. Referencia a NF **sem
+**Uma linha por unidade física de bem permanente recebido, sempre com quantidade 1.**
+Materiais de consumo não entram nesta tabela. Patrimônio e número de série são opcionais
+e não condicionam a criação da linha permanente. Referencia a NF **sem
 armazenar valor** (evita duplicidade).
 
 | Campo | Tipo | Observação |

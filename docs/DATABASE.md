@@ -112,7 +112,9 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `registrar_reajuste_item_ata(...)` | item, vigência, percentual, novo valor e observação | Registra uma versão de preço do item sem sobrescrever o valor original. |
 | `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
 | `registrar_movimentacao_inventario(...)` | unidade física, tipo, data, destino/responsáveis e documento | Acrescenta o evento e atualiza atomicamente o estado corrente do item. |
+| `registrar_recebimento_aquisicao_lote(...)` | nota e itens em JSONB | Valida/classifica o tipo de material e grava atomicamente NF, rateios e recebimentos. |
 | `_sync_entrega_agregado()` | trigger | Mantém `itens_entregas.patrimonio/numero_serie` agregados a partir de `itens_entregas_unidades`. |
+| `_validar_classificacao_recebimento()` | trigger | Exige `PERMANENTE`/`CONSUMO`, restringe patrimônio a permanentes e impede fluxo de unidade para consumo. |
 | `_unidade_key(p text)` | | Normalização de chave de unidade. |
 
 ### `can_access_tab` (autorização)
@@ -138,6 +140,9 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 - **`trg_sincronizar_inventario_unidade_*`** cria/atualiza o estado inicial quando uma
   unidade física nasce em aquisição ou ATA. **`trg_proteger_inventario_*`** bloqueia
   alteração direta do estado e do histórico fora do RPC transacional.
+- **`trg_materializar_unidades_*`** cria linhas físicas somente quando `tipo_material =
+  'PERMANENTE'`; **`trg_bloquear_unidade_fisica_consumo`** rejeita inserção direta de
+  unidades para materiais de consumo.
 - Demais relações usam FK padrão (ver lista completa §7).
 
 ## 6. RLS (Row Level Security) {#rls}

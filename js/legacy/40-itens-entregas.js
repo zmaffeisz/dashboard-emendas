@@ -1285,7 +1285,7 @@ async function loadItensEntregas(){
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
   const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,tipo_material,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs')
     .order('af_data',{ascending:false});
   if(e1b) console.warn('AF base:',e1b.message);
   const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
@@ -1337,7 +1337,7 @@ async function loadItensEntregas(){
       prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
       prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
       data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
-      recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
+      recebimento_tipo:r.recebimento_tipo||'', tipo_material:r.tipo_material||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,
       empenho:r.empenhos?.numero?`${r.empenhos.numero}${r.empenhos.ano?('/'+r.empenhos.ano):''}`:(r.empenho||empAqPorItem[String(r.item_id)]?.label||''),
       nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
@@ -1406,7 +1406,7 @@ async function loadItensEntregas(){
       prazoOriginalISO:(r.prazo_entrega_dias||ai.prazo_entrega)!=null?_addDiasISO(_toISODate(r.data_af),Number(r.prazo_entrega_dias||ai.prazo_entrega)):'',
       prazosHistorico:_prazosPorExec[String(r.id)]||[],
       valor_item:(Number(r.valor)&&Number(r.qtde))?(Number(r.valor)/Number(r.qtde)):(Number(ai.valor_unit)||0),
-      nota_fiscal:r.nf||emInfo.nota_fiscal||'', possui_patrimonio:r.possui_patrimonio, patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta, controle_obs:r.controle_obs||'',
+      nota_fiscal:r.nf||emInfo.nota_fiscal||'', tipo_material:r.tipo_material||'', possui_patrimonio:r.possui_patrimonio, patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta, controle_obs:r.controle_obs||'',
       empenho_vinculado:!!empAta,
       _ataPendenteAF:pendenteAF,
       status:pendenteAF?'aguardando AF':_prazoStatus(limiteISO,recebido,false)
@@ -1472,7 +1472,7 @@ async function loadItensEntregas(){
         prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
         prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
         data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
-        recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
+        recebimento_tipo:r.recebimento_tipo||'', tipo_material:r.tipo_material||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
         empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
         nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.nota_fiscal||'',
         nf_dataISO:_toISODate(r.nf_data),
@@ -1521,14 +1521,14 @@ async function loadItensEntregas(){
       prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
       prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
-      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',tipo_material:r.tipo_material||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   // RESGATE FINAL: query direta sem joins. Se RLS bloqueou o SELECT com joins
   // aninhados mas o INSERT passou, esta query resgata os registros órfãos.
   const _outIds2=new Set(out.map(r=>r.entrega_id).filter(Boolean));
   const {data:_resgate}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,possui_patrimonio,patrimonio,numero_serie,controle_obs')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,tipo_material,possui_patrimonio,patrimonio,numero_serie,controle_obs')
     .not('af_numero','is',null).neq('status','cancelada').order('af_data',{ascending:false});
   if(_resgate) _resgate.forEach(r=>{
     if(_outIds2.has(String(r.id))) return;
@@ -1545,7 +1545,7 @@ async function loadItensEntregas(){
       prazoOriginalISO:it.prazo_entrega_dias!=null?_addDiasISO(_toISODate(r.af_data),Number(it.prazo_entrega_dias)):'',
       prazosHistorico:_prazosPorEntrega[String(r.id)]||[],
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
-      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',tipo_material:r.tipo_material||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   entregasRows=out;
@@ -2554,6 +2554,7 @@ function verRecebimento(entregaId){
     ['Qtde recebida', r.qtde_recebida],
     ['Empenho', r.empenho],
     ['Nota fiscal', r.nota_fiscal],
+    ['Tipo do material', r.tipo_material==='PERMANENTE'?'Bem permanente':(r.tipo_material==='CONSUMO'?'Material de consumo':'Não informado')],
     ['Possui patrimônio', r.possui_patrimonio===true?'Sim':(r.possui_patrimonio===false?'Não':'Não informado')],
     ['Patrimônio', r.patrimonio],
     ['Número de série', r.numero_serie],
@@ -2568,6 +2569,33 @@ function verRecebimento(entregaId){
 function _recPossuiPatrimonio(){
   return document.querySelector('input[name="rec-possui-patrimonio"]:checked')?.value||'';
 }
+function _recTipoMaterial(){
+  return document.querySelector('input[name="rec-tipo-material"]:checked')?.value||'';
+}
+function _recDefinirTipoMaterial(valor, bloqueado){
+  document.querySelectorAll('input[name="rec-tipo-material"]').forEach(el=>{
+    el.checked=valor===el.value;
+    el.disabled=!!bloqueado;
+  });
+  window._recTipoMaterialBloqueado=!!bloqueado;
+  _recToggleTipoMaterial();
+}
+function _recToggleTipoMaterial(){
+  const tipo=_recTipoMaterial();
+  const permanente=tipo==='PERMANENTE';
+  const grupo=document.getElementById('rec-patrimonio-grupo');
+  if(grupo) grupo.style.display=permanente?'block':'none';
+  const ajuda=document.getElementById('rec-tipo-material-ajuda');
+  if(ajuda) ajuda.textContent=!tipo
+    ?'Selecione uma opção para definir o fluxo do recebimento.'
+    :(permanente
+      ?'O bem será individualizado em unidades físicas e seguirá para entrega na unidade.'
+      :'O consumo será concluído neste recebimento e não seguirá para entrega na unidade.');
+  if(!permanente){
+    document.querySelectorAll('input[name="rec-possui-patrimonio"]').forEach(el=>{el.checked=false;el.disabled=false;});
+  }
+  _recTogglePatrimonio();
+}
 function _recDefinirPatrimonio(valor, bloqueado){
   document.querySelectorAll('input[name="rec-possui-patrimonio"]').forEach(el=>{
     el.checked=valor===(el.value==='sim');
@@ -2577,14 +2605,15 @@ function _recDefinirPatrimonio(valor, bloqueado){
   _recTogglePatrimonio();
 }
 function _recTogglePatrimonio(){
+  const permanente=_recTipoMaterial()==='PERMANENTE';
   const escolha=_recPossuiPatrimonio();
-  const possui=escolha==='sim';
+  const possui=permanente&&escolha==='sim';
   const auto=document.getElementById('rec-patrimonio-auto');
   const bloco=document.getElementById('rec-patrimonio-unidades');
   if(auto) auto.style.display=possui?'block':'none';
   if(bloco) bloco.style.display=possui?'block':'none';
   const ajuda=document.getElementById('rec-patrimonio-ajuda');
-  if(ajuda) ajuda.textContent=!escolha?'Selecione uma opção para continuar.':(possui?'Informe um patrimônio para cada unidade recebida.':'As unidades físicas serão criadas individualmente, mesmo sem patrimônio ou série.');
+  if(ajuda) ajuda.textContent=!escolha?'Selecione uma opção para continuar.':(possui?'Informe um patrimônio para cada unidade recebida.':'As unidades físicas serão criadas sem número patrimonial.');
   if(possui) _recRenderUnidades();
   else{
     const cont=document.getElementById('rec-unidades');
@@ -2593,7 +2622,7 @@ function _recTogglePatrimonio(){
 }
 function _recRenderUnidades(){
   const cont=document.getElementById('rec-unidades'); if(!cont) return;
-  if(_recPossuiPatrimonio()!=='sim'){ cont.innerHTML=''; return; }
+  if(_recTipoMaterial()!=='PERMANENTE'||_recPossuiPatrimonio()!=='sim'){ cont.innerHTML=''; return; }
   const n=Math.max(0,Math.floor(Number(document.getElementById('rec-qtde')?.value)||0));
   const off=Number(window._recUnidadeOffset)||0;
   // preserva o que já foi digitado
@@ -2721,6 +2750,7 @@ async function abrirRecebimento(entregaId){
   try{ const {count}=await sb.from('itens_entregas_unidades').select('id',{count:'exact',head:true}).eq('entrega_id',row.entrega_id); off=Number(count)||0; }catch(_){}
   window._recUnidadeOffset=off;
   document.getElementById('rec-pat-inicial').value='';
+  _recDefinirTipoMaterial(row.tipo_material||'', !!row.tipo_material&&(Number(row.qtde_recebida)||0)>0);
   _recDefinirPatrimonio(row.possui_patrimonio, row.possui_patrimonio!=null&&(Number(row.qtde_recebida)||0)>0);
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
   catch(e){ _recSetMsg('Erro ao carregar documentos: '+e.message,'err'); }
@@ -2759,6 +2789,7 @@ async function abrirRecebimentoAta(execId){
   _recSetMsg('');
   window._recUnidadeOffset=0;
   document.getElementById('rec-pat-inicial').value='';
+  _recDefinirTipoMaterial(row.tipo_material||'', !!row.tipo_material&&!!row.recebido);
   _recDefinirPatrimonio(row.possui_patrimonio, row.possui_patrimonio!=null&&!!row.recebido);
   _recPreencherUnidades(unidadesExistentes);
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
@@ -2882,7 +2913,10 @@ async function salvarRecebimentoAta(){
   const qtde=_recNum('rec-qtde');
   const totalAut=Number(row.qtde)||0;
   if(!qtde||qtde<=0){ _recSetMsg('Informe uma quantidade recebida maior que zero.','err'); return; }
-  if(!Number.isInteger(qtde)){ _recSetMsg('O recebimento físico exige uma quantidade inteira.','err'); return; }
+  const tipoMaterial=_recTipoMaterial();
+  if(!tipoMaterial){ _recSetMsg('Informe se o item é bem permanente ou material de consumo.','err'); return; }
+  const permanente=tipoMaterial==='PERMANENTE';
+  if(permanente&&!Number.isInteger(qtde)){ _recSetMsg('Bem permanente exige uma quantidade inteira.','err'); return; }
   if(totalAut && qtde!==totalAut){
     _recSetMsg('Recebimento de ATA deve fechar a quantidade total autorizada nesta AF.','err');
     return;
@@ -2890,8 +2924,8 @@ async function salvarRecebimentoAta(){
   const dataRec=document.getElementById('rec-data').value;
   if(!dataRec){ _recSetMsg('Informe a data do recebimento.','err'); return; }
   const escolhaPatrimonio=_recPossuiPatrimonio();
-  if(!escolhaPatrimonio){ _recSetMsg('Informe se o item possui patrimônio.','err'); return; }
-  const possuiPatrimonio=escolhaPatrimonio==='sim';
+  if(permanente&&!escolhaPatrimonio){ _recSetMsg('Informe se o bem permanente possui patrimônio.','err'); return; }
+  const possuiPatrimonio=permanente&&escolhaPatrimonio==='sim';
   const btn=document.getElementById('rec-salvar'); const label=btn.textContent;
   btn.disabled=true; btn.textContent='Salvando...'; _recSetMsg('Salvando...');
   try{
@@ -2902,10 +2936,10 @@ async function salvarRecebimentoAta(){
     const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
-    })):Array.from({length:qtde},()=>({patrimonio:'',numero_serie:''}));
+    })):[];
     const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
-    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,possui_patrimonio:possuiPatrimonio};
+    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,tipo_material:tipoMaterial,possui_patrimonio:permanente?possuiPatrimonio:null};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
     const unidadesPayload=unidades.map((u,i)=>({
@@ -2928,6 +2962,7 @@ async function salvarRecebimentoAta(){
     row.recebido=true;
     row.entregaISO=dataRec;
     row.nota_fiscal=nf.numero||row.nota_fiscal||'';
+    row.tipo_material=tipoMaterial;
     row.patrimonio=patrimonioResumo||row.patrimonio||'';
     row.empenho=empNumero;
     document.getElementById('modal-recebimento').classList.remove('active');
@@ -2953,7 +2988,10 @@ async function salvarRecebimento(){
   const qtde=_recNum('rec-qtde');
   const saldo=Number(row.saldo_af)||0;
   if(!qtde||qtde<=0){ _recSetMsg('Informe uma quantidade recebida maior que zero.','err'); return; }
-  if(!Number.isInteger(qtde)){ _recSetMsg('O recebimento físico exige uma quantidade inteira.','err'); return; }
+  const tipoMaterial=_recTipoMaterial();
+  if(!tipoMaterial){ _recSetMsg('Informe se o item é bem permanente ou material de consumo.','err'); return; }
+  const permanente=tipoMaterial==='PERMANENTE';
+  if(permanente&&!Number.isInteger(qtde)){ _recSetMsg('Bem permanente exige uma quantidade inteira.','err'); return; }
   if(qtde>saldo){
     _recSetMsg(`Quantidade recebida (${qtde}) excede o saldo da AF (${saldo}).`,'err');
     return;
@@ -2961,8 +2999,8 @@ async function salvarRecebimento(){
   const dataRec=document.getElementById('rec-data').value;
   if(!dataRec){ _recSetMsg('Informe a data do recebimento.','err'); return; }
   const escolhaPatrimonio=_recPossuiPatrimonio();
-  if(!escolhaPatrimonio){ _recSetMsg('Informe se o item possui patrimônio.','err'); return; }
-  const possuiPatrimonio=escolhaPatrimonio==='sim';
+  if(permanente&&!escolhaPatrimonio){ _recSetMsg('Informe se o bem permanente possui patrimônio.','err'); return; }
+  const possuiPatrimonio=permanente&&escolhaPatrimonio==='sim';
   const btn=document.getElementById('rec-salvar'); const label=btn.textContent;
   btn.disabled=true; btn.textContent='Salvando...'; _recSetMsg('Salvando...');
   try{
@@ -2982,10 +3020,7 @@ async function salvarRecebimento(){
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim()||null,
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()||null,
       nota_fiscal_id:nf.id||null, recebido_em:dataRec, recebido_por:recPor
-    })):Array.from({length:qtde},(_,i)=>({
-      entrega_id:entregaId,item_id:row.item_id,unidade_seq:off+i+1,quantidade:1,
-      patrimonio:null,numero_serie:null,nota_fiscal_id:nf.id||null,recebido_em:dataRec,recebido_por:recPor
-    }));
+    })):[];
     const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
     const patch={
@@ -2993,7 +3028,7 @@ async function salvarRecebimento(){
       nota_fiscal_id:nf.id, nota_fiscal:nf.numero||null, nf_data:nf.data_emissao||document.getElementById('rec-nf-data').value||null,
       qtde_recebida:totalRecebido, data_recebimento:dataRec,
       recebido_por:recPor,
-      recebimento_tipo:tipo, possui_patrimonio:possuiPatrimonio, status:tipo==='total'?'recebido':'recebido_parcial'
+      recebimento_tipo:tipo, tipo_material:tipoMaterial, possui_patrimonio:permanente?possuiPatrimonio:null, status:tipo==='total'?'recebido':'recebido_parcial'
     };
     const {error}=await sb.from('itens_entregas').update(patch).eq('id',entregaId);
     if(error) throw error;
@@ -3064,11 +3099,18 @@ async function abrirRecebimentoLote(){
   document.getElementById('recl-recebido-por').value='';
   document.getElementById('recl-nf-data').value='';
   ['recl-nf-numero','recl-nf-valor','recl-nf-obs','recl-nf-arquivo','recl-pat-inicial'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const tiposConhecidos=[...new Set(_recLoteRows.map(r=>r.tipo_material||'').filter(Boolean))];
+  if(tiposConhecidos.length>1){ if(window.toast) toast('Os itens selecionados possuem tipos de material diferentes. Separe-os em recebimentos distintos.','error'); return; }
+  const tipoMaterialEl=document.getElementById('recl-tipo-material');
+  tipoMaterialEl.value=tiposConhecidos.length===1?tiposConhecidos[0]:'';
+  tipoMaterialEl.disabled=tiposConhecidos.length===1&&_recLoteRows.some(r=>(Number(r.qtde_recebida)||0)>0);
   const conhecidos=[...new Set(_recLoteRows.map(r=>r.possui_patrimonio==null?'':(r.possui_patrimonio?'sim':'nao')).filter(Boolean))];
-  document.getElementById('recl-possui-patrimonio').value=conhecidos.length===1?conhecidos[0]:'';
+  const patrimonioEl=document.getElementById('recl-possui-patrimonio');
+  patrimonioEl.value=conhecidos.length===1?conhecidos[0]:'';
+  patrimonioEl.disabled=conhecidos.length===1&&_recLoteRows.some(r=>(Number(r.qtde_recebida)||0)>0);
   _recLoteSetMsg('');
   _recLoteRenderItens();
-  _recLoteTogglePatrimonio();
+  _recLoteToggleTipoMaterial();
   document.getElementById('modal-recebimento-lote').classList.add('active');
 }
 function _recLoteRenderItens(){
@@ -3092,7 +3134,8 @@ function _recLoteCard(entregaId){
 function _recLoteAtualizarUnidades(entregaId){
   const card=_recLoteCard(entregaId); if(!card) return;
   const wrap=card.querySelector('.recl-unidades'); if(!wrap) return;
-  const possui=document.getElementById('recl-possui-patrimonio').value==='sim';
+  const permanente=document.getElementById('recl-tipo-material').value==='PERMANENTE';
+  const possui=permanente&&document.getElementById('recl-possui-patrimonio').value==='sim';
   const antigos=[...wrap.querySelectorAll('.recl-u-row')].map(r=>({patrimonio:r.querySelector('.recl-u-patr')?.value||'',serie:r.querySelector('.recl-u-serie')?.value||''}));
   if(!possui){wrap.style.display='none';wrap.innerHTML='';_recLoteAtualizarTotalUnidades();return;}
   const qtd=Number(card.querySelector('.recl-qtde')?.value)||0;
@@ -3106,9 +3149,20 @@ function _recLoteAtualizarTotalUnidades(){
   const el=document.getElementById('recl-pat-quantidade'); if(el) el.value=total||'';
 }
 function _recLoteTogglePatrimonio(){
-  const sim=document.getElementById('recl-possui-patrimonio').value==='sim';
+  const sim=document.getElementById('recl-tipo-material').value==='PERMANENTE'&&document.getElementById('recl-possui-patrimonio').value==='sim';
   const auto=document.getElementById('recl-patrimonio-auto'); if(auto) auto.style.display=sim?'block':'none';
   _recLoteRows.forEach(r=>_recLoteAtualizarUnidades(r.entrega_id));
+}
+function _recLoteToggleTipoMaterial(){
+  const tipo=document.getElementById('recl-tipo-material').value;
+  const permanente=tipo==='PERMANENTE';
+  const grupo=document.getElementById('recl-patrimonio-grupo'); if(grupo) grupo.style.display=permanente?'block':'none';
+  const ajuda=document.getElementById('recl-tipo-material-ajuda');
+  if(ajuda) ajuda.textContent=tipo==='CONSUMO'
+    ?'O lote será concluído no recebimento administrativo, sem unidades físicas e sem entrega na unidade.'
+    :(permanente?'Os bens serão individualizados e seguirão para entrega na unidade.':'Selecione uma opção para definir o fluxo.');
+  if(!permanente) document.getElementById('recl-possui-patrimonio').value='';
+  _recLoteTogglePatrimonio();
 }
 async function _recLoteGerarSequencia(){
   const raw=document.getElementById('recl-pat-inicial').value.trim();
@@ -3134,24 +3188,27 @@ async function _recLoteValidarPatrimonios(itens){
   return existentes.length?'Patrimônio(s) já cadastrado(s): '+existentes.join(', '):null;
 }
 function _recLoteColetarItens(){
+  const tipoMaterial=document.getElementById('recl-tipo-material').value;
+  if(!tipoMaterial) throw new Error('Informe se os itens são bens permanentes ou materiais de consumo.');
+  const permanente=tipoMaterial==='PERMANENTE';
   const possui=document.getElementById('recl-possui-patrimonio').value;
-  if(!possui) throw new Error('Informe se os itens possuem patrimônio.');
+  if(permanente&&!possui) throw new Error('Informe se os bens permanentes possuem patrimônio.');
   return _recLoteRows.map(row=>{
     const card=_recLoteCard(row.entrega_id);
     const qtd=Number(card?.querySelector('.recl-qtde')?.value)||0;
     const saldo=Number(row.saldo_af)||0;
     if(qtd<=0) throw new Error(`Informe a quantidade recebida para ${row.unidade||row.item}.`);
     if(qtd>saldo) throw new Error(`A quantidade de ${row.unidade||row.item} excede o saldo da AF (${saldo}).`);
-    if(!Number.isInteger(qtd)) throw new Error(`A quantidade de ${row.unidade||row.item} deve ser inteira para gerar as unidades físicas.`);
-    const unidades=possui==='sim'?[...card.querySelectorAll('.recl-u-row')].map((el,i)=>({
+    if(permanente&&!Number.isInteger(qtd)) throw new Error(`A quantidade de ${row.unidade||row.item} deve ser inteira por se tratar de bem permanente.`);
+    const unidades=permanente&&possui==='sim'?[...card.querySelectorAll('.recl-u-row')].map((el,i)=>({
       patrimonio:(el.querySelector('.recl-u-patr')?.value||'').trim(),
       numero_serie:(el.querySelector('.recl-u-serie')?.value||'').trim()||null,
       ordem:i+1
     })):[];
-    if(possui==='sim'&&unidades.length!==qtd) throw new Error(`Preencha as ${qtd} unidades físicas de ${row.unidade||row.item}.`);
+    if(permanente&&possui==='sim'&&unidades.length!==qtd) throw new Error(`Preencha as ${qtd} unidades físicas de ${row.unidade||row.item}.`);
     const faltantes=unidades.filter(u=>!u.patrimonio).length;
     if(faltantes) throw new Error(`Informe todos os patrimônios de ${row.unidade||row.item}.`);
-    return {entrega_id:row.entrega_id,empenho_id:row._loteEmpenho.id,quantidade:qtd,possui_patrimonio:possui==='sim',unidades};
+    return {entrega_id:row.entrega_id,empenho_id:row._loteEmpenho.id,quantidade:qtd,tipo_material:tipoMaterial,possui_patrimonio:permanente&&possui==='sim',unidades};
   });
 }
 async function salvarRecebimentoLote(){
@@ -3211,6 +3268,8 @@ window.abrirRecebimentoAta=abrirRecebimentoAta;
 window.salvarRecebimento=salvarRecebimento;
 window.abrirRecebimentoLote=abrirRecebimentoLote;
 window.salvarRecebimentoLote=salvarRecebimentoLote;
+window._recToggleTipoMaterial=_recToggleTipoMaterial;
+window._recLoteToggleTipoMaterial=_recLoteToggleTipoMaterial;
 window._recLoteTogglePatrimonio=_recLoteTogglePatrimonio;
 window._recLoteAtualizarUnidades=_recLoteAtualizarUnidades;
 window._recLoteGerarSequencia=_recLoteGerarSequencia;
@@ -3337,6 +3396,7 @@ async function loadConfirmacoes(){
   }
   (aq||[]).forEach(r=>{
     if((r.status||'')==='cancelada') return;
+    if(r.tipo_material==='CONSUMO') return;
     if(!r.af_numero && !r.af_data) return;
     // Só aparece em Confirmação após recebimento interno (qtde_recebida > 0 ou data_recebimento preenchida).
     if(!(Number(r.qtde_recebida)||0) && !r.data_recebimento) return;
@@ -3370,6 +3430,7 @@ async function loadConfirmacoes(){
     (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
   }
   (at||[]).forEach(r=>{
+    if(r.tipo_material==='CONSUMO') return;
     const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
     const ai=ataItemInfo[String(r.ata_item_id||'')]||{};
     if(String(ai.contratos?.status||'').toUpperCase().startsWith('ENCERRAD')) return;

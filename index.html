@@ -1449,12 +1449,20 @@
         <input type="text" id="rec-marca-modelo" disabled placeholder="—">
       </div>
       <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Tipo do material *</div>
+        <div style="display:flex;gap:18px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-tipo-material" value="PERMANENTE" onchange="_recToggleTipoMaterial()"> Bem permanente</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-tipo-material" value="CONSUMO" onchange="_recToggleTipoMaterial()"> Material de consumo</label>
+        </div>
+        <div id="rec-tipo-material-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Selecione uma opção para definir o fluxo do recebimento.</div>
+      </div>
+      <div class="form-group" id="rec-patrimonio-grupo" style="grid-column:1 / -1;display:none">
         <div class="form-label">Possui patrimônio? *</div>
         <div style="display:flex;gap:18px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)">
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-possui-patrimonio" value="sim" onchange="_recTogglePatrimonio()"> Sim</label>
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-possui-patrimonio" value="nao" onchange="_recTogglePatrimonio()"> Não</label>
         </div>
-        <div id="rec-patrimonio-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Selecione uma opção para continuar.</div>
+        <div id="rec-patrimonio-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Informe se as unidades já possuem número patrimonial.</div>
       </div>
       <div class="form-group" id="rec-patrimonio-auto" style="grid-column:1 / -1;display:none">
         <div class="form-label">Preenchimento automático de patrimônio</div>
@@ -1534,7 +1542,16 @@
       <div class="form-group"><div class="form-label">Data do recebimento *</div><input type="date" id="recl-data"></div>
       <div class="form-group"><div class="form-label">Recebido por</div><input type="text" id="recl-recebido-por" placeholder="nome do responsável"></div>
       <div class="form-group full">
-        <div class="form-label">Os itens possuem patrimônio? *</div>
+        <div class="form-label">Tipo do material *</div>
+        <select id="recl-tipo-material" onchange="_recLoteToggleTipoMaterial()">
+          <option value="">Selecione...</option>
+          <option value="PERMANENTE">Bem permanente</option>
+          <option value="CONSUMO">Material de consumo</option>
+        </select>
+        <div id="recl-tipo-material-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Materiais de consumo são concluídos no recebimento administrativo.</div>
+      </div>
+      <div class="form-group full" id="recl-patrimonio-grupo" style="display:none">
+        <div class="form-label">Os bens permanentes possuem patrimônio? *</div>
         <select id="recl-possui-patrimonio" onchange="_recLoteTogglePatrimonio()">
           <option value="">Selecione...</option>
           <option value="sim">Sim</option>
@@ -3198,7 +3215,7 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260825-localizacao-apos-entrega-1"></script>
   <script src="js/legacy/20-atas.js?v=20260827-datas-manuais-af-nf-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260827-hierarquia-org-1"></script>
-  <script src="js/legacy/40-itens-entregas.js?v=20260827-datas-manuais-af-nf-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260827-tipo-material-recebimento-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260827-hierarquia-org-1"></script>

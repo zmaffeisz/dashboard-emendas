@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Recebimento por tipo de material:** o recebimento administrativo agora exige escolher
+  entre bem permanente e material de consumo. Somente permanentes perguntam sobre patrimônio,
+  geram unidades físicas e seguem para entrega na unidade/Inventário; consumos permanecem
+  aglutinados e são concluídos no almoxarifado.
+
 - **AFs e recebimentos:** datas de AF, recebimento e emissão de NF deixam de ser preenchidas automaticamente; os campos obrigatórios precisam receber a data real antes de salvar.
 
 - **Empenhos:** o ano não é mais preenchido automaticamente; o número aceita somente

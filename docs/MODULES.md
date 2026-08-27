@@ -62,9 +62,10 @@ Acompanhamento/fiscalização de chamados e contratos: histórico
 `termo_contratos`), glosas.
 
 ## 7. Inventário
-O Inventário operacional é derivado das unidades físicas recebidas em
+O Inventário operacional é derivado dos bens permanentes recebidos em
 `itens_entregas_unidades` e `atas_execucao_unidades`. Cada linha representa exatamente uma
-unidade, mesmo sem patrimônio/série; `inventario_ac` permanece apenas como legado da antiga
+unidade permanente, mesmo sem patrimônio/série. Materiais de consumo permanecem aglutinados
+e não entram no Inventário; `inventario_ac` permanece apenas como legado da antiga
 planilha. `inventario_unidades` mantém o estado corrente e `inventario_movimentacoes` mantém
 o histórico documental imutável de transferências, empréstimos, devoluções e baixas. O modal
 “Vida do item” reúne estado atual, aquisição/origem e linha do tempo sem reescrever a Emenda.
@@ -78,8 +79,8 @@ Ciclo de vida do item após a contratação:
   AF e execuções de ATA pendentes/prazos. Ao emitir AF de aquisição que cubra a quantidade,
   o item deixa esta subaba. Execuções de ATA sem recebimento continuam nesta subaba mesmo
   se a ATA ou o item de origem tiver sido encerrado.
-- **Confirmação de Entrega na Unidade**: lista aquisições com `af_numero` e execuções de
-  ATA para confirmar a entrega real na unidade, termo e responsável. A confirmação alimenta
+- **Confirmação de Entrega na Unidade**: lista somente bens permanentes recebidos, de
+  aquisições ou execuções de ATA, para confirmar a entrega real na unidade, termo e responsável. A confirmação alimenta
   a aba Emendas. Recebimentos de Carona também oferecem um e-mail de aviso de retirada ao
   solicitante cadastrado, com cópia para a SUEQ e os dados da NF, item e quantidade.
 - **Empenhos**: cadastro e vínculo de empenhos; a confirmação/Emendas pode herdar o empenho
@@ -102,10 +103,11 @@ Ciclo de vida do item após a contratação:
   por Carona, eliminando duplicidades.
 - **E-mail de retirada da Carona**: `prepararEmailRetiradaCarona` usa o solicitante como
   destinatário e a SUEQ em cópia, após o recebimento administrativo com NF.
-- **Recebimento**: `abrirRecebimento` → quantidade recebida, NF, patrimônio/série.
-  O lote recebido é materializado **por unidade física** em `itens_entregas_unidades` ou
-  `atas_execucao_unidades`: uma linha por unidade, com patrimônio/série opcionais e NF
-  apenas referenciada, sem duplicar valor.
+- **Recebimento**: `abrirRecebimento` → quantidade recebida, NF e classificação entre bem
+  permanente e material de consumo. Permanentes são materializados **por unidade física**
+  em `itens_entregas_unidades` ou `atas_execucao_unidades`; consumos permanecem aglutinados
+  e encerram o fluxo no almoxarifado. Patrimônio/série são opcionais para permanentes e a NF
+  é apenas referenciada nas unidades, sem duplicar valor.
 - **Termo de entrega**: `abrirTermoEntrega` (arquivo no Storage).
 - **Notas Fiscais**: `notas_fiscais` + `nota_fiscal_itens` (rateio).
 

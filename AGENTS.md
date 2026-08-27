@@ -69,14 +69,16 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
 - **Solicitação parcial de ATA com origem em Emenda:** nunca reduzir a linha inteira da
   emenda para a quantidade solicitada. Dividir `emenda_itens`: a fração solicitada fica
   vinculada à `atas_execucao` e o saldo restante vira nova linha livre para solicitação.
-- **Inventário é sempre unitário:** quantidade maior que 1 pertence somente a planejamento,
+- **Bens permanentes no Inventário são sempre unitários:** quantidade maior que 1 pertence somente a planejamento,
   licitação, contrato, solicitação de ATA, AF ou execução ainda não recebida. No nascimento
   físico do bem (normalmente no recebimento com NF), criar **uma linha por unidade**, sempre
   com quantidade 1, mesmo quando patrimônio e número de série não estiverem disponíveis.
   Patrimônio/série são atributos opcionais e nunca condição para individualizar. Aquisições
   usam `itens_entregas_unidades`; ATAs usam `atas_execucao_unidades`. O registro pai mantém
   a quantidade agregada e o histórico do lote/pedido; cada linha física passa a ter vida e
-  histórico próprios. **Exceção de titularidade:** execuções de ATA com
+  histórico próprios. **Materiais de consumo** permanecem aglutinados no registro pai,
+  não criam unidades físicas nem seguem para confirmação de entrega na unidade; seu fluxo
+  termina no recebimento administrativo pelo almoxarifado. **Exceção de titularidade:** execuções de ATA com
   `origem_recurso = 'carona'` preservam essas linhas apenas como registro operacional do
   recebimento; não criam `inventario_unidades`, não aparecem na aba **Inventário** e não
   recebem movimentações, pois os bens pertencem ao órgão solicitante.
