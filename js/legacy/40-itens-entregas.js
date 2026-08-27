@@ -2851,7 +2851,12 @@ async function _recAnexarNotaFiscal(nf,file){
   const path=`${nf.id}/${Date.now()}-${_safeFileName(file.name)}`;
   const {error:uploadError}=await sb.storage.from('notas-fiscais').upload(path,file,{contentType:file.type,upsert:false});
   if(uploadError) throw uploadError;
-  const {data,error:updateError}=await sb.from('notas_fiscais').update({arquivo_url:path}).eq('id',nf.id).select('*').single();
+  // A vinculacao usa RPC (POST). Alguns navegadores/extensoes bloqueiam PATCH
+  // depois do preflight, embora o upload no Storage ja tenha sido concluido.
+  const {data,error:updateError}=await sb.rpc('anexar_arquivo_nota_fiscal',{
+    p_nota_fiscal_id:nf.id,
+    p_arquivo_url:path
+  });
   if(updateError){
     await sb.storage.from('notas-fiscais').remove([path]);
     throw updateError;

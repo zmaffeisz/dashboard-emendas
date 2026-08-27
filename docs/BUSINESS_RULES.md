@@ -243,7 +243,9 @@
   banco. As marcações usam o primeiro dia do mês como competência; a virada mensal cria um
   estado visual novo sem excluir o histórico dos meses anteriores.
 - No recebimento, uma NF nova só pode ser cadastrada com seu arquivo anexado em PDF ou
-  imagem. NF antiga sem anexo deve receber o arquivo antes de ser vinculada.
+  imagem. NF antiga sem anexo deve receber o arquivo antes de ser vinculada. Depois do
+  envio ao Storage, o caminho é associado à NF por uma RPC autenticada que respeita a RLS;
+  qualquer falha remove o arquivo novo e, quando aplicável, o cadastro provisório da NF.
 - No detalhe **Ver tudo** de uma unidade física, os anexos existentes da NF e do termo de
   entrega ficam disponíveis para download por link temporário, inclusive no modo público
   anônimo. Os buckets permanecem privados e a política libera somente arquivos vinculados

@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Anexo de NF mais resiliente:** a vinculação do PDF ou imagem à nota fiscal agora usa
+  uma operação autenticada via `POST`, evitando falhas de navegador que bloqueavam a etapa
+  `PATCH` depois de o arquivo já ter sido enviado. Em caso de erro, arquivo e cadastro
+  provisórios continuam sendo removidos para não deixar dados incompletos.
+
 - **Recebimento por tipo de material:** o recebimento administrativo agora exige escolher
   entre bem permanente e material de consumo. Somente permanentes perguntam sobre patrimônio,
   geram unidades físicas e seguem para entrega na unidade/Inventário; consumos permanecem
