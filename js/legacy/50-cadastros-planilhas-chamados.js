@@ -4,7 +4,8 @@ const CADASTRO_DEFS = {
   parlamentares: {tabela:'parlamentares', titulo:'🏛️ Parlamentares', temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true}]},
   secretarias:   {tabela:'secretarias',   titulo:'🏛️ Secretarias',  temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo',req:true}]},
   secretario:    {tabela:'secretario_atual', titulo:'👔 Secretário', temAtivo:false, ordem:'id', unico:true, campos:[{c:'nome',l:'Nome completo',req:true},{c:'cargo',l:'Cargo',valorNovo:'Secretário Municipal da Saúde'},{c:'secretaria',l:'Secretaria/órgão',valorNovo:'Secretaria Municipal da Saúde'},{c:'ato_nomeacao',l:'Ato de nomeação'},{c:'email',l:'E-mail',tipoInput:'email'},{c:'telefone',l:'Telefone',tipoInput:'tel'}]},
-  secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'}]},
+  divisoes:      {tabela:'divisoes',      titulo:'🏛️ Divisões',      temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true}]},
+  secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'},{c:'divisao_id',l:'Divisão',req:true,tipo:'divisao'}]},
   unidades:      {tabela:'unidades',      titulo:'🏥 Unidades',      temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'endereco',l:'Endereço'},{c:'telefone',l:'Telefone'}]},
   fornecedores:  {tabela:'fornecedores',  titulo:'🏭 Empresas',      temAtivo:false, ordem:'razao_social', campos:[{c:'razao_social',l:'Razão social',req:true},{c:'cnpj_normalizado',l:'CNPJ (só dígitos)'},{c:'nome_fantasia',l:'Nome fantasia'}]},
   status_opcoes: {tabela:'status_opcoes', titulo:'🏷️ Status',        temAtivo:true,  ordem:'ordem',        campos:[{c:'contexto',l:'Contexto (processo/item)',req:true},{c:'nome',l:'Nome',req:true},{c:'ordem',l:'Ordem',tipo:'int'}]},
@@ -53,7 +54,9 @@ async function abrirCadastroLista(ent){
   const {data,error}=await sb.from(def.tabela).select('*').order(def.ordem,{nullsFirst:false});
   const tb=document.getElementById('cad-tbody');
   if(error){ tb.innerHTML=`<tr><td colspan="9" style="padding:10px;color:var(--red)">Erro: ${_sanEsc(error.message)}</td></tr>`; return; }
-  const inp=(f,v)=>`<td style="padding:4px 6px"><input type="${f.tipoInput||'text'}" data-field="${f.c}" value="${_sanEsc(v??'')}" placeholder="${f.l}" style="width:100%;min-width:90px;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>`;
+  const inp=(f,v)=>f.tipo==='divisao'
+    ?`<td style="padding:4px 6px"><select data-field="${f.c}" style="width:100%;min-width:120px;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box">${_divisaoOptions(v)}</select></td>`
+    :`<td style="padding:4px 6px"><input type="${f.tipoInput||'text'}" data-field="${f.c}" value="${_sanEsc(v??'')}" placeholder="${f.l}" style="width:100%;min-width:90px;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box"></td>`;
   const cellAtivo=(checked)=>def.temAtivo?`<td style="text-align:center"><input type="checkbox" data-field="ativo" ${checked?'checked':''}></td>`:'<td></td>';
   const podeAdicionar=!def.unico||!(data||[]).length;
   const novo=podeAdicionar?`<tr data-novo="1" style="background:var(--surface2)">${def.campos.map(f=>inp(f,f.valorNovo||'')).join('')}${cellAtivo(true)}<td style="padding:4px 6px"><button onclick="cadastroSalvar('${ent}',this)" style="font-size:12px;padding:5px 10px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">+ Adicionar</button></td></tr>`:'';
@@ -67,7 +70,7 @@ async function cadastroSalvar(ent, btn){
   for(const f of def.campos){
     const v=tr.querySelector(`[data-field="${f.c}"]`).value.trim();
     if(f.req && !v){ toast('Preencha: '+f.l,'error'); return; }
-    dados[f.c]= v==='' ? null : (f.tipo==='int' ? (Number(v)||null) : v);
+    dados[f.c]= v==='' ? null : (f.tipo==='int'||f.tipo==='divisao' ? (Number(v)||null) : v);
   }
   const atv=tr.querySelector('[data-field="ativo"]'); if(atv) dados.ativo=atv.checked;
   // hub é o admin: o que ele cadastra/edita aqui já nasce validado (não cai na fila de revisão)
@@ -78,6 +81,7 @@ async function cadastroSalvar(ent, btn){
   btn.disabled=false;
   if(res.error){ toast('Erro: '+res.error.message,'error'); return; }
   if(ent==='secretario') _secretarioAtualCache=undefined;
+  if(ent==='divisoes'||ent==='secoes') await carregarContextoOrganizacional();
   toast(id?'Atualizado!':'Adicionado!','success');
   abrirCadastroLista(ent);
 }

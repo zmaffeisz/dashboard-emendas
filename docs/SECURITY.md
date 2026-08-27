@@ -28,12 +28,16 @@ Regras-chave:
 - Um perfil aprovado com escopo organizacional **Divisão** recebe poderes de gestão no
   **Portal Unidades** (e somente nele), sem ser promovido a `admin` neste dashboard.
 - Perfil precisa estar **aprovado** (`profiles.aprovado`) para acessar dados.
+- O alcance organizacional é hierárquico: `divisoes` → `secoes` → registros operacionais.
+  Usuário de seção fica restrito à sua seção; chefia pode alternar entre a visão consolidada
+  da própria divisão e qualquer seção dela; administrador pode usar contexto global, de
+  divisão ou de seção. As caixinhas por aba continuam sendo exigidas em todos os casos.
 
 ## 3. Dupla camada (banco + cliente)
 
 | Camada | Onde | Autoritativa? |
 |---|---|---|
-| **RLS no banco** | `can_access_tab()`, `is_approved_profile()`, policies por tabela | **Sim** — fonte real de controle |
+| **RLS no banco** | `can_access_tab()`, `private.can_access_secao()`, policies por tabela | **Sim** — fonte real de controle |
 | **Espelho no cliente** | `userCanView`/`userCanEdit`/`podeEditar`/`_isAdmin` ([index.html:2464+](../index.html)) | Não — apenas UX (oculta menus/botões) |
 
 `can_access_tab(p_tab, p_action)` (no banco):
@@ -47,6 +51,9 @@ Regras-chave:
 
 - Tabelas com RLS habilitada; hardening em `prod_hardening_revoke_anon_ciclo_itens` e
   `rls_auto_enable()`.
+- As policies operacionais combinam `can_access_tab()` com
+  `private.can_access_secao()`. O contexto selecionado no cabeçalho reduz a abrangência
+  efetiva sem ampliar as permissões por aba.
 - Policy típica: `SELECT` para `authenticated` com `is_approved_profile()`; escrita
   condicionada a `can_access_tab(<aba>, 'edit')`.
 - `anon` revogado das tabelas do ciclo de itens — acesso anônimo só pela RPC
@@ -56,9 +63,10 @@ Regras-chave:
   Contratos ou Dashboard. A gravação passa pela RPC autenticada
   `registrar_licitacao_itens_ocorrencias`; triggers fixam os dados históricos e impedem
   alterações ou exclusões posteriores do item, evento e vínculos.
-- O bucket privado `licitacao-ocorrencias` aceita PDF/JPEG/PNG/WEBP de até 10 MB. O
-  cliente abre anexos por URL assinada; uploads exigem permissão de edição e um documento
-  já vinculado a uma ocorrência não pode ser substituído nem apagado.
+- Os buckets privados validam a seção do registro vinculado antes de liberar leitura ou
+  exclusão. `licitacao-ocorrencias` aceita PDF/JPEG/PNG/WEBP de até 10 MB; uploads exigem
+  permissão de edição e um documento já vinculado a uma ocorrência não pode ser
+  substituído nem apagado por usuário fora do seu contexto organizacional.
 
 ## 5. Exposição de segredos
 

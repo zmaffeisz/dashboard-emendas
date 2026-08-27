@@ -103,6 +103,7 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | Função | Assinatura | Papel |
 |---|---|---|
 | `can_access_tab(p_tab, p_action)` | `(text, text) → boolean` | **Autorização central** usada nas policies RLS. Ver §6. |
+| `private.can_access_secao(p_secao_id)` | `(bigint) → boolean` | Limita a linha ao contexto global/divisão/seção permitido ao perfil atual. |
 | `is_approved_profile()` | `() → boolean` | Indica se o perfil atual está aprovado. |
 | `abrir_chamado_publico(...)` | 20 args text | RPC pública usada por `chamado.html` para abrir chamado sem login. |
 | `admin_delete_user(p_user_id uuid)` | | Exclusão de usuário (admin). |
@@ -144,8 +145,13 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 - RLS habilitada nas tabelas (hardening em `prod_hardening_revoke_anon_ciclo_itens` e
   `rls_auto_enable()`).
 - Padrão de policy (exemplo de `itens_entregas_unidades`):
-  - **SELECT** para `authenticated` usando `is_approved_profile()`.
-  - **ALL (escrita)** condicionada a `can_access_tab('itens'|'contratos'|'dashboard'|'atas','edit')`.
+  - **SELECT** para `authenticated` combina permissão de aba e seção visível.
+  - **Escrita** combina `can_access_tab(..., 'edit')` com
+    `private.can_access_secao(secao_id)` por meio de `private.can_access_domain(...)`.
+- `divisoes` agrupa `secoes`; registros operacionais continuam armazenando somente
+  `secao_id`. Assim, uma nova divisão não exige regravar contratos ou históricos.
+- Chefias respeitam `profiles.divisao_id` e podem alternar o contexto entre a divisão e
+  suas seções. Administradores podem usar `global`, uma divisão ou uma seção.
 - O `anon` permanece revogado do ciclo operacional em geral, mas possui policies
   `SELECT` estritas para as linhas comprovadamente vinculadas a `emenda_itens`, pois a
   aba Emendas é pública. Isso inclui o fluxo derivado de licitação, contratos, empenhos,

@@ -33,9 +33,12 @@ async function abrirDetalheUsuario(userId){
   document.getElementById('ud-email').textContent=p.email||'';
   document.getElementById('ud-papel').value=(p.papel==='admin')?'admin':'visualizador';
   document.getElementById('ud-escopo').value=p.escopo_organizacional==='divisao'?'divisao':'secao';
-  document.getElementById('ud-secao').innerHTML=_secaoOptions(p.secao_id||'');
+  const divisaoId=p.divisao_id||_secoesOrganizacionais.find(s=>String(s.id)===String(p.secao_id||''))?.divisao_id||'';
+  document.getElementById('ud-divisao').innerHTML=_divisaoOptions(divisaoId);
+  document.getElementById('ud-divisao').value=divisaoId?String(divisaoId):'';
+  document.getElementById('ud-secao').innerHTML=_secaoOptions(p.secao_id||'',{todas:true,divisaoId});
   document.getElementById('ud-secao').value=p.secao_id?String(p.secao_id):'';
-  _udEscopoChange();
+  _udPapelChange();
   const aprovadoEl=document.getElementById('ud-aprovado');
   if(aprovadoEl) aprovadoEl.checked = p.aprovado !== false;
   const excluirEl=document.getElementById('ud-excluir');
@@ -60,8 +63,23 @@ async function abrirDetalheUsuario(userId){
   }).join('');
 }
 function _udEscopoChange(){
+  const admin=document.getElementById('ud-papel')?.value==='admin';
   const divisao=document.getElementById('ud-escopo')?.value==='divisao';
-  const wrap=document.getElementById('ud-secao-wrap'); if(wrap) wrap.style.display=divisao?'none':'flex';
+  const divisaoWrap=document.getElementById('ud-divisao-wrap'); if(divisaoWrap) divisaoWrap.style.display=admin?'none':'flex';
+  const secaoWrap=document.getElementById('ud-secao-wrap'); if(secaoWrap) secaoWrap.style.display=admin||divisao?'none':'flex';
+}
+function _udPapelChange(){
+  const admin=document.getElementById('ud-papel')?.value==='admin';
+  const orgWrap=document.getElementById('ud-org-wrap'); if(orgWrap) orgWrap.style.display=admin?'none':'grid';
+  const nota=document.getElementById('ud-admin-org-nota'); if(nota) nota.style.display=admin?'block':'none';
+  _udEscopoChange();
+}
+function _udDivisaoChange(){
+  const divisaoId=document.getElementById('ud-divisao')?.value||'';
+  const secao=document.getElementById('ud-secao'); if(!secao) return;
+  const atual=secao.value;
+  secao.innerHTML=_secaoOptions(atual,{todas:true,divisaoId});
+  if(![...secao.options].some(o=>o.value===atual)) secao.value='';
 }
 function _udSyncEdit(key){
   const v=document.getElementById('udv-'+key);
@@ -80,9 +98,13 @@ async function salvarPermissoesUsuario(){
   const novoPapel=document.getElementById('ud-papel').value;
   const aprovado=!!document.getElementById('ud-aprovado')?.checked;
   const escopo=document.getElementById('ud-escopo').value;
-  const secaoId=escopo==='secao'?Number(document.getElementById('ud-secao').value||0):null;
-  if(escopo==='secao'&&!secaoId){msg.textContent='Selecione a seção do usuário.';msg.className='fmsg err';btn.disabled=false;btn.textContent='Salvar permissões';return;}
-  const org={escopo_organizacional:escopo,secao_id:secaoId,contexto_modo:escopo==='divisao'?'divisao':'secao',contexto_secao_id:secaoId};
+  const divisaoId=novoPapel==='admin'?null:Number(document.getElementById('ud-divisao').value||0);
+  const secaoId=novoPapel!=='admin'&&escopo==='secao'?Number(document.getElementById('ud-secao').value||0):null;
+  if(novoPapel!=='admin'&&!divisaoId){msg.textContent='Selecione a divisão do usuário.';msg.className='fmsg err';btn.disabled=false;btn.textContent='Salvar permissões';return;}
+  if(novoPapel!=='admin'&&escopo==='secao'&&!secaoId){msg.textContent='Selecione a seção do usuário.';msg.className='fmsg err';btn.disabled=false;btn.textContent='Salvar permissões';return;}
+  const org=novoPapel==='admin'
+    ?{escopo_organizacional:'divisao',divisao_id:null,secao_id:null,contexto_modo:'global',contexto_divisao_id:null,contexto_secao_id:null}
+    :{escopo_organizacional:escopo,divisao_id:divisaoId,secao_id:secaoId,contexto_modo:escopo==='divisao'?'divisao':'secao',contexto_divisao_id:divisaoId,contexto_secao_id:secaoId};
   const {data:upd,error:errPapel}=await sb.from('profiles').update({nome:novoNome||null,papel:novoPapel,aprovado,...org}).eq('id',_udUserId).select();
   if(errPapel){ msg.textContent='Erro ao salvar papel: '+errPapel.message; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
   if(!upd || upd.length===0){ msg.textContent='⚠️ Sem permissão para alterar este usuário (verifique a política RLS de profiles).'; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
@@ -161,7 +183,7 @@ async function carregarUsuarios(){
       <td style="padding:10px 12px;white-space:nowrap">
         <div style="display:flex;gap:6px;align-items:center">
           ${p.id===currentUser?.id?'<span style="font-size:11px;color:var(--text3)">(você)</span>':`<button onclick="alterarPapel('${p.id}','${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">Salvar papel</button>`}
-          ${p.aprovado===false?`<button onclick="aprovarUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">Aprovar</button>`:''}
+          ${p.aprovado===false?`<button onclick="abrirDetalheUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">Configurar e aprovar</button>`:''}
           ${p.id===currentUser?.id?'':`<button onclick="excluirUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>`}
           <button onclick="enviarResetSenha('${p.email}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer" title="Enviar e-mail de redefinição de senha">📧 Reset senha</button>
           <button onclick="abrirDetalheUsuario('${p.id}')" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">⚙️ Permissões</button>

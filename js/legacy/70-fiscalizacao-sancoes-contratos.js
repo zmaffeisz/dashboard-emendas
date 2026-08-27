@@ -1667,8 +1667,7 @@ function ecFornecedorChange(){
 }
 async function preencherSelectSecoes(selId, comNovo, valorAtual){
   const sel=document.getElementById(selId); if(!sel) return;
-  const {data}=await sb.from('secoes').select('sigla,nome').eq('ativo',true).order('sigla');
-  const lista=data||[];
+  const lista=typeof _secoesPermitidasContexto==='function'?_secoesPermitidasContexto():_secoesOrganizacionais;
   let opts='<option value="">Selecione a seção...</option>'
     + lista.map(s=>`<option value="${_sanEsc(s.sigla)}">${_sanEsc(s.sigla)}${s.nome?(' — '+_sanEsc(s.nome)):''}</option>`).join('');
   if(valorAtual && !lista.some(s=>s.sigla===valorAtual)) opts+=`<option value="${_sanEsc(valorAtual)}">${_sanEsc(valorAtual)}</option>`;
@@ -1682,7 +1681,14 @@ function ncSecaoChange(){
   if(sel.value==='__nova__'){ inp.style.display=''; inp.value=''; inp.focus(); }
   else { inp.style.display='none'; inp.value=''; }
 }
-async function obterOuCriarSecao(sigla){ if(!sigla) return; await sb.from('secoes').upsert({sigla},{onConflict:'sigla',ignoreDuplicates:true}); }
+async function obterOuCriarSecao(sigla){
+  if(!sigla) return;
+  const divisaoId=_divisaoAtualId()||_secaoAtual()?.divisao_id||null;
+  if(!divisaoId) throw new Error('Selecione uma divisão ou seção no cabeçalho antes de cadastrar uma nova seção.');
+  const {error}=await sb.from('secoes').upsert({sigla,divisao_id:divisaoId},{onConflict:'sigla',ignoreDuplicates:true});
+  if(error) throw error;
+  await carregarContextoOrganizacional();
+}
 function selNovoToggle(selId){
   const sel=document.getElementById(selId), inp=document.getElementById(selId+'-novo');
   if(!inp) return;
@@ -2355,7 +2361,7 @@ async function abrirModalNovoContrato(){
   fecharFornecedorCombo();
   const _ncc=document.getElementById("nc-cnpj"); if(_ncc) _ncc.readOnly=false;
   preencherSelectFornecedores();
-  await preencherSelectSecoes('nc-secao', _isAdmin());
+  await preencherSelectSecoes('nc-secao', false);
   aplicarSecaoTextoFormulario('nc-secao');
   await _ncPreencherFiscalMulti();
   window._ncEmpItens={};window._ncEmpBuffer={};window._ncEmpFree=null;window._ncModoAtual='';window._ncVincularItensMap={};

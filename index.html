@@ -21,14 +21,14 @@
   <div style="display:flex;align-items:center;gap:12px">
     <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" style="height:48px;width:auto" alt="Brasão">
     <div>
-      <div class="header-title">Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde</div>
+      <div class="header-title">Gestão de Emendas, Licitações e Contratos da Saúde</div>
       <div class="header-sub">Secretaria da Saúde · Prefeitura de Sorocaba</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <label id="org-context-wrap" style="display:none;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap">
       Visualizando como
-      <select id="org-context-select" onchange="trocarContextoAdmin()" style="max-width:180px;font-size:12px;padding:5px 26px 5px 8px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:#153a66;color:#fff"></select>
+      <select id="org-context-select" onchange="trocarContextoAdmin()" style="max-width:260px;font-size:12px;padding:5px 26px 5px 8px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:#153a66;color:#fff"></select>
     </label>
     <span id="org-context-label" style="display:none;font-size:11px;color:rgba(255,255,255,.85);padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:6px"></span>
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
@@ -3117,16 +3117,21 @@
     </div>
     <div class="form-group" style="margin-bottom:1rem">
       <div class="form-label">Papel global</div>
-      <select id="ud-papel" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+      <select id="ud-papel" onchange="_udPapelChange()" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
         <option value="visualizador">Usuário</option>
         <option value="admin">Administrador</option>
       </select>
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Usuário: o acesso de ver/editar é definido pelas caixinhas abaixo. Administrador: acesso total.</div>
     </div>
-    <div class="form-grid" style="margin-bottom:1rem">
+    <div id="ud-admin-org-nota" style="display:none;font-size:12px;color:var(--text3);margin-bottom:1rem">Administrador global: pode alternar entre todas as divisões e seções pelo seletor do cabeçalho.</div>
+    <div id="ud-org-wrap" class="form-grid" style="margin-bottom:1rem">
       <div class="form-group">
         <div class="form-label">Abrangência organizacional</div>
         <select id="ud-escopo" onchange="_udEscopoChange()"><option value="secao">Seção específica</option><option value="divisao">Chefia da divisão</option></select>
+      </div>
+      <div class="form-group" id="ud-divisao-wrap">
+        <div class="form-label">Divisão *</div>
+        <select id="ud-divisao" onchange="_udDivisaoChange()"></select>
       </div>
       <div class="form-group" id="ud-secao-wrap">
         <div class="form-label">Seção do usuário *</div>
@@ -3185,14 +3190,14 @@
 </div>
 
 <script src="js/components/kebab-menu.js"></script>
-<script src="js/legacy/00-core.js?v=20260825-ocorrencias-licitacao-1"></script>
+<script src="js/legacy/00-core.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260825-localizacao-apos-entrega-1"></script>
 <script src="js/legacy/20-atas.js?v=20260821-troca-marca-ata-2"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20260825-ocorrencias-licitacao-1"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260825-controle-colunas-1"></script>
-<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260825-ocorrencias-licitacao-1"></script>
+<script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260825-empenho-rotulos-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

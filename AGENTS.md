@@ -85,8 +85,10 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
   `inventario_unidades`. A unidade beneficiada mostrada na aba **Emendas** é a fotografia do
   cadastro original e nunca acompanha a localização atual; a tela pode apenas sinalizar que
   existe movimentação e mostrar os detalhes dentro da ficha do item.
-- **Permissões:** `admin` (total) vs. usuário comum (caixinhas em `user_tab_permissions`).
-  RLS no banco é autoritativa (`can_access_tab`); o cliente apenas espelha
+- **Permissões:** `admin` (global, com contexto de divisão/seção) vs. usuário comum
+  (caixinhas em `user_tab_permissions`). Usuários de seção ficam na própria seção; chefias
+  podem alternar apenas entre a sua divisão e as seções dela. RLS no banco é autoritativa
+  (`can_access_tab` + `private.can_access_secao`); o cliente apenas espelha
   (`userCanView/userCanEdit`). `usuarios`/`cadastros` são admin-only.
 - **Chamados:** "Chamados Antigos" (Google Sheets) é **somente leitura**; chamado órfão sem
   controle = "não aberto" (não criar controle automático).

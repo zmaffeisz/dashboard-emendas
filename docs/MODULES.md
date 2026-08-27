@@ -19,7 +19,7 @@
 | Contratos em execução | `contratos` (**matriz**), `contratos_vigencias`, `contratos_historico`, `fornecedores` | cadastro de contrato | edição (admin) |
 | Licitações em andamento | `processos`, `vw_processos_resumo`, `itens` | processos | status por item |
 | Sanções | `sancoes_solicitadas`, `sancao_itens`, `sancoes_administrativas` | a partir de execução/contrato | solicitação/aplicação |
-| Cadastros | `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `secoes`, `pessoas`, `secretario_atual` | cadastros-mestre | **admin** |
+| Cadastros | `parlamentares`, `unidades`, `fornecedores`, `status_opcoes`, `divisoes`, `secoes`, `pessoas`, `secretario_atual` | cadastros-mestre | **admin** |
 | Usuários | `profiles`, `user_tab_permissions` | Auth/cadastro | **admin** |
 | Planilhas | importações/exports | — | export/import |
 
@@ -183,7 +183,8 @@ Na aba **Atas Rp**, solicitações de execução com `origem_recurso = 'carona'`
 
 ## 15. Usuários (admin)
 Gestão de `profiles` e `user_tab_permissions` (caixinhas ver/editar por aba), aprovação de
-contas e exclusão (`admin_delete_user`). Apenas admin. Ver [SECURITY.md](SECURITY.md).
+contas, vínculo com divisão/seção, definição de chefia de divisão e exclusão
+(`admin_delete_user`). Apenas admin. Ver [SECURITY.md](SECURITY.md).
 
 ## 16. Planilhas
 Importação/exportação de planilhas (Excel/CSV via `xlsx`/`papaparse`). Oculta por padrão

@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- **Hierarquia organizacional por divisão e seção:** o sistema agora cadastra Divisões
+  separadamente e vincula cada Seção a uma divisão. DAG reúne SAC, SACON, SECOMP, SMCP e
+  SUEQ - EQUIP; DMMHF reúne MJ, SAMA, SEAP e SEMED. Chefias acessam e editam, conforme as
+  caixinhas por aba, somente as seções da própria divisão e podem alternar entre a visão
+  consolidada e cada seção pelo cabeçalho. Administradores continuam globais e podem
+  alternar entre todas as divisões, uma divisão ou uma seção. Os IDs e vínculos históricos
+  das seções foram preservados; Storage e a exclusão privilegiada de licitações também
+  passaram a validar o escopo organizacional.
 - **Localização física somente após a entrega:** a ficha “Vida do item” não usa mais a
   unidade planejada da Emenda como localização ou situação atuais. Esses dados aparecem
   somente depois da confirmação da entrega na unidade; a unidade planejada permanece no

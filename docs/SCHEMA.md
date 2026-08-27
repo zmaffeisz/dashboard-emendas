@@ -1,7 +1,7 @@
 # Esquema do Banco de Dados — dashboard-emendas
 
 > Banco: PostgreSQL 17 no Supabase de produção (nuvem, projeto `qpvgpfwuurqcqprnpxua`, `contratos-dag`), schema `public`.
-> 49 tabelas base + 3 views. Levantado diretamente do banco em produção.
+> 50 tabelas base + 3 views. Levantado diretamente do banco em produção.
 > Detalhes de migrations, funções, RLS e triggers em [DATABASE.md](DATABASE.md).
 
 ## 1. Mapa de domínios
@@ -18,7 +18,7 @@
 | **Sanções** | `sancoes_solicitadas`, `sancao_itens`, `sancoes_administrativas` |
 | **Chamados** | `chamados`, `chamados_controle`, `chamados_anexos`, `fiscalizacao_historico`, `termos_ateste`, `termo_chamados`, `termo_contratos` |
 | **Inventário** | `inventario_unidades`, `inventario_movimentacoes`, `inventario_ac` (legado) |
-| **Pessoas / Acesso** | `profiles`, `user_tab_permissions`, `pessoas`, `secoes` |
+| **Pessoas / Acesso** | `profiles`, `user_tab_permissions`, `pessoas`, `divisoes`, `secoes` |
 
 ## 2. Tabelas centrais do fluxo
 
@@ -295,9 +295,9 @@ no máximo uma NF. Como cada NF também guarda apenas um `medicao_id`, o víncul
 | `unidades` (8) | unidades (beneficiada/entrega). |
 | `fornecedores` (6) / `fornecedor_contatos` (7) | mestre de fornecedores. |
 | `status_opcoes` (8) | catálogo de status (`contexto`, `nome`, `ordem`, `ativo`, `orgao`, `automatico`). Ver [DATABASE.md](DATABASE.md#status). |
-| `profiles` (6) | perfil do usuário: `papel`, `aprovado`. |
+| `profiles` | perfil do usuário: papel, aprovação, divisão/seção de lotação e contexto organizacional atual. |
 | `user_tab_permissions` (6) | permissões por aba (`tab_key`, `can_view`, `can_edit`). |
-| `pessoas` (10), `secoes` (6), `secretarias` | cadastros auxiliares e institucionais. |
+| `divisoes`, `secoes`, `pessoas`, `secretarias` | hierarquia e cadastros auxiliares/institucionais; `secoes.divisao_id` é obrigatório. |
 | `secretario_atual` | ficha institucional única (`id = 1`) do secretário vigente; leitura autenticada para documentos e escrita somente por admin. |
 | `inventario_ac` (17) | inventário; FK `emenda_item_id`, `unidade_id`. |
 
@@ -330,7 +330,8 @@ contratos ─< sancoes_solicitadas ─< sancao_itens
 contratos ─< sancoes_administrativas
 contratos ─< chamados ─< chamados_controle / chamados_anexos / fiscalizacao_historico
 
-profiles ─< user_tab_permissions ;  profiles ─< pessoas
+divisoes ─< secoes ─< registros operacionais
+profiles ─< user_tab_permissions ; profiles >─ divisoes / secoes
 ```
 
 > A lista completa de chaves estrangeiras está consolidada em [DATABASE.md](DATABASE.md#chaves-estrangeiras).

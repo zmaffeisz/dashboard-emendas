@@ -392,6 +392,10 @@
 
 - Dois papéis: **admin** (acesso total) e **usuário comum** (acesso 100% definido por
   caixinhas por aba em `user_tab_permissions`).
+- A abrangência organizacional é independente das caixinhas: usuário de seção acessa
+  somente sua seção; chefe de divisão acessa todas as seções da própria divisão e pode
+  alternar entre a visão consolidada e cada seção; admin pode alternar entre contexto
+  global, divisão e seção.
 - Conta nova nasce só com **ver Emendas**; sem login vê apenas Emendas.
 - `usuarios` e `cadastros` são **admin-only**; `planilhas` oculta por padrão.
 - Detalhes em [SECURITY.md](SECURITY.md).

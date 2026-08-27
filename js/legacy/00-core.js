@@ -10,6 +10,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let currentProfile = null;
 let _secoesOrganizacionais = [];
+let _divisoesOrganizacionais = [];
 window._pendingApproval = false;
 
 // ═══ PERMISSÕES GRANULARES POR ABA ═══
@@ -37,48 +38,96 @@ const PUBLIC_TEASER_LABELS = {
 function _isApprovedProfile(){ return currentProfile?.aprovado !== false; }
 function _isAdmin(){ return (window._userPapel==='admin' || currentProfile?.papel==='admin') && _isApprovedProfile(); }
 function _perfilEhDivisao(){ return currentProfile?.escopo_organizacional==='divisao'; }
-function _contextoEhDivisao(){ return _isAdmin()?currentProfile?.contexto_modo==='divisao':_perfilEhDivisao(); }
-function _secaoAtualId(){ return _isAdmin()?(currentProfile?.contexto_secao_id||currentProfile?.secao_id):currentProfile?.secao_id; }
+function _podeTrocarContextoOrganizacional(){ return _isAdmin()||_perfilEhDivisao(); }
+function _contextoEhGlobal(){ return _isAdmin()&&currentProfile?.contexto_modo==='global'; }
+function _contextoEhDivisao(){ return _podeTrocarContextoOrganizacional()&&currentProfile?.contexto_modo==='divisao'; }
+function _secaoAtualId(){ return _podeTrocarContextoOrganizacional()?(currentProfile?.contexto_secao_id||null):currentProfile?.secao_id; }
 function _secaoAtual(){ const id=String(_secaoAtualId()||''); return _secoesOrganizacionais.find(s=>String(s.id)===id)||null; }
-function _escopoPodeChamados(){ return _contextoEhDivisao() || String(_secaoAtual()?.sigla||'').toUpperCase()==='SUEQ - EQUIP'; }
-function _secaoOptions(valor=''){
-  return '<option value="">Selecione a seção...</option>'+_secoesOrganizacionais.map(s=>`<option value="${s.id}"${String(s.id)===String(valor)?' selected':''}>${_sanEsc(s.sigla)}${s.nome?' — '+_sanEsc(s.nome):''}</option>`).join('');
+function _divisaoAtualId(){
+  if(_contextoEhGlobal()) return null;
+  if(_podeTrocarContextoOrganizacional()) return currentProfile?.contexto_divisao_id||_secaoAtual()?.divisao_id||currentProfile?.divisao_id||null;
+  return currentProfile?.divisao_id||_secaoAtual()?.divisao_id||null;
+}
+function _divisaoAtual(){ const id=String(_divisaoAtualId()||''); return _divisoesOrganizacionais.find(d=>String(d.id)===id)||null; }
+function _divisaoOptions(valor='',{incluirVazio=true}={}){
+  const lista=_divisoesOrganizacionais.filter(d=>d.ativo!==false||String(d.id)===String(valor));
+  return (incluirVazio?'<option value="">Selecione a divisão...</option>':'')+lista.map(d=>`<option value="${d.id}"${String(d.id)===String(valor)?' selected':''}>${_sanEsc(d.sigla)}</option>`).join('');
+}
+function _secoesPermitidasContexto(){
+  if(!currentUser) return _secoesOrganizacionais;
+  if(_contextoEhGlobal()) return _secoesOrganizacionais;
+  if(currentProfile?.contexto_modo==='secao'&&_secaoAtualId()) return _secoesOrganizacionais.filter(s=>String(s.id)===String(_secaoAtualId()));
+  const divisaoId=_divisaoAtualId();
+  if(divisaoId) return _secoesOrganizacionais.filter(s=>String(s.divisao_id)===String(divisaoId));
+  if(currentProfile?.secao_id) return _secoesOrganizacionais.filter(s=>String(s.id)===String(currentProfile.secao_id));
+  return [];
+}
+function _escopoPodeChamados(){
+  if(_contextoEhGlobal()) return true;
+  return _secoesPermitidasContexto().some(s=>String(s.sigla||'').toUpperCase()==='SUEQ - EQUIP');
+}
+function _secaoOptions(valor='',{todas=false,divisaoId=null}={}){
+  let lista=todas?_secoesOrganizacionais:_secoesPermitidasContexto();
+  if(divisaoId) lista=lista.filter(s=>String(s.divisao_id)===String(divisaoId));
+  return '<option value="">Selecione a seção...</option>'+lista.map(s=>`<option value="${s.id}"${String(s.id)===String(valor)?' selected':''}>${_sanEsc(s.sigla)}${s.nome?' — '+_sanEsc(s.nome):''}</option>`).join('');
 }
 function aplicarSecaoFormulario(selId,{valor=null}={}){
   const sel=document.getElementById(selId); if(!sel||!currentUser) return;
-  const podeEscolher=_isAdmin()||_perfilEhDivisao();
-  const escolhido=valor||(!_contextoEhDivisao()?_secaoAtualId():null);
+  const podeEscolher=_contextoEhGlobal()||_contextoEhDivisao();
+  const escolhido=valor||(!podeEscolher?_secaoAtualId():null);
   sel.innerHTML=_secaoOptions(escolhido);
   sel.disabled=!podeEscolher;
-  if(!podeEscolher&&currentProfile?.secao_id) sel.value=String(currentProfile.secao_id);
-  if(_contextoEhDivisao()&&!valor) sel.value='';
+  if(!podeEscolher&&_secaoAtualId()) sel.value=String(_secaoAtualId());
+  if(podeEscolher&&!valor) sel.value='';
 }
 function aplicarSecaoTextoFormulario(selId,valor=null){
   const sel=document.getElementById(selId); if(!sel||!currentUser) return;
-  const podeEscolher=_isAdmin()||_perfilEhDivisao();
-  const escolhido=valor||(!_contextoEhDivisao()?_secaoAtual()?.sigla:null);
+  const podeEscolher=_contextoEhGlobal()||_contextoEhDivisao();
+  const escolhido=valor||(!podeEscolher?_secaoAtual()?.sigla:null);
   if(escolhido) sel.value=escolhido;
   sel.disabled=!podeEscolher;
   if(!podeEscolher&&_secaoAtual()?.sigla) sel.value=_secaoAtual().sigla;
-  if(_contextoEhDivisao()&&!valor) sel.value='';
+  if(podeEscolher&&!valor) sel.value='';
 }
 async function carregarContextoOrganizacional(){
-  const {data}=await sb.from('secoes').select('id,sigla,nome').eq('ativo',true).order('sigla');
-  _secoesOrganizacionais=data||[];
+  const [divisoesResult,secoesResult]=await Promise.all([
+    sb.from('divisoes').select('id,sigla,ativo').order('sigla'),
+    sb.from('secoes').select('id,sigla,nome,divisao_id').eq('ativo',true).order('sigla')
+  ]);
+  _divisoesOrganizacionais=divisoesResult.data||[];
+  _secoesOrganizacionais=secoesResult.data||[];
   const wrap=document.getElementById('org-context-wrap'), label=document.getElementById('org-context-label');
-  if(_isAdmin()){
+  if(_podeTrocarContextoOrganizacional()){
     const sel=document.getElementById('org-context-select');
-    sel.innerHTML='<option value="divisao">Divisão — todas as seções</option>'+_secoesOrganizacionais.map(s=>`<option value="secao:${s.id}">${_sanEsc(s.sigla)}</option>`).join('');
-    sel.value=currentProfile?.contexto_modo==='divisao'?'divisao':`secao:${currentProfile?.contexto_secao_id||currentProfile?.secao_id||''}`;
+    const divisoesPermitidas=_isAdmin()
+      ?_divisoesOrganizacionais.filter(d=>d.ativo!==false)
+      :_divisoesOrganizacionais.filter(d=>String(d.id)===String(currentProfile?.divisao_id));
+    let options=_isAdmin()?'<option value="global">Todas as divisões</option>':'';
+    options+=divisoesPermitidas.map(d=>{
+      const secoes=_secoesOrganizacionais.filter(s=>String(s.divisao_id)===String(d.id));
+      return `<optgroup label="${_sanEsc(d.sigla)}"><option value="divisao:${d.id}">${_sanEsc(d.sigla)} — todas as seções</option>${secoes.map(s=>`<option value="secao:${s.id}">${_sanEsc(d.sigla)} › ${_sanEsc(s.sigla)}</option>`).join('')}</optgroup>`;
+    }).join('');
+    sel.innerHTML=options;
+    if(currentProfile?.contexto_modo==='global'&&_isAdmin()) sel.value='global';
+    else if(currentProfile?.contexto_modo==='divisao') sel.value=`divisao:${currentProfile?.contexto_divisao_id||currentProfile?.divisao_id||''}`;
+    else sel.value=`secao:${currentProfile?.contexto_secao_id||currentProfile?.secao_id||''}`;
+    if(!sel.value) sel.value=_isAdmin()?'global':`divisao:${currentProfile?.divisao_id||''}`;
     wrap.style.display='inline-flex'; label.style.display='none';
   }else{
-    wrap.style.display='none'; label.textContent=_perfilEhDivisao()?'Divisão — todas as seções':(_secaoAtual()?.sigla||'Seção não definida'); label.style.display='inline-flex';
+    wrap.style.display='none'; label.textContent=_secaoAtual()?`${_divisaoAtual()?.sigla||''} › ${_secaoAtual().sigla}`:'Seção não definida'; label.style.display='inline-flex';
   }
 }
 async function trocarContextoAdmin(){
-  if(!_isAdmin()) return;
+  if(!_podeTrocarContextoOrganizacional()) return;
   const val=document.getElementById('org-context-select')?.value||'';
-  const patch=val==='divisao'?{contexto_modo:'divisao',contexto_secao_id:null}:{contexto_modo:'secao',contexto_secao_id:Number(val.split(':')[1])};
+  let patch;
+  if(val==='global') patch={contexto_modo:'global',contexto_divisao_id:null,contexto_secao_id:null};
+  else if(val.startsWith('divisao:')) patch={contexto_modo:'divisao',contexto_divisao_id:Number(val.split(':')[1]),contexto_secao_id:null};
+  else{
+    const secaoId=Number(val.split(':')[1]);
+    const secao=_secoesOrganizacionais.find(s=>Number(s.id)===secaoId);
+    patch={contexto_modo:'secao',contexto_divisao_id:secao?.divisao_id||null,contexto_secao_id:secaoId};
+  }
   const {error}=await sb.from('profiles').update(patch).eq('id',currentUser.id);
   if(error){alert('Não foi possível trocar o contexto: '+error.message);return;}
   window.location.reload();
