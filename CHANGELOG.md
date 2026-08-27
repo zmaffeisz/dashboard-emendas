@@ -2,6 +2,8 @@
 
 ## Em desenvolvimento
 
+- **AFs e recebimentos:** datas de AF, recebimento e emissão de NF deixam de ser preenchidas automaticamente; os campos obrigatórios precisam receber a data real antes de salvar.
+
 - **Empenhos:** o ano não é mais preenchido automaticamente; o número aceita somente
   até cinco dígitos, sem barra ou ano embutido.
 - **Atas — nova solicitação:** a origem do recurso deixa de vir marcada por padrão e

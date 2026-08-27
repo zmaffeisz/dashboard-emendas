@@ -2297,7 +2297,7 @@ async function abrirModalAtaAF(execId){
   document.getElementById('ataaf-exec-id').value=r.id;
   document.getElementById('ataaf-info').innerHTML=`<b>${_sanEsc(r.item||'—')}</b><br>${_sanEsc(r.cpl||'—')} · ${_sanEsc(r.sim||'—')} · ${_sanEsc(r.unidade||'—')}`;
   document.getElementById('ataaf-numero').value=r.af_numero||'';
-  document.getElementById('ataaf-data').value=r.data_af||new Date().toISOString().slice(0,10);
+  document.getElementById('ataaf-data').value=r.data_af||'';
   document.getElementById('ataaf-prev').value=r.prev_entrega||'';
   document.getElementById('ataaf-empenho').value=r.empenho||'';
   const msg=document.getElementById('ataaf-msg'); msg.textContent=''; msg.className='fmsg';

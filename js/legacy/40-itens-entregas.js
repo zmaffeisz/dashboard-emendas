@@ -882,7 +882,7 @@ async function abrirModalAF(itemId, execId){
   document.getElementById('af-info').innerHTML=infoExtra;
   document.getElementById('af-saldo').value=saldo;
   document.getElementById('af-numero').value='';
-  document.getElementById('af-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('af-data').value='';
   document.getElementById('af-qtde-autorizada').value=saldo>0?saldo:'';
   const temPrazo=prazoItem!=null && prazoItem!=='' && !isNaN(Number(prazoItem)) && Number(prazoItem)>0;
   const prazoInput=document.getElementById('af-prazo-dias');
@@ -2341,7 +2341,7 @@ async function abrirAFLote(){
   const empresa=c.prestador||sel.find(r=>r.empresa)?.empresa||'—';
   document.getElementById('afl-info').innerHTML=`<strong>Contrato:</strong> ${_sanEsc(numero)} &nbsp;·&nbsp; <strong>Empresa:</strong> ${_sanEsc(empresa)} &nbsp;·&nbsp; <strong>CNPJ:</strong> ${_sanEsc(c.cnpj||'—')}`;
   document.getElementById('afl-numero').value='';
-  document.getElementById('afl-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('afl-data').value='';
   document.getElementById('afl-itens').innerHTML=_aflRows.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 6px;border-bottom:1px solid var(--border)">
     <span><strong>${_sanEsc(r.item)}</strong> · ${_sanEsc(r.unidade||'—')} <span style="color:var(--text3)">· qtde ${r.qtde||'—'}${r._vlUnit?(' · '+fmtFull(r._vlUnit)):''}</span></span>
     ${r._bloqueio?`<span style="color:var(--red);white-space:nowrap">⚠ ${r._bloqueio}</span>`:'<span style="color:var(--green);white-space:nowrap">ok</span>'}
@@ -2711,11 +2711,10 @@ async function abrirRecebimento(entregaId){
   document.getElementById('rec-saldo-af').value=saldo;
   document.getElementById('rec-qtde').value=saldo>0?saldo:'';
   document.getElementById('rec-tipo').value=saldo>0 && saldo<Number(row.qtde||0)?'parcial':'total';
-  document.getElementById('rec-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('rec-data').value='';
   document.getElementById('rec-recebido-por').value=row.recebido_por||'';
   document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'—';
   ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs','rec-nf-arquivo'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
-  document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
   _recSetMsg('');
   // offset: unidades já registradas nesta AF (numeração continua em recebimentos parciais)
   let off=0;
@@ -2753,11 +2752,10 @@ async function abrirRecebimentoAta(execId){
   document.getElementById('rec-saldo-af').value=saldo;
   document.getElementById('rec-qtde').value=saldo>0?saldo:qtde||'';
   document.getElementById('rec-tipo').value='total';
-  document.getElementById('rec-data').value=row.entregaISO||new Date().toISOString().slice(0,10);
+  document.getElementById('rec-data').value='';
   document.getElementById('rec-recebido-por').value=row.recebido_por||'';
   document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'â€”';
   ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs','rec-nf-arquivo'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
-  document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
   _recSetMsg('');
   window._recUnidadeOffset=0;
   document.getElementById('rec-pat-inicial').value='';
@@ -2793,7 +2791,8 @@ async function _recObterOuCriarNF(row){
     if(!usar) throw new Error('Cadastro de NF cancelado para evitar duplicidade.');
     return dup;
   }
-  const dataEmissao=document.getElementById('rec-nf-data').value||document.getElementById('rec-data').value||null;
+  const dataEmissao=document.getElementById('rec-nf-data').value;
+  if(!dataEmissao) throw new Error('Informe a data de emissão da nova NF.');
   const payload={
     numero, numero_normalizado:norm,
     fornecedor_id:row.fornecedor_id, contrato_id:row.contrato_id, processo_id:row.processo_id, emenda_id:row.emenda_id,
@@ -3061,10 +3060,9 @@ async function abrirRecebimentoLote(){
   }
   const primeira=_recLoteRows[0];
   document.getElementById('recl-info').innerHTML=`<b>${_sanEsc(primeira.item||'Item')}</b> · ${_recLoteRows.length} itens selecionados<br>Contrato ${_sanEsc(primeira.contrato||'—')} · Fornecedor ${_sanEsc(primeira.empresa||'—')}`;
-  const hoje=new Date().toISOString().slice(0,10);
-  document.getElementById('recl-data').value=hoje;
+  document.getElementById('recl-data').value='';
   document.getElementById('recl-recebido-por').value='';
-  document.getElementById('recl-nf-data').value=hoje;
+  document.getElementById('recl-nf-data').value='';
   ['recl-nf-numero','recl-nf-valor','recl-nf-obs','recl-nf-arquivo','recl-pat-inicial'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const conhecidos=[...new Set(_recLoteRows.map(r=>r.possui_patrimonio==null?'':(r.possui_patrimonio?'sim':'nao')).filter(Boolean))];
   document.getElementById('recl-possui-patrimonio').value=conhecidos.length===1?conhecidos[0]:'';
