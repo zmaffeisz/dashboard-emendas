@@ -154,7 +154,7 @@ empenho criado para a diferença. Quando aplicável, guarda também os vínculos
 `emendas`/`emenda_itens`. Cancelamentos são preservados por status, sem apagar a execução
 ou os documentos financeiros originais.
 
-### `itens` (25 colunas) — ciclo de vida do item
+### `itens` — ciclo de vida do item
 Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → entrega).
 
 | Campo | Tipo | Observação |
@@ -165,6 +165,7 @@ Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → en
 | `contrato_id` | FK → `contratos.id` | |
 | `processo_id` | FK → `processos.id` | |
 | `codigo_siam` | text, nullable | código do item/serviço no catálogo interno SIAM |
+| `unidade_medida` | text, nullable no histórico | unidade padronizada ou personalizada do item licitado; obrigatória pela interface em novos salvamentos |
 | `fornecedor_id` | FK → `fornecedores.id` | |
 | `item_origem_id` | FK → `itens.id` (auto) | divisão/troca marca-modelo |
 | `status_lic_id` | FK → `status_opcoes.id` | status de licitação por item |

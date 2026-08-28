@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Unidade de medida nos itens da licitação:** o cadastro de aquisições, ATAs e serviços
+  por demanda passa a exigir unidade de medida por item. O novo seletor pesquisável usa
+  códigos, nomes, categorias e exemplos de uso, aceita aproximações e permite criar opções
+  personalizadas, que reaparecem nas buscas após serem usadas.
+
 - **Empréstimos e movimentações do Inventário:** corrigido o gatilho compartilhado de
   proteção para validar `documento_path` somente no histórico de movimentações. A atualização
   do estado atual do bem deixa de tentar acessar esse campo inexistente e o empréstimo pode

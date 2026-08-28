@@ -275,7 +275,7 @@ function renderLicitacoes(){
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam])).concat(_procServicoPeriodicoItens(p).flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(_procServicoPeriodicoItens(p).flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
   const _ocultos=incluirContratados?0:ocultos;
@@ -371,8 +371,8 @@ function renderLicitacoes(){
         }).join('');
         const vincularAta=p.natureza==='ATA DE RP'&&podeEd&&!_licItemContratado(it)&&!ocorrencia?` <button type="button" onclick="abrirPlanejamentoEmendaAta(${p.id},'${it.id}')" style="margin-left:6px;font-size:10px;padding:3px 7px;border:1px solid var(--blue);border-radius:4px;background:var(--surface);color:var(--blue);cursor:pointer">Vincular Emenda</button>`:'';
         bloco+=`<tr style="border-top:1px solid var(--border);${ocorrencia?'background:var(--red-bg);color:var(--red-text)':''}">
-          <td style="padding:8px 13px"><div>${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}</div>${_procCodigoSiamHtml(it.codigo_siam)}${planosHtml}</td>
-          <td style="padding:8px 6px;color:var(--text3);width:50px;text-align:center">${it.qtde??''}</td>
+          <td style="padding:8px 13px"><div>${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}</div>${_procCodigoSiamHtml(it.codigo_siam)}${_procUnidadeMedidaHtml(it.unidade_medida)}${planosHtml}</td>
+          <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${it.qtde??''}${it.unidade_medida?`<div style="font-size:9px">${_sanEsc(it.unidade_medida)}</div>`:''}</td>
           <td style="padding:8px 8px">${ctrl}</td>
           <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)&&!ocorrencia?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(ocorrencia?.data_ocorrencia||it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">${ocorrencia?'encerrado definitivamente':`há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}`}</div></td>
         </tr>`;
@@ -605,7 +605,7 @@ async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
   while(true){
     const {data,error}=await sb.from('itens')
-      .select('id,processo_id,descricao,codigo_siam,qtde,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla)')
+      .select('id,processo_id,descricao,codigo_siam,unidade_medida,qtde,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla)')
       .not('processo_id','is',null).order('processo_id').range(from,from+size-1);
     if(error) throw error;
     all=all.concat(data||[]);
@@ -805,6 +805,7 @@ async function abrirNovoProcesso(opcoes={}){
   const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value='';
   await preencherSelectStatusProcesso();
   await preencherSelectSecoes('proc-secao', false);
+  await _procCarregarUnidadesMedidaUsadas();
   aplicarSecaoTextoFormulario('proc-secao');
   _procItensLoaded=[];
   _procSaldoCache={};
@@ -824,7 +825,7 @@ async function abrirNovoProcesso(opcoes={}){
   document.getElementById('proc-msg').className='fmsg';
   document.getElementById('modal-processo').classList.add('active');
 }
-function abrirEditarProcesso(id){
+async function abrirEditarProcesso(id){
   const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
   _procEditId=p.id;
   _procSaldoCache={};
@@ -852,6 +853,7 @@ function abrirEditarProcesso(id){
   document.getElementById('proc-obs').value=p.observacao||'';
   preencherSelectStatusProcesso().then(()=>{document.getElementById('proc-status').value=p.status||'';});
   preencherSelectSecoes('proc-secao', false, p.secao).then(()=>aplicarSecaoTextoFormulario('proc-secao',p.secao||''));
+  await _procCarregarUnidadesMedidaUsadas();
   const _impBox=document.getElementById('proc-import-box'); if(_impBox){_impBox.style.display='none';_impBox.innerHTML='';}
   procNaturezaChange();
   procRecalcServicoMensal();
@@ -983,6 +985,84 @@ async function salvarProcesso(){
 let _procItensLoaded=[];
 const PROC_TIPO_SERVICO_DEMANDA_NORM='servico por demanda/execucao';
 const PROC_FONTES=[['emenda','Emenda'],['recurso_proprio','Recurso próprio'],['outra','Outro']];
+const PROC_UNIDADES_MEDIDA=[
+  ['UN','UNIDADE','Contagem','fralda, cadeira, equipamento'],['PÇ','PEÇA','Contagem','material, componente'],['PAR','PAR','Contagem','luvas especiais, peças pareadas'],['DZ','DÚZIA','Contagem','materiais fornecidos por dúzia'],['CTO','CENTO','Contagem','copos, descartáveis'],['MIL','MILHEIRO','Contagem','impressos, embalagens'],['CJ','CONJUNTO','Contagem','instrumental, mobiliário'],['JG','JOGO','Contagem','instrumental, ferramentas'],['KIT','KIT','Contagem','kits odontológicos, testes'],
+  ['BL','BLOCO','Apresentação','formulários, papel'],['CX','CAIXA','Apresentação','medicamentos, luvas, materiais'],['EMB','EMBALAGEM','Apresentação','dietas, insumos'],['FD','FARDO','Apresentação','papel, limpeza'],['FR','FRASCO','Apresentação','produtos líquidos'],['GL','GALÃO','Apresentação','produtos de limpeza'],['LT','LATA','Apresentação','dietas, fórmulas'],['PCT','PACOTE','Apresentação','descartáveis, escritório'],['POT','POTE','Apresentação','produtos diversos'],['RL','ROLO','Apresentação','papel, gaze, filme'],['SC','SACO','Apresentação','resíduos, materiais'],['SACH','SACHÊ','Apresentação','dieta, medicamentos'],['SER','SERINGA','Apresentação','insumos médicos'],['TB','TUBO','Apresentação','creme, gel, materiais'],['VD','VIDRO','Apresentação','produtos acondicionados'],['AMP','AMPOLA','Apresentação','medicamentos'],['BLST','BLISTER','Apresentação','medicamentos, material'],['BOB','BOBINA','Apresentação','papel, plástico'],['CART','CARTELA','Apresentação','testes, medicamentos'],['ENV','ENVELOPE','Apresentação','materiais esterilizados'],['FOL','FOLHA','Apresentação','papel, impressos'],['BIS','BISNAGA','Apresentação','cremes, géis'],['CAPS','CÁPSULA','Apresentação','medicamentos'],['COMP','COMPRIMIDO','Apresentação','medicamentos'],['DOSE','DOSE','Apresentação','medicamentos, vacinas'],
+  ['G','GRAMA','Massa','dieta em pó, material'],['KG','QUILOGRAMA','Massa','alimentos, produtos químicos'],['MG','MILIGRAMA','Massa','medicamentos'],['MCG','MICROGRAMA','Massa','medicamentos'],['T','TONELADA','Massa','grandes volumes'],['ML','MILILITRO','Volume','medicamentos, soluções'],['L','LITRO','Volume','dieta, limpeza, líquidos'],['M³','METRO CÚBICO','Volume','gases, água'],['MM','MILÍMETRO','Comprimento','materiais técnicos'],['CM','CENTÍMETRO','Comprimento','materiais diversos'],['M','METRO','Comprimento','mangueira, tecido, cabo'],['KM','QUILÔMETRO','Comprimento','casos específicos'],['CM²','CENTÍMETRO QUADRADO','Área','curativos'],['M²','METRO QUADRADO','Área','revestimento, serviços'],
+  ['ML/M','MILILITRO POR METRO','Composta','casos técnicos'],['G/M²','GRAMA POR METRO QUADRADO','Composta','papel, tecido'],['MG/ML','MILIGRAMA POR MILILITRO','Concentração','medicamentos'],['MG/G','MILIGRAMA POR GRAMA','Concentração','medicamentos'],['%','PORCENTAGEM','Concentração','soluções'],['UI','UNIDADE INTERNACIONAL','Potência','medicamentos'],['UI/ML','UNIDADE INTERNACIONAL POR ML','Concentração','medicamentos'],
+  ['TESTE','TESTE','Fornecimento','testes diagnósticos'],['TIRA','TIRA','Fornecimento','glicemia, testes'],['DISCO','DISCO','Fornecimento','odontologia, laboratório'],['PLACA','PLACA','Fornecimento','laboratório, odontologia'],['REFIL','REFIL','Fornecimento','limpeza, equipamentos'],['CARTUCHO','CARTUCHO','Fornecimento','impressão, reagentes'],['RESMA','RESMA','Fornecimento','papel'],['FITA','FITA','Fornecimento','hospitalar, escritório'],['LENÇO','LENÇO','Fornecimento','higiene'],['ABSORVENTE','ABSORVENTE','Fornecimento','higiene'],['AVENTAL','AVENTAL','Fornecimento','EPI, hospitalar']
+].map(([codigo,nome,categoria,exemplos])=>({codigo,nome,categoria,exemplos,valor:codigo===nome?nome:`${codigo} — ${nome}`}));
+const _procUnidadesMedidaPersonalizadas=new Set();
+let _procUnidadesMedidaCarregadas=false;
+function _procNormalizarBusca(valor){ return String(valor||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s+/g,' '); }
+function _procDistanciaTexto(a,b){
+  a=_procNormalizarBusca(a); b=_procNormalizarBusca(b);
+  const linha=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    let anterior=linha[0]; linha[0]=i;
+    for(let j=1;j<=b.length;j++){
+      const atual=linha[j];
+      linha[j]=Math.min(linha[j]+1,linha[j-1]+1,anterior+(a[i-1]===b[j-1]?0:1));
+      anterior=atual;
+    }
+  }
+  return linha[b.length];
+}
+function _procRegistrarUnidadeMedida(valor){
+  const texto=String(valor||'').trim(); if(!texto) return;
+  const normal=_procNormalizarBusca(texto);
+  const padrao=PROC_UNIDADES_MEDIDA.some(u=>[_procNormalizarBusca(u.valor),_procNormalizarBusca(u.codigo),_procNormalizarBusca(u.nome)].includes(normal));
+  if(!padrao) _procUnidadesMedidaPersonalizadas.add(texto);
+}
+async function _procCarregarUnidadesMedidaUsadas(){
+  if(_procUnidadesMedidaCarregadas) return;
+  const {data,error}=await sb.from('itens').select('unidade_medida').not('unidade_medida','is',null).limit(1000);
+  if(error){ console.warn('Unidades de medida já usadas:',error.message); return; }
+  (data||[]).forEach(i=>_procRegistrarUnidadeMedida(i.unidade_medida));
+  _procUnidadesMedidaCarregadas=true;
+}
+function _procUnidadeMedidaValor(valor){
+  const texto=String(valor||'').trim().replace(/\s+/g,' ').slice(0,80), normal=_procNormalizarBusca(texto);
+  const padrao=PROC_UNIDADES_MEDIDA.find(u=>[_procNormalizarBusca(u.valor),_procNormalizarBusca(u.codigo),_procNormalizarBusca(u.nome)].includes(normal));
+  return padrao?padrao.valor:texto.toLocaleUpperCase('pt-BR');
+}
+function _procUnidadesMedidaFiltrar(consulta){
+  const q=_procNormalizarBusca(consulta);
+  const personalizadas=[..._procUnidadesMedidaPersonalizadas].map(valor=>({codigo:'',nome:valor,categoria:'Personalizada',exemplos:'',valor}));
+  if(!q) return [...PROC_UNIDADES_MEDIDA,...personalizadas].slice(0,30);
+  return [...PROC_UNIDADES_MEDIDA,...personalizadas].map(u=>{
+    const codigo=_procNormalizarBusca(u.codigo), nome=_procNormalizarBusca(u.nome), termos=_procNormalizarBusca(`${u.codigo} ${u.nome} ${u.categoria} ${u.exemplos}`);
+    let score=99;
+    if(q===codigo) score=0; else if(q===nome||q===_procNormalizarBusca(u.valor)) score=1;
+    else if(codigo.startsWith(q)) score=2; else if(nome.startsWith(q)) score=3;
+    else if(termos.split(/[^A-Z0-9%³²/]+/).some(t=>t.startsWith(q))) score=4;
+    else if(termos.includes(q)) score=5;
+    else if(q.length>=3){ const limite=Math.max(1,Math.ceil(q.length/4)); const d=Math.min(_procDistanciaTexto(q,codigo),_procDistanciaTexto(q,nome)); if(d<=limite) score=6+d; }
+    return {u,score};
+  }).filter(x=>x.score<99).sort((a,b)=>a.score-b.score||a.u.valor.localeCompare(b.u.valor,'pt-BR')).slice(0,20).map(x=>x.u);
+}
+function _procRenderUnidadesMedida(input){
+  const menu=input?.closest('.pi-unidade-medida-wrap')?.querySelector('.pi-unidade-medida-menu'); if(!menu) return;
+  const encontrados=_procUnidadesMedidaFiltrar(input.value), normal=_procNormalizarBusca(input.value);
+  const exato=[...PROC_UNIDADES_MEDIDA,...[..._procUnidadesMedidaPersonalizadas].map(valor=>({valor,codigo:'',nome:valor}))].some(u=>[_procNormalizarBusca(u.valor),_procNormalizarBusca(u.codigo),_procNormalizarBusca(u.nome)].includes(normal));
+  const opcoes=encontrados.map(u=>`<button type="button" class="pi-unidade-medida-opcao" data-um-value="${_sanEsc(u.valor).replace(/"/g,'&quot;')}" onmousedown="event.preventDefault()" onclick="_procEscolherUnidadeMedida(this)"><b>${_sanEsc(u.valor)}</b><small>${_sanEsc(u.categoria)}${u.exemplos?' · '+_sanEsc(u.exemplos):''}</small></button>`).join('');
+  const criar=input.value.trim()&&!exato?`<button type="button" class="pi-unidade-medida-opcao pi-unidade-medida-criar" data-um-value="${_sanEsc(_procUnidadeMedidaValor(input.value)).replace(/"/g,'&quot;')}" onmousedown="event.preventDefault()" onclick="_procEscolherUnidadeMedida(this)"><b>＋ Criar “${_sanEsc(_procUnidadeMedidaValor(input.value))}”</b><small>Nova unidade personalizada</small></button>`:'';
+  menu.innerHTML=opcoes+criar||(input.value.trim()?'<div class="pi-unidade-medida-vazio">Nenhuma aproximação encontrada.</div>':'');
+  menu.hidden=false; input.setAttribute('aria-expanded','true');
+}
+function _procEscolherUnidadeMedida(botao){
+  const wrap=botao.closest('.pi-unidade-medida-wrap'), input=wrap?.querySelector('.pi-unidade-medida'); if(!input) return;
+  input.value=_procUnidadeMedidaValor(botao.dataset.umValue); _procRegistrarUnidadeMedida(input.value);
+  const menu=wrap.querySelector('.pi-unidade-medida-menu'); if(menu) menu.hidden=true;
+  input.setAttribute('aria-expanded','false'); input.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function _procUnidadeMedidaTecla(evento){
+  const input=evento.currentTarget, menu=input.closest('.pi-unidade-medida-wrap')?.querySelector('.pi-unidade-medida-menu');
+  if(evento.key==='Escape'){ if(menu) menu.hidden=true; input.setAttribute('aria-expanded','false'); return; }
+  if(evento.key==='Enter'&&menu&&!menu.hidden){ const primeira=menu.querySelector('.pi-unidade-medida-opcao'); if(primeira){evento.preventDefault();_procEscolherUnidadeMedida(primeira);} }
+}
+function _procFecharUnidadeMedida(input){ setTimeout(()=>{ const menu=input?.closest('.pi-unidade-medida-wrap')?.querySelector('.pi-unidade-medida-menu'); if(menu) menu.hidden=true; input?.setAttribute('aria-expanded','false'); },120); }
+function _procUnidadeMedidaHtml(valor){ return valor?`<span style="font-size:10px;color:var(--text3);white-space:nowrap">${_sanEsc(valor)}</span>`:''; }
 const PROC_TIPO_SERVICO_MENSAL_FIXO='Serviço mensal valor fixo';
 const PROC_TIPO_SERVICO_TRIMESTRAL_FIXO='Serviço trimestral valor fixo';
 function _procCodigoSiam(valor){ return String(valor||'').trim().replace(/\s+/g,'')||null; }
@@ -1392,8 +1472,9 @@ function procAddItemRow(data,opcoes={}){
         <input type="text" class="pi-siam"${termDis} maxlength="50" inputmode="numeric" placeholder="000.00001.2491-01" value="${_sanEsc(String(data.codigo_siam||'')).replace(/"/g,'&quot;')}" oninput="_procCodigoSiamInput(this)" style="${inp}"></div>
       ${terminal?'':`<button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>`}
     </div>
-    <div style="display:grid;grid-template-columns:90px 130px 100px 1fr;gap:8px;margin-top:6px">
+    <div style="display:grid;grid-template-columns:90px minmax(190px,1.35fr) 130px 100px minmax(150px,1fr);gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade de medida *</div><div class="pi-unidade-medida-wrap"><input type="text" class="pi-unidade-medida"${termDis} maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Busque por código, nome ou uso" value="${_sanEsc(String(data.unidade_medida||'')).replace(/"/g,'&quot;')}" oninput="_procRenderUnidadesMedida(this)" onfocus="_procRenderUnidadesMedida(this)" onkeydown="_procUnidadeMedidaTecla(event)" onblur="_procFecharUnidadeMedida(this)" style="${inp}"><div class="pi-unidade-medida-menu" hidden></div></div></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor"${termDis} placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo"${termDis} min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
@@ -1510,7 +1591,7 @@ async function _carregarProcItens(processoId){
     ]);
     const ocorrenciaPorItem=Object.fromEntries((ocorrencias||[]).map(o=>[String(o.item_id),o]));
     (data||[]).forEach(it=>{ if(it.emenda_id&&!ocorrenciaPorItem[String(it.id)]){ const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0; _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor; } });
-    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); procAddItemRow({id:it.id, descricao:it.descricao, codigo_siam:it.codigo_siam, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
+    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); _procRegistrarUnidadeMedida(it.unidade_medida); procAddItemRow({id:it.id, descricao:it.descricao, codigo_siam:it.codigo_siam, unidade_medida:it.unidade_medida, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
   }
   _renderProcItensVazio();
   _recalcProcValorEstimado();
@@ -1529,11 +1610,14 @@ async function _persistProcItens(processoId, natureza){
     const g=cl=>c.querySelector('.'+cl);
     const descricao=(g('pi-desc').value||'').trim();
     const codigoSiam=_procCodigoSiam(g('pi-siam')?.value);
+    const unidadeMedida=_procUnidadeMedidaValor(g('pi-unidade-medida')?.value);
     const qtde=parseFloat(g('pi-qtde').value);
     const fonte_tipo=g('pi-fonte').value;
     const prazoNumero=Number(g('pi-prazo')?.value);
     const prazoEntrega=(!ehDemanda&&Number.isInteger(prazoNumero)&&prazoNumero>0)?prazoNumero:null;
     // Item 3: ATA DE RP não exige fonte/emenda/unidade nesta fase (vínculo ocorre na execução da ata)
+    if(!unidadeMedida) throw new Error(`Informe a unidade de medida do item "${descricao||'sem descrição'}".`);
+    _procRegistrarUnidadeMedida(unidadeMedida);
     if(ehAta||ehDemanda){
       if(!descricao||!qtde) throw new Error(ehDemanda?'Cada item do servico por demanda precisa de descricao e quantidade estimada.':'Cada item da ata precisa de descrição e quantidade.');
       if(ehDemanda && !(parseFloat(g('pi-valor').value)>0)) throw new Error('Cada item do servico por demanda precisa de valor unitario estimado.');
@@ -1551,7 +1635,7 @@ async function _persistProcItens(processoId, natureza){
     else if(!ehAta && !ehDemanda){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     current.push({id:c.dataset.itemId||null, row:{
       processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
-      grupo_item_id:c.dataset.grupo||null, descricao, codigo_siam:codigoSiam, qtde,
+      grupo_item_id:c.dataset.grupo||null, descricao, codigo_siam:codigoSiam, unidade_medida:unidadeMedida, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
       prazo_entrega_dias:ehDemanda?null:prazoEntrega,
       unidade_destino_id:(!ehAta && !ehDemanda && g('pi-unidade').value)?Number(g('pi-unidade').value):null,
