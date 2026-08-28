@@ -59,7 +59,8 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    `loadAtas()` **toda vez**, garantindo que alterações em **Contratos** (encerrar,
    prorrogar, editar) apareçam imediatamente. ([index.html:2820](../index.html))
 2. **Espelhamento Contrato ATA → `atas_itens`** — ao salvar um contrato `tipo=ATA`, os
-   itens selecionados são copiados para `atas_itens` e `itens.ata_item_id` é preenchido
+   itens selecionados são copiados para `atas_itens`, incluindo a unidade de medida, e
+   `itens.ata_item_id` é preenchido
    (idempotente; não duplica). A **fonte de verdade da execução** permanece na aba Atas.
    ([index.html:7118+](../index.html), `abrirModalNovoContrato`)
    - Para ATA RP, o contrato gerado exige número apenas numérico, data de início e seção.

@@ -1781,6 +1781,7 @@
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('cpl')" class="th-sort-label">CPL <span id="sort-atas-cpl"></span></span><span class="hdr-filter-btn" id="hfa-cpl" onclick="openAtaFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('sim')" class="th-sort-label">SIM <span id="sort-atas-sim"></span></span><span class="hdr-filter-btn" id="hfa-sim" onclick="openAtaFilter(event,'sim')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('item')" class="th-sort-label">Item <span id="sort-atas-item"></span></span><span class="hdr-filter-btn" id="hfa-item" onclick="openAtaFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('unidade_medida')" class="th-sort-label">Unid. medida <span id="sort-atas-unidade_medida"></span></span><span class="hdr-filter-btn" id="hfa-unidade_medida" onclick="openAtaFilter(event,'unidade_medida')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('marca')" class="th-sort-label">Marca/Modelo <span id="sort-atas-marca"></span></span><span class="hdr-filter-btn" id="hfa-marca" onclick="openAtaFilter(event,'marca')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('qtde_contratada')" class="th-sort-label">Qtde contrat. <span id="sort-atas-qtde_contratada"></span></span><span class="hdr-filter-btn" id="hfa-qtde_contratada" onclick="openAtaFilter(event,'qtde_contratada')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('exec')" class="th-sort-label">Executado <span id="sort-atas-exec"></span></span><span class="hdr-filter-btn" id="hfa-exec" onclick="openAtaFilter(event,'exec')" title="Filtrar">▾</span></span></th>
@@ -1848,6 +1849,7 @@
             <div id="na-contrato-resumo" style="display:none;margin-top:6px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-size:12px;color:var(--text2)"></div>
           </div>
           <div class="form-group full"><div class="form-label">Item *</div><input type="text" id="na-item" placeholder="ex: AR CONDICIONADO INVERTER 24.000 BTU"></div>
+          <div class="form-group full"><div class="form-label">Unidade de medida *</div><div class="pi-unidade-medida-wrap"><input type="text" id="na-unidade-medida" maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Busque por código, nome ou uso" oninput="_procRenderUnidadesMedida(this)" onfocus="_procRenderUnidadesMedida(this)" onkeydown="_procUnidadeMedidaTecla(event)" onblur="_procFecharUnidadeMedida(this)"><div class="pi-unidade-medida-menu" hidden></div></div></div>
           <div class="form-group"><div class="form-label">Marca/Modelo</div><input type="text" id="na-marca" placeholder="ex: AGRATTO LCST24F"></div>
           <div class="form-group"><div class="form-label">Qtde contratada *</div><input type="number" id="na-qtde" placeholder="ex: 46"></div>
           <div class="form-group"><div class="form-label">Valor unitário (R$)</div><input type="number" id="na-valor" placeholder="ex: 3749.82" step="0.01"></div>
@@ -1894,8 +1896,12 @@
             <div class="form-label">SIM</div>
             <input type="text" id="ne2-sim" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
           </div>
+          <div class="form-group full">
+            <div class="form-label">Unidade de medida</div>
+            <input type="text" id="ne2-unidade-medida" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)" placeholder="Preenchida conforme o item da ATA">
+          </div>
           <div class="form-group full" id="ne2-unidade-wrap">
-            <div class="form-label" id="ne2-unidade-label">Unidade *</div>
+            <div class="form-label" id="ne2-unidade-label">Unidade de destino *</div>
             <input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU">
             <select id="ne2-secretaria" style="display:none"><option value="">Selecione a secretaria...</option></select>
             <div id="ne2-unidade-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Preenchida automaticamente pela emenda.</div>
@@ -3214,9 +3220,9 @@
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260827-vida-lote-consumo-1"></script>
-  <script src="js/legacy/20-atas.js?v=20260827-codigo-siam-item-1"></script>
+  <script src="js/legacy/20-atas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260827-codigo-siam-item-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260827-codigo-siam-item-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260827-hierarquia-org-1"></script>

@@ -111,6 +111,7 @@ async function loadAtas(){
       sim:(contrato.numero_contrato||"").trim(),
       item:(r.item||"").trim(),
       codigo_siam:(r.codigo_siam||"").trim(),
+      unidade_medida:(r.unidade_medida||"").trim(),
       marca:(r.marca_modelo||"").trim(),
       qtde_contratada:Number(r.qtde_contratada)||0,
       valor_unit_original:Number(r.valor_unit)||0,
@@ -244,6 +245,7 @@ const ATA_FILTER_COLS = {
   cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
   sim:{get:r=>r.sim||'',disp:v=>v||'(vazio)'},
   item:{get:r=>r.item||'',disp:v=>v||'(vazio)'},
+  unidade_medida:{get:r=>r.unidade_medida||'',disp:v=>v||'(vazio)'},
   marca:{get:r=>r.marca||'',disp:v=>v||'(vazio)'},
   qtde_contratada:{get:r=>r.qtde_contratada??'',disp:v=>v!==''?v:'(vazio)'},
   exec:{get:r=>getExecutado(r.cpl,r.sim,r.item),disp:v=>v!==''?v:'(vazio)'},
@@ -398,7 +400,7 @@ function clearAllAtas(){
 }
 
 function _ataBuscaItemTexto(r){
-  return [r.item,r.codigo_siam,r.marca,r.cpl,r.sim,r.empresa,r.status].filter(Boolean).join(' ');
+  return [r.item,r.codigo_siam,r.unidade_medida,r.marca,r.cpl,r.sim,r.empresa,r.status].filter(Boolean).join(' ');
 }
 
 function _ataBuscaExecTexto(r){
@@ -478,6 +480,7 @@ function filtrarAtas(){
         ${_sanEsc(r.item)}${r.codigo_siam?`<div style="font-size:10px;color:var(--blue);font-weight:600">SIAM ${_sanEsc(r.codigo_siam)}</div>`:''}
         ${r.ata_renovada?`<div style="margin-top:4px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);font-size:9px;white-space:nowrap" title="Esta Ata de RP já utilizou sua única renovação${r.renovada_ate?` e está vigente até ${fmtDate(r.renovada_ate)}`:''}.">✓ JÁ RENOVADA · LIMITE ATINGIDO</span></div>`:''}
       </td>
+      <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.unidade_medida||"—")}</td>
       <td style="font-size:11px">${r.marca||"—"}</td>
       <td style="text-align:right">${r.qtde_contratada}</td>
       <td style="text-align:right">
@@ -514,7 +517,7 @@ function filtrarAtas(){
         `}
       </td>
     </tr>`;
-  }).join("")||`<tr><td colspan="13"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item de ata encontrado</div></td></tr>`;
+  }).join("")||`<tr><td colspan="14"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item de ata encontrado</div></td></tr>`;
 
   // Tabela de execuções filtradas
   let execRows=atasExec.filter(r=>{
@@ -1758,9 +1761,9 @@ function togglePendentes(){
 // ═══ EXPORTAR EXCEL ═══
 async function exportarAtas(){
   await ensureLib('xlsx');
-  const colunas=["CPL","SIM","CODIGO_SIAM","ITEM","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
+  const colunas=["CPL","SIM","CODIGO_SIAM","ITEM","UNIDADE_MEDIDA","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
   const rows=window._ataRowsFiltered||atasItens;
-  const dados=rows.map(r=>[r.cpl,r.sim,r.codigo_siam||'',r.item,r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
+  const dados=rows.map(r=>[r.cpl,r.sim,r.codigo_siam||'',r.item,r.unidade_medida||'',r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   const wb={SheetNames:["ATAs"],Sheets:{ATAs:ws}};
   XLSX.writeFile(wb,"atas_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");
@@ -1993,9 +1996,10 @@ async function salvarProrrogarPrazo(){
 function autoPreencherCplSim(){
   const itemId=document.getElementById("ne2-item").value;
   const at=_resolverAtaItemRef(itemId);
+  document.getElementById("ne2-unidade-medida").value=at?.unidade_medida||"";
+  document.getElementById("ne2-cpl").value=at?.cpl||"";
+  document.getElementById("ne2-sim").value=at?.sim||"";
   if(at){
-    document.getElementById("ne2-cpl").value=at.cpl||"";
-    document.getElementById("ne2-sim").value=at.sim||"";
     // Calcular valor auto quando digitar qtde
     document.getElementById("ne2-qtde").oninput=()=>calcValorExec();
   }
@@ -2022,7 +2026,7 @@ async function abrirModalNovaAta(contratoId=null){
     const fornecedores=new Map((forRes.data||[]).map(f=>[String(f.id),f]));
     atasContratos=(ctRes.data||[]).map(c=>({...c,empresa:fornecedores.get(String(c.fornecedor_id))?.razao_social||c.prestador||""}));
   }
-  ["na-item","na-marca","na-qtde","na-valor","na-prazo"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["na-item","na-unidade-medida","na-marca","na-qtde","na-valor","na-prazo"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   const sel=document.getElementById("na-contrato");
   sel.innerHTML='<option value="">Selecione a ATA...</option>'+atasContratos
     .slice().sort((a,b)=>(a.cpl||"").localeCompare(b.cpl||"",'pt-BR',{numeric:true}))
@@ -2067,10 +2071,10 @@ async function abrirModalNovaExec(){
   if(secretariaSel){ secretariaSel.disabled=false; secretariaSel.innerHTML='<option value="">Selecione a secretaria...</option>'; }
   const itensUnicos=atasItens.filter(r=>!String(r.status||"").toUpperCase().startsWith("ENCERRADO")).sort((a,b)=>a.item.localeCompare(b.item,'pt-BR'));
   const itemSel=document.getElementById("ne2-item");
-  itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
+  itemSel.innerHTML='<option value="">Selecione o item...</option>'+itensUnicos.map(r=>`<option value="${r.id}">${_sanEsc(r.item)}${r.unidade_medida?` · ${_sanEsc(r.unidade_medida)}`:''} (${_sanEsc(r.cpl)} / ${_sanEsc(r.sim)})</option>`).join("");
   document.getElementById("ne2-cpl").value="";
   document.getElementById("ne2-sim").value="";
-  ["ne2-unidade","ne2-secretaria","ne2-codigo-siam-secretaria","ne2-email-solicitante","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["ne2-unidade-medida","ne2-unidade","ne2-secretaria","ne2-codigo-siam-secretaria","ne2-email-solicitante","ne2-qtde","ne2-valor","ne2-data-af","ne2-dt-entrega"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   // A origem deve ser escolhida explicitamente para evitar solicitações
   // registradas com o tipo de recurso incorreto.
   if(!_neEmendasCache.length){ const {data}=await sb.from('emendas').select('id,emenda,ano,parlamentar,unidade,unidade_id').order('ano',{ascending:false}); _neEmendasCache=data||[]; }
@@ -2117,7 +2121,7 @@ function neOrigemChange(){
   document.getElementById("ne2-email-solicitante-wrap").style.display=carona?'':'none';
   const uni=document.getElementById("ne2-unidade");
   const secretaria=document.getElementById("ne2-secretaria");
-  document.getElementById("ne2-unidade-label").textContent=carona?'Secretaria solicitante *':'Unidade *';
+  document.getElementById("ne2-unidade-label").textContent=carona?'Secretaria solicitante *':'Unidade de destino *';
   uni.style.display=carona?'none':'';
   secretaria.style.display=carona?'':'none';
   uni.readOnly=emenda; uni.style.background=emenda?'var(--surface2)':'';
@@ -2234,11 +2238,13 @@ async function salvarNovaAta(){
   if(bloquearSeVisualiz('atas')) return;
   const contratoId=Number(document.getElementById("na-contrato").value)||null;
   const item=document.getElementById("na-item").value.trim();
+  const unidadeMedida=_procUnidadeMedidaValor(document.getElementById("na-unidade-medida").value);
   const qtde=parseFloat(document.getElementById("na-qtde").value)||0;
-  if(!contratoId||!item||!qtde){showMsg("na","Selecione a ATA e preencha Item e Quantidade (*)","err");return}
+  if(!contratoId||!item||!unidadeMedida||!qtde){showMsg("na","Selecione a ATA e preencha Item, Unidade de medida e Quantidade (*)","err");return}
+  _procRegistrarUnidadeMedida(unidadeMedida);
   const btn=document.querySelector("#modal-nova-ata .btn-primary");
   btn.disabled=true;btn.textContent="Salvando...";
-  const dados={contrato_id:contratoId,item,
+  const dados={contrato_id:contratoId,item,unidade_medida:unidadeMedida,
     marca_modelo:document.getElementById("na-marca").value.trim(),
     qtde_contratada:qtde,
     valor_unit:parseFloat(document.getElementById("na-valor").value)||0,

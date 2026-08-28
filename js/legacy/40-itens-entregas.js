@@ -4362,7 +4362,7 @@ async function _ncVincularItens(contratoId, fornecedorId){
 // reaproveita atas_itens órfãos de criação parcial. Retorna nº de itens espelhados.
 async function _ncEspelharAta(contratoId){
   const {data:itens,error}=await sb.from('itens')
-    .select('id,descricao,codigo_siam,qtde,valor_contratado,valor_estimado,prazo_entrega_dias,marca,modelo,ata_item_id')
+    .select('id,descricao,codigo_siam,unidade_medida,qtde,valor_contratado,valor_estimado,prazo_entrega_dias,marca,modelo,ata_item_id')
     .eq('contrato_id',contratoId).eq('origem','ata');
   if(error) throw error;
   const pendentes=(itens||[]).filter(it=>!it.ata_item_id);
@@ -4383,13 +4383,16 @@ async function _ncEspelharAta(contratoId){
     const idx=reutilizaveis.findIndex(a=>(a.item||'').trim()===desc && String(a.codigo_siam||'').trim()===codigoSiam && Number(a.qtde_contratada||0)===qtd);
     if(idx>=0){ alvoId=reutilizaveis[idx].id; reutilizaveis.splice(idx,1); }
     if(!alvoId){
-      const dados={contrato_id:contratoId,item:desc,codigo_siam:codigoSiam||null,marca_modelo:[it.marca,it.modelo].filter(Boolean).join(' ').trim(),
+      const dados={contrato_id:contratoId,item:desc,codigo_siam:codigoSiam||null,unidade_medida:it.unidade_medida||null,marca_modelo:[it.marca,it.modelo].filter(Boolean).join(' ').trim(),
         qtde_contratada:qtd,
         valor_unit:(it.valor_contratado!=null?Number(it.valor_contratado):(it.valor_estimado!=null?Number(it.valor_estimado):0)),
         prazo_entrega:(it.prazo_entrega_dias!=null?Number(it.prazo_entrega_dias):null)};
       const {data:novo,error:e2}=await sb.from('atas_itens').insert(dados).select('id').single();
       if(e2) throw e2;
       alvoId=novo?.id;
+    }else if(it.unidade_medida){
+      const {error:eUnidade}=await sb.from('atas_itens').update({unidade_medida:it.unidade_medida}).eq('id',alvoId).is('unidade_medida',null);
+      if(eUnidade) throw eUnidade;
     }
     if(alvoId){
       const {error:e3}=await sb.from('itens')

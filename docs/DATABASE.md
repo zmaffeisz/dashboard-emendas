@@ -59,6 +59,7 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260825134011 | `indexar_criador_ocorrencias_licitacao` — índice da relação entre ocorrência e usuário autor |
 | 20260827152129 | `adicionar_codigo_siam_itens` — código opcional do catálogo SIAM em itens licitados e itens de ATA, com validação e índices de consulta |
 | 20260828204740 | `adicionar_unidade_medida_itens_licitacao` — unidade de medida pesquisável e personalizável nos itens licitados |
+| 20260828213724 | `adicionar_unidade_medida_atas_itens` — unidade de medida nos itens de ATA, com recuperação a partir dos itens espelhados |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de

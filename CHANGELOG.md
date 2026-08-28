@@ -2,6 +2,11 @@
 
 ## Em desenvolvimento
 
+- **Unidade de medida nas Atas Rp:** a lista de itens passa a exibir, pesquisar, ordenar
+  e filtrar a unidade de medida. A nova solicitação mostra a unidade do item selecionado
+  separadamente da unidade de destino, e novos itens de ATA preservam esse dado desde a
+  licitação ou pelo cadastro manual.
+
 - **Planilha modelo e colagem completa dos itens da licitação:** Aquisição e ATA de RP
   agora oferecem modelos Excel próprios, com listas suspensas para unidade de medida,
   unidade de destino e fonte de recurso. A colagem em Descrição cria várias linhas e
