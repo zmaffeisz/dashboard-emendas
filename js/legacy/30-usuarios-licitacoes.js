@@ -1186,14 +1186,55 @@ function _procNumeroColado(valor){
   const numero=Number(texto);
   return Number.isFinite(numero)?String(negativo?-numero:numero):'';
 }
+function _procCamposPlanilhaItens(){
+  const base=['.pi-desc','.pi-qtde','.pi-unidade-medida','.pi-valor'];
+  if(!_procEhServicoDemanda()) base.push('.pi-prazo');
+  base.push('.pi-siam');
+  if(!_procEhAta()&&!_procEhServicoDemanda()) base.push('.pi-unidade','.pi-fonte');
+  return base;
+}
+function _procEhCabecalhoPlanilha(linha){
+  const primeira=_procNormalizarBusca(linha?.[0]);
+  return primeira==='DESCRICAO'||primeira==='ITEM'||primeira==='DESCRICAO DO ITEM';
+}
+function _procAplicarValorColado(input,seletor,valor){
+  const texto=String(valor??'').replace(/\u00a0/g,' ').trim();
+  if(!texto){ input.value=''; return {ok:true}; }
+  if(['.pi-qtde','.pi-valor','.pi-prazo','.smi-qtd','.smi-valor'].includes(seletor)){
+    const numero=_procNumeroColado(texto); if(numero==='') return {ok:false,motivo:'valor numérico'};
+    input.value=numero; return {ok:true};
+  }
+  if(seletor==='.pi-unidade-medida'){
+    input.value=_procUnidadeMedidaValor(texto); _procRegistrarUnidadeMedida(input.value); return {ok:true};
+  }
+  if(seletor==='.pi-siam'||seletor==='.smi-siam'){
+    const codigo=_procCodigoSiam(texto); if(!_procCodigoSiamValido(codigo)) return {ok:false,motivo:'Código SIAM'};
+    input.value=codigo||''; _procCodigoSiamInput(input); return {ok:true};
+  }
+  if(seletor==='.pi-unidade'){
+    const normal=_procNormalizarBusca(texto);
+    const opcao=[...input.options].find(o=>o.value&&_procNormalizarBusca(o.textContent)===normal);
+    if(!opcao) return {ok:false,motivo:`unidade de destino “${texto}”`};
+    input.value=opcao.value; return {ok:true};
+  }
+  if(seletor==='.pi-fonte'){
+    const mapa={'RECURSO PROPRIO':'recurso_proprio','RECURSO PROPRIO MUNICIPAL':'recurso_proprio','OUTRO':'outra','OUTRA':'outra','EMENDA':'emenda'};
+    const fonte=mapa[_procNormalizarBusca(texto)];
+    if(!fonte||fonte==='emenda') return {ok:false,motivo:fonte==='emenda'?'fonte Emenda (use “Puxar de emenda”)':`fonte de recurso “${texto}”`};
+    input.value=fonte; procFonteChange(input); return {ok:true};
+  }
+  input.value=texto; return {ok:true};
+}
 function _procColarPlanilha(evento){
   const alvo=evento?.target;
   if(!(alvo instanceof HTMLInputElement)||alvo.readOnly||alvo.disabled) return;
-  const tabela=_procLerClipboardPlanilha(evento);
+  let tabela=_procLerClipboardPlanilha(evento);
   if(!tabela.length||(tabela.length===1&&tabela[0].length===1)) return;
+  if(_procEhCabecalhoPlanilha(tabela[0])) tabela=tabela.slice(1);
+  if(!tabela.length) return;
   const configuracoes=[
     {lista:'#proc-serv-mensal-itens-lista',card:'.proc-serv-mensal-item',campos:['.smi-desc','.smi-qtd','.smi-valor'],adicionar:()=>procAddServicoMensalItemRow(),finalizar:()=>procRecalcServicoMensal()},
-    {lista:'#proc-itens-lista',card:'.proc-item-card',campos:['.pi-desc','.pi-qtde','.pi-valor'],adicionar:()=>procAddItemRow(null,{adiarAtualizacao:true}),finalizar:()=>{_renderProcItensVazio();_recalcProcValorEstimado();_procAplicarModoAta();}}
+    {lista:'#proc-itens-lista',card:'.proc-item-card',campos:_procCamposPlanilhaItens(),adicionar:()=>procAddItemRow(null,{adiarAtualizacao:true}),finalizar:()=>{_renderProcItensVazio();_recalcProcValorEstimado();_procAplicarModoAta();}}
   ];
   const config=configuracoes.find(item=>alvo.closest(item.lista)&&item.campos.some(seletor=>alvo.matches(seletor)));
   if(!config) return;
@@ -1203,24 +1244,32 @@ function _procColarPlanilha(evento){
   if(linhaInicial<0||colunaInicial<0) return;
   evento.preventDefault();
   while(cards.length<linhaInicial+tabela.length){ config.adicionar(); cards=[...document.querySelectorAll(`${config.lista} ${config.card}`)]; }
-  let preenchidos=0, invalidos=0;
+  let preenchidos=0, invalidos=0; const motivos=new Set();
   tabela.forEach((valores,deslocamentoLinha)=>{
     const card=cards[linhaInicial+deslocamentoLinha];
     valores.forEach((valor,deslocamentoColuna)=>{
       const indiceColuna=colunaInicial+deslocamentoColuna;
       const seletor=config.campos[indiceColuna]; if(!seletor) return;
       const input=card?.querySelector(seletor); if(!input||input.readOnly||input.disabled) return;
-      const convertido=indiceColuna===0?String(valor).trim():_procNumeroColado(valor);
-      if(indiceColuna>0&&String(valor).trim()&&convertido===''){ invalidos++; return; }
-      input.value=convertido;
+      const resultado=_procAplicarValorColado(input,seletor,valor);
+      if(!resultado.ok){ invalidos++; if(resultado.motivo) motivos.add(resultado.motivo); return; }
       preenchidos++;
     });
   });
   config.finalizar();
   if(window.toast){
-    if(invalidos) toast(`${preenchidos} campo(s) preenchido(s). ${invalidos} valor(es) numérico(s) não foram reconhecidos.`,'warning');
+    if(invalidos) toast(`${preenchidos} campo(s) preenchido(s). ${invalidos} valor(es) não reconhecido(s)${motivos.size?': '+[...motivos].slice(0,3).join(', '):''}.`,'warning');
     else toast(`${preenchidos} campo(s) preenchido(s) a partir da planilha.`,'success');
   }
+}
+function procBaixarModeloItens(){
+  const natureza=document.getElementById('proc-natureza')?.value;
+  const tipo=natureza==='AQUISIÇÃO'?'aquisicao':(natureza==='ATA DE RP'?'ata':'');
+  if(!tipo){ if(window.toast) toast('O modelo está disponível para Aquisição e ATA de RP.','warning'); return; }
+  const link=document.createElement('a');
+  link.href=`templates/modelo-itens-licitacao-${tipo}.xlsx`;
+  link.download=`modelo-itens-licitacao-${tipo}.xlsx`;
+  document.body.appendChild(link); link.click(); link.remove();
 }
 function procAddServicoMensalItemRow(item={}){
   const lista=document.getElementById('proc-serv-mensal-itens-lista');
@@ -1399,6 +1448,7 @@ function _procAplicarModoAta(){
   const demanda=_procEhServicoDemanda();
   // botão "Puxar de emenda" some na ATA (vínculo de emenda só na execução da ata)
   const btn=document.getElementById('proc-btn-puxar-emenda'); if(btn) btn.style.display=(ata||demanda)?'none':'';
+  const modelo=document.getElementById('proc-btn-modelo-itens'); if(modelo) modelo.style.display=demanda?'none':'';
   if(ata||demanda){ const box=document.getElementById('proc-import-box'); if(box){ box.style.display='none'; box.innerHTML=''; } }
   // dica do cabeçalho
   const hint=document.getElementById('proc-itens-hint');
@@ -1469,14 +1519,14 @@ function procAddItemRow(data,opcoes={}){
       <div style="flex:1"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Descrição *${locked?' <span style="text-transform:none;letter-spacing:0">· da emenda</span>':''}</div>
         <input type="text" class="pi-desc"${roAttr} placeholder="ex: AR CONDICIONADO 12000 BTU" value="${_sanEsc(String(data.descricao||'')).replace(/"/g,'&quot;')}" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
       <div style="flex:0 1 200px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Código SIAM <span style="text-transform:none;letter-spacing:0">(opcional)</span></div>
-        <input type="text" class="pi-siam"${termDis} maxlength="50" inputmode="numeric" placeholder="000.00001.2491-01" value="${_sanEsc(String(data.codigo_siam||'')).replace(/"/g,'&quot;')}" oninput="_procCodigoSiamInput(this)" style="${inp}"></div>
+        <input type="text" class="pi-siam"${termDis} maxlength="50" inputmode="numeric" placeholder="000.00001.2491-01" value="${_sanEsc(String(data.codigo_siam||'')).replace(/"/g,'&quot;')}" oninput="_procCodigoSiamInput(this)" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       ${terminal?'':`<button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>`}
     </div>
     <div style="display:grid;grid-template-columns:90px minmax(190px,1.35fr) 130px 100px minmax(150px,1fr);gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade de medida *</div><div class="pi-unidade-medida-wrap"><input type="text" class="pi-unidade-medida"${termDis} maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Busque por código, nome ou uso" value="${_sanEsc(String(data.unidade_medida||'')).replace(/"/g,'&quot;')}" oninput="_procRenderUnidadesMedida(this)" onfocus="_procRenderUnidadesMedida(this)" onkeydown="_procUnidadeMedidaTecla(event)" onblur="_procFecharUnidadeMedida(this)" style="${inp}"><div class="pi-unidade-medida-menu" hidden></div></div></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade de medida *</div><div class="pi-unidade-medida-wrap"><input type="text" class="pi-unidade-medida"${termDis} maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Busque por código, nome ou uso" value="${_sanEsc(String(data.unidade_medida||'')).replace(/"/g,'&quot;')}" oninput="_procRenderUnidadesMedida(this)" onfocus="_procRenderUnidadesMedida(this)" onkeydown="_procUnidadeMedidaTecla(event)" onblur="_procFecharUnidadeMedida(this)" onpaste="_procColarPlanilha(event)" style="${inp}"><div class="pi-unidade-medida-menu" hidden></div></div></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor"${termDis} placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
-      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo"${termDis} min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" style="${inp}"></div>
+      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo"${termDis} min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
     </div>
     <div class="pi-fonte-row" style="display:grid;grid-template-columns:170px 1fr;gap:8px;margin-top:6px;align-items:end">

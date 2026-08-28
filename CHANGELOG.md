@@ -2,6 +2,12 @@
 
 ## Em desenvolvimento
 
+- **Planilha modelo e colagem completa dos itens da licitação:** Aquisição e ATA de RP
+  agora oferecem modelos Excel próprios, com listas suspensas para unidade de medida,
+  unidade de destino e fonte de recurso. A colagem em Descrição cria várias linhas e
+  preenche descrição, quantidade, unidade de medida, valor, prazo, Código SIAM e, nas
+  aquisições, unidade de destino e fonte.
+
 - **Unidade de medida nos itens da licitação:** o cadastro de aquisições, ATAs e serviços
   por demanda passa a exigir unidade de medida por item. O novo seletor pesquisável usa
   códigos, nomes, categorias e exemplos de uso, aceita aproximações e permite criar opções

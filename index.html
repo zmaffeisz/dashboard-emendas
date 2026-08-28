@@ -1702,11 +1702,12 @@
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:.5rem">
         <div style="font-size:13px;font-weight:700">📦 Itens da licitação <span id="proc-itens-hint" style="font-size:11px;color:var(--text3);font-weight:400">(fonte de recurso obrigatória por item)</span></div>
         <div style="display:flex;gap:6px">
+          <button type="button" id="proc-btn-modelo-itens" onclick="procBaixarModeloItens()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer">⬇ Baixar planilha modelo</button>
           <button type="button" id="proc-btn-puxar-emenda" onclick="procImportarDeEmenda()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--surface);color:var(--blue);cursor:pointer">⬇ Puxar de emenda</button>
           <button type="button" onclick="procAddItemRow()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Adicionar item</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin:0 0 8px">Dica: informe o Código SIAM do catálogo em cada item quando disponível. Para descrição, quantidade e valor, é possível colar uma coluna ou as três colunas juntas começando em Descrição.</div>
+      <div style="font-size:11px;color:var(--text3);margin:0 0 8px">Dica: baixe o modelo, preencha as linhas e copie somente os dados. Ao colar no primeiro campo Descrição, o sistema cria todos os itens e preenche as colunas na mesma ordem da planilha.</div>
       <div id="proc-import-box" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem;margin-bottom:.5rem"></div>
       <div id="proc-itens-lista" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="proc-itens-vazio" style="font-size:12px;color:var(--text3);padding:.5rem 0">Nenhum item adicionado. Use "Adicionar item" ou "Puxar de emenda".</div>

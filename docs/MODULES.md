@@ -161,6 +161,13 @@ Processos (`processos`, `vw_processos_resumo`) e status de licitação por **ite
 (`itens.status_lic_id`). Tela "Controle de processos". O status viaja por item; a emenda
 apenas lê o status.
 
+No cadastro de itens, o botão **Baixar planilha modelo** entrega um arquivo específico para
+ATA de RP ou Aquisição. A colagem tabular, iniciada em **Descrição**, segue a ordem
+Descrição, Quantidade, Unidade de medida, Valor unitário estimado, Prazo e Código SIAM; em
+Aquisição, acrescenta Unidade de destino e Fonte de recurso. Os modelos usam listas
+suspensas para os campos padronizados. Itens de Emenda não são importados por essa planilha:
+devem usar **Puxar de emenda** para preservar o vínculo com `emenda_itens`.
+
 ## 13. Sanções
 Solicitação (`sancoes_solicitadas` + `sancao_itens`) e aplicação
 (`sancoes_administrativas`) de sanções administrativas, ligadas a `contratos` e a itens
