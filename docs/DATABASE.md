@@ -62,6 +62,7 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260828213724 | `adicionar_unidade_medida_atas_itens` — unidade de medida nos itens de ATA, com recuperação a partir dos itens espelhados |
 | 20260830220942 | `marcar_itens_ata_em_tramite_renovacao` — estado e data do acompanhamento de renovação por item da Ata |
 | 20260830223355 | `planejar_encerramento_itens_ata` — decisão exclusiva de encerrar o item ao fim da vigência, com data de marcação |
+| 20260830230436 | `restringir_edicao_operacional_contratos` — protege dados cadastrais e seção para admin e cria RPCs auditadas para os campos operacionais permitidos |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -118,6 +119,8 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
 | `registrar_movimentacao_inventario(...)` | unidade física, tipo, data, destino/responsáveis e documento | Acrescenta o evento e atualiza atomicamente o estado corrente do item. |
 | `registrar_recebimento_aquisicao_lote(...)` | nota e itens em JSONB | Valida/classifica o tipo de material e grava atomicamente NF, rateios e recebimentos; bens permanentes preenchem por `upsert` as sequências físicas materializadas pelo trigger, sem duplicá-las. |
+| `obter_dados_operacionais_contrato(...)` | contrato | Retorna somente os campos do editor operacional e informa se a data-base já foi bloqueada por reajuste. |
+| `atualizar_dados_operacionais_contrato(...)` | contrato e JSONB | Atualiza apenas e-mails, prefixo, contato e data-base permitida; acrescenta mudanças e observações ao histórico. |
 | `_sync_entrega_agregado()` | trigger | Mantém `itens_entregas.patrimonio/numero_serie` agregados a partir de `itens_entregas_unidades`. |
 | `_validar_classificacao_recebimento()` | trigger | Exige `PERMANENTE`/`CONSUMO`, restringe patrimônio a permanentes e impede fluxo de unidade para consumo. |
 | `_unidade_key(p text)` | | Normalização de chave de unidade. |
@@ -137,6 +140,9 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 
 ## 5. Triggers e integridade
 
+- **`proteger_identidade_contrato`** em `contratos` (BEFORE UPDATE) bloqueia para
+  não administradores alterações diretas nos dados cadastrais, na seção, no modelo e
+  nos valores iniciais; também impede corrigir a data-base depois do primeiro reajuste.
 - **`trg_ieu_sync`** em `itens_entregas_unidades` (AFTER INSERT/UPDATE/DELETE) → executa
   `_sync_entrega_agregado()`, reescrevendo `itens_entregas.patrimonio` e `numero_serie`
   como agregação (`string_agg`) das unidades. Mantém a UI antiga funcionando sem duplicar dado.

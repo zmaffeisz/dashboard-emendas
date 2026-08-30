@@ -2753,11 +2753,14 @@ function renderTabelaContratos(){
     const btnEmailCt=podeEditar('contratos')
       ?`<button onclick="abrirEmailContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};background:${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};color:${temVinculacao?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap" title="Configurar e-mail e prefixo de chamado">🔗 Vinculações</button>`
       :"";
+    const btnOperacionalCt=podeEditar('contratos')
+      ?`<button onclick="abrirDadosOperacionaisContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap" title="Editar os dados operacionais permitidos">✏️ Dados operacionais</button>`
+      :"";
     const expandido=!!ctExpandido[r.id];
     return `<tr>
       <td style="text-align:center;cursor:pointer;color:var(--text3);user-select:none" onclick="ctToggleExpand('${r.id}')" title="Ver itens do contrato">${expandido?'▼':'▶'}</td>
       <td style="text-align:center"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} ${podeManter?'':'disabled'} onchange="selecionarContrato('${r.id}',this.checked)" style="accent-color:var(--blue)"></td>
-      <td style="min-width:220px"><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap"><button onclick="abrirContratoGerencial('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap" title="Abrir a gestão individual do contrato">Gerenciar contrato</button>${btnEmailCt}${btnEncerrarCt}</div></td>
+      <td style="min-width:220px"><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap"><button onclick="abrirContratoGerencial('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap" title="Abrir a gestão individual do contrato">Gerenciar contrato</button>${btnOperacionalCt}${btnEmailCt}${btnEncerrarCt}</div></td>
       <td class="td-trunc" style="min-width:120px;max-width:140px;white-space:nowrap">${r.numero_contrato||"—"}</td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
       <td class="td-wrap" style="max-width:180px">${_sanEsc(_ctModeloLabel(r))}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(_ctHumanize(_ctFormaKey(r)))}</span></td>
@@ -2815,6 +2818,9 @@ function _ctContratoCardHtml(r){
   const btnEmailCt=podeManter
     ?`<button onclick="event.stopPropagation();abrirEmailContrato('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid ${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};background:${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};color:${temVinculacao?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap">Vinculacoes</button>`
     :"";
+  const btnOperacionalCt=podeManter
+    ?`<button onclick="event.stopPropagation();abrirDadosOperacionaisContrato('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">Dados operacionais</button>`
+    :"";
   const btnEditar=_isAdmin()
     ?`<button onclick="event.stopPropagation();abrirEditarContrato('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">Editar</button>`
     :"";
@@ -2854,7 +2860,7 @@ function _ctContratoCardHtml(r){
     ${expandido?`<div class="ct-contract-details">
       <div class="ct-contract-meta-grid">${meta}</div>
       <div class="ct-contract-actions">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${seletor}<button onclick="event.stopPropagation();abrirContratoGerencial('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap">Gerenciar contrato</button>${btnEmailCt}${btnEncerrarCt}${btnEditar}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${seletor}<button onclick="event.stopPropagation();abrirContratoGerencial('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap">Gerenciar contrato</button>${btnOperacionalCt}${btnEmailCt}${btnEncerrarCt}${btnEditar}</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text2)">
           <span>Inicial: <b>${valorInicial?_ctMoney(valorInicial):'-'}</b></span>
           <span>Reajustado: <b>${valorReajustado?_ctMoney(valorReajustado):'-'}</b></span>
@@ -3237,7 +3243,10 @@ async function salvarEmailContrato(){
   if(prefixo&&!/^[A-Z]+$/.test(prefixo)){msg.textContent="O prefixo deve conter somente letras.";msg.className="fmsg err";return;}
   const emailStr=emails.join(',')||null;
   const btn=document.getElementById("ct-email-salvar");btn.disabled=true;btn.textContent="Salvando...";
-  const {data,error}=await sb.from("contratos").update({email_empresa:emailStr,prefixo_chamado:prefixo||null}).eq("id",_ctEmailId).select("id,email_empresa,prefixo_chamado");
+  const {data,error}=await sb.rpc("atualizar_dados_operacionais_contrato",{
+    p_contrato_id:Number(_ctEmailId),
+    p_dados:{email_empresa:emailStr,prefixo_chamado:prefixo||null}
+  });
   btn.disabled=false;btn.textContent="Salvar vinculações";
   if(error){msg.textContent="Erro: "+error.message;msg.className="fmsg err";return;}
   if(!data?.length){msg.textContent="As vinculações não foram salvas. Verifique sua permissão de edição em Contratos.";msg.className="fmsg err";return;}
@@ -3246,6 +3255,78 @@ async function salvarEmailContrato(){
   renderTabelaContratos();
   msg.textContent="✓ Vinculações salvas.";msg.className="fmsg ok";
   setTimeout(()=>document.getElementById("modal-email-contrato").classList.remove("active"),700);
+}
+
+let _ctOperacionalId=null;
+
+function _ctOperacionalEmails(value){
+  return String(value||"").split(/[;,\n]+/).map(email=>email.trim()).filter(Boolean);
+}
+
+async function abrirDadosOperacionaisContrato(id){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!contratosCarregado) await loadContratos();
+  const contratoId=Number(id);
+  const info=document.getElementById('ctop-info');
+  const msg=document.getElementById('ctop-msg');
+  info.textContent='Carregando dados operacionais...';
+  msg.textContent='';msg.className='fmsg';
+  document.getElementById('modal-dados-operacionais-contrato').classList.add('active');
+  const {data,error}=await sb.rpc('obter_dados_operacionais_contrato',{p_contrato_id:contratoId});
+  if(error||!data?.length){
+    info.textContent='Não foi possível carregar o contrato.';
+    msg.textContent='Erro: '+(error?.message||'sem permissão de edição');msg.className='fmsg err';
+    return;
+  }
+  const dados=data[0];
+  const contrato=contratosRows.find(row=>String(row.id)===String(contratoId));
+  _ctOperacionalId=contratoId;
+  info.innerHTML=`<strong>${_sanEsc(contrato?.cpl||'Contrato')}</strong> · ${_sanEsc(contrato?.prestador||'Empresa não informada')}`;
+  document.getElementById('ctop-emails').value=_ctOperacionalEmails(dados.email_empresa).join('\n');
+  document.getElementById('ctop-prefixo').value=dados.prefixo_chamado||'';
+  document.getElementById('ctop-contato').value=dados.contato||'';
+  const dataBase=document.getElementById('ctop-data-base');
+  dataBase.value=dados.data_base_reajuste||'';
+  dataBase.disabled=!!dados.data_base_bloqueada;
+  document.getElementById('ctop-data-base-ajuda').textContent=dados.data_base_bloqueada
+    ?'Bloqueada porque este contrato já possui reajuste registrado.'
+    :'Pode ser corrigida enquanto ainda não existir reajuste registrado.';
+  document.getElementById('ctop-observacao').value='';
+}
+
+async function salvarDadosOperacionaisContrato(){
+  if(!_ctOperacionalId||bloquearSeVisualiz('contratos')) return;
+  const emails=_ctOperacionalEmails(document.getElementById('ctop-emails').value);
+  const msg=document.getElementById('ctop-msg');
+  for(const email of emails){
+    const input=document.createElement('input');input.type='email';input.value=email;
+    if(!input.checkValidity()){msg.textContent=`E-mail inválido: ${email}`;msg.className='fmsg err';return;}
+  }
+  const prefixo=document.getElementById('ctop-prefixo').value.trim().toUpperCase();
+  if(prefixo&&!/^[A-Z]+$/.test(prefixo)){msg.textContent='O prefixo deve conter somente letras.';msg.className='fmsg err';return;}
+  const dataBase=document.getElementById('ctop-data-base');
+  const dados={
+    email_empresa:emails.join(',')||null,
+    prefixo_chamado:prefixo||null,
+    contato:document.getElementById('ctop-contato').value.trim()||null,
+    observacao:document.getElementById('ctop-observacao').value.trim()||null
+  };
+  if(!dataBase.disabled) dados.data_base_reajuste=dataBase.value||null;
+  const btn=document.getElementById('ctop-salvar');btn.disabled=true;btn.textContent='Salvando...';
+  const {data,error}=await sb.rpc('atualizar_dados_operacionais_contrato',{
+    p_contrato_id:Number(_ctOperacionalId),p_dados:dados
+  });
+  btn.disabled=false;btn.textContent='Salvar dados operacionais';
+  if(error||!data?.length){msg.textContent='Erro: '+(error?.message||'os dados não foram atualizados');msg.className='fmsg err';return;}
+  const atualizados=data[0];
+  const local=contratosRows.find(row=>String(row.id)===String(_ctOperacionalId));
+  if(local) Object.assign(local,atualizados);
+  const modalCt=_contratosParaModal.find(row=>String(row.id)===String(_ctOperacionalId));
+  if(modalCt) Object.assign(modalCt,atualizados);
+  renderTabelaContratos();
+  if(typeof atasContratos!=='undefined'&&atasContratos.length) await loadAtas();
+  msg.textContent='✓ Dados operacionais salvos e registrados no histórico.';msg.className='fmsg ok';
+  setTimeout(()=>document.getElementById('modal-dados-operacionais-contrato').classList.remove('active'),900);
 }
 
 async function abrirDetalheContratoLegado(id){
@@ -4781,8 +4862,16 @@ async function salvarTrocaMarcaModelo(){
   await abrirDetalheContrato(Number(contratoId));
 }
 
-function abrirModalContratoOp(op){
-  if(bloquearSeVisualiz()) return;
+async function abrirFiscalizadoresContratoDireto(id){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!contratosCarregado) await loadContratos();
+  _ctAtual=contratosRows.find(row=>String(row.id)===String(id))||null;
+  if(!_ctAtual){alert('Contrato não encontrado.');return;}
+  abrirModalContratoOp('fiscal','contratos');
+}
+
+function abrirModalContratoOp(op,tabPermissao){
+  if(bloquearSeVisualiz(tabPermissao)) return;
   if(op==='prorrogacao'&&_ctEhAquisicao()){
     alert(_ctMsgProrrogacaoAquisicao());
     return;
@@ -4810,7 +4899,7 @@ function abrirModalContratoOp(op){
     if(wrap&&_ctAtual){
       sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",_ctAtual.id).is("data_fim",null).order("data_inicio",{ascending:false}).then(({data})=>{
         if(!data||!data.length){wrap.innerHTML=`<div style="font-size:13px;color:var(--text3)">Sem fiscalizadores ativos</div>`;return;}
-        wrap.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.375rem">Fiscalizadores ativos</div>`+data.map(f=>`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span>${f.nome||"—"}</span><button onclick="removerFiscalizador(${f.id})" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--red);background:none;color:var(--red);cursor:pointer">Remover</button></div>`).join("");
+        wrap.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.375rem">Fiscalizadores ativos</div>`+data.map(f=>`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span>${_sanEsc(f.nome||"—")}${f.cargo?` <small style="color:var(--text3)">· ${_sanEsc(f.cargo)}</small>`:""}</span><button onclick="removerFiscalizador('${_sanEsc(f.id)}')" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--red);background:none;color:var(--red);cursor:pointer">Remover</button></div>`).join("");
       });
     }
   }
@@ -4819,15 +4908,32 @@ function abrirModalContratoOp(op){
 }
 
 async function removerFiscalizador(fiscId){
+  if(bloquearSeVisualiz('contratos')) return;
   if(!await uiConfirm("Remover este fiscalizador?")) return;
   const hoje=new Date().toISOString().substring(0,10);
-  const {error}=await sb.from("contratos_fiscalizadores").update({data_fim:hoje}).eq("id",fiscId);
+  const {data:fiscal,error:consultaErro}=await sb.from("contratos_fiscalizadores")
+    .select("id,contrato_id,nome,cargo,data_inicio,data_fim,secao_id").eq("id",fiscId).maybeSingle();
+  if(consultaErro||!fiscal){alert("Não foi possível localizar o fiscalizador.");return;}
+  const {data:removido,error}=await sb.from("contratos_fiscalizadores")
+    .update({data_fim:hoje,ativo:false}).eq("id",fiscId).select("id");
   if(error){alert("Erro: "+error.message);return;}
-  abrirModalContratoOp("fiscal");
+  if(!removido?.length){alert("O fiscalizador não pôde ser removido. Verifique sua permissão.");return;}
+  const historico=await ctRegistrarHistoricoContrato({
+    contrato_id:fiscal.contrato_id,tipo:"Troca de fiscal",action_type:"alteracao_fiscal",
+    titulo:"Fiscal removido",data_evento:hoje,status_evento:"formalizado",
+    obs:`Fiscal removido: ${fiscal.nome||"—"}${fiscal.cargo?` (${fiscal.cargo})`:""}`
+  });
+  if(historico.error){alert("Fiscal removido, mas houve erro ao registrar o histórico: "+historico.error.message);}
+  const {data:ativos}=await sb.from("contratos_fiscalizadores").select("nome")
+    .eq("contrato_id",fiscal.contrato_id).is("data_fim",null).order("data_inicio");
+  await sb.from("contratos").update({fiscalizacao:(ativos||[]).map(item=>item.nome).filter(Boolean).join(", ")||null}).eq("id",fiscal.contrato_id);
+  if(contratosCarregado) await loadContratos();
+  _ctAtual=contratosRows.find(row=>String(row.id)===String(fiscal.contrato_id))||_ctAtual;
+  abrirModalContratoOp("fiscal","contratos");
 }
 
 async function salvarOperacaoContrato(op){
-  if(bloquearSeVisualiz()) return;
+  if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual){alert("Contrato nao selecionado.");return;}
   const id=_ctAtual.id;
   const msgEl=document.getElementById({renovar:"ctr-msg",prorrogacao:"ctpr-msg",fiscal:"ctfi-msg"}[op]);
@@ -4876,10 +4982,16 @@ async function salvarOperacaoContrato(op){
       if(!nome||!inicio){setMsg("Nome e data inicio sao obrigatorios",false);return;}
       if(document.getElementById("ctfi-nome").value==='__novo__' && nome){ try{ await obterOuCriarPessoa(nome); }catch(_){} }
       const cargo=document.getElementById("ctfi-cargo").value.trim();
-      const {error}=await sb.from("contratos_fiscalizadores").insert({contrato_id:id,nome,data_inicio:inicio,cargo:cargo||null});
+      const {error}=await sb.from("contratos_fiscalizadores").insert({contrato_id:id,nome,data_inicio:inicio,cargo:cargo||null,secao_id:_ctAtual.secao_id||null});
       if(error) throw error;
-      await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Troca de fiscal",action_type:"alteracao_fiscal",titulo:"Fiscal adicionado",data_evento:inicio,status_evento:"formalizado",obs:`Novo fiscal: ${nome}${cargo?" ("+cargo+")":""} a partir de ${inicio}`});
-      await sb.from("contratos").update({fiscalizacao:nome}).eq("id",id);
+      const hist=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Troca de fiscal",action_type:"alteracao_fiscal",titulo:"Fiscal adicionado",data_evento:inicio,status_evento:"formalizado",obs:`Novo fiscal: ${nome}${cargo?" ("+cargo+")":""} a partir de ${inicio}`});
+      if(hist.error) throw hist.error;
+      const {data:ativos,error:ativosErro}=await sb.from("contratos_fiscalizadores").select("nome")
+        .eq("contrato_id",id).is("data_fim",null).order("data_inicio");
+      if(ativosErro) throw ativosErro;
+      const {error:fiscalizacaoErro}=await sb.from("contratos")
+        .update({fiscalizacao:(ativos||[]).map(item=>item.nome).filter(Boolean).join(", ")||nome}).eq("id",id);
+      if(fiscalizacaoErro) throw fiscalizacaoErro;
       setMsg("Fiscal adicionado.",true);
     }
     await loadContratos();

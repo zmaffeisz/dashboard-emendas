@@ -2,6 +2,14 @@
 
 ## Em desenvolvimento
 
+- **Edição operacional e fiscalizadores nas Atas RP:** o menu de cada item passa a
+  separar a edição administrativa completa, exclusiva de admin, dos fluxos permitidos
+  aos editores de Contratos. O novo editor operacional libera apenas e-mails, prefixo de
+  chamado, contato, data-base antes do primeiro reajuste e inclusão de observação interna
+  no histórico; empresa, objeto, seção, vigência, status e valores não ficam disponíveis.
+  A nova opção **Fiscalizadores** permite adicionar ou remover responsáveis pelo fluxo
+  próprio, mantendo o histórico do contrato e a lista de fiscais ativos sincronizada.
+
 - **Decisão de vigência por item nas Atas RP:** os cards de contratos vencidos ou
   próximos do vencimento agora são clicáveis e permitem classificar cada item como
   **Em renovação**, **Encerrar ao vencer** ou **Não analisado**. As decisões são

@@ -745,7 +745,9 @@ function filtrarAtas(){
           podeEditar('atas')?{label:'🏷️ Trocar marca',onclick:`abrirTrocaMarcaItemAta('${r.id}')`,title:'Registrar apostilamento de troca de marca/modelo'}:null,
           podeEditar('atas')?{label:'📈 Reajustar',onclick:`abrirReajusteItemAta('${r.id}')`,title:'Registrar novo valor para este item a partir de uma data'}:null,
           {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
-          _isAdmin()?{label:'✏️ Editar',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Editar dados do contrato (fiscalização, seção, empresa, objeto...)'}:null,
+          _isAdmin()?{label:'✏️ Editar contrato (admin)',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Edição administrativa completa do contrato'}:null,
+          podeEditar('contratos')?{label:'✏️ Dados operacionais',onclick:`_ataAbrirDadosOperacionaisContrato('${r.contrato_id}')`,title:'Editar e-mails, prefixo, contato, data-base e registrar observação'}:null,
+          podeEditar('contratos')?{label:'👤 Fiscalizadores',onclick:`_ataAbrirFiscalizadoresContrato('${r.contrato_id}')`,title:'Adicionar ou remover fiscalizadores com registro no histórico'}:null,
           podeEditar('contratos')?{label:'🔗 Vinculações',onclick:`_ataAbrirEmailContrato('${r.contrato_id}')`,title:'Configurar e-mail e prefixo de chamado'}:null,
           saldo<=0?{label:'⛔ Encerrar item',onclick:`encerrarAtaItem('${r.id}')`,title:'Saldo zerado: encerrar antecipadamente somente este item da ATA',danger:true,divider:true}:null
         ])}
@@ -2128,6 +2130,14 @@ async function _ataAbrirEmailContrato(contratoId){
   if(!podeEditar('contratos')){ alert('⛔ Você não tem permissão para editar contratos.'); return; }
   if(!contratosCarregado) await loadContratos();
   abrirEmailContrato(contratoId);
+}
+async function _ataAbrirDadosOperacionaisContrato(contratoId){
+  if(!podeEditar('contratos')){ alert('⛔ Você não tem permissão para editar contratos.'); return; }
+  await abrirDadosOperacionaisContrato(contratoId);
+}
+async function _ataAbrirFiscalizadoresContrato(contratoId){
+  if(!podeEditar('contratos')){ alert('⛔ Você não tem permissão para editar contratos.'); return; }
+  await abrirFiscalizadoresContratoDireto(contratoId);
 }
 
 // ═══ ENCERRAR ITEM DE ATA ═══

@@ -2538,6 +2538,48 @@
   </div>
 </div>
 
+<!-- Modal de Dados Operacionais do Contrato -->
+<div class="modal-overlay" id="modal-dados-operacionais-contrato">
+  <div class="modal-box" style="width:620px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Dados operacionais</span>
+      <button onclick="document.getElementById('modal-dados-operacionais-contrato').classList.remove('active')" title="Fechar" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div id="ctop-info" style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:1rem"></div>
+    <div style="font-size:11px;color:var(--blue-text);background:var(--blue-bg);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:1rem">
+      Este editor não altera empresa, objeto, seção, vigência, vencimento, status ou valores do contrato.
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group full">
+        <div class="form-label">E-mails para chamados</div>
+        <textarea id="ctop-emails" rows="3" placeholder="Um e-mail por linha" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px"></textarea>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Prefixo de chamado</div>
+        <input type="text" id="ctop-prefixo" placeholder="ex: OD, ME, ARC" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Contato operacional</div>
+        <input type="text" id="ctop-contato" placeholder="Nome, telefone ou ramal">
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Data-base do reajuste</div>
+        <input type="date" id="ctop-data-base">
+        <div id="ctop-data-base-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Nova observação interna</div>
+        <textarea id="ctop-observacao" rows="3" placeholder="A observação será acrescentada ao histórico; não apagará registros anteriores." style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ctop-salvar" onclick="salvarDadosOperacionaisContrato()">Salvar dados operacionais</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-dados-operacionais-contrato').classList.remove('active')">Cancelar</button>
+      <span id="ctop-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de Edição Completa do Contrato (admin) -->
 <div class="modal-overlay" id="modal-editar-contrato" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
   <div class="modal-box" style="width:780px;max-width:98vw;max-height:90vh;overflow-y:auto">
@@ -3242,12 +3284,12 @@
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260827-vida-lote-consumo-1"></script>
-  <script src="js/legacy/20-atas.js?v=20260830-decisoes-vigencia-1"></script>
+  <script src="js/legacy/20-atas.js?v=20260830-dados-operacionais-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260827-codigo-siam-item-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260827-hierarquia-org-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260830-dados-operacionais-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

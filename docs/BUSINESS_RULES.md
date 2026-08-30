@@ -142,7 +142,16 @@
     impactos usam a quantidade de ciclos trimestrais restantes;
   - uma medição/NF por ciclo é o comportamento esperado, sem bloqueio rígido de exceções
     justificadas.
-- **Edição completa de contrato é exclusiva de admin.**
+- **Edição completa de contrato é exclusiva de admin.** Usuários com edição em
+  `contratos` usam o fluxo de **Dados operacionais**, limitado a e-mails, prefixo de
+  chamado, contato operacional, data-base do reajuste (somente antes do primeiro
+  reajuste) e nova observação interna acrescentada ao histórico. Empresa, objeto,
+  seção, vigência, vencimento, status e valores não fazem parte desse editor; **seção
+  permanece sempre admin-only**.
+- **Fiscalizadores do contrato/ATA** são mantidos pelo fluxo próprio
+  **Fiscalizadores/Trocar fiscal**, disponível aos usuários com edição em `contratos`.
+  Inclusões e remoções são por responsável, preservam o período de atuação e geram
+  eventos no histórico do contrato.
 - **Fiscalização de OS por demanda:** a medição e a NF podem incluir OS com situação
   `pendente`, além de `conforme`, `conforme_ressalva` e `parcial`. Gerar a medição não
   encerra nem congela a fiscalização: a situação da OS permanece editável e pode ser
