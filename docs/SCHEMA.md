@@ -108,7 +108,7 @@ de **ATA** (a aba "Atas Rp" é uma visão filtrada desta matriz — ver [MODULES
   alterada e o valor unitário do período nos reajustes, aditivos e supressões.
 - `contratos_vigencias` preserva a periodicidade e o valor periódico de cada vigência.
 
-### `atas_itens` (13 colunas)
+### `atas_itens` (23 colunas)
 Itens de uma ATA de registro de preços (fonte de verdade da execução das atas).
 
 | Campo | Tipo | Observação |
@@ -119,6 +119,10 @@ Itens de uma ATA de registro de preços (fonte de verdade da execução das atas
 | `qtde_contratada` | numeric | |
 | `valor_unit` | numeric | **valor monetário** |
 | `status_contrato` | text | |
+| `renovacao_em_tramite` | boolean | acompanhamento administrativo por item |
+| `renovacao_em_tramite_em` | timestamptz, nullable | início da marcação de trâmite |
+| `encerramento_planejado` | boolean | decisão de encerrar o item ao fim da vigência |
+| `encerramento_planejado_em` | timestamptz, nullable | data da decisão de encerramento planejado |
 
 ### `atas_execucao`
 Execução/entrega por item de ata, por unidade (AF, NF, datas, termo).

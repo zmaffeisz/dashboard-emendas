@@ -119,6 +119,10 @@ async function loadAtas(){
       data_base_reajuste:contrato.data_base_reajuste||null,
       vencimento:(contrato.vencimento||"").trim(),
       status:statusItem,
+      renovacao_em_tramite:!!r.renovacao_em_tramite,
+      renovacao_em_tramite_em:r.renovacao_em_tramite_em||null,
+      encerramento_planejado:!!r.encerramento_planejado,
+      encerramento_planejado_em:r.encerramento_planejado_em||null,
       ata_renovada:!!renovacao,
       renovada_em:renovacao?.data||null,
       renovada_ate:renovacao?.ate||null,
@@ -218,26 +222,256 @@ function diasParaVencer(vencimento){
     const partes=vencimento.split("/");
     let d;
     if(partes.length===3) d=new Date(partes[2],partes[1]-1,partes[0]);
-    else d=new Date(vencimento);
-    return Math.round((d-new Date())/(1000*60*60*24));
+    else if(/^\d{4}-\d{2}-\d{2}/.test(vencimento)){
+      const [ano,mes,dia]=vencimento.slice(0,10).split("-").map(Number);
+      d=new Date(ano,mes-1,dia);
+    }else d=new Date(vencimento);
+    if(Number.isNaN(d.getTime())) return 9999;
+    d.setHours(0,0,0,0);
+    const hoje=new Date();
+    hoje.setHours(0,0,0,0);
+    return Math.round((d-hoje)/(1000*60*60*24));
   }catch(e){return 9999;}
 }
 
+function _ataAlertEsc(value){
+  return String(value??"").replace(/[&<>"']/g,char=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[char]);
+}
+
+function _ataFormatarDataTramite(value){
+  if(!value) return "—";
+  const data=new Date(value);
+  return Number.isNaN(data.getTime())?String(value):data.toLocaleDateString("pt-BR");
+}
+
+function _ataAlertContractKey(item){
+  return String(item?.contrato_id||`${item?.cpl||""}::${item?.sim||""}`);
+}
+
+function _ataAgruparContratosAlerta(items){
+  const grupos=new Map();
+  items.forEach(item=>{
+    const chave=_ataAlertContractKey(item);
+    if(!grupos.has(chave)){
+      grupos.set(chave,{
+        contrato_id:item.contrato_id,
+        cpl:item.cpl||"—",
+        sim:item.sim||"—",
+        empresa:item.empresa||"",
+        vencimento:item.vencimento||"",
+        dias:diasParaVencer(item.vencimento),
+        itens:[]
+      });
+    }
+    const grupo=grupos.get(chave);
+    if(!grupo.itens.some(existente=>String(existente.id)===String(item.id))) grupo.itens.push(item);
+  });
+  return Array.from(grupos.values());
+}
+
+function _ataRenderGrupoAlerta(grupo,tipo){
+  const vencido=tipo==="vencido";
+  const prazo=vencido
+    ?`Vencido há ${Math.abs(grupo.dias)} ${Math.abs(grupo.dias)===1?"dia":"dias"}`
+    :grupo.dias===0?"Vence hoje":`Vence em ${grupo.dias} ${grupo.dias===1?"dia":"dias"}`;
+  const emTramite=grupo.itens.filter(item=>item.renovacao_em_tramite&&!item.ata_renovada).length;
+  const paraEncerrar=grupo.itens.filter(item=>item.encerramento_planejado&&!_ataStatusEncerrado(item.status)).length;
+  const semDecisao=grupo.itens.filter(item=>!item.ata_renovada&&!_ataStatusEncerrado(item.status)&&!item.renovacao_em_tramite&&!item.encerramento_planejado).length;
+  const itens=grupo.itens.length
+    ?`<ul class="ata-alert-items">${grupo.itens.map(item=>`<li><span>${_ataAlertEsc(item.item||"Item sem descrição")}</span>${item.ata_renovada?`<span class="ata-alert-item-state ata-alert-item-renewed">Já renovada</span>`:_ataStatusEncerrado(item.status)?`<span class="ata-alert-item-state ata-alert-item-closed">Encerrado</span>`:item.renovacao_em_tramite?`<span class="ata-alert-item-state">Em renovação</span>`:item.encerramento_planejado?`<span class="ata-alert-item-state ata-alert-item-closing">Encerrar ao vencer</span>`:`<span class="ata-alert-item-state ata-alert-item-pending">Não analisado</span>`}</li>`).join("")}</ul>`
+    :`<div class="ata-alert-empty">Nenhum item informado</div>`;
+  const contratoId=_ataAlertEsc(grupo.contrato_id);
+  return `<article class="ata-alert-contract" role="button" tabindex="0" onclick="abrirModalTramiteRenovacao('${contratoId}')" onkeydown="ataAlertaContratoKeydown(event,'${contratoId}')" aria-label="Abrir itens do contrato CPL ${_ataAlertEsc(grupo.cpl)}, SIM ${_ataAlertEsc(grupo.sim)}">
+    <div class="ata-alert-contract-head">
+      <div>
+        <strong>CPL ${_ataAlertEsc(grupo.cpl)} / SIM ${_ataAlertEsc(grupo.sim)}</strong>
+        ${grupo.empresa?`<div class="ata-alert-company">${_ataAlertEsc(grupo.empresa)}</div>`:""}
+      </div>
+      <span class="ata-alert-deadline">${_ataAlertEsc(prazo)}</span>
+    </div>
+    <div class="ata-alert-date">Vencimento: <strong>${_ataAlertEsc(grupo.vencimento||"—")}</strong></div>
+    <div class="ata-alert-items-status">
+      <span class="ata-alert-items-label">${grupo.itens.length} ${grupo.itens.length===1?"item":"itens"}</span>
+      ${emTramite?`<span class="ata-alert-renewal-count">🔄 ${emTramite} em trâmite</span>`:""}
+      ${paraEncerrar?`<span class="ata-alert-closing-count">⛔ ${paraEncerrar} para encerrar</span>`:""}
+      ${semDecisao?`<span class="ata-alert-pending-count">● ${semDecisao} sem decisão</span>`:""}
+    </div>
+    ${itens}
+    <div class="ata-alert-open-hint">Clique para revisar a decisão de cada item</div>
+  </article>`;
+}
+
+function _ataRenderAlertaExpansivel(tipo,grupos){
+  if(!grupos.length) return "";
+  const vencido=tipo==="vencido";
+  const quantidade=grupos.length;
+  const titulo=vencido
+    ?`${quantidade} ${quantidade===1?"contrato vencido":"contratos vencidos"}`
+    :`${quantidade} ${quantidade===1?"contrato vencendo":"contratos vencendo"} em até 90 dias`;
+  const ordenados=[...grupos].sort((a,b)=>vencido?b.dias-a.dias:a.dias-b.dias);
+  return `<details class="ata-alert ata-alert-${vencido?"danger":"warning"}">
+    <summary class="ata-alert-summary">
+      <span class="ata-alert-icon" aria-hidden="true">${vencido?"⛔":"⚠"}</span>
+      <span class="ata-alert-title">${titulo}</span>
+      <span class="ata-alert-action"><span class="ata-alert-show">Ver detalhes</span><span class="ata-alert-hide">Ocultar</span><span class="ata-alert-chevron" aria-hidden="true">⌄</span></span>
+    </summary>
+    <div class="ata-alert-content">
+      ${ordenados.map(grupo=>_ataRenderGrupoAlerta(grupo,tipo)).join("")}
+    </div>
+  </details>`;
+}
+
 function renderAlertas(){
-  const vencendo=atasItens.filter(r=>diasParaVencer(r.vencimento)<=90&&diasParaVencer(r.vencimento)>0&&!r.status?.toUpperCase().startsWith("ENCERRADO"));
-  const encerrados=atasItens.filter(r=>diasParaVencer(r.vencimento)<0&&!r.status?.toUpperCase().startsWith("ENCERRADO"));
-  let html="";
-  if(encerrados.length){
-    html+=`<div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:.5rem;font-size:13px">
-      ⛔ <strong>${encerrados.length} contrato(s) VENCIDO(S):</strong> ${encerrados.map(r=>`${r.cpl} / ${r.sim} — ${r.item}`).join(" · ")}
+  const ativos=atasItens.filter(r=>!_ataStatusEncerrado(r.status));
+  const vencidos=_ataAgruparContratosAlerta(ativos.filter(r=>diasParaVencer(r.vencimento)<0));
+  const vencendo=_ataAgruparContratosAlerta(ativos.filter(r=>{
+    const dias=diasParaVencer(r.vencimento);
+    return dias>=0&&dias<=90;
+  }));
+  document.getElementById("atas-alertas").innerHTML=
+    _ataRenderAlertaExpansivel("vencido",vencidos)+
+    _ataRenderAlertaExpansivel("vencendo",vencendo);
+}
+
+let _ataTramiteContratoId=null;
+
+function ataAlertaContratoKeydown(event,contratoId){
+  if(event.key!=="Enter"&&event.key!==" ") return;
+  event.preventDefault();
+  abrirModalTramiteRenovacao(contratoId);
+}
+
+function _ataTramiteItensContrato(){
+  return atasItens
+    .filter(item=>String(item.contrato_id)===String(_ataTramiteContratoId))
+    .sort((a,b)=>String(a.item||"").localeCompare(String(b.item||""),"pt-BR"));
+}
+
+function abrirModalTramiteRenovacao(contratoId){
+  const itens=atasItens.filter(item=>String(item.contrato_id)===String(contratoId));
+  if(!itens.length) return;
+  _ataTramiteContratoId=contratoId;
+  const primeiro=itens[0];
+  const podeEditarAtas=podeEditar("atas");
+  const vigenciaVencida=diasParaVencer(primeiro.vencimento)<0;
+  document.getElementById("atr-info").innerHTML=`
+    <strong>CPL ${_ataAlertEsc(primeiro.cpl||"—")} / SIM ${_ataAlertEsc(primeiro.sim||"—")}</strong>
+    <span>${_ataAlertEsc(primeiro.empresa||"Empresa não informada")}</span>
+    <span>Vencimento: ${_ataAlertEsc(primeiro.vencimento||"—")}</span>
+    <em class="${vigenciaVencida?"ata-renewal-expired":""}">${vigenciaVencida?"Vigência vencida: as ações finais estão disponíveis abaixo, por item.":"Planejamento: renovação e encerramento efetivos só ficam disponíveis após o vencimento."}</em>
+    ${podeEditarAtas?"":"<em>Modo de consulta: você não possui permissão para alterar esta aba.</em>"}`;
+  document.getElementById("atr-lista").innerHTML=_ataTramiteItensContrato().map(item=>{
+    const encerrado=_ataStatusEncerrado(item.status);
+    const bloqueado=encerrado||item.ata_renovada;
+    const disabled=!podeEditarAtas||bloqueado;
+    const saldo=getSaldo(item);
+    const decisao=item.renovacao_em_tramite?"renovar":item.encerramento_planejado?"encerrar":"pendente";
+    const estado=item.ata_renovada
+      ?`<span class="ata-renewal-option-state ata-renewal-option-renewed">✓ Já renovada · limite atingido</span>`
+      :encerrado
+        ?`<span class="ata-renewal-option-state ata-renewal-option-closed">Item encerrado</span>`
+        :item.renovacao_em_tramite
+          ?`<span class="ata-renewal-option-state">Em trâmite desde ${_ataAlertEsc(item.renovacao_em_tramite_em?_ataFormatarDataTramite(item.renovacao_em_tramite_em):"data não informada")}</span>`
+          :item.encerramento_planejado
+            ?`<span class="ata-renewal-option-state ata-renewal-option-closed">Encerramento decidido em ${_ataAlertEsc(item.encerramento_planejado_em?_ataFormatarDataTramite(item.encerramento_planejado_em):"data não informada")}</span>`
+          :"";
+    const nome=`atr-decisao-${_ataAlertEsc(item.id)}`;
+    const opcoes=disabled?"":`<div class="ata-renewal-decisions" role="radiogroup" aria-label="Decisão para ${_ataAlertEsc(item.item||"item")}">
+      <label class="ata-renewal-decision ata-renewal-decision-pending"><input type="radio" class="atr-item-decision" name="${nome}" value="pendente" data-item-id="${_ataAlertEsc(item.id)}" ${decisao==="pendente"?"checked":""} onchange="ataTramiteAtualizarResumo()"><span>Não analisado</span></label>
+      <label class="ata-renewal-decision ata-renewal-decision-renew"><input type="radio" class="atr-item-decision" name="${nome}" value="renovar" data-item-id="${_ataAlertEsc(item.id)}" ${decisao==="renovar"?"checked":""} onchange="ataTramiteAtualizarResumo()"><span>Em renovação</span></label>
+      <label class="ata-renewal-decision ata-renewal-decision-close"><input type="radio" class="atr-item-decision" name="${nome}" value="encerrar" data-item-id="${_ataAlertEsc(item.id)}" ${decisao==="encerrar"?"checked":""} onchange="ataTramiteAtualizarResumo()"><span>Encerrar ao vencer</span></label>
     </div>`;
-  }
-  if(vencendo.length){
-    html+=`<div style="background:var(--amber-bg);color:var(--amber-text);border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:13px">
-      ⚠️ <strong>${vencendo.length} contrato(s) vencendo em até 90 dias:</strong> ${vencendo.map(r=>`${r.cpl}/${r.sim} — ${r.item} (${diasParaVencer(r.vencimento)}d)`).join(" · ")}
+    const acoes=vigenciaVencida&&podeEditarAtas&&!bloqueado?`<div class="ata-renewal-item-actions">
+      <button type="button" class="btn-secondary btn-compact" onclick="ataTramiteExecutarAcao('renovar','${_ataAlertEsc(item.id)}')">🔄 Prorrogar vigência</button>
+      <button type="button" class="btn-secondary btn-compact ata-renewal-close-button" onclick="ataTramiteExecutarAcao('encerrar','${_ataAlertEsc(item.id)}')">⛔ Encerrar item</button>
+    </div>`:"";
+    return `<div class="ata-renewal-option${disabled?" ata-renewal-option-disabled":""}">
+      <span class="ata-renewal-option-body">
+        <strong>${_ataAlertEsc(item.item||"Item sem descrição")}</strong>
+        <span>${_ataAlertEsc(item.marca||"Marca/modelo não informado")}${item.codigo_siam?` · SIAM ${_ataAlertEsc(item.codigo_siam)}`:""} · Saldo ${_ataAlertEsc(saldo)}</span>
+        ${estado}
+      </span>
+      ${opcoes}
+      ${acoes}
     </div>`;
+  }).join("");
+  document.getElementById("atr-salvar").style.display=podeEditarAtas?"inline-flex":"none";
+  const msg=document.getElementById("atr-msg");
+  msg.textContent="";msg.className="fmsg";
+  ataTramiteAtualizarResumo();
+  document.getElementById("modal-ata-tramite-renovacao").classList.add("active");
+}
+
+function fecharModalTramiteRenovacao(){
+  document.getElementById("modal-ata-tramite-renovacao")?.classList.remove("active");
+  _ataTramiteContratoId=null;
+}
+
+function ataTramiteAtualizarResumo(){
+  const selecionados=Array.from(document.querySelectorAll("#atr-lista .atr-item-decision:checked"));
+  const renovar=selecionados.filter(input=>input.value==="renovar").length;
+  const encerrar=selecionados.filter(input=>input.value==="encerrar").length;
+  const pendentes=selecionados.filter(input=>input.value==="pendente").length;
+  document.getElementById("atr-resumo").textContent=`${renovar} em renovação · ${encerrar} para encerrar · ${pendentes} sem decisão`;
+}
+
+function ataTramiteExecutarAcao(acao,itemId){
+  fecharModalTramiteRenovacao();
+  setTimeout(()=>acao==="renovar"?renovarAta(itemId):encerrarAtaItem(itemId),80);
+}
+
+async function salvarTramiteRenovacao(){
+  if(bloquearSeVisualiz("atas")) return;
+  const itens=_ataTramiteItensContrato();
+  if(!itens.length) return;
+  const decisoes=new Map(Array.from(document.querySelectorAll("#atr-lista .atr-item-decision:checked")).map(input=>[String(input.dataset.itemId),input.value]));
+  const editaveis=itens.filter(item=>!item.ata_renovada&&!_ataStatusEncerrado(item.status)&&decisoes.has(String(item.id)));
+  const paraRenovar=editaveis.filter(item=>decisoes.get(String(item.id))==="renovar"&&!item.renovacao_em_tramite);
+  const paraEncerrar=editaveis.filter(item=>decisoes.get(String(item.id))==="encerrar"&&!item.encerramento_planejado);
+  const paraPendente=editaveis.filter(item=>decisoes.get(String(item.id))==="pendente"&&(item.renovacao_em_tramite||item.encerramento_planejado));
+  if(!paraRenovar.length&&!paraEncerrar.length&&!paraPendente.length){
+    showMsg("atr","Nenhuma alteração para salvar.","ok");
+    return;
   }
-  document.getElementById("atas-alertas").innerHTML=html;
+  const btn=document.getElementById("atr-salvar");
+  btn.disabled=true;btn.textContent="Salvando...";
+  let alterou=false;
+  try{
+    if(paraRenovar.length){
+      const {data,error}=await sb.from("atas_itens")
+        .update({renovacao_em_tramite:true,renovacao_em_tramite_em:new Date().toISOString(),encerramento_planejado:false,encerramento_planejado_em:null})
+        .in("id",paraRenovar.map(item=>item.id)).select("id");
+      if(error) throw error;
+      if((data||[]).length!==paraRenovar.length) throw new Error("Nem todos os itens puderam ser marcados para renovação. Verifique sua permissão.");
+      alterou=true;
+    }
+    if(paraEncerrar.length){
+      const {data,error}=await sb.from("atas_itens")
+        .update({renovacao_em_tramite:false,renovacao_em_tramite_em:null,encerramento_planejado:true,encerramento_planejado_em:new Date().toISOString()})
+        .in("id",paraEncerrar.map(item=>item.id)).select("id");
+      if(error) throw error;
+      if((data||[]).length!==paraEncerrar.length) throw new Error("Nem todos os itens puderam ser marcados para encerramento. Verifique sua permissão.");
+      alterou=true;
+    }
+    if(paraPendente.length){
+      const {data,error}=await sb.from("atas_itens")
+        .update({renovacao_em_tramite:false,renovacao_em_tramite_em:null,encerramento_planejado:false,encerramento_planejado_em:null})
+        .in("id",paraPendente.map(item=>item.id)).select("id");
+      if(error) throw error;
+      if((data||[]).length!==paraPendente.length) throw new Error("Nem todos os itens puderam voltar para não analisado. Verifique sua permissão.");
+      alterou=true;
+    }
+    await loadAtas();
+    showMsg("atr","✓ Decisões dos itens atualizadas.","ok");
+    setTimeout(fecharModalTramiteRenovacao,700);
+  }catch(error){
+    if(alterou) await loadAtas();
+    showMsg("atr","Erro: "+(error.message||error),"err");
+  }finally{
+    btn.disabled=false;btn.textContent="Salvar decisões";
+  }
 }
 
 // Filtros estilo Google Sheets para ATAs / Execuções
@@ -454,7 +688,10 @@ function filtrarAtas(){
 
   const totalSaldo=rows.reduce((a,r)=>a+getSaldo(r.cpl,r.sim,r.item),0);
   const totalExec=rows.reduce((a,r)=>a+getExecutado(r.cpl,r.sim,r.item),0);
-  const vencendo90=rows.filter(r=>diasParaVencer(r.vencimento)<=90&&r.status!=="ENCERRADO").length;
+  const vencendo90=new Set(rows.filter(r=>{
+    const dias=diasParaVencer(r.vencimento);
+    return dias>=0&&dias<=90&&!_ataStatusEncerrado(r.status);
+  }).map(_ataAlertContractKey)).size;
 
   document.getElementById("at-total").textContent=rows.length;
   document.getElementById("at-saldo").textContent=totalSaldo;
@@ -478,7 +715,7 @@ function filtrarAtas(){
       <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
       <td class="td-trunc" title="${_sanEsc(r.item)}${r.codigo_siam?' · SIAM '+_sanEsc(r.codigo_siam):''}" style="max-width:220px">
         ${_sanEsc(r.item)}${r.codigo_siam?`<div style="font-size:10px;color:var(--blue);font-weight:600">SIAM ${_sanEsc(r.codigo_siam)}</div>`:''}
-        ${r.ata_renovada?`<div style="margin-top:4px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);font-size:9px;white-space:nowrap" title="Esta Ata de RP já utilizou sua única renovação${r.renovada_ate?` e está vigente até ${fmtDate(r.renovada_ate)}`:''}.">✓ JÁ RENOVADA · LIMITE ATINGIDO</span></div>`:''}
+        ${r.ata_renovada?`<div style="margin-top:4px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);font-size:9px;white-space:nowrap" title="Esta Ata de RP já utilizou sua única renovação${r.renovada_ate?` e está vigente até ${fmtDate(r.renovada_ate)}`:''}.">✓ JÁ RENOVADA · LIMITE ATINGIDO</span></div>`:r.renovacao_em_tramite?`<div style="margin-top:4px"><span class="badge ata-renewal-badge" title="Este item já foi incluído no trâmite administrativo de renovação${r.renovacao_em_tramite_em?` em ${_ataFormatarDataTramite(r.renovacao_em_tramite_em)}`:""}.">🔄 RENOVAÇÃO EM TRÂMITE</span></div>`:r.encerramento_planejado?`<div style="margin-top:4px"><span class="badge ata-closing-badge" title="Este item foi analisado e deverá ser encerrado ao fim da vigência${r.encerramento_planejado_em?` em ${_ataFormatarDataTramite(r.encerramento_planejado_em)}`:""}.">⛔ ENCERRAR AO VENCER</span></div>`:""}
       </td>
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.unidade_medida||"—")}</td>
       <td style="font-size:11px">${r.marca||"—"}</td>
@@ -507,11 +744,10 @@ function filtrarAtas(){
         ${kebabMenuHtml([
           podeEditar('atas')?{label:'🏷️ Trocar marca',onclick:`abrirTrocaMarcaItemAta('${r.id}')`,title:'Registrar apostilamento de troca de marca/modelo'}:null,
           podeEditar('atas')?{label:'📈 Reajustar',onclick:`abrirReajusteItemAta('${r.id}')`,title:'Registrar novo valor para este item a partir de uma data'}:null,
-          !r.ata_renovada?{label:'🔄 Prorrogar',onclick:`renovarAta('${r.id}')`,title:'Prorrogar vigência do contrato (permitido uma única vez)'}:null,
           {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
           _isAdmin()?{label:'✏️ Editar',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Editar dados do contrato (fiscalização, seção, empresa, objeto...)'}:null,
           podeEditar('contratos')?{label:'🔗 Vinculações',onclick:`_ataAbrirEmailContrato('${r.contrato_id}')`,title:'Configurar e-mail e prefixo de chamado'}:null,
-          {label:'⛔ Encerrar item',onclick:`encerrarAtaItem('${r.id}')`,title:'Encerrar somente este item da ATA',danger:true,divider:true}
+          saldo<=0?{label:'⛔ Encerrar item',onclick:`encerrarAtaItem('${r.id}')`,title:'Saldo zerado: encerrar antecipadamente somente este item da ATA',danger:true,divider:true}:null
         ])}
         </div>
         `}
@@ -1636,6 +1872,21 @@ function renovarAta(itemId){
     alert(`Esta Ata de RP já foi renovada${at.renovada_ate?` até ${fmtDate(at.renovada_ate)}`:''}. A renovação é permitida uma única vez.`);
     return;
   }
+  if(diasParaVencer(at.vencimento)>=0){
+    alert(`A prorrogação só pode ser registrada depois do vencimento da vigência atual (${at.vencimento||"data não informada"}). Antes disso, as compras ainda pertencem ao período vigente.`);
+    return;
+  }
+  const ativosContrato=atasItens.filter(item=>String(item.contrato_id)===String(at.contrato_id)&&!_ataStatusEncerrado(item.status)&&!item.ata_renovada);
+  const paraEncerrar=ativosContrato.filter(item=>item.encerramento_planejado);
+  if(paraEncerrar.length){
+    alert(`Antes de prorrogar, encerre ${paraEncerrar.length} ${paraEncerrar.length===1?"item marcado como “Encerrar ao vencer”":"itens marcados como “Encerrar ao vencer”"}. Assim, somente os itens escolhidos entrarão na nova vigência.`);
+    return;
+  }
+  const semDecisao=ativosContrato.filter(item=>!item.renovacao_em_tramite);
+  if(semDecisao.length){
+    alert(`Antes de prorrogar, revise todos os itens deste contrato. Ainda ${semDecisao.length===1?"há 1 item sem decisão":"há "+semDecisao.length+" itens sem decisão"}.`);
+    return;
+  }
   _renovarItemId=at.id;
   const vencAtual=at.vencimento||"";
   document.getElementById("rv-info").textContent=`${at.cpl} · ${at.sim} · ${at.item}`;
@@ -1685,13 +1936,25 @@ async function salvarRenovacao(){
   try{
     // Revalida no banco imediatamente antes de salvar para evitar uma segunda
     // renovação quando a tela estiver desatualizada em outra sessão.
-    const [vigenciasRes,historicoRes]=await Promise.all([
+    const [vigenciasRes,historicoRes,contratoRes,itensRes]=await Promise.all([
       sb.from("contratos_vigencias").select("id,numero").eq("contrato_id",at.contrato_id).limit(2),
       sb.from("contratos_historico").select("id,tipo").eq("contrato_id",at.contrato_id)
-        .or("tipo.ilike.%prorroga%,tipo.ilike.%renova%").limit(1)
+        .or("tipo.ilike.%prorroga%,tipo.ilike.%renova%").limit(1),
+      sb.from("contratos").select("id,vencimento").eq("id",at.contrato_id).maybeSingle(),
+      sb.from("atas_itens").select("id,item,status_contrato,renovacao_em_tramite,encerramento_planejado")
+        .eq("contrato_id",at.contrato_id)
     ]);
     if(vigenciasRes.error) throw vigenciasRes.error;
     if(historicoRes.error) throw historicoRes.error;
+    if(contratoRes.error) throw contratoRes.error;
+    if(itensRes.error) throw itensRes.error;
+    if(!contratoRes.data) throw new Error("O contrato não foi encontrado para validar o vencimento.");
+    if(diasParaVencer(contratoRes.data.vencimento)>=0) throw new Error(`A prorrogação só pode ser registrada depois do vencimento da vigência atual (${contratoRes.data.vencimento||"data não informada"}).`);
+    const itensAtivos=(itensRes.data||[]).filter(item=>!_ataStatusEncerrado(item.status_contrato));
+    const encerramentosPendentes=itensAtivos.filter(item=>item.encerramento_planejado);
+    if(encerramentosPendentes.length) throw new Error(`Encerre primeiro ${encerramentosPendentes.length} ${encerramentosPendentes.length===1?"item marcado como “Encerrar ao vencer”":"itens marcados como “Encerrar ao vencer”"}.`);
+    const decisoesPendentes=itensAtivos.filter(item=>!item.renovacao_em_tramite);
+    if(decisoesPendentes.length) throw new Error(`Revise todos os itens antes de prorrogar: ${decisoesPendentes.length} ${decisoesPendentes.length===1?"item ainda está sem decisão":"itens ainda estão sem decisão"}.`);
     const vigencias=vigenciasRes.data||[];
     const jaRenovada=vigencias.some(v=>Number(v.numero)>=2)||vigencias.length>=2||(historicoRes.data||[]).length>0;
     if(jaRenovada) throw new Error("Esta Ata de RP já foi renovada. A renovação é permitida uma única vez.");
@@ -1700,14 +1963,19 @@ async function salvarRenovacao(){
       .update({vencimento:novaFormatada,status:novoStatus})
       .eq("id",at.contrato_id);
     if(errContrato) throw errContrato;
-    if(reiniciarSaldo){
-      // A renovação reinicia o saldo de todos os itens do contrato, sem apagar
-      // solicitações, NFs, patrimônios ou termos do ciclo anterior.
-      const {error:errSaldo}=await sb.from("atas_itens")
-        .update({saldo_reiniciado_em:novaData})
-        .eq("contrato_id",at.contrato_id);
-      if(errSaldo) throw errSaldo;
-    }
+    // A conclusão da renovação encerra automaticamente qualquer marcação de
+    // trâmite. Quando escolhido, também reinicia o saldo sem apagar o histórico.
+    const atualizacaoItens={
+      renovacao_em_tramite:false,
+      renovacao_em_tramite_em:null,
+      encerramento_planejado:false,
+      encerramento_planejado_em:null
+    };
+    if(reiniciarSaldo) atualizacaoItens.saldo_reiniciado_em=novaData;
+    const {error:errItens}=await sb.from("atas_itens")
+      .update(atualizacaoItens)
+      .eq("contrato_id",at.contrato_id);
+    if(errItens) throw errItens;
     const {error:errHist}=await sb.from("contratos_historico").insert({
       contrato_id:at.contrato_id,
       tipo:"Prorrogação de ATA",
@@ -1864,12 +2132,23 @@ async function _ataAbrirEmailContrato(contratoId){
 
 // ═══ ENCERRAR ITEM DE ATA ═══
 let _encerrarAtaItemId=null;
+function _ataPodeEncerrarItem(ataItem){
+  return !!ataItem&&(diasParaVencer(ataItem.vencimento)<0||getSaldo(ataItem)<=0);
+}
 function encerrarAtaItem(ataItemId){
   if(bloquearSeVisualiz()) return;
   const ataItem=atasItens.find(r=>String(r.id)===String(ataItemId));
   if(!ataItem||String(ataItem.status||'').toUpperCase().startsWith('ENCERRADO')) return;
+  if(!_ataPodeEncerrarItem(ataItem)){
+    alert(`Este item ainda não venceu e possui saldo ${getSaldo(ataItem)}. O encerramento só é liberado depois do vencimento ou quando o saldo chegar a zero.`);
+    return;
+  }
   _encerrarAtaItemId=ataItem.id;
   document.getElementById("enc-info").textContent=`${ataItem.cpl||""} · ${ataItem.sim||""} · ${ataItem.item||""}`;
+  const regra=document.getElementById("enc-regra");
+  if(regra) regra.textContent=diasParaVencer(ataItem.vencimento)<0
+    ?`Vigência vencida em ${ataItem.vencimento||"data não informada"}.`
+    :"Encerramento antecipado liberado porque o saldo deste item está zerado.";
   document.getElementById("enc-motivo").value="";
   document.getElementById("enc-msg").className="fmsg";
   document.getElementById("modal-encerrar").classList.add("active");
@@ -1881,12 +2160,38 @@ async function confirmarEncerramento(){
   btn.disabled=true;btn.textContent="Encerrando...";
   const motivo=document.getElementById("enc-motivo").value.trim();
   try{
-    const {error}=await sb.from("atas_itens").update({
+    const {data:itemAtual,error:erroItem}=await sb.from("atas_itens")
+      .select("id,contrato_id,qtde_contratada,saldo_reiniciado_em,status_contrato")
+      .eq("id",_encerrarAtaItemId).maybeSingle();
+    if(erroItem) throw erroItem;
+    if(!itemAtual) throw new Error("O item não foi encontrado para validar o encerramento.");
+    if(_ataStatusEncerrado(itemAtual.status_contrato)) throw new Error("Este item já está encerrado.");
+    const [contratoRes,execucoesRes]=await Promise.all([
+      sb.from("contratos").select("id,vencimento").eq("id",itemAtual.contrato_id).maybeSingle(),
+      sb.from("atas_execucao").select("qtde,data_af,dt_entrega,created_at").eq("ata_item_id",itemAtual.id)
+    ]);
+    if(contratoRes.error) throw contratoRes.error;
+    if(execucoesRes.error) throw execucoesRes.error;
+    if(!contratoRes.data) throw new Error("O contrato não foi encontrado para validar o vencimento.");
+    const marco=_toISODate(itemAtual.saldo_reiniciado_em);
+    const executado=(execucoesRes.data||[])
+      .filter(exec=>!marco||_dataExecucaoParaSaldo(exec)>=marco)
+      .reduce((total,exec)=>total+(Number(exec.qtde)||0),0);
+    const saldoAtual=(Number(itemAtual.qtde_contratada)||0)-executado;
+    if(diasParaVencer(contratoRes.data.vencimento)>=0&&saldoAtual>0){
+      throw new Error(`Encerramento bloqueado: o item ainda não venceu e possui saldo ${saldoAtual}.`);
+    }
+    const {data:encerrado,error}=await sb.from("atas_itens").update({
       status_contrato:"ENCERRADO",
       data_encerramento:new Date().toISOString().slice(0,10),
-      motivo_encerramento:motivo||null
-    }).eq("id",_encerrarAtaItemId);
+      motivo_encerramento:motivo||null,
+      renovacao_em_tramite:false,
+      renovacao_em_tramite_em:null,
+      encerramento_planejado:false,
+      encerramento_planejado_em:null
+    }).eq("id",_encerrarAtaItemId).select("id");
     if(error) throw error;
+    if((encerrado||[]).length!==1) throw new Error("O item não pôde ser encerrado. Verifique sua permissão.");
     await Promise.all([loadAtas(),contratosCarregado?loadContratos():Promise.resolve()]);
     showMsg("enc","✓ Item encerrado!","ok");
     setTimeout(()=>document.getElementById("modal-encerrar").classList.remove("active"),1200);

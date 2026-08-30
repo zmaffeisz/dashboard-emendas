@@ -2,6 +2,21 @@
 
 ## Em desenvolvimento
 
+- **Decisão de vigência por item nas Atas RP:** os cards de contratos vencidos ou
+  próximos do vencimento agora são clicáveis e permitem classificar cada item como
+  **Em renovação**, **Encerrar ao vencer** ou **Não analisado**. As decisões são
+  mutuamente exclusivas, persistem por item e aparecem também na grade. A prorrogação
+  efetiva só é liberada depois do vencimento; o encerramento antecipado só é liberado
+  quando o saldo do item está zerado. As ações de prorrogar e encerrar itens vencidos
+  ficam no próprio card de vencidos. Antes da nova vigência, todos os itens ativos devem
+  estar definidos para renovação e os destinados ao encerramento devem ser encerrados.
+
+- **Alertas de vigência nas Atas RP:** contratos vencidos e contratos vencendo em até
+  90 dias agora aparecem em resumos separados, recolhidos por padrão e expansíveis. A
+  abertura mostra cada contrato em um cartão legível, com prazo, vencimento, empresa e
+  itens agrupados; o indicador de 90 dias passa a contar contratos únicos e não inclui
+  os já vencidos.
+
 - **Unidade de medida nas Atas Rp:** a lista de itens passa a exibir, pesquisar, ordenar
   e filtrar a unidade de medida. A nova solicitação mostra a unidade do item selecionado
   separadamente da unidade de destino, e novos itens de ATA preservam esse dado desde a

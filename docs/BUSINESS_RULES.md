@@ -293,7 +293,7 @@
 
 ## 7. Recebimento de itens / AF
 
-- O encerramento de uma ATA pode ser integral, no contrato, ou seletivo, por item. Encerrar um item atualiza somente `atas_itens.status_contrato`; os demais itens do mesmo contrato permanecem vigentes e podem ser renovados/executados. O encerramento do contrato continua prevalecendo sobre todos os itens.
+- O encerramento de uma ATA pode ser integral, no contrato, ou seletivo, por item. Encerrar um item atualiza somente `atas_itens.status_contrato`; os demais itens do mesmo contrato permanecem vigentes e podem ser renovados/executados. O encerramento do contrato continua prevalecendo sobre todos os itens. O encerramento seletivo só é liberado quando a vigência já venceu ou, como exceção antecipada, quando o saldo daquele item chegou a zero.
 
 - O encerramento administrativo da ATA ou do item impede **novas solicitações**, mas não
   encerra uma execução já criada. Para acompanhamento operacional, uma linha de
@@ -309,6 +309,25 @@
   exibe **JÁ RENOVADA · LIMITE ATINGIDO** em cada item e não oferece novamente a ação de
   prorrogar. O salvamento também revalida o histórico no banco para bloquear uma tela
   desatualizada.
+
+- A prorrogação da vigência só pode ser efetivada **depois do vencimento da vigência
+  atual**. Saldo zerado não antecipa essa permissão: toda compra feita antes do vencimento
+  ainda pertence ao período vigente. A tela e o salvamento revalidam o vencimento antes
+  de aceitar a operação. Como a nova data pertence ao contrato, a prorrogação também exige
+  que todos os itens ativos estejam marcados **RENOVAÇÃO EM TRÂMITE**; itens marcados
+  **ENCERRAR AO VENCER** devem ser encerrados primeiro, impedindo que entrem por engano na
+  nova vigência.
+
+- Antes da vigência terminar, cada item de uma Ata pode receber uma decisão administrativa
+  individual: **RENOVAÇÃO EM TRÂMITE**, **ENCERRAR AO VENCER** ou **NÃO ANALISADO**.
+  Renovação e encerramento planejado são mutuamente exclusivos e não alteram saldo,
+  vigência ou status. Os cards de vencimento exibem as contagens e a decisão de cada item;
+  a mesma indicação aparece na grade. Ao concluir a renovação ou efetivar o encerramento,
+  as marcações de planejamento correspondentes são removidas automaticamente.
+
+- Na grade geral de Atas, a ação **Prorrogar** não é oferecida e **Encerrar item** aparece
+  antes do vencimento somente quando o saldo está zerado. Nos cards de contratos vencidos,
+  as duas ações efetivas ficam disponíveis por item.
 
 - Uma solicitação de ATA pode ser excluída antes da AF somente se não houver AF/data/previsão, NF, recebimento, patrimônio, entrega na unidade, termo, unidade física ou sanção. `obs_prazo` isolada, inclusive de importação, é apenas informativa e não bloqueia a exclusão.
 

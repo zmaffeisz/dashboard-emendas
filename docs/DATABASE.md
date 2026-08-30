@@ -60,6 +60,8 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260827152129 | `adicionar_codigo_siam_itens` — código opcional do catálogo SIAM em itens licitados e itens de ATA, com validação e índices de consulta |
 | 20260828204740 | `adicionar_unidade_medida_itens_licitacao` — unidade de medida pesquisável e personalizável nos itens licitados |
 | 20260828213724 | `adicionar_unidade_medida_atas_itens` — unidade de medida nos itens de ATA, com recuperação a partir dos itens espelhados |
+| 20260830220942 | `marcar_itens_ata_em_tramite_renovacao` — estado e data do acompanhamento de renovação por item da Ata |
+| 20260830223355 | `planejar_encerramento_itens_ata` — decisão exclusiva de encerrar o item ao fim da vigência, com data de marcação |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
