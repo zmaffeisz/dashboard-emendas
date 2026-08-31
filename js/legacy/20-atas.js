@@ -250,6 +250,18 @@ function _ataAlertContractKey(item){
   return String(item?.contrato_id||`${item?.cpl||""}::${item?.sim||""}`);
 }
 
+function _ataItemNaoAnalisado(item){
+  return !!item&&!item.ata_renovada&&!_ataStatusEncerrado(item.status)&&!item.renovacao_em_tramite&&!item.encerramento_planejado;
+}
+
+function _ataItemAlertaVigencia(item){
+  if(!item||_ataStatusEncerrado(item.status)) return false;
+  const dias=diasParaVencer(item.vencimento);
+  return dias<0||(dias>=0&&dias<=90);
+}
+
+let _ataAlertasSomenteNaoAnalisados={vencido:false,vencendo:false};
+
 function _ataAgruparContratosAlerta(items){
   const grupos=new Map();
   items.forEach(item=>{
@@ -271,19 +283,26 @@ function _ataAgruparContratosAlerta(items){
   return Array.from(grupos.values());
 }
 
-function _ataRenderGrupoAlerta(grupo,tipo){
+function _ataRenderGrupoAlerta(grupo,tipo,itensVisiveis=grupo.itens){
   const vencido=tipo==="vencido";
   const prazo=vencido
     ?`Vencido há ${Math.abs(grupo.dias)} ${Math.abs(grupo.dias)===1?"dia":"dias"}`
     :grupo.dias===0?"Vence hoje":`Vence em ${grupo.dias} ${grupo.dias===1?"dia":"dias"}`;
-  const emTramite=grupo.itens.filter(item=>item.renovacao_em_tramite&&!item.ata_renovada).length;
-  const paraEncerrar=grupo.itens.filter(item=>item.encerramento_planejado&&!_ataStatusEncerrado(item.status)).length;
-  const semDecisao=grupo.itens.filter(item=>!item.ata_renovada&&!_ataStatusEncerrado(item.status)&&!item.renovacao_em_tramite&&!item.encerramento_planejado).length;
-  const itens=grupo.itens.length
-    ?`<ul class="ata-alert-items">${grupo.itens.map(item=>`<li><span>${_ataAlertEsc(item.item||"Item sem descrição")}</span>${item.ata_renovada?`<span class="ata-alert-item-state ata-alert-item-renewed">Já renovada</span>`:_ataStatusEncerrado(item.status)?`<span class="ata-alert-item-state ata-alert-item-closed">Encerrado</span>`:item.renovacao_em_tramite?`<span class="ata-alert-item-state">Em renovação</span>`:item.encerramento_planejado?`<span class="ata-alert-item-state ata-alert-item-closing">Encerrar ao vencer</span>`:`<span class="ata-alert-item-state ata-alert-item-pending">Não analisado</span>`}</li>`).join("")}</ul>`
+  const itens=Array.isArray(itensVisiveis)?itensVisiveis:[];
+  const semDecisao=itens.filter(_ataItemNaoAnalisado).length;
+  const emTramite=itens.filter(item=>item.renovacao_em_tramite&&!item.ata_renovada).length;
+  const paraEncerrar=itens.filter(item=>item.encerramento_planejado&&!_ataStatusEncerrado(item.status)).length;
+  const itensLabel=_ataAlertasSomenteNaoAnalisados[tipo]
+    ?`${itens.length} ${itens.length===1?"item não analisado":"itens não analisados"}`
+    :`${itens.length} ${itens.length===1?"item":"itens"}`;
+  const listaItens=itens.length
+    ?`<ul class="ata-alert-items">${itens.map(item=>`<li><span>${_ataAlertEsc(item.item||"Item sem descrição")}</span>${item.ata_renovada?`<span class="ata-alert-item-state ata-alert-item-renewed">Já renovada</span>`:_ataStatusEncerrado(item.status)?`<span class="ata-alert-item-state ata-alert-item-closed">Encerrado</span>`:item.renovacao_em_tramite?`<span class="ata-alert-item-state">Em renovação</span>`:item.encerramento_planejado?`<span class="ata-alert-item-state ata-alert-item-closing">Encerrar ao vencer</span>`:`<span class="ata-alert-item-state ata-alert-item-pending">Não analisado</span>`}</li>`).join("")}</ul>`
     :`<div class="ata-alert-empty">Nenhum item informado</div>`;
   const contratoId=_ataAlertEsc(grupo.contrato_id);
-  return `<article class="ata-alert-contract" role="button" tabindex="0" onclick="abrirModalTramiteRenovacao('${contratoId}')" onkeydown="ataAlertaContratoKeydown(event,'${contratoId}')" aria-label="Abrir itens do contrato CPL ${_ataAlertEsc(grupo.cpl)}, SIM ${_ataAlertEsc(grupo.sim)}">
+  const destaquePendente=grupo.itens.some(_ataItemNaoAnalisado);
+  const todosAnalisados=grupo.itens.length>0&&!destaquePendente;
+  const classesCard=`ata-alert-contract${destaquePendente?" ata-alert-contract-pending":""}${todosAnalisados?" ata-alert-contract-analyzed":""}`;
+  return `<article class="${classesCard}" role="button" tabindex="0" onclick="abrirModalTramiteRenovacao('${contratoId}')" onkeydown="ataAlertaContratoKeydown(event,'${contratoId}')" aria-label="Abrir itens do contrato CPL ${_ataAlertEsc(grupo.cpl)}, SIM ${_ataAlertEsc(grupo.sim)}">
     <div class="ata-alert-contract-head">
       <div>
         <strong>CPL ${_ataAlertEsc(grupo.cpl)} / SIM ${_ataAlertEsc(grupo.sim)}</strong>
@@ -293,32 +312,67 @@ function _ataRenderGrupoAlerta(grupo,tipo){
     </div>
     <div class="ata-alert-date">Vencimento: <strong>${_ataAlertEsc(grupo.vencimento||"—")}</strong></div>
     <div class="ata-alert-items-status">
-      <span class="ata-alert-items-label">${grupo.itens.length} ${grupo.itens.length===1?"item":"itens"}</span>
+      <span class="ata-alert-items-label">${itensLabel}</span>
       ${emTramite?`<span class="ata-alert-renewal-count">🔄 ${emTramite} em trâmite</span>`:""}
       ${paraEncerrar?`<span class="ata-alert-closing-count">⛔ ${paraEncerrar} para encerrar</span>`:""}
       ${semDecisao?`<span class="ata-alert-pending-count">● ${semDecisao} sem decisão</span>`:""}
     </div>
-    ${itens}
+    ${listaItens}
     <div class="ata-alert-open-hint">Clique para revisar a decisão de cada item</div>
   </article>`;
+}
+
+function ataAlternarFiltroAlerta(tipo,event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  if(!Object.prototype.hasOwnProperty.call(_ataAlertasSomenteNaoAnalisados,tipo)) return;
+  _ataAlertasSomenteNaoAnalisados[tipo]=!_ataAlertasSomenteNaoAnalisados[tipo];
+  renderAlertas();
+}
+
+function ataTabelaItemAlertaClick(event,contratoId){
+  if(event?.target?.closest?.("button,a,input,select,textarea")) return;
+  if(contratoId===undefined||contratoId===null||contratoId==="") return;
+  abrirModalTramiteRenovacao(contratoId);
+}
+
+function ataTabelaItemAlertaKeydown(event,contratoId){
+  if(event.key!=="Enter"&&event.key!==" ") return;
+  event.preventDefault();
+  ataTabelaItemAlertaClick(event,contratoId);
 }
 
 function _ataRenderAlertaExpansivel(tipo,grupos){
   if(!grupos.length) return "";
   const vencido=tipo==="vencido";
-  const quantidade=grupos.length;
-  const titulo=vencido
+  const somenteNaoAnalisados=!!_ataAlertasSomenteNaoAnalisados[tipo];
+  const gruposExibidos=somenteNaoAnalisados
+    ?grupos.filter(grupo=>grupo.itens.some(_ataItemNaoAnalisado))
+    :grupos;
+  const quantidade=gruposExibidos.length;
+  const tituloBase=vencido
     ?`${quantidade} ${quantidade===1?"contrato vencido":"contratos vencidos"}`
     :`${quantidade} ${quantidade===1?"contrato vencendo":"contratos vencendo"} em até 90 dias`;
-  const ordenados=[...grupos].sort((a,b)=>vencido?b.dias-a.dias:a.dias-b.dias);
-  return `<details class="ata-alert ata-alert-${vencido?"danger":"warning"}">
+  const titulo=somenteNaoAnalisados?`${tituloBase} com itens não analisados`:tituloBase;
+  const ordenados=[...gruposExibidos].sort((a,b)=>{
+    const prioridadeA=a.itens.some(_ataItemNaoAnalisado)?0:1;
+    const prioridadeB=b.itens.some(_ataItemNaoAnalisado)?0:1;
+    return prioridadeA-prioridadeB||(vencido?b.dias-a.dias:a.dias-b.dias);
+  });
+  const conteudo=ordenados.length
+    ?ordenados.map(grupo=>_ataRenderGrupoAlerta(grupo,tipo,somenteNaoAnalisados?grupo.itens.filter(_ataItemNaoAnalisado):grupo.itens)).join("")
+    :`<div class="ata-alert-filter-empty">Nenhum contrato com item não analisado.</div>`;
+  return `<details class="ata-alert ata-alert-${vencido?"danger":"warning"} ata-alert-${tipo}" data-ata-alerta-tipo="${tipo}">
     <summary class="ata-alert-summary">
-      <span class="ata-alert-icon" aria-hidden="true">${vencido?"⛔":"⚠"}</span>
-      <span class="ata-alert-title">${titulo}</span>
+      <span class="ata-alert-summary-main">
+        <span class="ata-alert-icon" aria-hidden="true">${vencido?"⛔":"⚠"}</span>
+        <span class="ata-alert-title">${titulo}</span>
+        <button type="button" class="ata-alert-filter-btn${somenteNaoAnalisados?" active":""}" aria-pressed="${somenteNaoAnalisados}" title="${somenteNaoAnalisados?"Mostrar todos os contratos e itens":"Mostrar somente contratos com itens não analisados"}" onclick="ataAlternarFiltroAlerta('${tipo}',event)">${somenteNaoAnalisados?"Mostrar todos":"Mostrar apenas não analisados"}</button>
+      </span>
       <span class="ata-alert-action"><span class="ata-alert-show">Ver detalhes</span><span class="ata-alert-hide">Ocultar</span><span class="ata-alert-chevron" aria-hidden="true">⌄</span></span>
     </summary>
     <div class="ata-alert-content">
-      ${ordenados.map(grupo=>_ataRenderGrupoAlerta(grupo,tipo)).join("")}
+      ${conteudo}
     </div>
   </details>`;
 }
@@ -330,9 +384,17 @@ function renderAlertas(){
     const dias=diasParaVencer(r.vencimento);
     return dias>=0&&dias<=90;
   }));
-  document.getElementById("atas-alertas").innerHTML=
+  const alertas=document.getElementById("atas-alertas");
+  const estadosAbertos=Object.fromEntries(["vencido","vencendo"].map(tipo=>[
+    tipo,!!alertas?.querySelector(`.ata-alert-${tipo}`)?.open
+  ]));
+  alertas.innerHTML=
     _ataRenderAlertaExpansivel("vencido",vencidos)+
     _ataRenderAlertaExpansivel("vencendo",vencendo);
+  Object.entries(estadosAbertos).forEach(([tipo,aberto])=>{
+    const detalhes=alertas.querySelector(`.ata-alert-${tipo}`);
+    if(detalhes) detalhes.open=aberto;
+  });
 }
 
 let _ataTramiteContratoId=null;
@@ -681,6 +743,8 @@ function filtrarAtas(){
       if(["vencimento","data_base_reajuste"].includes(_sortAtasCol)){
         const da=parseDataBR(va),db=parseDataBR(vb);
         if(da&&db) return _sortAtasAsc?da-db:db-da;
+        if(da) return -1;
+        if(db) return 1;
       }
       return _sortAtasAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
     });
@@ -710,7 +774,12 @@ function filtrarAtas(){
     const pct=r.qtde_contratada?Math.round(exec/r.qtde_contratada*100):0;
     const stColor=r.status==="VIGENTE"?"var(--green)":r.status==="ENCERRADO"?"var(--red)":"var(--amber)";
     const temPedidoAberto=atasExec.some(e=>String(e.ata_item_id)===String(r.id)&&!_ataExecRecebida(e));
-    return`<tr>
+    const itemAlertaVigencia=_ataItemAlertaVigencia(r);
+    const contratoId=_ataAlertEsc(r.contrato_id);
+    const atributosClique=itemAlertaVigencia
+      ?` class="ata-alert-table-row" tabindex="0" title="Clique para revisar as decisões deste contrato" onclick="ataTabelaItemAlertaClick(event,'${contratoId}')" onkeydown="ataTabelaItemAlertaKeydown(event,'${contratoId}')"`
+      :"";
+    return`<tr${atributosClique}>
       <td style="font-size:11px;white-space:nowrap">${r.cpl}</td>
       <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
       <td class="td-trunc" title="${_sanEsc(r.item)}${r.codigo_siam?' · SIAM '+_sanEsc(r.codigo_siam):''}" style="max-width:220px">
@@ -1996,7 +2065,7 @@ async function salvarRenovacao(){
 }
 
 // ═══ ORDENAÇÃO ATAS ═══
-let _sortAtasCol=null,_sortAtasAsc=true;
+let _sortAtasCol='vencimento',_sortAtasAsc=true;
 function sortAtas(col){
   if(_sortAtasCol===col)_sortAtasAsc=!_sortAtasAsc;else{_sortAtasCol=col;_sortAtasAsc=true;}
   document.querySelectorAll('[id^="sort-atas-"]').forEach(el=>el.textContent="");

@@ -2,6 +2,21 @@
 
 ## Em desenvolvimento
 
+- **Triagem dos alertas de vigência nas Atas RP:** os cards com pelo menos um item
+  **Não analisado** agora aparecem antes dos demais e ficam brancos, enquanto os cards com
+  todos os itens definidos recebem fundo azul-claro, mantendo a ordenação por proximidade
+  do vencimento dentro de cada grupo. Os alertas de contratos vencendo e vencidos ganharam
+  o filtro **Mostrar apenas não analisados**: na tela resumida ele restringe os cards e os
+  itens exibidos, mas o modal continua mostrando todos os itens do contrato para decisão.
+
+- **Atalho das Atas RP na tabela:** itens vinculados a contratos vencidos ou vencendo em
+  até 90 dias agora são clicáveis na tabela de itens e abrem o modal de decisões do contrato,
+  com todos os seus itens. As demais linhas permanecem sem esse atalho.
+
+- **Ordenação padrão das Atas RP:** a tabela de itens agora começa ordenada pelo vencimento,
+  dos contratos vencidos e mais próximos dos contratos com vencimento mais distante. A ordenação
+  manual pelos cabeçalhos continua disponível.
+
 - **Edição operacional e fiscalizadores nas Atas RP:** o menu de cada item passa a
   separar a edição administrativa completa, exclusiva de admin, dos fluxos permitidos
   aos editores de Contratos. O novo editor operacional libera apenas e-mails, prefixo de
