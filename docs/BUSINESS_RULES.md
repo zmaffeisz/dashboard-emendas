@@ -90,6 +90,9 @@
   fluxo real: contrato, empenho, AF, recebimento e confirmação na unidade. O
   `status_lic_id` anterior pode permanecer armazenado como histórico, mas não deve
   substituir o status operacional.
+- A exportação em Excel de **Licitações em andamento** respeita exatamente os filtros
+  visíveis da tela (busca, tipo, secretaria e inclusão de contratadas). Ela traz uma linha
+  por item exibido e uma aba complementar com os planejamentos de ATA vinculados.
 - Quando a soma autorizada em AF for menor que a quantidade contratada, o andamento
   deve indicar **AF parcial — saldo aguardando AF**. Recebimento e confirmação também
   só são considerados totais quando alcançam a quantidade completa do item.

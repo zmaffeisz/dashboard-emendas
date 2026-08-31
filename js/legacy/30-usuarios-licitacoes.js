@@ -250,6 +250,27 @@ function _licItemExecutado(i){ const s=_cpStatusById[i.status_lic_id]; return !!
 function _licItemContratado(i){ return !!i.contrato_id; }
 function _licItemOcorrencia(i){ return i?_licOcorrenciasByItem[String(i.id)]||null:null; }
 function _licItemEncerrado(i){ return !!_licItemOcorrencia(i); }
+function _licProcessosVisiveis(){
+  const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
+  const fTipo=document.getElementById('lic-f-tipo')?.value||'';
+  const fOrg=document.getElementById('lic-f-orgao')?.value||'';
+  const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
+  const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
+  return _licitacoesCache.map(p=>{
+    const todosItens=porProc[p.id]||[];
+    const itensServico=_procServicoPeriodicoItens(p);
+    const naLic=todosItens.filter(i=>!_licItemExecutado(i));
+    const fullyContratado=naLic.length>0&&naLic.every(i=>_licItemContratado(i));
+    return {p,naLic,itensServico,fullyContratado,gone:todosItens.length>0&&naLic.length===0};
+  }).filter(x=>{
+    if(x.gone||(x.fullyContratado&&!incluirContratados)) return false;
+    const p=x.p;
+    if(fTipo&&(p.tipo||'')!==fTipo) return false;
+    if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; if(!fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean).includes(fOrg)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(x.itensServico.flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    return true;
+  });
+}
 function renderLicitacoes(){
   const box=document.getElementById('lic-lista'); if(!box) return;
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
@@ -385,6 +406,52 @@ function renderLicitacoes(){
   box.innerHTML=html||'<div style="padding:1rem;text-align:center;color:var(--text3)">Nenhuma licitação em andamento</div>';
   const cnt=document.getElementById('lic-count');
   if(cnt) cnt.textContent=mostrados+' em andamento'+(_ocultos?` · ${_ocultos} já contratada${_ocultos!==1?'s':''} oculta${_ocultos!==1?'s':''}`:'');
+}
+function _licExcelData(valor){ return valor?new Date(valor).toLocaleDateString('pt-BR'):''; }
+function _licExcelAjustarColunas(ws,colunas,linhas){
+  ws['!cols']=colunas.map((_,i)=>({wch:Math.min(55,Math.max(12,...linhas.slice(0,300).map(l=>String(l[i]??'').length))+2)}));
+  if(linhas.length) ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(colunas.length-1)}${linhas.length+1}`};
+}
+async function exportarLicitacoesExcel(){
+  const processos=_licProcessosVisiveis();
+  if(!processos.length){ if(window.toast) toast('Nenhuma licitação visível para exportar.','info'); else alert('Nenhuma licitação visível para exportar.'); return; }
+  await ensureLib('xlsx');
+  const colunas=[
+    'PROCESSO','TIPO','NATUREZA','TIPO DE SERVIÇO','OBJETO','MODALIDADE','STATUS DO PROCESSO','SEÇÃO','SC','VALOR ESTIMADO DO PROCESSO','OBSERVAÇÃO DO PROCESSO','LINK PÚBLICO SEI',
+    'ITEM','CÓDIGO SIAM','TIPO DA EMENDA','PARLAMENTAR','NÚMERO DA EMENDA','ANO DA EMENDA','UNIDADE DE MEDIDA','QUANTIDADE','VALOR UNITÁRIO ESTIMADO','VALOR TOTAL ESTIMADO','VALOR UNITÁRIO CONTRATADO','VALOR TOTAL CONTRATADO','PRAZO DE ENTREGA (DIAS)','UNIDADE DE DESTINO','FONTE DE RECURSO','DETALHE DA FONTE','STATUS INTERNO DO ITEM','SECRETARIA RESPONSÁVEL','SITUAÇÃO DETALHADA','SITUAÇÃO DESDE','ÚLTIMA ATUALIZAÇÃO','JÁ GEROU CONTRATO','OCORRÊNCIA','PREGÃO','LOTE','DATA DA OCORRÊNCIA','OBSERVAÇÃO DA OCORRÊNCIA','PLANEJAMENTO DE ATA','PERIODICIDADE DO SERVIÇO','VALOR DO PERÍODO'
+  ];
+  const linhas=[],linhasPlanejamento=[];
+  processos.forEach(x=>{
+    const p=x.p, itens=x.naLic.length?x.naLic:x.itensServico;
+    (itens.length?itens:[null]).forEach(it=>{
+      const situacao=it?_cpSituacao(it):{nome:'',orgao:''};
+      const ocorrencia=it?_licItemOcorrencia(it):null;
+      const planos=it?_ataPlanejamentosLicitacao.filter(v=>String(v.processo_item_id)===String(it.id)):[];
+      const periodico=!x.naLic.length&&x.itensServico.length;
+      const qtd=it?(it.qtde??it.quantidade??null):null;
+      const unit=it?(it.valor_estimado??it.valor_unitario??null):null;
+      const unitContratado=it?.valor_contratado??null;
+      const emenda=it?.emendas||{};
+      const valorPeriodo=periodico?(it?.valor_trimestral??it?.valor_mensal??(qtd!=null&&unit!=null?Number(qtd)*Number(unit):null)):null;
+      const total=periodico?valorPeriodo:(qtd!=null&&unit!=null?Number(qtd)*Number(unit):null);
+      const resumoPlanos=planos.map(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; return `Emenda ${em.emenda||'?'}${em.ano?('/'+em.ano):''} · ${_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,'sem unidade')} · previsão ${v.quantidade_prevista??'—'} · ${v.status||'—'}`; }).join(' | ');
+      linhas.push([
+        p.identificador||'',p.tipo||'',p.natureza||'',p.tipo_servico||'',p.objeto||'',p.modalidade||'',p.status||'',p.secao||'',p.sc||'',p.valor_estimado??null,p.observacao||'',p.link_publico_sei||'',
+        it?.descricao||'',it?.codigo_siam||'',emenda.tipo||'',emenda.parlamentar||'',emenda.emenda||'',emenda.ano??'',it?.unidade_medida||'',qtd,unit,total,unitContratado,qtd!=null&&unitContratado!=null?Number(qtd)*Number(unitContratado):null,it?.prazo_entrega_dias??null,it?.unidades?.nome||'',it?.fonte_tipo||'',it?.fonte_descricao||'',it?.status||'',situacao.orgao||'',situacao.nome||'',_licExcelData(it?.status_lic_desde),_licExcelData(it?.status_lic_atualizado_em),it?.contrato_id?'Sim':'Não',ocorrencia?.tipo||'',ocorrencia?.numero_pregao||'',ocorrencia?.numero_lote||'',_licExcelData(ocorrencia?.data_ocorrencia),ocorrencia?.observacao||'',resumoPlanos,periodico?(String(p.tipo_servico||'').includes('TRIMESTRAL')?'Trimestral':'Mensal'):'',valorPeriodo
+      ]);
+      planos.forEach(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; linhasPlanejamento.push([p.identificador||'',it?.descricao||'',em.emenda||'',em.ano||'',em.parlamentar||'',ei.item||'',_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,''),v.quantidade_prevista??null,v.status||'',v.contrato_id||'',v.ata_item_id||'',v.ata_execucao_id||'']); });
+    });
+  });
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([colunas,...linhas]);
+  _licExcelAjustarColunas(ws,colunas,linhas);
+  XLSX.utils.book_append_sheet(wb,ws,'Licitações filtradas');
+  if(linhasPlanejamento.length){
+    const colsPlano=['PROCESSO','ITEM DA LICITAÇÃO','EMENDA','ANO','PARLAMENTAR','ITEM DA EMENDA','UNIDADE','QUANTIDADE PREVISTA','STATUS','CONTRATO','ITEM DA ATA','EXECUÇÃO DA ATA'];
+    const wsPlano=XLSX.utils.aoa_to_sheet([colsPlano,...linhasPlanejamento]);
+    _licExcelAjustarColunas(wsPlano,colsPlano,linhasPlanejamento);
+    XLSX.utils.book_append_sheet(wb,wsPlano,'Planejamento ATA');
+  }
+  XLSX.writeFile(wb,`licitacoes_filtradas_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 let _licOcorrenciaContext=null;
@@ -605,7 +672,7 @@ async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
   while(true){
     const {data,error}=await sb.from('itens')
-      .select('id,processo_id,descricao,codigo_siam,unidade_medida,qtde,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla)')
+      .select('id,processo_id,descricao,codigo_siam,unidade_medida,qtde,valor_estimado,valor_contratado,prazo_entrega_dias,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,unidade_destino_id,status,status_lic_id,status_lic_secretaria_id,status_lic_texto,status_lic_desde,contrato_id,secretarias(sigla),unidades(nome),emendas(tipo,parlamentar,emenda,ano)')
       .not('processo_id','is',null).order('processo_id').range(from,from+size-1);
     if(error) throw error;
     all=all.concat(data||[]);

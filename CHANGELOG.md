@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Excel das Licitações filtradas:** a aba Licitações em andamento agora exporta os
+  processos que estão visíveis, com uma linha por item, valores, unidades, fonte, situação,
+  ocorrências, número e ano da emenda, e planejamentos de ATA em aba complementar.
+
 - **Triagem dos alertas de vigência nas Atas RP:** os cards com pelo menos um item
   **Não analisado** agora aparecem antes dos demais e ficam brancos, enquanto os cards com
   todos os itens definidos recebem fundo azul-claro, mantendo a ordenação por proximidade
