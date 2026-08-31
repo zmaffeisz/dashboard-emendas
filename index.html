@@ -1451,8 +1451,8 @@
       <div class="form-group" style="grid-column:1 / -1">
         <div class="form-label">Tipo do material *</div>
         <div style="display:flex;gap:18px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-tipo-material" value="PERMANENTE" onchange="_recToggleTipoMaterial()"> Bem permanente</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-tipo-material" value="CONSUMO" onchange="_recToggleTipoMaterial()"> Material de consumo</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-tipo-material" value="PERMANENTE" onchange="_recSelecionarTipoMaterial(this.value)"> Bem permanente</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-tipo-material" value="CONSUMO" onchange="_recSelecionarTipoMaterial(this.value)"> Material de consumo</label>
         </div>
         <div id="rec-tipo-material-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Selecione uma opção para definir o fluxo do recebimento.</div>
       </div>

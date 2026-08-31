@@ -2,6 +2,10 @@
 
 ## Em desenvolvimento
 
+- **Recebimento de bem permanente:** a seleção de tipo de material passa a ser lida dentro
+  do modal e registrada no momento do clique, evitando a mensagem indevida para itens já
+  marcados como bem permanente ou material de consumo.
+
 - **Excel das Licitações filtradas:** a aba Licitações em andamento agora exporta os
   processos que estão visíveis, com uma linha por item, valores, unidades, fonte, situação,
   ocorrências, número e ano da emenda, e planejamentos de ATA em aba complementar.

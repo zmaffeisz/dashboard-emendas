@@ -2581,13 +2581,18 @@ function verRecebimento(entregaId){
 }
 // Renderiza N linhas de unidade (patrimônio + série) conforme a quantidade recebida agora.
 function _recPossuiPatrimonio(){
-  return document.querySelector('input[name="rec-possui-patrimonio"]:checked')?.value||'';
+  return document.querySelector('#modal-recebimento input[name="rec-possui-patrimonio"]:checked')?.value||'';
 }
 function _recTipoMaterial(){
-  return document.querySelector('input[name="rec-tipo-material"]:checked')?.value||'';
+  return document.querySelector('#modal-recebimento input[name="rec-tipo-material"]:checked')?.value||window._recTipoMaterialSelecionado||'';
+}
+function _recSelecionarTipoMaterial(valor){
+  window._recTipoMaterialSelecionado=valor||'';
+  _recToggleTipoMaterial();
 }
 function _recDefinirTipoMaterial(valor, bloqueado){
-  document.querySelectorAll('input[name="rec-tipo-material"]').forEach(el=>{
+  window._recTipoMaterialSelecionado=valor||'';
+  document.querySelectorAll('#modal-recebimento input[name="rec-tipo-material"]').forEach(el=>{
     el.checked=valor===el.value;
     el.disabled=!!bloqueado;
   });
@@ -2611,7 +2616,7 @@ function _recToggleTipoMaterial(){
   _recTogglePatrimonio();
 }
 function _recDefinirPatrimonio(valor, bloqueado){
-  document.querySelectorAll('input[name="rec-possui-patrimonio"]').forEach(el=>{
+  document.querySelectorAll('#modal-recebimento input[name="rec-possui-patrimonio"]').forEach(el=>{
     el.checked=valor===(el.value==='sim');
     el.disabled=!!bloqueado;
   });
