@@ -2990,6 +2990,14 @@ async function salvarRecebimentoAta(){
     })):[];
     const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
+    // A RPC de vínculo preenche a NF na execução. Grave antes a classificação exigida
+    // pelo banco para que esse preenchimento não seja interpretado como recebimento sem tipo.
+    const classificacao={
+      tipo_material:tipoMaterial,
+      possui_patrimonio:permanente?possuiPatrimonio:null
+    };
+    const {error:classificacaoErro}=await sb.from('atas_execucao').update(classificacao).eq('id',execId);
+    if(classificacaoErro) throw classificacaoErro;
     const nf=await _recObterOuCriarNF(row);
     if(emp?.id){
       const {error:vinculoErro}=await sb.rpc('vincular_documentos_execucao_ata',{
@@ -3001,7 +3009,7 @@ async function salvarRecebimentoAta(){
     }else{
       await _recGarantirNFExecucaoAtaHistorica(row,nf,qtde);
     }
-    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,tipo_material:tipoMaterial,possui_patrimonio:permanente?possuiPatrimonio:null};
+    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,...classificacao};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
     const unidadesPayload=unidades.map((u,i)=>({

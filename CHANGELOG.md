@@ -103,6 +103,10 @@
   geram unidades físicas e seguem para entrega na unidade/Inventário; consumos permanecem
   aglutinados e são concluídos no almoxarifado.
 
+- **Classificação antes do vínculo da NF em ATA:** o tipo de material e a informação de
+  patrimônio são gravados antes da vinculação de empenho e nota fiscal, evitando que uma
+  escolha já feita na tela seja recusada pela validação do recebimento.
+
 - **AFs e recebimentos:** datas de AF, recebimento e emissão de NF deixam de ser preenchidas automaticamente; os campos obrigatórios precisam receber a data real antes de salvar.
 
 - **Empenhos:** o ano não é mais preenchido automaticamente; o número aceita somente
