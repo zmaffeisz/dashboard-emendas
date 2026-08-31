@@ -287,6 +287,10 @@
   quando a origem for recurso próprio e não existir `emenda_item_id`. No recebimento, o
   rateio da NF deve gravar o mesmo `exec_id` em `nota_fiscal_itens`; os números textuais em
   `atas_execucao` são apenas a fotografia exibida e não substituem as chaves relacionais.
+- Exceção para importações históricas sem rateio recuperável: quando a execução já possui
+  um ou mais números de empenho no texto, o recebimento não exige um novo vínculo nem
+  escolhe arbitrariamente um dos números. A NF permanece relacionada à execução por
+  `nota_fiscal_itens.exec_id`, com `empenho_id` nulo até eventual saneamento financeiro.
 - No "gerar contrato" o empenho considera **fonte + emenda** (memória do projeto, lote
   27/06). **A confirmar** comportamento exato.
 - No modal de gerar contrato, itens disponíveis cuja descrição seja equivalente

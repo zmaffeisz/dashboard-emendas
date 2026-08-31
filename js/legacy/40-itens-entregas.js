@@ -2529,6 +2529,12 @@ async function _recCarregarEmpenhoHerdado(row){
       const unicos=(candidatos||[]).filter(e=>normalizarNumeroDocumento(e.numero)===numero&&(!ano||Number(e.ano)===ano));
       if(unicos.length===1) emp=unicos[0];
     }
+    // Importações históricas podem trazer mais de um número no mesmo pedido sem
+    // rateio que permita escolher, com segurança, um único empenho relacional.
+    // O texto continua sendo a fotografia documental válida da execução.
+    if(!emp&&row.empenho&&String(row.empenho).trim()){
+      emp={id:null,numero:String(row.empenho).trim(),ano:null,_textoHistorico:true};
+    }
     window._recEmpenhoHerdado=emp;
     const info=document.getElementById('rec-empenho-info');
     const hid=document.getElementById('rec-empenho-id-herdado');
@@ -2898,6 +2904,34 @@ async function _recGarantirNFItem(row, nf, empenho, qtde){
     if(error) throw error;
   }
 }
+async function _recGarantirNFExecucaoAtaHistorica(row,nf,qtde){
+  const payload={
+    nota_fiscal_id:nf.id,
+    item_id:null,
+    emenda_id:row.emenda_id||null,
+    emenda_item_id:row.emenda_item_id||null,
+    empenho_id:null,
+    exec_id:row.exec_id,
+    quantidade:qtde,
+    valor_unitario:row.valor_item||null,
+    valor_total:row.valor_item?Number((Number(row.valor_item)*qtde).toFixed(2)):null,
+    observacoes:`Execução histórica com empenho(s) preservado(s) no texto: ${String(row.empenho||'').trim()}`
+  };
+  const {data:exist,error:e1}=await sb.from('nota_fiscal_itens')
+    .select('id')
+    .eq('nota_fiscal_id',nf.id)
+    .eq('exec_id',row.exec_id)
+    .is('empenho_id',null)
+    .maybeSingle();
+  if(e1) throw e1;
+  if(exist){
+    const {error}=await sb.from('nota_fiscal_itens').update(payload).eq('id',exist.id);
+    if(error) throw error;
+  }else{
+    const {error}=await sb.from('nota_fiscal_itens').insert(payload);
+    if(error) throw error;
+  }
+}
 function _wbValorAtualPermite(atual, novo){
   if(!novo) return false;
   if(!atual) return true;
@@ -2942,25 +2976,29 @@ async function salvarRecebimentoAta(){
   const btn=document.getElementById('rec-salvar'); const label=btn.textContent;
   btn.disabled=true; btn.textContent='Salvando...'; _recSetMsg('Salvando...');
   try{
-    const nf=await _recObterOuCriarNF(row);
     const emp=await _recCarregarEmpenhoHerdado(row);
     const empNumero=emp?.numero||row.empenho||null;
-    if(!emp?.id) throw new Error('Item sem empenho relacionado. Vincule novamente o empenho antes do recebimento.');
+    if(!empNumero) throw new Error('Item sem número de empenho. Vincule o empenho antes do recebimento.');
     const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
     })):[];
     const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
+    const nf=await _recObterOuCriarNF(row);
+    if(emp?.id){
+      const {error:vinculoErro}=await sb.rpc('vincular_documentos_execucao_ata',{
+        p_exec_id:execId,
+        p_empenho_id:emp.id,
+        p_nota_fiscal_id:nf.id
+      });
+      if(vinculoErro) throw vinculoErro;
+    }else{
+      await _recGarantirNFExecucaoAtaHistorica(row,nf,qtde);
+    }
     const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,tipo_material:tipoMaterial,possui_patrimonio:permanente?possuiPatrimonio:null};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
-    const {error:vinculoErro}=await sb.rpc('vincular_documentos_execucao_ata',{
-      p_exec_id:execId,
-      p_empenho_id:emp.id,
-      p_nota_fiscal_id:nf.id
-    });
-    if(vinculoErro) throw vinculoErro;
     const unidadesPayload=unidades.map((u,i)=>({
       exec_id:execId,
       ata_item_id:row.ata_item_id||null,

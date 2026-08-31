@@ -40,6 +40,11 @@
   itens agrupados; o indicador de 90 dias passa a contar contratos únicos e não inclui
   os já vencidos.
 
+- **Recebimento de ATA com empenho histórico:** execuções importadas que já possuem
+  número(s) de empenho, mas não têm um único vínculo relacional recuperável, deixam de
+  pedir nova vinculação. A NF fica relacionada diretamente à execução, sem atribuir
+  valores a um empenho arbitrário; as validações também passam a ocorrer antes da criação
+  ou anexação da NF, evitando novos documentos órfãos em caso de erro.
 - **Unidade de medida nas Atas Rp:** a lista de itens passa a exibir, pesquisar, ordenar
   e filtrar a unidade de medida. A nova solicitação mostra a unidade do item selecionado
   separadamente da unidade de destino, e novos itens de ATA preservam esse dado desde a
