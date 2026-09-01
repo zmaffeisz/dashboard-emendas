@@ -985,7 +985,7 @@
       </div>
       <div class="fg">
         <div class="fg-label">Categoria <button onclick="clearF('finv-categoria')">✕</button></div>
-        <select id="finv-categoria" onchange="filtrarInventario()"><option value="">Todas</option></select>
+        <select id="finv-categoria" multiple onchange="filtrarInventario()"></select>
       </div>
       <div class="fg">
         <div class="fg-label">Situação <button onclick="clearF('finv-status')">✕</button></div>
@@ -1654,7 +1654,7 @@
     <div class="filters" style="margin-bottom:1rem">
       <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="lic-busca" placeholder="identificador, objeto, item..." oninput="filtrarLicitacoes()"></div>
       <div class="fg"><div class="fg-label">Tipo</div><select id="lic-f-tipo" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
-      <div class="fg"><div class="fg-label">Categoria</div><select id="lic-f-categoria" onchange="filtrarLicitacoes()"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fg-label">Categoria</div><select id="lic-f-categoria" multiple onchange="filtrarLicitacoes()"></select></div>
       <div class="fg"><div class="fg-label">Secretaria</div><select id="lic-f-orgao" onchange="filtrarLicitacoes()"><option value="">Todas</option></select></div>
       <div class="fg"><div class="fg-label">&nbsp;</div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="lic-f-contratados" onchange="filtrarLicitacoes()" style="cursor:pointer">incluir já contratadas</label></div>
     </div>
@@ -1753,7 +1753,7 @@
       </div>
       <div class="fg">
         <div class="fg-label">Categoria <button onclick="clearF('fat-categoria')">✕</button></div>
-        <select id="fat-categoria" onchange="filtrarAtas()"><option value="">Todas</option></select>
+        <select id="fat-categoria" multiple onchange="filtrarAtas()"></select>
       </div>
       <div class="fg">
         <div class="fg-label">Status <button onclick="clearF('fat-status')">✕</button></div>
@@ -3295,12 +3295,12 @@
 
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260827-hierarquia-org-1"></script>
-<script src="js/legacy/10-chamados-inventario.js?v=20260901-categorias-licitacao-1"></script>
-  <script src="js/legacy/20-atas.js?v=20260901-categorias-licitacao-1"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20260901-categorias-licitacao-1"></script>
+<script src="js/legacy/10-chamados-inventario.js?v=20260901-categorias-multiplas-1"></script>
+  <script src="js/legacy/20-atas.js?v=20260901-categorias-multiplas-1"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20260901-categorias-multiplas-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260901-categorias-licitacao-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260825-ocorrencias-licitacao-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260901-categorias-multiplas-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260830-dados-operacionais-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>

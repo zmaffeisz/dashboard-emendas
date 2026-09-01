@@ -705,11 +705,18 @@ function _popularFiltrosInv(){
   if(sel) sel.innerHTML='<option value="">Todas</option>'+unidades.map(u=>`<option value="${_sanEsc(u)}">${_sanEsc(u)}</option>`).join('');
   const categorias=[...new Set(inventarioRows.map(r=>r.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const selCategoria=document.getElementById('finv-categoria');
-  if(selCategoria) selCategoria.innerHTML='<option value="">Todas</option>'+(inventarioRows.some(r=>!r.categoria)?'<option value="__sem__">Sem categoria</option>':'')+categorias.map(c=>`<option value="${_sanEsc(c)}">${_sanEsc(c)}</option>`).join('');
+  if(selCategoria){
+    const atuais=[...selCategoria.selectedOptions].map(o=>o.value).filter(Boolean);
+    selCategoria.innerHTML=(inventarioRows.some(r=>!r.categoria)?'<option value="__sem__">Sem categoria</option>':'')+categorias.map(c=>`<option value="${_sanEsc(c)}">${_sanEsc(c)}</option>`).join('');
+    [...selCategoria.options].forEach(o=>o.selected=atuais.includes(o.value));
+    if(typeof enhanceMultiSelect==='function') enhanceMultiSelect(selCategoria,{placeholder:'Pesquisar categorias...'});
+  }
 }
 
 function clearAllInv(){
-  ['finv-tipo','finv-unidade','finv-categoria','finv-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['finv-tipo','finv-unidade','finv-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const categoria=document.getElementById('finv-categoria');
+  if(categoria){[...categoria.options].forEach(o=>o.selected=false);categoria._ss?.render();}
   const b=document.getElementById('finv-busca');if(b)b.value='';
   filtrarInventario();
 }
@@ -717,14 +724,13 @@ function clearAllInv(){
 function filtrarInventario(){
   const tipo=document.getElementById('finv-tipo')?.value||'';
   const unidade=document.getElementById('finv-unidade')?.value||'';
-  const categoria=document.getElementById('finv-categoria')?.value||'';
+  const categorias=[...(document.getElementById('finv-categoria')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
   const situacao=document.getElementById('finv-status')?.value||'';
   const q=(document.getElementById('finv-busca')?.value||'').toLowerCase();
   _invFiltered=inventarioRows.filter(r=>{
     if(tipo&&r.tipo!==tipo) return false;
     if(unidade&&r.unidade!==unidade) return false;
-    if(categoria==='__sem__'&&r.categoria) return false;
-    if(categoria&&categoria!=='__sem__'&&r.categoria!==categoria) return false;
+    if(categorias.length&&!((!r.categoria&&categorias.includes('__sem__'))||categorias.includes(r.categoria))) return false;
     if(situacao&&(r.situacao_atual||'ATIVO')!==situacao) return false;
     if(q){const hay=[r.item,r.categoria,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.unidade_origem,r.processo,r.numero_serie,r.emprestado_para].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;

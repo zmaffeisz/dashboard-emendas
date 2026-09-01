@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-01 — Filtro por múltiplas categorias
+
+- Os filtros de categoria em Licitações, Atas RP e Inventário agora aceitam várias
+  categorias simultaneamente, inclusive em combinação com **Sem categoria**.
+- Limpar a seleção volta a exibir todas as categorias.
+
 ## 2026-09-01 — Categorias específicas da DMMHF
 
 - Adicionadas as categorias Dieta (Rede, MJ e genérica), Fralda (Rede e MJ), Freestyle,

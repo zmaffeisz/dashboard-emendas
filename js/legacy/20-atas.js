@@ -675,11 +675,14 @@ function popularFiltrosAtas(){
   sel("fat-cpl",[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort());
   sel("fat-sim",[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort());
   sel("fat-empresa",[...new Set(atasItens.map(r=>r.empresa).filter(Boolean))].sort());
-  const categoriaAtual=document.getElementById('fat-categoria')?.value||'';
-  sel("fat-categoria",[...new Set(atasItens.map(r=>r.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')));
   const categoriaSel=document.getElementById('fat-categoria');
-  if(categoriaSel&&!atasItens.every(r=>r.categoria)) categoriaSel.insertAdjacentHTML('beforeend','<option value="__sem__">Sem categoria</option>');
-  if(categoriaSel&&[...categoriaSel.options].some(o=>o.value===categoriaAtual)) categoriaSel.value=categoriaAtual;
+  const categoriasAtuais=[...(categoriaSel?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+  const categorias=[...new Set(atasItens.map(r=>r.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(categoriaSel) categoriaSel.innerHTML=(!atasItens.every(r=>r.categoria)?'<option value="__sem__">Sem categoria</option>':'')+categorias.map(v=>`<option value="${_sanEsc(v)}">${_sanEsc(v)}</option>`).join('');
+  if(categoriaSel){
+    [...categoriaSel.options].forEach(o=>o.selected=categoriasAtuais.includes(o.value));
+    if(typeof enhanceMultiSelect==='function') enhanceMultiSelect(categoriaSel,{placeholder:'Pesquisar categorias...'});
+  }
   // Agrupar encerrados num único filtro
   const statusUnicos=[...new Set([...atasItens,...atasExec].map(r=>{
     if(r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return "ENCERRADO";
@@ -696,7 +699,9 @@ function popularFiltrosAtas(){
 let _atasStatusInit=false;
 
 function clearAllAtas(){
-  ["fat-cpl","fat-sim","fat-empresa","fat-categoria","fat-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["fat-cpl","fat-sim","fat-empresa","fat-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  const categoria=document.getElementById('fat-categoria');
+  if(categoria){[...categoria.options].forEach(o=>o.selected=false);categoria._ss?.render();}
   const elSt=document.getElementById("fat-status");
   if(elSt) elSt.value=[...elSt.options].some(o=>o.value==="VIGENTE")?"VIGENTE":"";
   Object.keys(ataHeaderFilters).forEach(k=>ataHeaderFilters[k]=[]);
@@ -722,7 +727,7 @@ function filtrarAtas(){
   const cpl=document.getElementById("fat-cpl")?.value||"";
   const sim=document.getElementById("fat-sim")?.value||"";
   const emp=document.getElementById("fat-empresa")?.value||"";
-  const categoria=document.getElementById("fat-categoria")?.value||"";
+  const categorias=[...(document.getElementById("fat-categoria")?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
   const st=document.getElementById("fat-status")?.value||"";
   const busca=document.getElementById("fat-busca")?.value||"";
 
@@ -730,8 +735,7 @@ function filtrarAtas(){
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
     if(emp&&r.empresa!==emp) return false;
-    if(categoria==='__sem__'&&r.categoria) return false;
-    if(categoria&&categoria!=='__sem__'&&r.categoria!==categoria) return false;
+    if(categorias.length&&!((!r.categoria&&categorias.includes('__sem__'))||categorias.includes(r.categoria))) return false;
     for(const [col,sel] of Object.entries(ataHeaderFilters)){
       if(!sel.length) continue;
       const cfg=ATA_FILTER_COLS[col];

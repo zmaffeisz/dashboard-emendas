@@ -426,12 +426,18 @@ document.addEventListener('click',function(e){
 });
 
 function clearF(id){
-  const el=document.getElementById(id);if(el)el.value="";
+  const el=document.getElementById(id);
+  if(el){
+    if(el.multiple) [...el.options].forEach(o=>o.selected=false);
+    else el.value="";
+    el._ss?.render();
+  }
   if(id.startsWith("fat-")) return filtrarAtas();
   if(id.startsWith("ct-")) return filtrarContratos();
   if(id.startsWith("sa-")) return filtrarSancoes();
   if(id.startsWith("fc-")) return filtrarChamados();
   if(id.startsWith("cn-")) return filtrarChamadosNovos();
+  if(id.startsWith("finv-")) return filtrarInventario();
   applyFilters();
 }
 const MUNICIPAL_ANTIGA_ANOS=[2022,2023,2024,2025];
