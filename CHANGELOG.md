@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-09-01 — Totais e visualização compacta nas Licitações
+
+- Cada item em Licitações em andamento passa a mostrar quantidade, valor unitário,
+  valor total e a unidade beneficiada/de destino quando houver essa informação.
+- O total dos itens considerados aparece no cabeçalho e no rodapé do processo.
+- Os valores usam apresentação discreta, sem negrito ou destaque colorido excessivo.
+- No cabeçalho, o total aparece abaixo do número do processo com destaque moderado;
+  as ações ficam agrupadas em um único menu e o identificador não recebe sublinhado.
+- Adicionado o filtro **Somente com emenda vinculada**, considerando vínculos diretos
+  dos itens e planejamentos de ATA; a exportação respeita o mesmo recorte.
+- A exportação existente foi identificada como **Excel - Itens/Processos** e uma nova
+  opção **Excel - Apenas Processos** gera uma linha por processo, reunindo título,
+  número, todas as emendas vinculadas, secretaria, situação atual e data desde quando.
+- Cada item da licitação exibe o número e o ano das emendas vinculadas diretamente ou
+  por planejamento de ATA.
+- Serviços mensais e trimestrais passam a exibir e somar o valor global da vigência;
+  o detalhamento mantém visível o valor do período e o multiplicador de meses/ciclos.
+- O cabeçalho e o rodapé dos serviços também mostram o valor mensal/trimestral do
+  contrato inteiro, separado do total global da vigência.
+- Itens podem ser ocultados visualmente do cálculo, com opção de revelá-los e
+  reincluí-los; essa preferência permanece apenas na sessão do navegador.
+- Secretaria, situação e data ficam em leitura compacta. Os controles individuais
+  aparecem somente ao clicar em **Editar item**, mantendo **Aplicar a todos** como fluxo
+  principal.
+
 ## 2026-09-01 — Filtro por múltiplas categorias
 
 - Os filtros de categoria em Licitações, Atas RP e Inventário agora aceitam várias

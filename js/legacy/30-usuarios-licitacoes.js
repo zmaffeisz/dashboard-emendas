@@ -305,22 +305,28 @@ function _licItemExecutado(i){ const s=_cpStatusById[i.status_lic_id]; return !!
 function _licItemContratado(i){ return !!i.contrato_id; }
 function _licItemOcorrencia(i){ return i?_licOcorrenciasByItem[String(i.id)]||null:null; }
 function _licItemEncerrado(i){ return !!_licItemOcorrencia(i); }
+function _licProcessoTemEmendaVinculada(processoId,itens=[]){
+  if((itens||[]).some(i=>i?.emenda_id||i?.emenda_item_id)) return true;
+  return _ataPlanejamentosLicitacao.some(v=>String(v.processo_id)===String(processoId)&&(v.emenda_id||v.emenda_item_id));
+}
 function _licProcessosVisiveis(){
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
   const fTipo=document.getElementById('lic-f-tipo')?.value||'';
   const fCategorias=[...(document.getElementById('lic-f-categoria')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
   const fOrg=document.getElementById('lic-f-orgao')?.value||'';
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
+  const somenteComEmenda=document.getElementById('lic-f-emenda')?.checked||false;
   const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
   return _licitacoesCache.map(p=>{
     const todosItens=porProc[p.id]||[];
     const itensServico=_procServicoPeriodicoItens(p);
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));
     const fullyContratado=naLic.length>0&&naLic.every(i=>_licItemContratado(i));
-    return {p,naLic,itensServico,fullyContratado,gone:todosItens.length>0&&naLic.length===0};
+    return {p,todosItens,naLic,itensServico,fullyContratado,gone:todosItens.length>0&&naLic.length===0};
   }).filter(x=>{
     if(x.gone||(x.fullyContratado&&!incluirContratados)) return false;
     const p=x.p;
+    if(somenteComEmenda&&!_licProcessoTemEmendaVinculada(p.id,x.todosItens)) return false;
     if(fTipo&&(p.tipo||'')!==fTipo) return false;
     if(fCategorias.length&&!((!p.categoria_id&&fCategorias.includes('__sem__'))||fCategorias.includes(String(p.categoria_id||'')))) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; if(!fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean).includes(fOrg)) return false; }
@@ -335,6 +341,7 @@ function renderLicitacoes(){
   const fCategorias=[...(document.getElementById('lic-f-categoria')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
   const fOrg=document.getElementById('lic-f-orgao')?.value||'';
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
+  const somenteComEmenda=document.getElementById('lic-f-emenda')?.checked||false;
   const podeEd=podeEditar('contratos');
   const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
   let mostrados=0;
@@ -345,13 +352,14 @@ function renderLicitacoes(){
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));            // pendentes + já contratados
     const pendentes=naLic.filter(i=>!_licItemContratado(i)&&!_licItemEncerrado(i));
     const fullyContratado=naLic.length>0&&naLic.every(i=>_licItemContratado(i));
-    return {p, naLic, pendentes, itensServico, totContratado:naLic.filter(_licItemContratado).length, fullyContratado, gone:todosItens.length>0 && naLic.length===0};
+    return {p, todosItens, naLic, pendentes, itensServico, totContratado:naLic.filter(_licItemContratado).length, fullyContratado, gone:todosItens.length>0 && naLic.length===0};
   });
   const ocultos=info.filter(x=>x.fullyContratado).length;
   const base=info.filter(x=>{
     if(x.gone) return false;                                  // todos os itens já saíram (executados)
     if(x.fullyContratado && !incluirContratados) return false; // 100% virou contrato → some por padrão
     const p=x.p;
+    if(somenteComEmenda&&!_licProcessoTemEmendaVinculada(p.id,x.todosItens)) return false;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fCategorias.length&&!((!p.categoria_id&&fCategorias.includes('__sem__'))||fCategorias.includes(String(p.categoria_id||'')))) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
@@ -367,6 +375,19 @@ function renderLicitacoes(){
     const itensComOcorrencia=items.filter(_licItemEncerrado);
     const itensServico=x.itensServico;
     const totalItensExibidos=items.length||itensServico.length;
+    const itensDoTotal=items.length?items:itensServico;
+    const tipoChave=items.length?'item':'servico';
+    const itensOcultosProcesso=itensDoTotal.filter((it,idx)=>_cpHiddenItemKeys.has(_cpVisualItemKey(p.id,items.length?it.id:idx,tipoChave))).length;
+    const totalProcesso=itensDoTotal.reduce((soma,it,idx)=>{
+      const itemId=items.length?it.id:idx;
+      if(_cpHiddenItemKeys.has(_cpVisualItemKey(p.id,itemId,tipoChave))) return soma;
+      return soma+((items.length?_licItemValorTotal(it):_licServicoValorGlobalItem(it,p))||0);
+    },0);
+    const servicoPeriodico=!items.length&&itensServico.length>0;
+    const valorPeriodoContrato=servicoPeriodico?(_licNumero(_procProcessoEhTrimestral(p)?p.servico_trimestral_valor_trimestral:p.servico_mensal_valor_mensal)??itensServico.reduce((soma,it)=>soma+(_licItemValorTotal(it)||0),0)):null;
+    const quantidadePeriodosContrato=servicoPeriodico?_licServicoQuantidadePeriodos(p):null;
+    const periodoContratoLabel=servicoPeriodico?(_procProcessoEhTrimestral(p)?'Trimestral':'Mensal'):'';
+    const mostrarOcultos=!!_cpShowHiddenByProcess[p.id];
     // Nesta aba, o contrato vinculado prevalece apenas na apresentação do processo.
     // O status original continua intacto no banco e nas demais telas/fluxos.
     const roll=itensComOcorrencia.length&&!itensEditaveis.length
@@ -377,18 +398,21 @@ function renderLicitacoes(){
     const aberto=!!_cpExpanded[p.id];
     const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
     const tituloSc=p.sc?` title="SC: ${_sanEsc(p.sc)}"`:'';
+    const acoesProcesso=[
+      {label:'✏️ Editar processo',onclick:`abrirEditarProcesso(${p.id})`},
+      podeExcluir?{label:'🗑️ Excluir processo',onclick:`excluirProcesso(${p.id})`,danger:true}:null,
+      podeEd&&itensEditaveis.length?{label:'⚠ Fracassar/Desertar itens',onclick:`abrirModalOcorrenciaLicitacao(${p.id})`,danger:true,divider:true}:null,
+      podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))?{label:'📄 Gerar contrato',onclick:`gerarContratoDoProcesso(${p.id})`,divider:true}:null,
+    ];
     let bloco=`<div class="lic-process-card"${tituloSc} style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface);text-transform:uppercase">
       <div class="lic-process-card-header" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
         <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
-          <div style="font-weight:600;font-size:13px">${_procIdentificadorHtml(p)} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
-          <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · <span style="color:var(--blue);font-weight:600">${_sanEsc(p.categoria_licitacao||'SEM CATEGORIA')}</span> · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
+          <div class="lic-process-heading"><div class="lic-process-ident"><div>${_procIdentificadorHtml(p)}</div><span class="lic-process-total">Total considerado: ${fmtFull(totalProcesso)}</span>${valorPeriodoContrato!==null?`<span class="lic-process-period-total">${periodoContratoLabel} do contrato: ${fmtFull(valorPeriodoContrato)}${quantidadePeriodosContrato?` · ${quantidadePeriodosContrato} ${_procProcessoEhTrimestral(p)?'ciclos':'meses'}`:''}</span>`:''}</div><span class="lic-process-object">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
+          <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · ${_sanEsc(p.categoria_licitacao||'SEM CATEGORIA')} · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
         </div>
         ${_cpStatusBadge(roll)}
-        <button onclick="abrirEditarProcesso(${p.id})" title="Editar processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
-        ${podeExcluir?`<button onclick="excluirProcesso(${p.id})" title="Excluir processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">🗑️</button>`:''}
-        ${podeEd&&itensEditaveis.length?`<button onclick="abrirModalOcorrenciaLicitacao(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer">⚠ Fracassar/Desertar itens</button>`:''}
-        ${podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
+        ${kebabMenuHtml(acoesProcesso)}
       </div>`;
     if(aberto){
       if(podeEd&&(itensEditaveis.length||(!items.length&&itensServico.length))){
@@ -401,46 +425,62 @@ function renderLicitacoes(){
           <button onclick="${bulkFn}(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
         </div>`;
       }
-      bloco+=`<table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>`;
+      bloco+=`<div class="lic-items-table-wrap"><table class="lic-items-table"><thead><tr><th>Item</th><th class="num">Quantidade</th><th class="money">Valor unitário</th><th class="money">Valor total</th><th>Acompanhamento</th><th class="actions">Ações</th></tr></thead><tbody>`;
       if(!items.length&&itensServico.length){
         itensServico.forEach((it,idx)=>{
-          const qtd=Number(it.quantidade||0);
-          const unit=Number(it.valor_unitario||0);
+          const chave=_cpVisualItemKey(p.id,idx,'servico');
+          const itemOculto=_cpHiddenItemKeys.has(chave);
+          if(itemOculto&&!mostrarOcultos) return;
+          const qtd=_licItemQuantidade(it);
+          const unit=_licItemValorUnitario(it);
+          const valorPeriodo=_licItemValorTotal(it);
+          const totalItem=_licServicoValorGlobalItem(it,p);
+          const quantidadePeriodos=_licServicoQuantidadePeriodos(p);
           const trimestral=_procProcessoEhTrimestral(p);
-          const valorPeriodo=Number(it.valor_trimestral||it.valor_mensal||(qtd*unit)||0);
           const periodoLabel=trimestral?'trimestral':'mensal';
           const cur=_cpStatusById[it.status_lic_id];
+          const editando=_cpEditingItemKeys.has(chave);
           let ctrl;
           if(cur&&cur.automatico){
-            ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
-          }else if(podeEd){
-            ctrl=_cpSituacaoEditor(`cp-serv-secretaria-${p.id}-${idx}`,`cp-serv-texto-${p.id}-${idx}`,it,`cpSalvarSituacaoServicoMensal(${p.id},${idx})`);
+            ctrl=`<span class="lic-item-automatic"><span></span>${_sanEsc(cur.nome)} 🔒</span>${_cpDesdeResumoHtml(it)}`;
+          }else if(podeEd&&editando){
+            ctrl=_cpSituacaoEditor(`cp-serv-secretaria-${p.id}-${idx}`,`cp-serv-texto-${p.id}-${idx}`,it,`cpSalvarSituacaoServicoMensal(${p.id},${idx})`,{desdeId:`cp-serv-desde-${p.id}-${idx}`,cancelar:`cpToggleItemEditor(${p.id},${idx},'servico')`});
           }else{
-            ctrl=_sanEsc(_cpSituacao(it).nome);
+            ctrl=_cpSituacaoResumoHtml(it);
           }
-          bloco+=`<tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 13px"><div>${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço ${periodoLabel}</span></div>${_procCodigoSiamHtml(it.codigo_siam)}</td>
-            <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${qtd||''}</td>
-            <td style="padding:8px 8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Unit. ${unit?fmtFull(unit):'—'} · ${trimestral?'Trimestral':'Mensal'} ${valorPeriodo?fmtFull(valorPeriodo):'—'}</div>${ctrl}</td>
-            <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-serv-desde-${p.id}-${idx}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetServicoMensalItemDesde(${p.id},${idx},this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}</div></td>
+          bloco+=`<tr class="${itemOculto?'is-hidden-from-total':''}">
+            <td><div class="lic-item-description">${_sanEsc(it.descricao||'—')} <span class="lic-item-kind">serviço ${periodoLabel}</span></div>${_procCodigoSiamHtml(it.codigo_siam)}${_licUnidadesHtml(it)}</td>
+            <td class="num">${qtd??'—'}${it.unidade_medida?`<small>${_sanEsc(it.unidade_medida)}</small>`:''}</td>
+            <td class="money">${_licValorHtml(unit)}</td>
+            <td class="money total">${_licValorHtml(totalItem)}${valorPeriodo!==null&&quantidadePeriodos>1?`<small class="lic-money-period">${trimestral?'Trimestral':'Mensal'}: ${_licValorHtml(valorPeriodo)} × ${quantidadePeriodos} ${trimestral?'ciclos':'meses'}</small>`:''}</td>
+            <td class="status">${ctrl}</td>
+            <td class="actions"><div class="lic-item-actions">${podeEd&&!cur?.automatico?`<button type="button" class="lic-item-btn" onclick="cpToggleItemEditor(${p.id},${idx},'servico')">${editando?'Fechar edição':'Editar item'}</button>`:''}<button type="button" class="lic-item-btn ${itemOculto?'include':'hide'}" onclick="cpToggleItemOculto(${p.id},${idx},'servico')">${itemOculto?'Reincluir no total':'Ocultar do total'}</button></div></td>
           </tr>`;
         });
       }
       items.forEach(it=>{
+        const chave=_cpVisualItemKey(p.id,it.id);
+        const itemOculto=_cpHiddenItemKeys.has(chave);
+        if(itemOculto&&!mostrarOcultos) return;
         const cur=_cpStatusById[it.status_lic_id];
         const ocorrencia=_licItemOcorrencia(it);
         const exc=['fracassado','deserto','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
+        const editavel=podeEd&&!_licItemContratado(it)&&!ocorrencia&&!(cur&&cur.automatico);
+        const editando=editavel&&_cpEditingItemKeys.has(chave);
+        const qtd=_licItemQuantidade(it);
+        const unit=_licItemValorUnitario(it);
+        const totalItem=_licItemValorTotal(it);
         let ctrl;
         if(ocorrencia){
-          ctrl=`<div style="color:var(--red);font-weight:800">${_sanEsc(ocorrencia.tipo)} 🔒</div><div style="font-size:10px;color:var(--text2);margin-top:3px">Pregão ${_sanEsc(ocorrencia.numero_pregao)} · lote ${_sanEsc(ocorrencia.numero_lote)} · ${_sanEsc(_cpDataCurta(ocorrencia.data_ocorrencia)||'—')}</div><button type="button" onclick="abrirDocumentoOcorrenciaLicitacao('${ocorrencia.id}')" style="margin-top:4px;font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px;background:var(--surface);color:var(--red);cursor:pointer">📎 ${_sanEsc(ocorrencia.documento_nome||'Ver documento')}</button>`;
+          ctrl=`<div class="lic-item-occurrence">${_sanEsc(ocorrencia.tipo)} 🔒</div><div class="lic-item-status-meta">Pregão ${_sanEsc(ocorrencia.numero_pregao)} · lote ${_sanEsc(ocorrencia.numero_lote)} · ${_sanEsc(_cpDataCurta(ocorrencia.data_ocorrencia)||'—')}</div><button type="button" onclick="abrirDocumentoOcorrenciaLicitacao('${ocorrencia.id}')" class="lic-item-btn danger">📎 ${_sanEsc(ocorrencia.documento_nome||'Ver documento')}</button>`;
         } else if(_licItemContratado(it)){
-          ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)">✔ virou contrato</span> <span title="já gerou contrato — agora é gerido em Contratos em execução" style="color:var(--text3);cursor:help">🔒</span>`;
+          ctrl=`<span class="lic-item-contracted">✔ virou contrato 🔒</span>${_cpDesdeResumoHtml(it)}`;
         } else if(cur&&cur.automatico){
-          ctrl=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue)"><span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block"></span>${_sanEsc(cur.nome)}</span> <span title="definido automaticamente pelo sistema" style="color:var(--text3);cursor:help">🔒</span>`;
-        } else if(podeEd){
-          ctrl=_cpSituacaoEditor(`cp-secretaria-${it.id}`,`cp-texto-${it.id}`,it,`cpSalvarSituacaoItem('${it.id}')`);
+          ctrl=`<span class="lic-item-automatic"><span></span>${_sanEsc(cur.nome)} 🔒</span>${_cpDesdeResumoHtml(it)}`;
+        } else if(editando){
+          ctrl=_cpSituacaoEditor(`cp-secretaria-${it.id}`,`cp-texto-${it.id}`,it,`cpSalvarSituacaoItem('${it.id}')`,{desdeId:`cp-desde-${it.id}`,cancelar:`cpToggleItemEditor(${p.id},'${it.id}')`});
         } else {
-          ctrl=_sanEsc(_cpSituacao(it).nome);
+          ctrl=_cpSituacaoResumoHtml(it);
         }
         const planos=p.natureza==='ATA DE RP'?_ataPlanejamentosLicitacao.filter(v=>String(v.processo_item_id)===String(it.id)):[];
         const planosHtml=planos.map(v=>{
@@ -450,14 +490,16 @@ function renderLicitacoes(){
           return `<div style="margin-top:5px;padding:5px 7px;border-left:3px solid var(--blue);background:rgba(55,138,221,.07);font-size:10px;color:var(--text2)"><b>Emenda ${_sanEsc(em.emenda||'?')}${em.ano?('/'+_sanEsc(em.ano)):''}</b> · ${_sanEsc(unidade)} · ${_sanEsc(ei.item||'item')} · previsão ${v.quantidade_prevista} · ${_sanEsc(estado)}${podeEd&&v.status==='PLANEJAMENTO'?` <button type="button" onclick="cancelarPlanejamentoEmendaAta('${v.id}')" style="margin-left:5px;border:0;background:none;color:var(--red);cursor:pointer;font-size:10px">cancelar</button>`:''}</div>`;
         }).join('');
         const vincularAta=p.natureza==='ATA DE RP'&&podeEd&&!_licItemContratado(it)&&!ocorrencia?` <button type="button" onclick="abrirPlanejamentoEmendaAta(${p.id},'${it.id}')" style="margin-left:6px;font-size:10px;padding:3px 7px;border:1px solid var(--blue);border-radius:4px;background:var(--surface);color:var(--blue);cursor:pointer">Vincular Emenda</button>`:'';
-        bloco+=`<tr style="border-top:1px solid var(--border);${ocorrencia?'background:var(--red-bg);color:var(--red-text)':''}">
-          <td style="padding:8px 13px"><div>${_sanEsc(it.descricao||'—')}${exc?` <span style="font-size:10px;color:var(--red);border:1px solid var(--red);border-radius:3px;padding:0 4px">${_sanEsc(exc)}</span>`:''}${vincularAta}</div>${_procCodigoSiamHtml(it.codigo_siam)}${_procUnidadeMedidaHtml(it.unidade_medida)}${planosHtml}</td>
-          <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${it.qtde??''}${it.unidade_medida?`<div style="font-size:9px">${_sanEsc(it.unidade_medida)}</div>`:''}</td>
-          <td style="padding:8px 8px">${ctrl}</td>
-          <td style="padding:8px 13px;color:var(--text3);width:220px;text-align:right;white-space:nowrap"><div>${podeEd&&!_licItemContratado(it)&&!ocorrencia?`<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)" title="Data desde quando o item está neste status">DESDE <input id="cp-desde-${it.id}" type="date" value="${_cpDataInput(it.status_lic_desde)}" onchange="cpSetItemDesde('${it.id}', this.value)" style="font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);width:118px"></label>`:`Desde ${_cpDataCurta(ocorrencia?.data_ocorrencia||it.status_lic_desde)||'—'}`}</div><div style="font-size:10px;margin-top:3px">${ocorrencia?'encerrado definitivamente':`há ${_cpDesde(it.status_lic_desde)||'—'} · Atualizado em ${_cpDataCurta(it.status_lic_atualizado_em)||'—'}`}</div></td>
+        bloco+=`<tr class="${itemOculto?'is-hidden-from-total':''}${ocorrencia?' has-occurrence':''}">
+          <td><div class="lic-item-description">${_sanEsc(it.descricao||'—')}${exc?` <span class="lic-item-exception">${_sanEsc(exc)}</span>`:''}${vincularAta}</div>${_procCodigoSiamHtml(it.codigo_siam)}${_procUnidadeMedidaHtml(it.unidade_medida)}${_licUnidadesHtml(it,planos)}${_licEmendasItemHtml(it,planos)}${planosHtml}</td>
+          <td class="num">${qtd??'—'}${it.unidade_medida?`<small>${_sanEsc(it.unidade_medida)}</small>`:''}</td>
+          <td class="money">${_licValorHtml(unit)}</td>
+          <td class="money total">${_licValorHtml(totalItem)}</td>
+          <td class="status">${ctrl}</td>
+          <td class="actions"><div class="lic-item-actions">${editavel?`<button type="button" class="lic-item-btn" onclick="cpToggleItemEditor(${p.id},'${it.id}')">${editando?'Fechar edição':'Editar item'}</button>`:''}<button type="button" class="lic-item-btn ${itemOculto?'include':'hide'}" onclick="cpToggleItemOculto(${p.id},'${it.id}')">${itemOculto?'Reincluir no total':'Ocultar do total'}</button></div></td>
         </tr>`;
       });
-      bloco+=`</tbody></table>`;
+      bloco+=`</tbody></table></div><div class="lic-process-footer"><div>${itensOcultosProcesso?`<button type="button" class="lic-item-btn" onclick="cpToggleMostrarOcultos(${p.id})">${mostrarOcultos?'Esconder novamente':`Mostrar ${itensOcultosProcesso} oculto${itensOcultosProcesso===1?'':'s'}`}</button><span>${itensOcultosProcesso} ${itensOcultosProcesso===1?'item fora':'itens fora'} do cálculo</span>`:'<span>Todos os itens estão no cálculo</span>'}</div><div class="lic-process-footer-values">${valorPeriodoContrato!==null?`<span>${periodoContratoLabel} do contrato: ${fmtFull(valorPeriodoContrato)}</span>`:''}<strong>Total considerado: ${fmtFull(totalProcesso)}</strong></div></div>`;
     }
     bloco+=`</div>`;
     return bloco;
@@ -492,7 +534,7 @@ async function exportarLicitacoesExcel(){
       const unitContratado=it?.valor_contratado??null;
       const emenda=it?.emendas||{};
       const valorPeriodo=periodico?(it?.valor_trimestral??it?.valor_mensal??(qtd!=null&&unit!=null?Number(qtd)*Number(unit):null)):null;
-      const total=periodico?valorPeriodo:(qtd!=null&&unit!=null?Number(qtd)*Number(unit):null);
+      const total=periodico?(valorPeriodo!=null?valorPeriodo*_licServicoQuantidadePeriodos(p):null):(qtd!=null&&unit!=null?Number(qtd)*Number(unit):null);
       const resumoPlanos=planos.map(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; return `Emenda ${em.emenda||'?'}${em.ano?('/'+em.ano):''} · ${_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,'sem unidade')} · previsão ${v.quantidade_prevista??'—'} · ${v.status||'—'}`; }).join(' | ');
       linhas.push([
         p.identificador||'',p.tipo||'',p.natureza||'',p.categoria_licitacao||'',p.tipo_servico||'',p.objeto||'',p.modalidade||'',p.status||'',p.secao||'',p.sc||'',p.valor_estimado??null,p.observacao||'',p.link_publico_sei||'',
@@ -511,6 +553,44 @@ async function exportarLicitacoesExcel(){
     XLSX.utils.book_append_sheet(wb,wsPlano,'Planejamento ATA');
   }
   XLSX.writeFile(wb,`licitacoes_filtradas_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function _licExcelEmendasDoProcesso(processoId,itens=[]){
+  const emendas=new Set();
+  const adicionar=em=>{
+    const numero=String(em?.emenda||'').trim();
+    const ano=String(em?.ano||'').trim();
+    if(numero) emendas.add(ano?`${numero}/${ano}`:numero);
+  };
+  (itens||[]).forEach(it=>adicionar(it?.emendas));
+  _ataPlanejamentosLicitacao.filter(v=>String(v.processo_id)===String(processoId)).forEach(v=>adicionar(v?.emendas));
+  return [...emendas].sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true})).join(' | ');
+}
+function _licExcelSecretariaItem(item){
+  const secretaria=_cpSecretariaById[item?.status_lic_secretaria_id]||item?.secretarias;
+  if(!secretaria) return _cpSituacao(item).orgao||'';
+  return secretaria.nome?`${secretaria.sigla} — ${secretaria.nome}`:(secretaria.sigla||'');
+}
+async function exportarLicitacoesProcessosExcel(){
+  const processos=_licProcessosVisiveis();
+  if(!processos.length){ if(window.toast) toast('Nenhuma licitação visível para exportar.','info'); else alert('Nenhuma licitação visível para exportar.'); return; }
+  await ensureLib('xlsx');
+  const colunas=['PROCESSO','TÍTULO / OBJETO','TIPO','NATUREZA','CATEGORIA','EMENDAS VINCULADAS (NÚMERO/ANO)','SECRETARIA RESPONSÁVEL','SITUAÇÃO ATUAL','DESDE','STATUS CADASTRADO DO PROCESSO','SEÇÃO','SC','LINK PÚBLICO SEI'];
+  const linhas=processos.map(x=>{
+    const p=x.p;
+    const itensAndamento=x.naLic.length?x.naLic:x.itensServico;
+    const secretarias=[...new Set(itensAndamento.map(_licExcelSecretariaItem).filter(Boolean))];
+    const situacoes=[...new Set(itensAndamento.map(it=>_cpSituacao(it).nome).filter(Boolean))];
+    const datas=itensAndamento.map(it=>it?.status_lic_desde).filter(Boolean).map(d=>new Date(d)).filter(d=>!Number.isNaN(d.getTime())).sort((a,b)=>a-b);
+    return [
+      p.identificador||'',p.objeto||'',p.tipo||'',p.natureza||'',p.categoria_licitacao||'',
+      _licExcelEmendasDoProcesso(p.id,x.todosItens),secretarias.join(' | '),situacoes.join(' | '),
+      datas.length?_licExcelData(datas[0].toISOString()):'',p.status||'',p.secao||'',p.sc||'',p.link_publico_sei||''
+    ];
+  });
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([colunas,...linhas]);
+  _licExcelAjustarColunas(ws,colunas,linhas);
+  XLSX.utils.book_append_sheet(wb,ws,'Processos licitatórios');
+  XLSX.writeFile(wb,`licitacoes_apenas_processos_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 let _licOcorrenciaContext=null;
@@ -726,6 +806,98 @@ async function cancelarPlanejamentoEmendaAta(id){
 // ═══ CONTROLE DE PROCESSOS (gestão de status por item) ═══
 let _cpProcessos=[], _cpItens=[], _cpStatusOpts=[], _cpStatusById={}, _cpSecretarias=[], _cpSecretariaById={}, _cpExpanded={};
 let _ataPlanejamentosLicitacao=[];
+const _cpHiddenStorageKey='licitacoes-itens-ocultos-v1';
+let _cpHiddenItemKeys=new Set();
+let _cpEditingItemKeys=new Set();
+let _cpShowHiddenByProcess={};
+try{
+  const salvos=JSON.parse(sessionStorage.getItem(_cpHiddenStorageKey)||'[]');
+  if(Array.isArray(salvos)) _cpHiddenItemKeys=new Set(salvos.map(String));
+}catch(_){ }
+function _cpVisualItemKey(pid,itemId,tipo='item'){ return `${tipo}:${pid}:${itemId}`; }
+function _cpSalvarItensOcultos(){
+  try{ sessionStorage.setItem(_cpHiddenStorageKey,JSON.stringify([..._cpHiddenItemKeys])); }catch(_){ }
+}
+function cpToggleItemOculto(pid,itemId,tipo='item'){
+  const chave=_cpVisualItemKey(pid,itemId,tipo);
+  if(_cpHiddenItemKeys.has(chave)) _cpHiddenItemKeys.delete(chave); else _cpHiddenItemKeys.add(chave);
+  _cpEditingItemKeys.delete(chave);
+  _cpSalvarItensOcultos();
+  renderLicitacoes();
+}
+function cpToggleItemEditor(pid,itemId,tipo='item'){
+  const chave=_cpVisualItemKey(pid,itemId,tipo);
+  if(_cpEditingItemKeys.has(chave)) _cpEditingItemKeys.delete(chave); else _cpEditingItemKeys.add(chave);
+  renderLicitacoes();
+}
+function cpToggleMostrarOcultos(pid){
+  _cpShowHiddenByProcess[pid]=!_cpShowHiddenByProcess[pid];
+  renderLicitacoes();
+}
+function _licNumero(valor){
+  if(valor===null||valor===undefined||valor==='') return null;
+  const numero=Number(valor);
+  return Number.isFinite(numero)?numero:null;
+}
+function _licItemQuantidade(item){ return _licNumero(item?.qtde??item?.quantidade); }
+function _licItemValorUnitario(item){ return _licNumero(item?.valor_contratado??item?.valor_estimado??item?.valor_unitario); }
+function _licItemValorTotal(item){
+  const quantidade=_licItemQuantidade(item),unitario=_licItemValorUnitario(item);
+  return quantidade===null||unitario===null?null:quantidade*unitario;
+}
+function _licServicoQuantidadePeriodos(processo){
+  const trimestral=_procProcessoEhTrimestral(processo);
+  const quantidade=_licNumero(trimestral?processo?.servico_trimestral_ciclos:processo?.servico_mensal_meses);
+  if(quantidade&&quantidade>0) return quantidade;
+  const valorPeriodo=_licNumero(trimestral?processo?.servico_trimestral_valor_trimestral:processo?.servico_mensal_valor_mensal);
+  const valorGlobal=_licNumero(trimestral?processo?.servico_trimestral_valor_global:processo?.servico_mensal_valor_global);
+  const calculada=valorPeriodo&&valorGlobal?valorGlobal/valorPeriodo:null;
+  return calculada&&Number.isFinite(calculada)&&calculada>0?calculada:1;
+}
+function _licServicoValorGlobalItem(item,processo){
+  const valorPeriodo=_licItemValorTotal(item);
+  return valorPeriodo===null?null:valorPeriodo*_licServicoQuantidadePeriodos(processo);
+}
+function _licValorHtml(valor){ return valor===null?'—':fmtFull(valor); }
+function _licUnidadesBeneficiadas(item,planos=[]){
+  const nomes=[];
+  const adicionar=valor=>{ const nome=String(valor||'').trim(); if(nome&&!nomes.includes(nome)) nomes.push(nome); };
+  adicionar(item?.unidades?.nome);
+  adicionar(item?.unidade_destino);
+  planos.forEach(v=>{
+    const ei=v?.emenda_itens||{};
+    adicionar(_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,''));
+  });
+  return nomes;
+}
+function _licUnidadesHtml(item,planos=[]){
+  const nomes=_licUnidadesBeneficiadas(item,planos);
+  return nomes.length?`<div class="lic-item-beneficiadas" title="Unidade beneficiada ou de destino">📍 ${nomes.map(_sanEsc).join(' · ')}</div>`:'';
+}
+function _licEmendasItemHtml(item,planos=[]){
+  const numeros=[];
+  const adicionar=em=>{
+    const numero=String(em?.emenda||'').trim();
+    const ano=String(em?.ano||'').trim();
+    if(!numero) return;
+    const numeroAno=ano&&!numero.includes('/'+ano)?`${numero}/${ano}`:numero;
+    if(!numeros.includes(numeroAno)) numeros.push(numeroAno);
+  };
+  adicionar(item?.emendas);
+  (planos||[]).forEach(v=>adicionar(v?.emendas));
+  return numeros.length?`<div class="lic-item-emendas">Emenda ${numeros.map(_sanEsc).join(' · ')}</div>`:'';
+}
+function _cpDesdeResumoHtml(item,dataAlternativa=null){
+  const data=dataAlternativa||item?.status_lic_desde;
+  return `<div class="lic-item-status-meta">Desde ${_sanEsc(_cpDataCurta(data)||'—')}${data?` · ${_sanEsc(_cpDesde(data)||'')}`:''}${item?.status_lic_atualizado_em?` · atualizado em ${_sanEsc(_cpDataCurta(item.status_lic_atualizado_em)||'—')}`:''}</div>`;
+}
+function _cpSituacaoResumoHtml(item){
+  const situacao=_cpSituacao(item);
+  const secretaria=_cpSecretariaById[item?.status_lic_secretaria_id]||item?.secretarias;
+  const secretariaNome=secretaria?.sigla||situacao.orgao||'Sem secretaria';
+  const texto=String(item?.status_lic_texto||'').trim()||(situacao.nome||'Indefinido');
+  return `<div class="lic-item-status-readonly"><span>${_sanEsc(secretariaNome)}</span><strong>${_sanEsc(texto)}</strong></div>${_cpDesdeResumoHtml(item)}`;
+}
 function _cpOrgaoCor(o){ return o==='SEAD'?'#d8a730':(o==='CONTROLADORIA'?'#7c5cd6':'var(--blue)'); }
 async function _cpFetchAllItens(){
   let all=[], from=0; const size=1000;
@@ -762,10 +934,13 @@ function _cpSituacao(item){
   if(sec&&texto) return {nome:`${sec.sigla} – ${texto}`,orgao:sec.sigla,auto:false};
   return auto?{nome:auto.nome,orgao:auto.orgao,auto:false}:{nome:'Indefinido',orgao:null,auto:false};
 }
-function _cpSituacaoEditor(secretariaId,textoId,item,acao){
+function _cpSituacaoEditor(secretariaId,textoId,item,acao,opcoes={}){
   const sec=item?.status_lic_secretaria_id||'';
   const texto=_sanEsc(String(item?.status_lic_texto||'')).replace(/"/g,'&quot;');
-  return `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select id="${secretariaId}" data-search="off" style="width:165px;flex:0 0 165px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"><option value="">Secretaria...</option>${_cpSecretariaOptions(sec)}</select><input id="${textoId}" type="text" maxlength="55" value="${texto}" placeholder="Situação (até 55 caracteres)" style="flex:1 1 250px;min-width:220px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"><button onclick="${acao}" style="font-size:11px;padding:4px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">Salvar</button></div>`;
+  const desdeId=opcoes.desdeId||'';
+  const desde=desdeId?`<label class="lic-item-editor-date">Desde <input id="${desdeId}" type="date" value="${_cpDataInput(item?.status_lic_desde)}"></label>`:'';
+  const cancelar=opcoes.cancelar?`<button type="button" class="lic-item-btn" onclick="${opcoes.cancelar}">Cancelar</button>`:'';
+  return `<div class="lic-item-editor"><select id="${secretariaId}" data-search="off"><option value="">Secretaria...</option>${_cpSecretariaOptions(sec)}</select><input id="${textoId}" type="text" maxlength="55" value="${texto}" placeholder="Situação (até 55 caracteres)">${desde}<div class="lic-item-editor-actions"><button type="button" class="lic-item-btn primary" onclick="${acao}">Salvar</button>${cancelar}</div></div>`;
 }
 function _cpRollup(items){
   const situacoes=[...new Set(items.map(i=>_cpSituacao(i).nome))];
@@ -799,7 +974,7 @@ async function cpSalvarSituacaoItem(itemId){
   const secretariaId=document.getElementById(`cp-secretaria-${itemId}`)?.value||'';
   const texto=document.getElementById(`cp-texto-${itemId}`)?.value||'';
   const desde=document.getElementById(`cp-desde-${itemId}`)?.value||'';
-  try{ await _cpGravarStatus(itemId,secretariaId,texto,desde||null); renderLicitacoes(); if(typeof loadData==='function') await loadData(); }
+  try{ await _cpGravarStatus(itemId,secretariaId,texto,desde||null); _cpEditingItemKeys.delete(_cpVisualItemKey(_cpItens.find(i=>String(i.id)===String(itemId))?.processo_id,itemId)); renderLicitacoes(); if(typeof loadData==='function') await loadData(); }
   catch(e){ alert('Erro ao salvar: '+(e.message||e)); }
 }
 async function cpSetItemStatus(itemId, val, desde){
@@ -866,7 +1041,7 @@ async function cpSalvarSituacaoServicoMensal(pid, indice){
   const secretariaId=document.getElementById(`cp-serv-secretaria-${pid}-${indice}`)?.value||'';
   const texto=document.getElementById(`cp-serv-texto-${pid}-${indice}`)?.value||'';
   const desde=document.getElementById(`cp-serv-desde-${pid}-${indice}`)?.value||'';
-  try{ await _cpGravarStatusServicoMensal(pid,Number(indice),secretariaId,texto,desde||null); renderLicitacoes(); if(typeof loadData==='function') await loadData(); }
+  try{ await _cpGravarStatusServicoMensal(pid,Number(indice),secretariaId,texto,desde||null); _cpEditingItemKeys.delete(_cpVisualItemKey(pid,indice,'servico')); renderLicitacoes(); if(typeof loadData==='function') await loadData(); }
   catch(e){ alert('Erro ao salvar: '+(e.message||e)); }
 }
 async function cpSetServicoMensalItemStatus(pid, indice, val, desde){
