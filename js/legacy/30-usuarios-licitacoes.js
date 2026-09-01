@@ -200,6 +200,47 @@ let _procEditId=null;
 let _procSaldoCache={};
 let _procEditOldByEmenda={};
 let _licOcorrenciasByItem={};
+let _categoriasLicitacaoCache=[];
+function _categoriaLicitacaoChave(valor){
+  return String(valor||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s+/g,' ');
+}
+function procCategoriaChange(){
+  const nova=document.getElementById('proc-categoria')?.value==='__nova__';
+  const wrap=document.getElementById('proc-categoria-nova-wrap');
+  const input=document.getElementById('proc-categoria-nova');
+  if(wrap) wrap.style.display=nova?'flex':'none';
+  if(input){ input.required=nova; if(!nova) input.value=''; }
+}
+async function _carregarCategoriasLicitacao(){
+  const {data,error}=await sb.from('categorias_licitacao').select('id,nome,nome_chave,ordem,ativo,revisado').order('ordem').order('nome');
+  if(error) throw error;
+  _categoriasLicitacaoCache=data||[];
+  return _categoriasLicitacaoCache;
+}
+async function _preencherSelectCategoriaProcesso(selecionada=''){
+  if(!_categoriasLicitacaoCache.length) await _carregarCategoriasLicitacao();
+  const sel=document.getElementById('proc-categoria'); if(!sel) return;
+  const opcoes=_categoriasLicitacaoCache.filter(c=>c.ativo!==false||String(c.id)===String(selecionada));
+  sel.innerHTML='<option value="">Selecione...</option>'+opcoes.map(c=>`<option value="${c.id}"${String(c.id)===String(selecionada)?' selected':''}>${_sanEsc(c.nome)}${c.ativo===false?' (inativa)':''}</option>`).join('')+'<option value="__nova__">＋ Criar nova categoria...</option>';
+  sel.value=selecionada?String(selecionada):'';
+  procCategoriaChange();
+}
+async function _resolverCategoriaProcesso(){
+  const selecionada=document.getElementById('proc-categoria')?.value||'';
+  if(selecionada&&selecionada!=='__nova__') return Number(selecionada);
+  if(selecionada!=='__nova__') throw new Error('Selecione a categoria da licitação.');
+  const input=document.getElementById('proc-categoria-nova');
+  const nome=String(input?.value||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('pt-BR');
+  if(nome.length<2) throw new Error('Informe o nome da nova categoria.');
+  const chave=_categoriaLicitacaoChave(nome);
+  const existente=_categoriasLicitacaoCache.find(c=>_categoriaLicitacaoChave(c.nome_chave||c.nome)===chave);
+  if(existente) return Number(existente.id);
+  const proximaOrdem=Math.max(0,..._categoriasLicitacaoCache.map(c=>Number(c.ordem)||0))+1;
+  const {data,error}=await sb.from('categorias_licitacao').insert({nome,ordem:proximaOrdem,ativo:true,revisado:!!_isAdmin()}).select('id,nome,nome_chave,ordem,ativo,revisado').single();
+  if(error) throw error;
+  _categoriasLicitacaoCache.push(data);
+  return Number(data.id);
+}
 function _procLinkPublicoSeguro(valor){
   const texto=String(valor||'').trim();
   if(!texto) return '';
@@ -220,7 +261,7 @@ async function loadLicitacoes(){
   const box=document.getElementById('lic-lista');
   if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
   try{
-    const [proc,so,itens,secretarias,planejamentos,ocorrencias]=await Promise.all([
+    const [proc,so,itens,secretarias,planejamentos,ocorrencias,categorias]=await Promise.all([
       sb.from('vw_processos_resumo').select('*').order('identificador'),
       sb.from('status_opcoes').select('id,nome,ordem,orgao,automatico').eq('contexto','licitacao').eq('ativo',true).order('ordem'),
       _cpFetchAllItens(),
@@ -230,13 +271,26 @@ async function loadLicitacoes(){
         .neq('status','CANCELADO'),
       sb.from('licitacao_item_ocorrencias')
         .select('id,item_id,processo_id,tipo,numero_pregao,numero_lote,data_ocorrencia,observacao,documento_path,documento_nome,valor_unitario_snapshot,quantidade_snapshot,valor_total_snapshot,created_at')
-        .order('created_at',{ascending:false})
+        .order('created_at',{ascending:false}),
+      sb.from('categorias_licitacao').select('id,nome,nome_chave,ordem,ativo,revisado').order('ordem').order('nome')
     ]);
+    if(proc.error) throw proc.error;
+    if(so.error) throw so.error;
+    if(secretarias.error) throw secretarias.error;
+    if(planejamentos.error) throw planejamentos.error;
+    if(categorias.error) throw categorias.error;
     _licitacoesCache=proc.data||[];
+    _categoriasLicitacaoCache=categorias.data||[];
     _cpStatusOpts=so.data||[]; _cpStatusById={}; _cpStatusOpts.forEach(s=>_cpStatusById[s.id]=s);
     _cpSecretarias=secretarias.data||[]; _cpSecretariaById={}; _cpSecretarias.forEach(s=>_cpSecretariaById[s.id]=s);
     const filtro=document.getElementById('lic-f-orgao');
     if(filtro) filtro.innerHTML='<option value="">Todas</option>'+_cpSecretarias.map(s=>`<option value="${s.sigla}">${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join('');
+    const filtroCategoria=document.getElementById('lic-f-categoria');
+    if(filtroCategoria){
+      const atual=filtroCategoria.value;
+      filtroCategoria.innerHTML='<option value="">Todas</option><option value="__sem__">Sem categoria</option>'+_categoriasLicitacaoCache.filter(c=>c.ativo!==false).map(c=>`<option value="${c.id}">${_sanEsc(c.nome)}</option>`).join('');
+      filtroCategoria.value=atual;
+    }
     _cpItens=itens||[];
     _ataPlanejamentosLicitacao=planejamentos.data||[];
     _licOcorrenciasByItem={};
@@ -253,6 +307,7 @@ function _licItemEncerrado(i){ return !!_licItemOcorrencia(i); }
 function _licProcessosVisiveis(){
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
   const fTipo=document.getElementById('lic-f-tipo')?.value||'';
+  const fCategoria=document.getElementById('lic-f-categoria')?.value||'';
   const fOrg=document.getElementById('lic-f-orgao')?.value||'';
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
   const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
@@ -266,8 +321,10 @@ function _licProcessosVisiveis(){
     if(x.gone||(x.fullyContratado&&!incluirContratados)) return false;
     const p=x.p;
     if(fTipo&&(p.tipo||'')!==fTipo) return false;
+    if(fCategoria==='__sem__'&&p.categoria_id) return false;
+    if(fCategoria&&fCategoria!=='__sem__'&&String(p.categoria_id||'')!==fCategoria) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; if(!fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean).includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(x.itensServico.flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico,p.categoria_licitacao].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(x.itensServico.flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
 }
@@ -275,6 +332,7 @@ function renderLicitacoes(){
   const box=document.getElementById('lic-lista'); if(!box) return;
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
   const fTipo=document.getElementById('lic-f-tipo')?.value||'';
+  const fCategoria=document.getElementById('lic-f-categoria')?.value||'';
   const fOrg=document.getElementById('lic-f-orgao')?.value||'';
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
   const podeEd=podeEditar('contratos');
@@ -295,8 +353,10 @@ function renderLicitacoes(){
     if(x.fullyContratado && !incluirContratados) return false; // 100% virou contrato → some por padrão
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
+    if(fCategoria==='__sem__'&&p.categoria_id) return false;
+    if(fCategoria && fCategoria!=='__sem__' && String(p.categoria_id||'')!==fCategoria) return false;
     if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(_procServicoPeriodicoItens(p).flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico,p.categoria_licitacao].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(_procServicoPeriodicoItens(p).flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
   const _ocultos=incluirContratados?0:ocultos;
@@ -323,7 +383,7 @@ function renderLicitacoes(){
         <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
           <div style="font-weight:600;font-size:13px">${_procIdentificadorHtml(p)} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
-          <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
+          <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · <span style="color:var(--blue);font-weight:600">${_sanEsc(p.categoria_licitacao||'SEM CATEGORIA')}</span> · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
         </div>
         ${_cpStatusBadge(roll)}
         <button onclick="abrirEditarProcesso(${p.id})" title="Editar processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
@@ -417,7 +477,7 @@ async function exportarLicitacoesExcel(){
   if(!processos.length){ if(window.toast) toast('Nenhuma licitação visível para exportar.','info'); else alert('Nenhuma licitação visível para exportar.'); return; }
   await ensureLib('xlsx');
   const colunas=[
-    'PROCESSO','TIPO','NATUREZA','TIPO DE SERVIÇO','OBJETO','MODALIDADE','STATUS DO PROCESSO','SEÇÃO','SC','VALOR ESTIMADO DO PROCESSO','OBSERVAÇÃO DO PROCESSO','LINK PÚBLICO SEI',
+    'PROCESSO','TIPO','NATUREZA','CATEGORIA DA LICITAÇÃO','TIPO DE SERVIÇO','OBJETO','MODALIDADE','STATUS DO PROCESSO','SEÇÃO','SC','VALOR ESTIMADO DO PROCESSO','OBSERVAÇÃO DO PROCESSO','LINK PÚBLICO SEI',
     'ITEM','CÓDIGO SIAM','TIPO DA EMENDA','PARLAMENTAR','NÚMERO DA EMENDA','ANO DA EMENDA','UNIDADE DE MEDIDA','QUANTIDADE','VALOR UNITÁRIO ESTIMADO','VALOR TOTAL ESTIMADO','VALOR UNITÁRIO CONTRATADO','VALOR TOTAL CONTRATADO','PRAZO DE ENTREGA (DIAS)','UNIDADE DE DESTINO','FONTE DE RECURSO','DETALHE DA FONTE','STATUS INTERNO DO ITEM','SECRETARIA RESPONSÁVEL','SITUAÇÃO DETALHADA','SITUAÇÃO DESDE','ÚLTIMA ATUALIZAÇÃO','JÁ GEROU CONTRATO','OCORRÊNCIA','PREGÃO','LOTE','DATA DA OCORRÊNCIA','OBSERVAÇÃO DA OCORRÊNCIA','PLANEJAMENTO DE ATA','PERIODICIDADE DO SERVIÇO','VALOR DO PERÍODO'
   ];
   const linhas=[],linhasPlanejamento=[];
@@ -436,7 +496,7 @@ async function exportarLicitacoesExcel(){
       const total=periodico?valorPeriodo:(qtd!=null&&unit!=null?Number(qtd)*Number(unit):null);
       const resumoPlanos=planos.map(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; return `Emenda ${em.emenda||'?'}${em.ano?('/'+em.ano):''} · ${_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,'sem unidade')} · previsão ${v.quantidade_prevista??'—'} · ${v.status||'—'}`; }).join(' | ');
       linhas.push([
-        p.identificador||'',p.tipo||'',p.natureza||'',p.tipo_servico||'',p.objeto||'',p.modalidade||'',p.status||'',p.secao||'',p.sc||'',p.valor_estimado??null,p.observacao||'',p.link_publico_sei||'',
+        p.identificador||'',p.tipo||'',p.natureza||'',p.categoria_licitacao||'',p.tipo_servico||'',p.objeto||'',p.modalidade||'',p.status||'',p.secao||'',p.sc||'',p.valor_estimado??null,p.observacao||'',p.link_publico_sei||'',
         it?.descricao||'',it?.codigo_siam||'',emenda.tipo||'',emenda.parlamentar||'',emenda.emenda||'',emenda.ano??'',it?.unidade_medida||'',qtd,unit,total,unitContratado,qtd!=null&&unitContratado!=null?Number(qtd)*Number(unitContratado):null,it?.prazo_entrega_dias??null,it?.unidades?.nome||'',it?.fonte_tipo||'',it?.fonte_descricao||'',it?.status||'',situacao.orgao||'',situacao.nome||'',_licExcelData(it?.status_lic_desde),_licExcelData(it?.status_lic_atualizado_em),it?.contrato_id?'Sim':'Não',ocorrencia?.tipo||'',ocorrencia?.numero_pregao||'',ocorrencia?.numero_lote||'',_licExcelData(ocorrencia?.data_ocorrencia),ocorrencia?.observacao||'',resumoPlanos,periodico?(String(p.tipo_servico||'').includes('TRIMESTRAL')?'Trimestral':'Mensal'):'',valorPeriodo
       ]);
       planos.forEach(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; linhasPlanejamento.push([p.identificador||'',it?.descricao||'',em.emenda||'',em.ano||'',em.parlamentar||'',ei.item||'',_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,''),v.quantidade_prevista??null,v.status||'',v.contrato_id||'',v.ata_item_id||'',v.ata_execucao_id||'']); });
@@ -868,6 +928,8 @@ async function abrirNovoProcesso(opcoes={}){
   document.getElementById('proc-tipo').value='';
   _procTipoChange();
   document.getElementById('proc-natureza').value=opcoes.natureza||'';
+  document.getElementById('proc-categoria-nova').value='';
+  await _preencherSelectCategoriaProcesso('');
   document.getElementById('proc-tipo-servico').value='';
   const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value='';
   await preencherSelectStatusProcesso();
@@ -906,6 +968,8 @@ async function abrirEditarProcesso(id){
   document.getElementById('proc-sc').value=p.sc||'';
   _procTipoChange();
   document.getElementById('proc-natureza').value=p.natureza||'';
+  document.getElementById('proc-categoria-nova').value='';
+  await _preencherSelectCategoriaProcesso(p.categoria_id||'');
   document.getElementById('proc-tipo-servico').value=p.tipo_servico||'';
   _procCarregarServicoMensalItens(p);
   const trimestral=_procProcessoEhTrimestral(p);
@@ -992,13 +1056,14 @@ async function salvarProcesso(){
   const sc=document.getElementById('proc-sc')?.value.trim()||null;
   const status=document.getElementById('proc-status')?.value||null;
   const natureza=document.getElementById('proc-natureza').value;
+  const categoriaSelecionada=document.getElementById('proc-categoria')?.value||'';
   const tipoServico=document.getElementById('proc-tipo-servico')?.value||'';
   const servicoMensal=_procLerServicoMensal();
   const servicoDemandaMeses=Number(document.getElementById('proc-serv-demanda-meses')?.value||0);
   const secao=document.getElementById('proc-secao').value;
   const secaoId=_secoesOrganizacionais.find(s=>s.sigla===secao)?.id||null;
   const objeto=document.getElementById('proc-objeto').value.trim();
-  if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
+  if(!ident||!tipo||!natureza||!categoriaSelecionada||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Categoria, Seção e Objeto.','err');return;}
   if(tipo==='SEI'&&!linkSeiInformado){showMsg('proc','Informe o link público do processo SEI.','err');document.getElementById('proc-sei-link')?.focus();return;}
   if(tipo==='SEI'&&!linkPublicoSei){showMsg('proc','O link público do processo SEI deve começar com http:// ou https:// e não pode conter espaços.','err');document.getElementById('proc-sei-link')?.focus();return;}
   if(natureza==='SERVIÇO'&&!tipoServico){showMsg('proc','Preencha o campo obrigatório (*): Tipo do serviço.','err');return;}
@@ -1008,12 +1073,16 @@ async function salvarProcesso(){
   if(_procEhServicoDemanda()&&servicoDemandaMeses<=0){showMsg('proc','Informe a vigencia em meses do servico por demanda/execucao.','err');return;}
   const erroPrazo=_procValidarPrazosEntrega(natureza);
   if(erroPrazo){showMsg('proc',erroPrazo,'err');return;}
+  let categoriaId;
+  try{ categoriaId=await _resolverCategoriaProcesso(); }
+  catch(e){ showMsg('proc','Categoria: '+(e.message||e),'err'); return; }
   const dados={
     identificador:ident,
     tipo,
     link_publico_sei:linkPublicoSei,
     sc,
     natureza,
+    categoria_id:categoriaId,
     tipo_servico:natureza==='SERVIÇO'?tipoServico:null,
     objeto,
     modalidade:document.getElementById('proc-modalidade').value.trim()||null,

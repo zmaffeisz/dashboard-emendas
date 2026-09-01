@@ -8,6 +8,7 @@ const CADASTRO_DEFS = {
   secoes:        {tabela:'secoes',        titulo:'🏢 Seções',        temAtivo:true,  ordem:'sigla',        campos:[{c:'sigla',l:'Sigla',req:true},{c:'nome',l:'Nome completo'},{c:'divisao_id',l:'Divisão',req:true,tipo:'divisao'}]},
   unidades:      {tabela:'unidades',      titulo:'🏥 Unidades',      temAtivo:true,  ordem:'nome',         campos:[{c:'nome',l:'Nome',req:true},{c:'endereco',l:'Endereço'},{c:'telefone',l:'Telefone'}]},
   fornecedores:  {tabela:'fornecedores',  titulo:'🏭 Empresas',      temAtivo:false, ordem:'razao_social', campos:[{c:'razao_social',l:'Razão social',req:true},{c:'cnpj_normalizado',l:'CNPJ (só dígitos)'},{c:'nome_fantasia',l:'Nome fantasia'}]},
+  categorias_licitacao: {tabela:'categorias_licitacao', titulo:'🗂️ Categorias de licitação', temAtivo:true, ordem:'ordem', campos:[{c:'nome',l:'Nome',req:true},{c:'ordem',l:'Ordem',tipo:'int'}]},
   status_opcoes: {tabela:'status_opcoes', titulo:'🏷️ Status',        temAtivo:true,  ordem:'ordem',        campos:[{c:'contexto',l:'Contexto (processo/item)',req:true},{c:'nome',l:'Nome',req:true},{c:'ordem',l:'Ordem',tipo:'int'}]},
 };
 let _cadAtual=null;
@@ -98,6 +99,8 @@ const REV_DEFS = {
     refs:[['contratos','secao'],['processos','secao']]},
   fornecedores:  {titulo:'🏭 Empresas', keyCol:'razao_social', label:r=>(r.razao_social||r.nome_fantasia||('#'+r.id)), tipo:'fk',
     refs:[['contratos','fornecedor_id'],['itens','fornecedor_id'],['empenhos','fornecedor_id'],['notas_fiscais','fornecedor_id'],['fornecedor_contatos','fornecedor_id']]},
+  categorias_licitacao: {titulo:'🗂️ Categorias de licitação', keyCol:'nome', label:r=>r.nome, tipo:'fk',
+    refs:[['processos','categoria_id'],['itens','categoria_id'],['contratos','categoria_id'],['atas_itens','categoria_id']]},
   unidades:      {titulo:'🏥 Unidades', keyCol:'nome', label:r=>r.nome, tipo:'fk',
     refs:[['emendas','unidade_id'],['emenda_itens','unidade_beneficiada_id'],['emenda_itens','unidade_entrega_id'],['chamados','unidade_id'],['inventario_ac','unidade_id'],['itens','unidade_destino_id']]},
 };

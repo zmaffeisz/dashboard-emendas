@@ -27,8 +27,12 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 ### Fluxo principal (Emenda → … → Entrega)
 - [ ] Criar emenda + itens (aba Emendas); conferir **Saldo das Emendas**.
 - [ ] Vincular item a processo (Licitações); status viaja por item.
+- [ ] Criar processo escolhendo uma categoria padrão; repetir criando uma categoria nova
+      e confirmar que ela aparece em Cadastros para revisão e que um nome equivalente não duplica.
 - [ ] Criar contrato (matriz **Contratos**); para `tipo=ATA`, itens **espelhados** em
       `atas_itens`.
+- [ ] Confirmar a mesma categoria no item, contrato e item da ATA; filtrar por ela em
+      Licitações, Atas Rp e Inventário e validar também as exportações Excel.
 - [ ] Abrir aba **Atas Rp** e confirmar que reflete alterações de Contratos (encerrar/
       prorrogar/editar) — reload automático.
 - [ ] Em um item de ATA com pedidos sem AF, com AF aguardando recebimento e já recebidos,

@@ -42,7 +42,7 @@ async function loadAtas(){
   document.getElementById("atas-loading").style.display="block";
   document.getElementById("atas-main").style.display="none";
   try{
-    const [r1,r2,r3,r4,r5,r6,r7,r8]=await Promise.all([
+    const [r1,r2,r3,r4,r5,r6,r7,r8,r9]=await Promise.all([
       sb.from("atas_itens").select("*").order("created_at"),
       sb.from("atas_execucao").select("*").order("created_at",{ascending:false}),
       sb.from("contratos").select("*").eq("tipo_instrumento","ATA"),
@@ -51,7 +51,8 @@ async function loadAtas(){
       sb.from("atas_execucao_reajustes").select("*").eq("status","ATIVO").order("criado_em",{ascending:false}),
       sb.from("contratos_vigencias").select("contrato_id,numero,data_inicio,data_fim,created_at"),
       sb.from("contratos_historico").select("contrato_id,tipo,data_evento,vigencia_nova_fim,created_at")
-        .or("tipo.ilike.%prorroga%,tipo.ilike.%renova%")
+        .or("tipo.ilike.%prorroga%,tipo.ilike.%renova%"),
+      sb.from("categorias_licitacao").select("id,nome").order("ordem").order("nome")
     ]);
     if(r1.error) throw r1.error;
     if(r2.error) throw r2.error;
@@ -61,11 +62,13 @@ async function loadAtas(){
     if(r6.error) throw r6.error;
     if(r7.error) throw r7.error;
     if(r8.error) throw r8.error;
+    if(r9.error) throw r9.error;
     atasReajustes=r5.data||[];
     atasExecReajustes=r6.data||[];
     atasVigencias=r7.data||[];
     atasHistoricoRenovacoes=r8.data||[];
     const fornecedorPorId=new Map((r4.data||[]).map(f=>[String(f.id),f]));
+    const categoriaPorId=new Map((r9.data||[]).map(c=>[String(c.id),c.nome]));
     atasContratos=(r3.data||[])
       .map(c=>{
       const fornecedor=fornecedorPorId.get(String(c.fornecedor_id))||null;
@@ -106,6 +109,8 @@ async function loadAtas(){
       const itemBase={
       id:r.id,
       contrato_id:r.contrato_id,
+      categoria_id:r.categoria_id||contrato.categoria_id||null,
+      categoria:categoriaPorId.get(String(r.categoria_id||contrato.categoria_id||''))||'',
       fornecedor_id:contrato.fornecedor_id,
       cpl:(contrato.cpl||"").trim(),
       sim:(contrato.numero_contrato||"").trim(),
@@ -670,6 +675,11 @@ function popularFiltrosAtas(){
   sel("fat-cpl",[...new Set(atasItens.map(r=>r.cpl).filter(Boolean))].sort());
   sel("fat-sim",[...new Set(atasItens.map(r=>r.sim).filter(Boolean))].sort());
   sel("fat-empresa",[...new Set(atasItens.map(r=>r.empresa).filter(Boolean))].sort());
+  const categoriaAtual=document.getElementById('fat-categoria')?.value||'';
+  sel("fat-categoria",[...new Set(atasItens.map(r=>r.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')));
+  const categoriaSel=document.getElementById('fat-categoria');
+  if(categoriaSel&&!atasItens.every(r=>r.categoria)) categoriaSel.insertAdjacentHTML('beforeend','<option value="__sem__">Sem categoria</option>');
+  if(categoriaSel&&[...categoriaSel.options].some(o=>o.value===categoriaAtual)) categoriaSel.value=categoriaAtual;
   // Agrupar encerrados num único filtro
   const statusUnicos=[...new Set([...atasItens,...atasExec].map(r=>{
     if(r.status&&r.status.toUpperCase().startsWith("ENCERRADO")) return "ENCERRADO";
@@ -686,7 +696,7 @@ function popularFiltrosAtas(){
 let _atasStatusInit=false;
 
 function clearAllAtas(){
-  ["fat-cpl","fat-sim","fat-empresa","fat-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  ["fat-cpl","fat-sim","fat-empresa","fat-categoria","fat-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   const elSt=document.getElementById("fat-status");
   if(elSt) elSt.value=[...elSt.options].some(o=>o.value==="VIGENTE")?"VIGENTE":"";
   Object.keys(ataHeaderFilters).forEach(k=>ataHeaderFilters[k]=[]);
@@ -696,7 +706,7 @@ function clearAllAtas(){
 }
 
 function _ataBuscaItemTexto(r){
-  return [r.item,r.codigo_siam,r.unidade_medida,r.marca,r.cpl,r.sim,r.empresa,r.status].filter(Boolean).join(' ');
+  return [r.item,r.codigo_siam,r.unidade_medida,r.marca,r.cpl,r.sim,r.empresa,r.categoria,r.status].filter(Boolean).join(' ');
 }
 
 function _ataBuscaExecTexto(r){
@@ -712,6 +722,7 @@ function filtrarAtas(){
   const cpl=document.getElementById("fat-cpl")?.value||"";
   const sim=document.getElementById("fat-sim")?.value||"";
   const emp=document.getElementById("fat-empresa")?.value||"";
+  const categoria=document.getElementById("fat-categoria")?.value||"";
   const st=document.getElementById("fat-status")?.value||"";
   const busca=document.getElementById("fat-busca")?.value||"";
 
@@ -719,6 +730,8 @@ function filtrarAtas(){
     if(cpl&&r.cpl!==cpl) return false;
     if(sim&&r.sim!==sim) return false;
     if(emp&&r.empresa!==emp) return false;
+    if(categoria==='__sem__'&&r.categoria) return false;
+    if(categoria&&categoria!=='__sem__'&&r.categoria!==categoria) return false;
     for(const [col,sel] of Object.entries(ataHeaderFilters)){
       if(!sel.length) continue;
       const cfg=ATA_FILTER_COLS[col];
@@ -784,6 +797,7 @@ function filtrarAtas(){
       <td style="font-size:11px;white-space:nowrap">${r.sim}</td>
       <td class="td-trunc" title="${_sanEsc(r.item)}${r.codigo_siam?' · SIAM '+_sanEsc(r.codigo_siam):''}" style="max-width:220px">
         ${_sanEsc(r.item)}${r.codigo_siam?`<div style="font-size:10px;color:var(--blue);font-weight:600">SIAM ${_sanEsc(r.codigo_siam)}</div>`:''}
+        ${r.categoria?`<div style="font-size:9px;color:var(--text3);font-weight:600;margin-top:2px">${_sanEsc(r.categoria)}</div>`:''}
         ${r.ata_renovada?`<div style="margin-top:4px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);font-size:9px;white-space:nowrap" title="Esta Ata de RP já utilizou sua única renovação${r.renovada_ate?` e está vigente até ${fmtDate(r.renovada_ate)}`:''}.">✓ JÁ RENOVADA · LIMITE ATINGIDO</span></div>`:r.renovacao_em_tramite?`<div style="margin-top:4px"><span class="badge ata-renewal-badge" title="Este item já foi incluído no trâmite administrativo de renovação${r.renovacao_em_tramite_em?` em ${_ataFormatarDataTramite(r.renovacao_em_tramite_em)}`:""}.">🔄 RENOVAÇÃO EM TRÂMITE</span></div>`:r.encerramento_planejado?`<div style="margin-top:4px"><span class="badge ata-closing-badge" title="Este item foi analisado e deverá ser encerrado ao fim da vigência${r.encerramento_planejado_em?` em ${_ataFormatarDataTramite(r.encerramento_planejado_em)}`:""}.">⛔ ENCERRAR AO VENCER</span></div>`:""}
       </td>
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.unidade_medida||"—")}</td>
@@ -2100,9 +2114,9 @@ function togglePendentes(){
 // ═══ EXPORTAR EXCEL ═══
 async function exportarAtas(){
   await ensureLib('xlsx');
-  const colunas=["CPL","SIM","CODIGO_SIAM","ITEM","UNIDADE_MEDIDA","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
+  const colunas=["CPL","SIM","CATEGORIA_LICITACAO","CODIGO_SIAM","ITEM","UNIDADE_MEDIDA","MARCA_MODELO","QTDE_CONTRATADA","VALOR_UNIT","VENCIMENTO","STATUS_CONTRATO","EMPRESA","PRAZO_ENTREGA","EXECUTADO","SALDO"];
   const rows=window._ataRowsFiltered||atasItens;
-  const dados=rows.map(r=>[r.cpl,r.sim,r.codigo_siam||'',r.item,r.unidade_medida||'',r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
+  const dados=rows.map(r=>[r.cpl,r.sim,r.categoria||'',r.codigo_siam||'',r.item,r.unidade_medida||'',r.marca,r.qtde_contratada,r.valor_unit,r.vencimento,r.status,r.empresa,r.prazo_entrega||"",getExecutado(r.cpl,r.sim,r.item),getSaldo(r.cpl,r.sim,r.item)]);
   const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
   const wb={SheetNames:["ATAs"],Sheets:{ATAs:ws}};
   XLSX.writeFile(wb,"atas_"+new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")+".xlsx");

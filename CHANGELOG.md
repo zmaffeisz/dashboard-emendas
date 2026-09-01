@@ -1,6 +1,27 @@
 # Changelog
 
+## 2026-09-01 — Categorias específicas da DMMHF
+
+- Adicionadas as categorias Dieta (Rede, MJ e genérica), Fralda (Rede e MJ), Freestyle,
+  Provox, I-Port, Impressos, Laboratório e Diversos.
+- Reclassificados apenas os processos cuja destinação está expressa no objeto, nos itens
+  ou nas Atas importadas; três processos conflitantes ou inespecíficos voltaram para
+  **Sem categoria**, aguardando confirmação da área gestora.
+
+## 2026-09-01 — Classificação inicial das contratações existentes
+
+- Classificados os 99 processos existentes a partir do objeto e da composição dos itens.
+- A classificação foi propagada para os 750 itens, 107 contratos e 233 itens de atas vinculados.
+- Processos mistos foram classificados pela finalidade predominante, preservando a possibilidade de revisão humana posterior.
+
 ## Em desenvolvimento
+
+- **Categorias de licitação:** novos processos passam a exigir uma categoria mestre. O
+  sistema oferece 25 categorias iniciais, permite criar outra no próprio modal e inclui
+  as categorias novas na fila de revisão da aba Cadastros. A categoria é propagada para
+  itens, contratos e itens de ATA, aparece nas listagens e exportações e pode ser usada
+  para filtrar Licitações, Atas Rp Vigentes e Inventário. O banco bloqueia duplicatas por
+  diferenças apenas de caixa, acentuação ou espaços.
 
 - **Recebimento de bem permanente:** a seleção de tipo de material passa a ser lida dentro
   do modal e registrada no momento do clique, evitando a mensagem indevida para itens já

@@ -84,7 +84,7 @@ async function loadInventario(){
   try{
     const [{data:aq,error:e1},{data:at,error:e2}]=await Promise.all([
       sb.from('itens_entregas')
-        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total,arquivo_url), itens(id,descricao,marca,modelo,valor_estimado,valor_contratado,emenda_item_id, processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
+        .select('*, empenhos(numero,valor_empenhado,data_emissao), notas_fiscais(numero,data_emissao,valor_total,arquivo_url), itens(id,descricao,marca,modelo,valor_estimado,valor_contratado,emenda_item_id,categoria_id,categorias_licitacao(nome), processos(identificador), contratos(cpl,numero_contrato), fornecedores(razao_social,cnpj_normalizado), unidades(nome), emenda_it:emenda_item_id(emenda,item,emendas:emenda_id(emenda,ano,parlamentar)))')
         .or('data_entrega_unidade.not.is.null,data_recebimento.not.is.null')
         .order('data_entrega_unidade',{ascending:false}),
       sb.from('atas_execucao')
@@ -114,6 +114,8 @@ async function loadInventario(){
       const base={
         tipo:'Aquisição', id:r.id,
         item:it.descricao||'',
+        categoria_id:it.categoria_id||null,
+        categoria:it.categorias_licitacao?.nome||'',
         marca:it.marca||'',
         modelo:it.modelo||'',
         unidade:it.unidades?.nome||'',
@@ -185,7 +187,7 @@ async function loadInventario(){
     const ataItemIds=[...new Set(atInventario.map(r=>r.ata_item_id).filter(Boolean))];
     if(ataItemIds.length){
       const {data:aiInfo}=await sb.from('atas_itens')
-        .select('id,cpl,sim,item,marca_modelo,empresa,valor_unit,contratos(cpl,numero_contrato,prestador)')
+        .select('id,cpl,sim,item,marca_modelo,empresa,valor_unit,categoria_id,categorias_licitacao(nome),contratos(cpl,numero_contrato,prestador)')
         .in('id',ataItemIds);
       (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
     }
@@ -212,6 +214,8 @@ async function loadInventario(){
       const base={
         tipo:'ATA', id:r.id,
         item,
+        categoria_id:ai.categoria_id||null,
+        categoria:ai.categorias_licitacao?.nome||'',
         marca_modelo:r.marca_modelo||ai.marca_modelo||'',
         unidade,
         empresa, cnpj:'',
@@ -699,10 +703,13 @@ function _popularFiltrosInv(){
   const unidades=[...new Set(inventarioRows.map(r=>r.unidade).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const sel=document.getElementById('finv-unidade');
   if(sel) sel.innerHTML='<option value="">Todas</option>'+unidades.map(u=>`<option value="${_sanEsc(u)}">${_sanEsc(u)}</option>`).join('');
+  const categorias=[...new Set(inventarioRows.map(r=>r.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const selCategoria=document.getElementById('finv-categoria');
+  if(selCategoria) selCategoria.innerHTML='<option value="">Todas</option>'+(inventarioRows.some(r=>!r.categoria)?'<option value="__sem__">Sem categoria</option>':'')+categorias.map(c=>`<option value="${_sanEsc(c)}">${_sanEsc(c)}</option>`).join('');
 }
 
 function clearAllInv(){
-  ['finv-tipo','finv-unidade','finv-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['finv-tipo','finv-unidade','finv-categoria','finv-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const b=document.getElementById('finv-busca');if(b)b.value='';
   filtrarInventario();
 }
@@ -710,13 +717,16 @@ function clearAllInv(){
 function filtrarInventario(){
   const tipo=document.getElementById('finv-tipo')?.value||'';
   const unidade=document.getElementById('finv-unidade')?.value||'';
+  const categoria=document.getElementById('finv-categoria')?.value||'';
   const situacao=document.getElementById('finv-status')?.value||'';
   const q=(document.getElementById('finv-busca')?.value||'').toLowerCase();
   _invFiltered=inventarioRows.filter(r=>{
     if(tipo&&r.tipo!==tipo) return false;
     if(unidade&&r.unidade!==unidade) return false;
+    if(categoria==='__sem__'&&r.categoria) return false;
+    if(categoria&&categoria!=='__sem__'&&r.categoria!==categoria) return false;
     if(situacao&&(r.situacao_atual||'ATIVO')!==situacao) return false;
-    if(q){const hay=[r.item,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.unidade_origem,r.processo,r.numero_serie,r.emprestado_para].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    if(q){const hay=[r.item,r.categoria,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.unidade_origem,r.processo,r.numero_serie,r.emprestado_para].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
   const total=_invFiltered.length;
@@ -745,7 +755,7 @@ function renderInventario(){
     const situacaoClass={ATIVO:'ativo',EMPRESTADO:'emprestado',BAIXADO:'baixado'}[situacao]||'ativo';
     return`<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:6px 8px;white-space:nowrap"><span class="badge" style="background:${tipoCor}22;color:${tipoCor}">${_sanEsc(r.tipo)}</span></td>
-      <td style="padding:6px 8px;max-width:220px;white-space:normal;word-break:break-word" title="${_sanEsc(r.item)}">${_sanEsc(r.item||'—')}</td>
+      <td style="padding:6px 8px;max-width:220px;white-space:normal;word-break:break-word" title="${_sanEsc(r.item)}">${_sanEsc(r.item||'—')}${r.categoria?`<div style="font-size:9px;color:var(--text3);font-weight:600;margin-top:2px">${_sanEsc(r.categoria)}</div>`:''}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-size:12px">${_sanEsc(r.unidade||'—')}${r._temMovimentacao?'<span class="inv-movement-dot" title="Este item possui histórico de movimentações">↻</span>':''}</td>
       <td style="padding:6px 8px;white-space:nowrap"><span class="inv-status inv-status-${situacaoClass}">${_sanEsc(situacaoLabel)}</span></td>
       <td style="padding:6px 8px;font-size:12px;max-width:160px;white-space:normal;word-break:break-word" title="${_sanEsc(r.empresa)}">${_sanEsc(r.empresa||'—')}</td>

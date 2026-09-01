@@ -56,6 +56,13 @@
 
 ## 3. Licitação / status por item
 
+- Todo novo processo exige uma categoria de `categorias_licitacao`. O cadastro oferece as
+  categorias oficiais e aceita criação inline; a nova opção nasce pendente de revisão em
+  **Cadastros**. Nomes equivalentes por caixa, acentuação e espaços não podem coexistir.
+- `processos.categoria_id` é a origem. O banco propaga o vínculo para `itens`, `contratos`
+  e `atas_itens`, inclusive quando a categoria do processo é corrigida depois. Atas Rp e
+  Inventário filtram pelo vínculo herdado do item de origem; registros históricos sem
+  categoria permanecem visíveis no filtro **Todas** até o processo ser classificado.
 - **Fracasso ou deserção encerra definitivamente o item licitado.** O registro exige
   resultado (`FRACASSADO` ou `DESERTO`), número do pregão, número do lote, data e documento
   comprobatório. Depois de registrado, o item não pode ser editado, excluído, contratado,
@@ -91,7 +98,7 @@
   `status_lic_id` anterior pode permanecer armazenado como histórico, mas não deve
   substituir o status operacional.
 - A exportação em Excel de **Licitações em andamento** respeita exatamente os filtros
-  visíveis da tela (busca, tipo, secretaria e inclusão de contratadas). Ela traz uma linha
+  visíveis da tela (busca, tipo, categoria, secretaria e inclusão de contratadas). Ela traz uma linha
   por item exibido e uma aba complementar com os planejamentos de ATA vinculados.
 - Quando a soma autorizada em AF for menor que a quantidade contratada, o andamento
   deve indicar **AF parcial — saldo aguardando AF**. Recebimento e confirmação também

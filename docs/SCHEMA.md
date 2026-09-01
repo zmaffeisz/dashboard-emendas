@@ -69,6 +69,7 @@ A licitação / processo de contratação.
 | `status` | text | |
 | `valor_estimado` | numeric | **valor monetário** |
 | `natureza` | — | (ver migration `add_natureza_e_status_processo`) |
+| `categoria_id` | FK → `categorias_licitacao.id` | categoria obrigatória nos novos processos e origem da propagação |
 | `link_publico_sei` | text, nullable | URL pública `http/https` do processo SEI; históricos podem permanecer sem link |
 | `servico_trimestral_itens` | jsonb | itens e valores periódicos do serviço trimestral |
 | `servico_trimestral_meses` / `servico_trimestral_ciclos` | integer | vigência e quantidade esperada de ciclos |
@@ -82,6 +83,7 @@ de **ATA** (a aba "Atas Rp" é uma visão filtrada desta matriz — ver [MODULES
 |---|---|---|
 | `id` | integer (PK) | |
 | `processo_id` | FK → `processos.id` | |
+| `categoria_id` | FK → `categorias_licitacao.id` | herdada do processo |
 | `fornecedor_id` | FK → `fornecedores.id` | |
 | `tipo_instrumento` | text | `CONTRATO` ou `ATA` |
 | `status` | text | |
@@ -95,6 +97,12 @@ de **ATA** (a aba "Atas Rp" é uma visão filtrada desta matriz — ver [MODULES
 | `fonte` | text | fonte de recurso |
 | `vigencia_atual`, `vencimento`, `total_periodos_vigencia` | — | vigência |
 | `prefixo_chamado` | text | liga contrato ↔ chamados |
+
+### `categorias_licitacao`
+Cadastro mestre das categorias de licitação. `nome_chave` é gerado sem diferenças de
+caixa, acentuação ou espaços repetidos e possui índice único. `ativo` controla a oferta
+nos seletores e `revisado` alimenta a moderação em Cadastros. `itens.categoria_id` e
+`atas_itens.categoria_id` guardam o vínculo herdado usado nas filtragens operacionais.
 
 > **Atenção:** existem campos monetários duplicados em texto (`valor_*`) e numéricos
 > (`valor_*_num`). Os numéricos são a referência para cálculos. Ver [BUSINESS_RULES.md](BUSINESS_RULES.md).

@@ -63,6 +63,10 @@ Listadas via `list_migrations` (ordem cronológica):
 | 20260830220942 | `marcar_itens_ata_em_tramite_renovacao` — estado e data do acompanhamento de renovação por item da Ata |
 | 20260830223355 | `planejar_encerramento_itens_ata` — decisão exclusiva de encerrar o item ao fim da vigência, com data de marcação |
 | 20260830230436 | `restringir_edicao_operacional_contratos` — protege dados cadastrais e seção para admin e cria RPCs auditadas para os campos operacionais permitidos |
+| 20260901003150 | `categorias_licitacao_e_propagacao` — cadastro mestre, 25 opções iniciais, RLS, vínculos e propagação para processo/item/contrato/ATA |
+| 20260901003312 | `corrigir_trigger_categoria_licitacao` — restringe a leitura dos campos de origem ao tipo correto de cada gatilho compartilhado |
+| 20260901004527 | `classificar_contratacoes_existentes` — classifica por inferência os 99 processos históricos e propaga a categoria para itens, contratos e itens de ATA |
+| 20260901005743 | `ampliar_categorias_e_reclassificar_dmmhf` — adiciona 11 categorias específicas da DMMHF, reclassifica vínculos inequívocos e remove inferências conflitantes |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
