@@ -77,6 +77,16 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    Enquanto o item está na licitação, o nome detalhado de `itens.status_lic_id` é exibido e
    o painel é recarregado logo após a alteração na aba Licitações.
 
+   **Espelhamento em Licitações (aquisições):** a cada abertura/atualização da aba,
+   `licitacoes-fluxo.js` consulta entregas e empenhos pelos IDs dos itens, com paginação,
+   e usa `_flowStatusFromFlow`, a mesma regra de rótulos de Emendas. O acompanhamento
+   do item e os dois Excel usam essa situação e a data do marco operacional; os campos
+   manuais não são sobrescritos. Etapas diferentes resultam em "Vários" no processo.
+   O filtro de processos totalmente contratados permanece; o status operacional por si
+   só não remove itens de processos mistos. Consumo encerra no recebimento administrativo.
+   Serviços e ATAs não são convertidos para o fluxo de aquisição. Teste local:
+   `node tests/licitacoes-fluxo.test.mjs`.
+
 5. **Planejamento de futura Ata** — o vínculo percorre
    `Emenda → Licitação → Ata vigente aguardando requisição`. Somente a criação efetiva de
    `atas_execucao`, no momento da formalização ou posteriormente na aba Atas, inicia

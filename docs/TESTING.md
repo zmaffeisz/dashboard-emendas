@@ -13,6 +13,16 @@
 
 ## 2. Roteiro de teste manual (smoke)
 
+### Regressão — situação operacional em Licitações
+
+- Rodar `node tests/licitacoes-fluxo.test.mjs`: cobre rótulos compartilhados com Emendas,
+  recebimento/entrega parcial, cancelamento, consumo, paginação, filtros e as duas exportações.
+- Abrir `tests/licitacoes-fluxo-ui.html` no servidor local: simula o carregamento e a
+  apresentação sem acessar o banco; deve mostrar **PASSOU** e quatro etapas distintas.
+- Com login, comparar uma aquisição nas abas Emendas e Licitações e nos dois Excel.
+  Conferir recebimento interno, confirmação na unidade e suas datas. Para processos
+  totalmente contratados, marcar **Incluir já contratadas**.
+
 Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 (admin + comum) no Supabase. Ver [DEPLOYMENT.md](DEPLOYMENT.md).
 

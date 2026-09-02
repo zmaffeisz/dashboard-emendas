@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Teste — situação operacional nas Licitações</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../dashboard.css">
+</head>
+<body>
+  <main style="padding:24px">
+    <h1>Licitações — teste local sem acesso ao banco</h1>
+    <p id="resultado">Executando…</p>
+    <label><input type="checkbox" id="lic-f-contratados" onchange="renderLicitacoes()"> Incluir já contratadas</label>
+    <span id="lic-count"></span>
+    <div id="lic-lista"></div>
+  </main>
+  <script>
+    const _sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const podeEditar=()=>false;
+    const kebabMenuHtml=()=>'';
+    const fmtFull=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const registros=[
+      {id:'manual',processo_id:313,descricao:'Item ainda na licitação',qtde:1,status_lic_secretaria_id:30,status_lic_texto:'AGUARDANDO ENTREGA DOS ITENS'},
+      {id:'af',processo_id:313,descricao:'Aguardando recebimento',qtde:1,contrato_id:424},
+      {id:'recebido',processo_id:313,descricao:'Bisturi Elétrico',qtde:1,contrato_id:424},
+      {id:'entregue',processo_id:313,descricao:'Câmara para conservação',qtde:1,contrato_id:424}
+    ].map(i=>({...i,valor_estimado:100,unidades:{nome:'UBS de teste'}}));
+    const tabelas={
+      vw_processos_resumo:[{id:313,identificador:'PROCESSO DE TESTE',natureza:'AQUISIÇÃO',objeto:'Teste de andamento operacional',tipo:'SEI'}],
+      status_opcoes:[], secretarias:[{id:30,sigla:'SES',nome:'Secretaria da Saúde'}],
+      ata_planejamento_emendas:[], licitacao_item_ocorrencias:[], categorias_licitacao:[], empenho_itens:[],
+      itens_entregas:[
+        {id:'af',item_id:'af',qtde_autorizada:1,af_data:'2026-07-30'},
+        {id:'recebido',item_id:'recebido',qtde_autorizada:1,qtde_recebida:1,af_data:'2026-07-30',data_recebimento:'2026-08-03'},
+        {id:'entregue',item_id:'entregue',qtde_autorizada:1,qtde_recebida:1,af_data:'2026-07-30',data_recebimento:'2026-08-03',data_entrega_unidade:'2026-08-05'}
+      ]
+    };
+    const sb={from(tabela){
+      if(!(tabela in tabelas)) throw new Error('Tabela não simulada: '+tabela);
+      return {select(){return this},order(){return this},eq(){return this},neq(){return this},in(){return this},
+        range(de,ate){return Promise.resolve({data:tabelas[tabela].slice(de,ate+1)})},
+        then(resolve,reject){return Promise.resolve({data:tabelas[tabela]}).then(resolve,reject)}
+      };
+    }};
+  </script>
+  <script src="../js/legacy/30-usuarios-licitacoes.js"></script>
+  <script type="module">
+    try {
+      // Usa a função real de Emendas sem inicializar suas telas ou acesso ao banco.
+      const source=await (await fetch('../js/legacy/50-cadastros-planilhas-chamados.js')).text();
+      window._flowStatusFromFlow=new Function(source.slice(source.indexOf('function _flowStatusLicitacaoFromFlow('),source.indexOf('function _expandirLinhaEmendaPorUnidades('))+'; return _flowStatusFromFlow;')();
+      _cpFetchAllItens=async()=>registros.map(i=>({...i}));
+      _cpExpanded[313]=true;
+      await loadLicitacoes();
+      const tela=document.getElementById('lic-lista').textContent;
+      for(const texto of ['Vários','AGUARDANDO ENTREGA DOS ITENS','AF EMITIDA - AGUARDANDO ENTREGA/CONFIRMACAO','RECEBIDO - AGUARDANDO CONFIRMACAO NA UNIDADE','ADQUIRIDO/ENTREGUE NA UNIDADE','03/08/2026','05/08/2026']){
+        if(!tela.includes(texto)) throw new Error('Texto ausente: '+texto);
+      }
+      if(tela.includes('Indefinido')||tela.includes('virou contrato')) throw new Error('Situação operacional substituída.');
+      document.getElementById('resultado').textContent='PASSOU: carregamento, resumo, situações e datas corretos na tela.';
+    } catch(e) {
+      document.getElementById('resultado').textContent='FALHOU: '+e.message;
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

@@ -292,7 +292,8 @@ async function loadLicitacoes(){
       [...filtroCategoria.options].forEach(o=>o.selected=atuais.includes(o.value));
       if(typeof enhanceMultiSelect==='function') enhanceMultiSelect(filtroCategoria,{placeholder:'Pesquisar categorias...'});
     }
-    _cpItens=itens||[];
+    const {carregarSituacoesAquisicoes}=await import('../modules/licitacoes/licitacoes-fluxo.js');
+    _cpItens=await carregarSituacoesAquisicoes(sb,itens||[],_licitacoesCache,_flowStatusFromFlow);
     _ataPlanejamentosLicitacao=planejamentos.data||[];
     _licOcorrenciasByItem={};
     if(ocorrencias.error) throw ocorrencias.error;
@@ -301,7 +302,7 @@ async function loadLicitacoes(){
   renderLicitacoes();
 }
 function filtrarLicitacoes(){ renderLicitacoes(); }
-function _licItemExecutado(i){ const s=_cpStatusById[i.status_lic_id]; return !!(s&&s.automatico); }
+function _licItemExecutado(i){ if(i._situacaoFluxo) return false; const s=_cpStatusById[i.status_lic_id]; return !!(s&&s.automatico); }
 function _licItemContratado(i){ return !!i.contrato_id; }
 function _licItemOcorrencia(i){ return i?_licOcorrenciasByItem[String(i.id)]||null:null; }
 function _licItemEncerrado(i){ return !!_licItemOcorrencia(i); }
@@ -371,7 +372,7 @@ function renderLicitacoes(){
     const p=x.p; mostrados++;
     const podeExcluir=podeEd && !Number(p.n_contratos||0) && !x.naLic.some(_licItemEncerrado);
     const items=x.naLic;
-    const itensEditaveis=items.filter(i=>!_licItemExecutado(i)&&!_licItemContratado(i)&&!_licItemEncerrado(i));
+    const itensEditaveis=items.filter(i=>!_cpSituacao(i).auto&&!_licItemContratado(i)&&!_licItemEncerrado(i));
     const itensComOcorrencia=items.filter(_licItemEncerrado);
     const itensServico=x.itensServico;
     const totalItensExibidos=items.length||itensServico.length;
@@ -388,11 +389,11 @@ function renderLicitacoes(){
     const quantidadePeriodosContrato=servicoPeriodico?_licServicoQuantidadePeriodos(p):null;
     const periodoContratoLabel=servicoPeriodico?(_procProcessoEhTrimestral(p)?'Trimestral':'Mensal'):'';
     const mostrarOcultos=!!_cpShowHiddenByProcess[p.id];
-    // Nesta aba, o contrato vinculado prevalece apenas na apresentação do processo.
-    // O status original continua intacto no banco e nas demais telas/fluxos.
+    // Aquisições mostram o andamento real; contratação continua sendo um filtro,
+    // não um substituto para o estágio de recebimento/entrega.
     const roll=itensComOcorrencia.length&&!itensEditaveis.length
       ? {nome:[...new Set(itensComOcorrencia.map(i=>_licItemOcorrencia(i).tipo))].join(' / '),orgao:null,auto:false,ocorrencia:true}
-      : x.fullyContratado
+      : x.fullyContratado&&!items.some(i=>i._situacaoFluxo)
       ? {nome:'CONTRATADO',orgao:null,auto:false,contratado:true}
       : ((items.length||itensServico.length)?_cpRollup(items.length?items:itensServico):{nome:'sem itens',orgao:null,auto:false});
     const aberto=!!_cpExpanded[p.id];
@@ -465,7 +466,7 @@ function renderLicitacoes(){
         const cur=_cpStatusById[it.status_lic_id];
         const ocorrencia=_licItemOcorrencia(it);
         const exc=['fracassado','deserto','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
-        const editavel=podeEd&&!_licItemContratado(it)&&!ocorrencia&&!(cur&&cur.automatico);
+        const editavel=podeEd&&!_licItemContratado(it)&&!ocorrencia&&!_cpSituacao(it).auto;
         const editando=editavel&&_cpEditingItemKeys.has(chave);
         const qtd=_licItemQuantidade(it);
         const unit=_licItemValorUnitario(it);
@@ -473,6 +474,8 @@ function renderLicitacoes(){
         let ctrl;
         if(ocorrencia){
           ctrl=`<div class="lic-item-occurrence">${_sanEsc(ocorrencia.tipo)} 🔒</div><div class="lic-item-status-meta">Pregão ${_sanEsc(ocorrencia.numero_pregao)} · lote ${_sanEsc(ocorrencia.numero_lote)} · ${_sanEsc(_cpDataCurta(ocorrencia.data_ocorrencia)||'—')}</div><button type="button" onclick="abrirDocumentoOcorrenciaLicitacao('${ocorrencia.id}')" class="lic-item-btn danger">📎 ${_sanEsc(ocorrencia.documento_nome||'Ver documento')}</button>`;
+        } else if(it._situacaoFluxo){
+          ctrl=`<span class="lic-item-automatic"><span></span>${_sanEsc(_cpSituacao(it).nome)} 🔒</span>${_cpDesdeResumoHtml(it)}`;
         } else if(_licItemContratado(it)){
           ctrl=`<span class="lic-item-contracted">✔ virou contrato 🔒</span>${_cpDesdeResumoHtml(it)}`;
         } else if(cur&&cur.automatico){
@@ -508,7 +511,7 @@ function renderLicitacoes(){
   const cnt=document.getElementById('lic-count');
   if(cnt) cnt.textContent=mostrados+' em andamento'+(_ocultos?` · ${_ocultos} já contratada${_ocultos!==1?'s':''} oculta${_ocultos!==1?'s':''}`:'');
 }
-function _licExcelData(valor){ return valor?new Date(valor).toLocaleDateString('pt-BR'):''; }
+function _licExcelData(valor){ return valor?new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(valor))?valor+'T12:00:00':valor).toLocaleDateString('pt-BR'):''; }
 function _licExcelAjustarColunas(ws,colunas,linhas){
   ws['!cols']=colunas.map((_,i)=>({wch:Math.min(55,Math.max(12,...linhas.slice(0,300).map(l=>String(l[i]??'').length))+2)}));
   if(linhas.length) ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(colunas.length-1)}${linhas.length+1}`};
@@ -538,7 +541,7 @@ async function exportarLicitacoesExcel(){
       const resumoPlanos=planos.map(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; return `Emenda ${em.emenda||'?'}${em.ano?('/'+em.ano):''} · ${_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,'sem unidade')} · previsão ${v.quantidade_prevista??'—'} · ${v.status||'—'}`; }).join(' | ');
       linhas.push([
         p.identificador||'',p.tipo||'',p.natureza||'',p.categoria_licitacao||'',p.tipo_servico||'',p.objeto||'',p.modalidade||'',p.status||'',p.secao||'',p.sc||'',p.valor_estimado??null,p.observacao||'',p.link_publico_sei||'',
-        it?.descricao||'',it?.codigo_siam||'',emenda.tipo||'',emenda.parlamentar||'',emenda.emenda||'',emenda.ano??'',it?.unidade_medida||'',qtd,unit,total,unitContratado,qtd!=null&&unitContratado!=null?Number(qtd)*Number(unitContratado):null,it?.prazo_entrega_dias??null,it?.unidades?.nome||'',it?.fonte_tipo||'',it?.fonte_descricao||'',it?.status||'',situacao.orgao||'',situacao.nome||'',_licExcelData(it?.status_lic_desde),_licExcelData(it?.status_lic_atualizado_em),it?.contrato_id?'Sim':'Não',ocorrencia?.tipo||'',ocorrencia?.numero_pregao||'',ocorrencia?.numero_lote||'',_licExcelData(ocorrencia?.data_ocorrencia),ocorrencia?.observacao||'',resumoPlanos,periodico?(String(p.tipo_servico||'').includes('TRIMESTRAL')?'Trimestral':'Mensal'):'',valorPeriodo
+        it?.descricao||'',it?.codigo_siam||'',emenda.tipo||'',emenda.parlamentar||'',emenda.emenda||'',emenda.ano??'',it?.unidade_medida||'',qtd,unit,total,unitContratado,qtd!=null&&unitContratado!=null?Number(qtd)*Number(unitContratado):null,it?.prazo_entrega_dias??null,it?.unidades?.nome||'',it?.fonte_tipo||'',it?.fonte_descricao||'',it?.status||'',situacao.orgao||'',situacao.nome||'',_licExcelData(_cpSituacaoDesde(it)),_licExcelData(_cpSituacaoAtualizada(it)),it?.contrato_id?'Sim':'Não',ocorrencia?.tipo||'',ocorrencia?.numero_pregao||'',ocorrencia?.numero_lote||'',_licExcelData(ocorrencia?.data_ocorrencia),ocorrencia?.observacao||'',resumoPlanos,periodico?(String(p.tipo_servico||'').includes('TRIMESTRAL')?'Trimestral':'Mensal'):'',valorPeriodo
       ]);
       planos.forEach(v=>{ const em=v.emendas||{},ei=v.emenda_itens||{}; linhasPlanejamento.push([p.identificador||'',it?.descricao||'',em.emenda||'',em.ano||'',em.parlamentar||'',ei.item||'',_preferUnidadeExec(ei.unidade_beneficiada,ei.unidade_entrega,''),v.quantidade_prevista??null,v.status||'',v.contrato_id||'',v.ata_item_id||'',v.ata_execucao_id||'']); });
     });
@@ -566,6 +569,7 @@ function _licExcelEmendasDoProcesso(processoId,itens=[]){
   return [...emendas].sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true})).join(' | ');
 }
 function _licExcelSecretariaItem(item){
+  if(item?._situacaoFluxo) return _cpSituacao(item).orgao||'';
   const secretaria=_cpSecretariaById[item?.status_lic_secretaria_id]||item?.secretarias;
   if(!secretaria) return _cpSituacao(item).orgao||'';
   return secretaria.nome?`${secretaria.sigla} — ${secretaria.nome}`:(secretaria.sigla||'');
@@ -580,11 +584,11 @@ async function exportarLicitacoesProcessosExcel(){
     const itensAndamento=x.naLic.length?x.naLic:x.itensServico;
     const secretarias=[...new Set(itensAndamento.map(_licExcelSecretariaItem).filter(Boolean))];
     const situacoes=[...new Set(itensAndamento.map(it=>_cpSituacao(it).nome).filter(Boolean))];
-    const datas=itensAndamento.map(it=>it?.status_lic_desde).filter(Boolean).map(d=>new Date(d)).filter(d=>!Number.isNaN(d.getTime())).sort((a,b)=>a-b);
+    const datas=itensAndamento.map(_cpSituacaoDesde).filter(Boolean).map(d=>String(d).slice(0,10)).sort();
     return [
       p.identificador||'',p.objeto||'',p.tipo||'',p.natureza||'',p.categoria_licitacao||'',
       _licExcelEmendasDoProcesso(p.id,x.todosItens),secretarias.join(' | '),situacoes.join(' | '),
-      datas.length?_licExcelData(datas[0].toISOString()):'',p.status||'',p.secao||'',p.sc||'',p.link_publico_sei||''
+      datas.length?_licExcelData(datas[0]):'',p.status||'',p.secao||'',p.sc||'',p.link_publico_sei||''
     ];
   });
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([colunas,...linhas]);
@@ -630,7 +634,7 @@ function _licOcorrenciaMsg(texto,tipo='err'){
 function abrirModalOcorrenciaLicitacao(processoId){
   if(!podeEditar('contratos')){ alert('Sem permissão para encerrar itens da licitação.'); return; }
   const processo=_licitacoesCache.find(p=>String(p.id)===String(processoId));
-  const itens=_cpItens.filter(i=>String(i.processo_id)===String(processoId)&&!_licItemExecutado(i)&&!_licItemContratado(i)&&!_licItemEncerrado(i));
+  const itens=_cpItens.filter(i=>String(i.processo_id)===String(processoId)&&!_cpSituacao(i).auto&&!_licItemContratado(i)&&!_licItemEncerrado(i));
   if(!processo||!itens.length){ if(window.toast) toast('Não há itens disponíveis para fracassar/desertar.','info'); return; }
   _licOcorrenciaContext={processo,itens};
   const modal=_licOcorrenciaEnsureModal();
@@ -887,15 +891,17 @@ function _licEmendasItemHtml(item,planos=[]){
   (planos||[]).forEach(v=>adicionar(v?.emendas));
   return numeros.length?`<div class="lic-item-emendas">Emenda ${numeros.map(_sanEsc).join(' · ')}</div>`:'';
 }
+function _cpSituacaoDesde(item){ return item?._situacaoFluxo?item._situacaoFluxo.desde:item?.status_lic_desde; }
+function _cpSituacaoAtualizada(item){ return item?._situacaoFluxo?item._situacaoFluxo.atualizadoEm:item?.status_lic_atualizado_em; }
 function _cpDesdeResumoHtml(item,dataAlternativa=null){
-  const data=dataAlternativa||item?.status_lic_desde;
-  return `<div class="lic-item-status-meta">Desde ${_sanEsc(_cpDataCurta(data)||'—')}${data?` · ${_sanEsc(_cpDesde(data)||'')}`:''}${item?.status_lic_atualizado_em?` · atualizado em ${_sanEsc(_cpDataCurta(item.status_lic_atualizado_em)||'—')}`:''}</div>`;
+  const data=dataAlternativa||_cpSituacaoDesde(item), atualizada=_cpSituacaoAtualizada(item);
+  return `<div class="lic-item-status-meta">Desde ${_sanEsc(_cpDataCurta(data)||'—')}${data?` · ${_sanEsc(_cpDesde(data)||'')}`:''}${atualizada?` · atualizado em ${_sanEsc(_cpDataCurta(atualizada)||'—')}`:''}</div>`;
 }
 function _cpSituacaoResumoHtml(item){
   const situacao=_cpSituacao(item);
   const secretaria=_cpSecretariaById[item?.status_lic_secretaria_id]||item?.secretarias;
   const secretariaNome=secretaria?.sigla||situacao.orgao||'Sem secretaria';
-  const texto=String(item?.status_lic_texto||'').trim()||(situacao.nome||'Indefinido');
+  const texto=situacao.auto?situacao.nome:(String(item?.status_lic_texto||'').trim()||(situacao.nome||'Indefinido'));
   return `<div class="lic-item-status-readonly"><span>${_sanEsc(secretariaNome)}</span><strong>${_sanEsc(texto)}</strong></div>${_cpDesdeResumoHtml(item)}`;
 }
 function _cpOrgaoCor(o){ return o==='SEAD'?'#d8a730':(o==='CONTROLADORIA'?'#7c5cd6':'var(--blue)'); }
@@ -927,6 +933,9 @@ async function _cpFetchAllItens(){
 }
 function _cpSecretariaOptions(selecionada=''){ return _cpSecretarias.map(s=>`<option value="${s.id}"${String(s.id)===String(selecionada)?' selected':''}>${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join(''); }
 function _cpSituacao(item){
+  const ocorrencia=_licItemOcorrencia(item);
+  if(ocorrencia) return {nome:ocorrencia.tipo,orgao:null,auto:true,ocorrencia:true};
+  if(item?._situacaoFluxo) return item._situacaoFluxo;
   const auto=_cpStatusById[item?.status_lic_id];
   if(auto&&auto.automatico) return {nome:auto.nome,orgao:auto.orgao,auto:true};
   const sec=_cpSecretariaById[item?.status_lic_secretaria_id]||item?.secretarias;
@@ -945,8 +954,6 @@ function _cpSituacaoEditor(secretariaId,textoId,item,acao,opcoes={}){
 function _cpRollup(items){
   const situacoes=[...new Set(items.map(i=>_cpSituacao(i).nome))];
   if(situacoes.length===1) return _cpSituacao(items[0]);
-  const ids=[...new Set(items.map(i=>i.status_lic_id))];
-  if(ids.length===1){ const s=_cpStatusById[ids[0]]; return s?{nome:s.nome,orgao:s.orgao,auto:s.automatico}:{nome:'Indefinido',orgao:null,auto:false}; }
   return {nome:'Vários', orgao:null, auto:false};
 }
 function _cpStatusBadge(r){
@@ -956,9 +963,11 @@ function _cpStatusBadge(r){
 }
 function _cpDesde(d){ if(!d) return ''; const dias=Math.floor((Date.now()-new Date(d).getTime())/86400000); return dias<=0?'hoje':('há '+dias+'d'); }
 function _cpDataInput(d){ return d?String(d).slice(0,10):''; }
-function _cpDataCurta(d){ return d?new Date(d).toLocaleDateString('pt-BR'):''; }
+function _cpDataCurta(d){ return _licExcelData(d); }
 function cpToggle(pid){ _cpExpanded[pid]=!_cpExpanded[pid]; renderLicitacoes(); }
 async function _cpGravarStatus(itemId, secretariaId, texto, desde){
+  const itemAtual=_cpItens.find(i=>String(i.id)===String(itemId));
+  if(itemAtual&&(_cpSituacao(itemAtual).auto||_licItemContratado(itemAtual))) throw new Error('A situação deste item é controlada pelo fluxo de execução.');
   const secretaria=_cpSecretariaById[secretariaId];
   const situacao=String(texto||'').trim();
   if(!secretaria||!situacao) throw new Error('Informe a secretaria e a situação.');
@@ -1005,7 +1014,7 @@ async function cpBulkApply(pid){
   if(String(texto).trim().length>55){ alert('A situação pode ter no máximo 55 caracteres.'); return; }
   const desde=document.getElementById('cp-bulk-desde-'+pid)?.value||'';
   if(!desde){ alert('Informe a data "Desde" para aplicar o status.'); return; }
-  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_licItemExecutado(i) && !_licItemContratado(i) && !_licItemEncerrado(i));
+  const alvos=_cpItens.filter(i=>String(i.processo_id)===String(pid) && !_cpSituacao(i).auto && !_licItemContratado(i) && !_licItemEncerrado(i));
   if(!alvos.length){ alert('Nenhum item editável neste processo (os já contratados/executados são controlados em outras abas).'); return; }
   if(!confirm(`Aplicar "${_cpSecretariaById[secretariaId]?.sigla} – ${String(texto).trim()}" desde ${desde.split('-').reverse().join('/')} a ${alvos.length} item(ns)?`)) return;
   try{

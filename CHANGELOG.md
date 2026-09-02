@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-02 — Andamento das aquisições em Licitações e Excel
+
+- Licitações e ambas as exportações Excel passam a derivar a situação das aquisições
+  de empenhos, AFs, recebimentos e confirmações, reutilizando os rótulos de Emendas.
+- Itens contratados com situação licitatória vazia não aparecem mais como
+  "Indefinido" quando o fluxo operacional informa a etapa; situações manuais antigas
+  não sobrepõem recebimento/entrega. Nenhum status é regravado no banco.
+- Datas refletem o marco operacional disponível, sem confundir recebimento interno
+  com entrega na unidade ou deslocar datas sem horário para o dia anterior.
+- Processos com etapas diferentes mostram "Vários"; a opção de incluir processos
+  totalmente contratados permanece. Recebimentos parciais e cancelados são respeitados;
+  consumo termina no almoxarifado. Serviços e ATAs mantêm seus fluxos próprios.
+- Teste de regressão: `node tests/licitacoes-fluxo.test.mjs`.
+
 ## 2026-09-01 — Totais e visualização compacta nas Licitações
 
 - Cada item em Licitações em andamento passa a mostrar quantidade, valor unitário,
