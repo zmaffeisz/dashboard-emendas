@@ -1584,8 +1584,8 @@ function renderItensEntregas(){
       if(!matchBusca(hay,q)) return false;
     }
     return true;
-  }).sort((a,b)=>{ // atrasados primeiro, depois por dias restantes
-    const ord={'atrasado':0,'aguardando AF':1,'vence hoje':2,'no prazo':3,'sem prazo':4,'recebido':5,'cancelado':6};
+  }).sort((a,b)=>{ // aguardando AF primeiro; depois atrasados, por dias restantes
+    const ord={'aguardando AF':0,'atrasado':1,'vence hoje':2,'no prazo':3,'sem prazo':4,'recebido':5,'cancelado':6};
     const da=(ord[a.status]??9)-(ord[b.status]??9); if(da) return da;
     return (_diasRestantes(a.limiteISO)??99999)-(_diasRestantes(b.limiteISO)??99999);
   });

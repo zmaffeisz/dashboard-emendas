@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-02 — Aguardando AF no topo do Controle de Entregas
+
+- Itens de aquisição e ATA com status **aguardando AF** aparecem antes dos atrasados.
+- Os demais grupos mantêm a ordem anterior; entre atrasados, os de maior atraso
+  continuam primeiro. Filtros e regras de recebimento não foram alterados.
+
 ## 2026-09-02 — Andamento das aquisições em Licitações e Excel
 
 - Licitações e ambas as exportações Excel passam a derivar a situação das aquisições

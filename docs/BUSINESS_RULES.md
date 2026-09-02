@@ -355,6 +355,9 @@
 - Uma solicitação de ATA pode ser excluída antes da AF somente se não houver AF/data/previsão, NF, recebimento, patrimônio, entrega na unidade, termo, unidade física ou sanção. `obs_prazo` isolada, inclusive de importação, é apenas informativa e não bloqueia a exclusão.
 
 - AF de **aquisição** gera `itens_entregas` (autorizada vs. recebida).
+- Na subaba **Controle de Entregas / Prazos**, a ordem é: **aguardando AF**, atrasado,
+  vence hoje, no prazo, sem prazo, recebido e cancelado. Dentro de cada grupo permanece
+  a ordenação por dias restantes, com os mais atrasados primeiro no grupo de atrasos.
 - Na subaba **Controle de Entregas / Prazos**, aquisições com saldo de AF pendente ficam
   como "aguardando AF". Após emitir AF, o item **permanece** nesta subaba com os botões
   **Receber** e **Prazo**. O item só sai da subaba e entra em **Confirmação de Entrega na
