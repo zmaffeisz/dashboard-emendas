@@ -51,6 +51,17 @@
 | Sanção | aba **Sanções** | solicitação/aplicação | Contrato |
 | Chamado | `chamado.html` (público) / aba Chamados | controle interno | Fiscalização, Contrato |
 
+### Entrada em lote no cadastro de emendas
+
+O modal **Nova emenda** oferece `templates/modelo-itens-emenda.xlsx`, com as colunas
+Item, Valor unitário, Status inicial, Unidade e Quantidade. A colagem no campo
+Item/Descrição usa `js/modules/emendas/emendas-planilha.js` para validar todas as
+linhas antes de preencher o formulário. Unidade e status (opcional) precisam corresponder
+ao cadastro disponível. Descrição, valor e status iguais agrupam as unidades no mesmo
+item; linhas repetidas da mesma unidade somam a quantidade. Itens já preenchidos são
+preservados. A colagem não grava dados: **Salvar emenda** mantém o fluxo existente,
+criando uma linha em `emenda_itens` por item/unidade e calculando unitário × quantidade.
+
 ## 3. Reflexo automático entre abas (fonte única da verdade)
 
 O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismos de reflexo:

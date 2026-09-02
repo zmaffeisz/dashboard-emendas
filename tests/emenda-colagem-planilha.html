@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Teste — modelo e colagem de emendas</title>
+<link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../dashboard.css"></head>
+<body>
+<pre id="resultado" style="position:fixed;z-index:10000;bottom:0;background:white;max-height:100px;overflow:auto">Executando…</pre>
+<script>
+  const _sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtFull=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const popularStatusLicitacao=async()=>{};
+  const aplicarSecaoFormulario=()=>{};
+  const _getUnidadesAtivasCache=async()=>[{id:1,nome:'UBS São Bento'},{id:2,nome:'UBS Aparecidinha'}];
+  let _statusLicCache=['EM LICITAÇÃO','AGUARDANDO RESERVA'];
+  function showMsg(p,texto,tipo){const el=document.getElementById(p+'-msg');el.textContent=texto;el.className='fmsg '+tipo;}
+  const obterOuCriarParlamentar=async()=>{};
+  const loadData=()=>{};
+  const gravados=[];
+  const sb={
+    from(tabela){
+      return {insert(dados){
+        gravados.push({tabela,dados});
+        return {select(){return this},single:async()=>({data:{id:'emenda-teste'}})};
+      }};
+    }
+  };
+</script>
+<script src="../js/legacy/30-usuarios-licitacoes.js"></script>
+<script type="module">
+  try{
+    const pagina=new DOMParser().parseFromString(await (await fetch('../index.html')).text(),'text/html');
+    const modal=pagina.getElementById('panel-nova-emenda'); document.body.appendChild(modal); modal.classList.add('active');
+    const source=await (await fetch('../js/legacy/60-emendas-dashboard.js')).text();
+    const base=document.createElement('base');base.href='../';document.head.appendChild(base);
+    const script=document.createElement('script');
+    // O recorte inline tem base /tests; corrige somente a URL do import do módulo.
+    script.textContent=source.slice(source.indexOf('let _neUnidadesCache='),source.indexOf('async function salvarNovoItem(')).replace("import('../modules/emendas/emendas-planilha.js')","import('./js/modules/emendas/emendas-planilha.js')");
+    document.body.appendChild(script);
+    await neInitItens();
+    const checks=[],ok=(v,msg)=>{if(!v)throw new Error(msg);checks.push('OK: '+msg);};
+    const colar=async(texto,html='')=>{
+      let cancelado=false;
+      await neColarPlanilha({target:document.querySelector('.ne-it-desc'),preventDefault(){cancelado=true},clipboardData:{getData:tipo=>tipo==='text/html'?html:texto}});
+      return cancelado;
+    };
+    ok(!await colar('uma descrição'),'Texto simples conserva a colagem comum');
+    ok(await colar('ITEM\tVALOR UNITÁRIO\tSTATUS INICIAL\tUNIDADE\tQUANTIDADE\nMonitor\t2.400,50\tEM LICITAÇÃO\tUBS São Bento\t2\nMonitor\t2.400,50\tEM LICITAÇÃO\tUBS Aparecidinha\t3'),'Colagem tabular interceptada');
+    ok(document.querySelectorAll('.ne-item').length===1,'Agrupou as duas unidades em um item');
+    ok(document.querySelectorAll('.ne-u-row').length===2,'Criou as duas linhas de unidade');
+    ok(document.querySelector('.ne-it-status').value==='EM LICITAÇÃO','Preencheu o status');
+    ok(document.getElementById('ne-resumo').textContent.includes('12.002,50'),'Recalculou o total e o resumo');
+    const antes=document.getElementById('ne-itens').innerHTML;
+    await colar('Inválido\t100\t\tUnidade inexistente\t1');
+    ok(document.getElementById('ne-itens').innerHTML===antes,'Erro não altera os itens');
+    ok(document.getElementById('ne-msg').textContent.includes('Nada foi importado'),'Explica o erro');
+    await colar('','<table><tr><td>Balança</td><td>500,25</td><td></td><td>UBS São Bento</td><td>1</td></tr></table>');
+    ok(document.querySelectorAll('.ne-item').length===2,'Tabela HTML adiciona item sem sobrescrever o anterior');
+    ok(document.querySelector('.ne-it-desc').value==='Monitor','Preserva item preenchido');
+    ok(gravados.length===0,'Colagem não grava no banco');
+    document.getElementById('ne-secao').innerHTML='<option value="1">SUEQ - EQUIP</option>';
+    document.getElementById('ne-parlamentar-sel').innerHTML='<option>Parlamentar de teste</option>';
+    for(const [id,valor] of [['ne-tipo','FEDERAL'],['ne-emenda','EMENDA DE TESTE'],['ne-ano','2026'],['ne-valor','50000'],['ne-objeto','Equipamentos para unidades de saúde']])document.getElementById(id).value=valor;
+    neRecalc();
+    await salvarNovaEmenda();
+    const registros=gravados.find(g=>g.tabela==='emenda_itens')?.dados;
+    ok(registros?.length===3,'Salvar gera uma linha por item/unidade no fluxo existente (banco simulado)');
+    ok(registros[0].vl_total_cadastrado===4801&&registros[1].qtde===3,'Preserva valores e quantidades no salvamento');
+    ok(registros[0].status==='EM LICITAÇÃO'&&registros[2].status===null,'Salva status preenchido e opcional vazio');
+    document.getElementById('resultado').textContent=checks.join('\n')+'\nTODOS OS TESTES PASSARAM';
+    document.body.dataset.testStatus='passed';
+  }catch(error){document.getElementById('resultado').textContent='FALHOU: '+error.stack;document.body.dataset.testStatus='failed';console.error(error);}
+</script></body></html>

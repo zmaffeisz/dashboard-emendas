@@ -2034,14 +2034,44 @@ async function neInitItens(){
   aplicarSecaoFormulario('ne-secao');
   neAddItem();
 }
-function neAddItem(){
+function neBaixarModeloItens(){
+  const link=document.createElement('a');
+  link.href='templates/modelo-itens-emenda.xlsx';
+  link.download='modelo-itens-emenda.xlsx';
+  document.body.appendChild(link); link.click(); link.remove();
+}
+let _neColagemEmAndamento=false;
+async function neColarPlanilha(evento){
+  const alvo=evento?.target;
+  if(!alvo?.matches('.ne-it-desc')||alvo.disabled||alvo.readOnly) return;
+  const tabela=_procLerClipboardPlanilha(evento);
+  if(!tabela.length||(tabela.length===1&&tabela[0].length===1)) return;
+  evento.preventDefault();
+  if(_neColagemEmAndamento){ showMsg('ne','Aguarde a conclusão da colagem anterior.','err'); return; }
+  _neColagemEmAndamento=true;
+  try{
+    const [{prepararItensEmenda,preencherItensEmenda}]=await Promise.all([
+      import('../modules/emendas/emendas-planilha.js'),_neEnsureUnidades(),popularStatusLicitacao()
+    ]);
+    if(!alvo.isConnected) return;
+    const resultado=prepararItensEmenda(tabela,_neUnidadesCache||[],_statusLicCache||[]);
+    if(resultado.erros.length){
+      showMsg('ne',`Nada foi importado. ${resultado.erros.slice(0,4).join(' ')}${resultado.erros.length>4?` E mais ${resultado.erros.length-4} linha(s) com erro.`:''}`,'err');
+      return;
+    }
+    preencherItensEmenda(resultado.itens,{alvo,adicionarItem:neAddItem,adicionarUnidade:_neAddUnidadeRow,recalcular:neRecalc});
+    showMsg('ne',`${resultado.linhas} linha(s) importada(s) em ${resultado.itens.length} item(ns). Confira o resumo antes de salvar.`,'ok');
+  }catch(error){ showMsg('ne','Não foi possível importar: '+(error.message||error),'err'); }
+  finally{ _neColagemEmAndamento=false; }
+}
+function neAddItem(opcoes={}){
   const box=document.getElementById('ne-itens'); if(!box) return;
   const div=document.createElement('div');
   div.className='ne-item';
   div.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--surface2)';
   div.innerHTML=`
     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-      <div style="flex:2;min-width:180px"><div class="form-label">Item / Descrição *</div><input type="text" class="ne-it-desc" placeholder="ex: AR CONDICIONADO 12000 BTU"></div>
+      <div style="flex:2;min-width:180px"><div class="form-label">Item / Descrição *</div><input type="text" class="ne-it-desc" placeholder="Digite ou cole as linhas da planilha" onpaste="neColarPlanilha(event)"></div>
       <div style="flex:1;min-width:120px"><div class="form-label">Valor unitário (R$) *</div><input type="number" class="ne-it-vlunit" placeholder="ex: 2400" oninput="neRecalc()"></div>
       <div style="flex:1.4;min-width:160px"><div class="form-label">Status inicial</div><select class="ne-it-status">${_neStatusOptions()}</select></div>
       <button type="button" onclick="neRemoveItem(this)" title="Remover item" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);cursor:pointer;padding:6px 9px;height:34px">🗑</button>
@@ -2054,12 +2084,13 @@ function neAddItem(){
       <div class="ne-it-unidades"></div>
     </div>`;
   box.appendChild(div);
-  _neAddUnidadeRow(div);
-  neRecalc();
+  _neAddUnidadeRow(div,{adiarAtualizacao:true});
+  if(!opcoes.adiarAtualizacao) neRecalc();
+  return div;
 }
 function neRemoveItem(btn){ const it=btn.closest('.ne-item'); if(it) it.remove(); neRecalc(); }
 function neAddUnidade(btn){ const it=btn.closest('.ne-item'); if(it) _neAddUnidadeRow(it); }
-function _neAddUnidadeRow(itemDiv){
+function _neAddUnidadeRow(itemDiv,opcoes={}){
   const wrap=itemDiv.querySelector('.ne-it-unidades'); if(!wrap) return;
   const row=document.createElement('div');
   row.className='ne-u-row';
@@ -2069,7 +2100,8 @@ function _neAddUnidadeRow(itemDiv){
     <span class="ne-u-total">—</span>
     <button type="button" class="ne-u-remove" onclick="neRemoveUnidade(this)" title="Remover unidade" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);cursor:pointer">✕</button>`;
   wrap.appendChild(row);
-  neRecalc();
+  if(!opcoes.adiarAtualizacao) neRecalc();
+  return row;
 }
 function neRemoveUnidade(btn){ const r=btn.closest('.ne-u-row'); if(r) r.remove(); neRecalc(); }
 function neRecalc(){
@@ -2100,6 +2132,7 @@ function neRecalc(){
 }
 
 async function salvarNovaEmenda(){
+  if(_neColagemEmAndamento){ showMsg('ne','Aguarde a conclusão da colagem antes de salvar.','err'); return; }
   const secaoId=Number(document.getElementById('ne-secao')?.value||0);
   const tipo=document.getElementById("ne-tipo").value;
   const emenda=document.getElementById("ne-emenda").value.trim();

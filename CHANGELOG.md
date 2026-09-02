@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-02 — Modelo Excel e colagem no cadastro de emendas
+
+- **Cadastrar nova emenda** passa a oferecer **Baixar planilha modelo**, com as colunas
+  Item, Valor unitário, Status inicial, Unidade e Quantidade.
+- Ao colar as cinco colunas no campo Item / Descrição, o formulário cria os itens e
+  suas unidades, aceita moeda brasileira e recalcula os totais. Cabeçalho é opcional.
+- Linhas com a mesma descrição, valor e status são agrupadas; quantidades da mesma
+  unidade são somadas dentro da colagem. Itens já digitados são preservados.
+- Unidades e status são conferidos com as opções do cadastro; valores e quantidades
+  precisam ser positivos. Uma linha inválida bloqueia toda a colagem com explicação.
+- A colagem não grava no banco. O salvamento continua usando **Salvar emenda**.
+- Testes: `node tests/emenda-colagem-planilha.test.mjs` e
+  `tests/emenda-colagem-planilha.html` (formulário e salvamento simulados).
+
 ## 2026-09-02 — Aguardando AF no topo do Controle de Entregas
 
 - Itens de aquisição e ATA com status **aguardando AF** aparecem antes dos atrasados.

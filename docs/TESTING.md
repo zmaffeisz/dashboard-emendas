@@ -13,6 +13,17 @@
 
 ## 2. Roteiro de teste manual (smoke)
 
+### Regressão — modelo e colagem de itens em Nova emenda
+
+- Rodar `node tests/emenda-colagem-planilha.test.mjs`: valida colunas, cabeçalho opcional,
+  valores brasileiros, agrupamento por item/unidade e rejeição integral de dados inválidos.
+- Abrir `tests/emenda-colagem-planilha.html` no servidor local: usa o formulário real,
+  testa colagem de texto/tabela HTML, preservação de itens, totais e salvamento simulado,
+  sem acessar o banco. Deve mostrar **TODOS OS TESTES PASSARAM**.
+- Com login, baixar o modelo em **Nova emenda**, preencher as cinco colunas com nomes
+  cadastrados e colar em Item/Descrição. Conferir status vazio, múltiplas unidades,
+  resumo e mensagens de linha inválida antes de salvar um cadastro de teste autorizado.
+
 ### Regressão — situação operacional em Licitações
 
 - Rodar `node tests/licitacoes-fluxo.test.mjs`: cobre rótulos compartilhados com Emendas,
