@@ -1027,6 +1027,7 @@ function filterByParl(p){headerFilters.parlamentar=[p];updateHeaderFilterIndicat
 
 // Edição administrativa da emenda
 let _editEmendaId=null;
+let _editEmendaItens=null, _editEmendaSalvando=false;
 async function abrirEditarEmenda(emendaId){
   if(!_isAdmin()){
     alert('Somente administradores podem editar os dados centrais da emenda.');
@@ -1037,6 +1038,11 @@ async function abrirEditarEmenda(emendaId){
   const dados=emenda||linha;
   if(!dados){ alert('Emenda não encontrada. Recarregue a página e tente novamente.'); return; }
   _editEmendaId=String(emendaId);
+  _editEmendaItens=null;
+  const idAberto=_editEmendaId;
+  document.getElementById('edem-itens').textContent='Carregando itens e conferindo vínculos...';
+  document.querySelector('#modal-editar-emenda [data-resumo-itens]').textContent='';
+  document.getElementById('edem-salvar').disabled=true;
   document.getElementById('edem-tipo').value=dados.tipo||'';
   document.getElementById('edem-emenda').value=dados.emenda||'';
   document.getElementById('edem-ano').value=dados.ano||'';
@@ -1050,14 +1056,33 @@ async function abrirEditarEmenda(emendaId){
   parlSel.innerHTML='<option value="">Selecione...</option>'+nomes.map(nome=>`<option value="${_sanEsc(nome)}">${_sanEsc(nome)}</option>`).join('');
   parlSel.value=dados.parlamentar||'';
   if(error) console.error('Não foi possível carregar parlamentares:',error.message);
+  if(_editEmendaId!==idAberto) return;
   const msg=document.getElementById('edem-msg'); msg.textContent=''; msg.className='fmsg';
   document.getElementById('modal-editar-emenda').classList.add('active');
+  try{
+    const [modulo,resposta]=await Promise.all([
+      import('../modules/emendas/emendas-edicao.js'),
+      sb.rpc('listar_emenda_itens_edicao',{p_emenda_id:idAberto})
+    ]);
+    if(_editEmendaId!==idAberto) return;
+    if(resposta.error) throw resposta.error;
+    if(!Array.isArray(resposta.data)) throw new Error('Resposta inválida ao conferir os itens.');
+    _editEmendaItens=modulo.montarEditorItens(document.getElementById('edem-itens'),resposta.data);
+    document.getElementById('edem-salvar').disabled=false;
+  }catch(err){
+    if(_editEmendaId!==idAberto) return;
+    document.getElementById('edem-itens').textContent='Não foi possível conferir os vínculos. Feche e abra novamente após atualizar o sistema.';
+    showMsg('edem','Edição bloqueada por segurança: '+(err.message||err),'err');
+  }
 }
 function fecharEditarEmenda(){
+  if(_editEmendaSalvando) return;
   document.getElementById('modal-editar-emenda').classList.remove('active');
   _editEmendaId=null;
+  _editEmendaItens=null;
 }
 async function salvarEditarEmenda(){
+  if(_editEmendaSalvando) return;
   if(!_editEmendaId||!_isAdmin()){
     alert('Somente administradores podem editar os dados centrais da emenda.');
     return;
@@ -1078,19 +1103,28 @@ async function salvarEditarEmenda(){
     showMsg('edem',`Já existe outra emenda ${numero}/${ano}.`,'err');
     return;
   }
+  let alteracoes;
+  try{
+    if(!_editEmendaItens) throw new Error('Aguarde a conferência dos vínculos antes de salvar.');
+    alteracoes=_editEmendaItens.alteracoes();
+  }catch(err){showMsg('edem',err.message||String(err),'err');return;}
+  const exclusoes=alteracoes.filter(i=>i.excluir).length;
+  if(exclusoes&&!confirm(`Excluir ${exclusoes} item(ns) sem vínculo e salvar as alterações? Essa exclusão não pode ser desfeita pelo sistema.`)) return;
   const btn=document.getElementById('edem-salvar');
   const label=btn.textContent; btn.disabled=true; btn.textContent='Salvando...';
+  _editEmendaSalvando=true;
   try{
     const payload={tipo,emenda:numero,ano,parlamentar,sei_emenda:sei||null,valor_cedido:Number(valor.toFixed(2)),objeto};
-    const {error}=await sb.from('emendas').update(payload).eq('id',_editEmendaId).select('id').single();
+    const {error}=await sb.rpc('salvar_emenda_com_itens_livres',{p_emenda_id:_editEmendaId,p_dados:payload,p_itens:alteracoes});
     if(error) throw error;
-    showMsg('edem','✓ Emenda atualizada. Recalculando todas as telas...','ok');
+    showMsg('edem',`✓ Emenda atualizada${exclusoes?`; ${exclusoes} item(ns) excluído(s)`:''}. Recalculando todas as telas...`,'ok');
     saldoEmendaCarregado=false;
     await loadData();
     setTimeout(fecharEditarEmenda,500);
   }catch(err){
     showMsg('edem','Erro ao atualizar a emenda: '+(err.message||err),'err');
   }finally{
+    _editEmendaSalvando=false;
     btn.disabled=false; btn.textContent=label;
   }
 }
@@ -2036,7 +2070,7 @@ async function neInitItens(){
 }
 function neBaixarModeloItens(){
   const link=document.createElement('a');
-  link.href='templates/modelo-itens-emenda.xlsx';
+  link.href='templates/modelo-itens-emenda.xlsx?v=20260902-listas';
   link.download='modelo-itens-emenda.xlsx';
   document.body.appendChild(link); link.click(); link.remove();
 }

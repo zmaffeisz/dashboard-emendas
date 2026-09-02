@@ -54,13 +54,35 @@
 ### Entrada em lote no cadastro de emendas
 
 O modal **Nova emenda** oferece `templates/modelo-itens-emenda.xlsx`, com as colunas
-Item, Valor unitário, Status inicial, Unidade e Quantidade. A colagem no campo
+Item, Valor unitário, Status inicial, Unidade e Quantidade. Unidade e Status inicial
+têm listas suspensas e validação de parada no Excel (linhas 2–1001). As opções ficam
+na aba Listas, fotografia do catálogo ativo em 02/09/2026; o arquivo estático precisa
+ser atualizado quando unidades ou status forem alterados. A colagem no campo
 Item/Descrição usa `js/modules/emendas/emendas-planilha.js` para validar todas as
 linhas antes de preencher o formulário. Unidade e status (opcional) precisam corresponder
 ao cadastro disponível. Descrição, valor e status iguais agrupam as unidades no mesmo
 item; linhas repetidas da mesma unidade somam a quantidade. Itens já preenchidos são
 preservados. A colagem não grava dados: **Salvar emenda** mantém o fluxo existente,
 criando uma linha em `emenda_itens` por item/unidade e calculando unitário × quantidade.
+
+### Edição do planejamento sem vínculo
+
+O modal **Editar emenda** consulta `listar_emenda_itens_edicao` e mostra cada linha de
+`emenda_itens` com motivo de bloqueio e versão. Apenas itens livres permitem editar
+descrição, quantidade e valor unitário planejado, ou marcar exclusão. Os campos de
+execução financeira não são preenchidos por essa edição; descrição/quantidade exibidas
+acompanham o planejamento enquanto o item não tem vínculo.
+
+`salvar_emenda_com_itens_livres` salva cabeçalho e alterações em uma transação, sob RLS
+e permissão de administrador/seção. Confere novamente cada vínculo e a versão após
+travar as linhas, evitando salvar parcialmente se o estado mudou. O helper privado
+compara também referências de outros domínios invisíveis pela RLS do chamador.
+Planejamento cancelado e ocorrências ainda são histórico vinculado; não são apagados.
+Exclusões só atingem o item livre, sem limpeza em cascata. Cancelar descarta as marcas.
+
+Publicação: `20260902204904_editar_emenda_itens_sem_vinculo.sql` aplicada no projeto
+oficial em 02/09/2026, com recarga do cache da API. Em outros ambientes, aplicar antes
+do frontend. Sem as RPCs, o modal informa falha e não permite salvar.
 
 ## 3. Reflexo automático entre abas (fonte única da verdade)
 

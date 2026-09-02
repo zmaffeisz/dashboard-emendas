@@ -1,0 +1,42 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Teste modal editar emenda</title><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../dashboard.css"></head><body>
+<pre id="resultado" style="position:fixed;bottom:0;z-index:10000;background:white;max-height:100px;overflow:auto">Executando...</pre>
+<script>
+const _sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const _isAdmin=()=>true;
+const cachedEmendas=[{id:'emenda-teste',tipo:'FEDERAL',emenda:'TESTE LOCAL',ano:2026,parlamentar:'Parlamentar de teste',valor_cedido:300000,objeto:'Aquisição de equipamentos'}];
+const allRows=[];
+let saldoEmendaCarregado=true, enviados=[], falharLeitura=false;
+const dadosItens=[{id:'livre',versao:'v1',item:'Freezer Vertical',qtde:1,valor:3867,unidade:'CAPS AD III - SACA SÓ',bloqueio:null},
+ {id:'preso',versao:'v2',item:'Monitor com processo',qtde:1,valor:1000,unidade:'CAPS AD III - SACA SÓ',bloqueio:'Processo vinculado'}];
+const sb={from(){return{select(){return this},eq(){return this},order:async()=>({data:[{nome:'Parlamentar de teste'}]})}},
+ rpc:async(nome,args)=>{if(nome==='listar_emenda_itens_edicao')return falharLeitura?{error:{message:'Falha simulada'}}:{data:dadosItens};enviados.push({nome,args});return{data:{atualizados:1,excluidos:0}}}};
+function showMsg(prefix,texto){document.getElementById(prefix+'-msg').textContent=texto}
+const loadData=async()=>{};
+// Evita que o temporizador de fechamento oculte o formulário durante a inspeção.
+const setTimeout=()=>{};
+</script>
+<script type="module">
+try{
+ const html=new DOMParser().parseFromString(await(await fetch('../index.html')).text(),'text/html');
+ document.body.appendChild(html.getElementById('modal-editar-emenda'));
+ const source=await(await fetch('../js/legacy/60-emendas-dashboard.js')).text();
+ const s=document.createElement('script');
+ s.textContent=source.slice(source.indexOf('// Edição administrativa da emenda'),source.indexOf('// ═══ SALDO DAS EMENDAS')).replace("import('../modules/emendas/emendas-edicao.js')","import('../js/modules/emendas/emendas-edicao.js')");
+ document.body.appendChild(s);
+ const checks=[],ok=(v,m)=>{if(!v)throw new Error(m);checks.push('OK: '+m)};
+ await abrirEditarEmenda('emenda-teste');
+ ok(document.querySelectorAll('#edem-itens fieldset').length===2,'Modal real carrega os itens');
+ const qtde=document.querySelector('#edem-itens [data-campo=qtde]');qtde.value='2';qtde.dispatchEvent(new Event('input',{bubbles:true}));
+ await salvarEditarEmenda();
+ ok(enviados.length===1&&enviados[0].nome==='salvar_emenda_com_itens_livres','Uma única operação salva cabeçalho e itens');
+ ok(enviados[0].args.p_itens.length===1&&enviados[0].args.p_itens[0].qtde===2,'Não envia alteração de item bloqueado');
+ ok(!saldoEmendaCarregado,'Invalida saldo após salvar');
+ fecharEditarEmenda();falharLeitura=true;
+ await abrirEditarEmenda('emenda-teste');
+ ok(document.getElementById('edem-salvar').disabled,'Falha de vínculos bloqueia o salvamento');
+ await salvarEditarEmenda();
+ ok(enviados.length===1,'Não grava sem conferência de vínculos');
+ fecharEditarEmenda();falharLeitura=false;await abrirEditarEmenda('emenda-teste');
+ document.getElementById('resultado').textContent=checks.join('\n')+'\nTODOS OS TESTES PASSARAM';document.body.dataset.testStatus='passed';
+}catch(e){document.getElementById('resultado').textContent=e.stack;document.body.dataset.testStatus='failed';console.error(e)}
+</script></body></html>

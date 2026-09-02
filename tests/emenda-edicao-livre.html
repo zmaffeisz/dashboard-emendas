@@ -1,0 +1,27 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Teste edição de itens livres</title><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../dashboard.css"></head>
+<body><pre id="resultado">Executando...</pre><section id="fixture" style="max-width:900px;margin:20px auto"><h2>Itens da emenda</h2><div id="itens"></div><div data-resumo-itens></div></section>
+<script type="module">
+import {montarEditorItens} from '../js/modules/emendas/emendas-edicao.js';
+const livre={id:'livre',versao:'v1',item:'Freezer Vertical',unidade:'CAPS AD III - SACA SÓ',qtde:1,valor:3867,bloqueio:null};
+const vinculado={...livre,id:'vinculado',item:'Monitor com processo',bloqueio:'Item de processo/contrato vinculado'};
+try{
+ const checks=[],ok=(v,m)=>{if(!v)throw new Error(m);checks.push('OK: '+m)};
+ const box=document.getElementById('itens'), editor=montarEditorItens(box,[livre,vinculado]);
+ const [a,b]=box.querySelectorAll('fieldset');
+ ok(!a.disabled&&b.disabled,'Somente item livre habilitado');
+ a.querySelector('[data-campo=qtde]').value='3';
+ a.querySelector('[data-campo=valor]').value='4000';
+ a.dispatchEvent(new Event('input',{bubbles:true}));
+ ok(editor.alteracoes()[0].qtde===3&&editor.alteracoes().length===1,'Coleta somente alteração livre');
+ ok(a.querySelector('[data-total]').textContent.includes('12.000,00'),'Recalcula total planejado');
+ a.querySelector('[data-excluir]').click();
+ ok(editor.alteracoes()[0].excluir&&a.querySelector('input').disabled,'Exclusão apenas marcada');
+ a.querySelector('[data-excluir]').click();
+ ok(!editor.alteracoes()[0].excluir&&!a.querySelector('input').disabled,'Desfaz exclusão sem perder edição');
+ b.querySelector('[data-excluir]').click();
+ ok(editor.alteracoes().length===1,'Botão bloqueado não marca exclusão');
+ montarEditorItens(box,[livre,vinculado]);
+ ok(box.querySelector('[data-campo=qtde]').value==='1','Reabrir descarta alterações não salvas');
+ document.getElementById('resultado').textContent=checks.join('\n')+'\nTODOS OS TESTES PASSARAM';document.body.dataset.testStatus='passed';
+}catch(e){document.getElementById('resultado').textContent=e.stack;document.body.dataset.testStatus='failed';console.error(e)}
+</script></body></html>

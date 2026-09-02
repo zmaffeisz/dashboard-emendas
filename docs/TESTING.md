@@ -13,8 +13,25 @@
 
 ## 2. Roteiro de teste manual (smoke)
 
+### Regressão — edição de itens livres na emenda
+
+- `node tests/emenda-edicao-livre.test.mjs`: valida alterações, exclusões e bloqueios.
+- Abrir `tests/emenda-edicao-livre.html` e `tests/emenda-edicao-modal.html` via HTTP:
+  devem mostrar **TODOS OS TESTES PASSARAM**, sem gravar no banco.
+- `tests/emenda-edicao-livre.sql`: somente em transação com ROLLBACK, carregando a
+  migration na mesma transação. Usa dados sintéticos e verifica RLS como authenticated,
+  vínculo indireto e criado após abrir, edição planejada sem execução fictícia, versão
+  desatualizada, exclusão e reversão integral quando um dos itens estiver bloqueado.
+- No modal, ajustar quantidade/valor e conferir total; marcar exclusão, desfazer e
+  cancelar. Itens vinculados devem mostrar o motivo e controles desabilitados.
+- Depois da publicação autorizada, confirmar recarga de Emendas e Saldo após salvar.
+
 ### Regressão — modelo e colagem de itens em Nova emenda
 
+- Rodar `python tests/emenda-modelo-listas.test.py`: confere as duas validações de lista,
+  seus intervalos/fontes, bloqueio de valores inválidos e integridade do Excel.
+- No Excel, clicar em C2 e D2: conferir as setas e as opções de status/unidade. Digitar
+  um valor fora da lista deve gerar erro de parada. Repetir em C1001 e D1001.
 - Rodar `node tests/emenda-colagem-planilha.test.mjs`: valida colunas, cabeçalho opcional,
   valores brasileiros, agrupamento por item/unidade e rejeição integral de dados inválidos.
 - Abrir `tests/emenda-colagem-planilha.html` no servidor local: usa o formulário real,

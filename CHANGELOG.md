@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-09-02 — Editar itens sem vínculo no modal da emenda
+
+- **Editar emenda** lista os itens e permite ao administrador ajustar descrição,
+  quantidade e valor unitário planejado ou marcar exclusões, com opção de desfazer.
+- Itens com processo, item de contrato, planejamento/execução de ata, empenho, NF,
+  ocorrência ou evidência legada de execução ficam bloqueados com o motivo.
+- Duas RPCs novas conferem vínculos no banco e salvam cabeçalho/itens atomicamente,
+  com RLS, controle de versão e trava contra criação concorrente de vínculos.
+- A exclusão deste fluxo nunca usa cascade. Valores executados não são criados ou
+  sobrescritos. Falha na consulta bloqueia o salvamento por segurança.
+- Migration `20260902204904_editar_emenda_itens_sem_vinculo.sql` aplicada no banco
+  oficial com autorização do usuário; cache da API recarregado. Os testes de salvamento
+  usaram dados sintéticos integralmente revertidos, e a consulta da emenda apresentada
+  retornou 40 itens livres. Nenhum item real foi alterado ou excluído na implantação.
+
+## 2026-09-02 — Seleção de unidade e status no modelo de emendas
+
+- O modelo Excel agora inclui listas suspensas de **Unidade** e **Status inicial**,
+  com validação de parada para opções fora do cadastro, nas linhas 2 a 1001.
+- A aba **Listas** contém 53 unidades ativas e 20 status manuais de licitação,
+  consultados somente para leitura no banco oficial em 02/09/2026. O modelo é
+  estático: alterações futuras do catálogo exigem atualização do arquivo.
+- Instruções e download atualizados; preservados o status opcional e a validação da colagem.
+
 ## 2026-09-02 — Modelo Excel e colagem no cadastro de emendas
 
 - **Cadastrar nova emenda** passa a oferecer **Baixar planilha modelo**, com as colunas
