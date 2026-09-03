@@ -1025,9 +1025,18 @@
         <table class="inv-table">
           <thead>
             <tr>
-              <th style="width:90px">Tipo</th><th style="width:260px">Item</th><th style="width:230px">Localização atual</th><th style="width:110px">Situação</th><th style="width:200px">Empresa</th>
-              <th style="width:110px">Patrimônio</th><th style="width:140px">Entrega na Unidade</th>
-              <th style="width:125px">Empenho</th><th style="width:140px">Emenda</th><th style="width:260px">Contrato/ATA</th><th style="width:210px">Ações</th>
+              <th style="width:90px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('tipo')">Tipo <span class="sort-icon" id="inv-si-tipo"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-tipo" onclick="openInvHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
+              <th style="width:260px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('item')">Item <span class="sort-icon" id="inv-si-item"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-item" onclick="openInvHeaderFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="width:230px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('unidade')">Localização atual <span class="sort-icon" id="inv-si-unidade"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-unidade" onclick="openInvHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="width:110px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('situacao')">Situação <span class="sort-icon" id="inv-si-situacao"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-situacao" onclick="openInvHeaderFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
+              <th style="width:200px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('empresa')">Empresa <span class="sort-icon" id="inv-si-empresa"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-empresa" onclick="openInvHeaderFilter(event,'empresa')" title="Filtrar">▾</span></span></th>
+              <th style="width:110px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('patrimonio')">Patrimônio <span class="sort-icon" id="inv-si-patrimonio"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-patrimonio" onclick="openInvHeaderFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
+              <th style="width:130px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('data_recebimento')">Data da entrega <span class="sort-icon" id="inv-si-data_recebimento"> ↓</span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-data_recebimento" onclick="openInvHeaderFilter(event,'data_recebimento')" title="Filtrar">▾</span></span></th>
+              <th style="width:175px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('data_entrega_unidade')">Data da entrega na unidade <span class="sort-icon" id="inv-si-data_entrega_unidade"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-data_entrega_unidade" onclick="openInvHeaderFilter(event,'data_entrega_unidade')" title="Filtrar">▾</span></span></th>
+              <th style="width:125px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('empenho')">Empenho <span class="sort-icon" id="inv-si-empenho"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-empenho" onclick="openInvHeaderFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
+              <th style="width:140px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('emenda')">Emenda <span class="sort-icon" id="inv-si-emenda"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-emenda" onclick="openInvHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
+              <th style="width:260px"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="invSort('contrato')">Contrato/ATA <span class="sort-icon" id="inv-si-contrato"></span></span><span class="hdr-filter-btn inv-header-filter" id="inv-hf-contrato" onclick="openInvHeaderFilter(event,'contrato')" title="Filtrar">▾</span></span></th>
+              <th style="width:210px">Ações</th>
             </tr>
           </thead>
           <tbody id="inv-body"></tbody>
@@ -3302,7 +3311,7 @@
 
 <script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js?v=20260827-hierarquia-org-1"></script>
-<script src="js/legacy/10-chamados-inventario.js?v=20260901-categorias-multiplas-1"></script>
+<script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20260901-categorias-multiplas-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260901-servico-mensal-contrato-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>

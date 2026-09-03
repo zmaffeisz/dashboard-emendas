@@ -701,6 +701,123 @@ async function salvarControleChamado(){
 }
 
 // ═══ INVENTÁRIO GERAL ═══
+const INV_HEADER_COLS={
+  tipo:{get:r=>r.tipo||'',disp:v=>v||'(vazio)'},
+  item:{get:r=>r.item||'',disp:v=>v||'(vazio)'},
+  unidade:{get:r=>r.unidade||'',disp:v=>v||'(vazio)'},
+  situacao:{get:r=>r.situacao_atual||'ATIVO',disp:v=>({ATIVO:'Ativo',EMPRESTADO:'Emprestado',BAIXADO:'Baixado'}[v]||v||'(vazio)')},
+  empresa:{get:r=>r.empresa||'',disp:v=>v||'(vazio)'},
+  patrimonio:{get:r=>r.patrimonio||'',disp:v=>v||'(vazio)'},
+  data_recebimento:{get:r=>r.data_recebimento||'',disp:v=>v?fmtDate(v):'(vazio)'},
+  data_entrega_unidade:{get:r=>r.data_entrega_unidade||'',disp:v=>v?fmtDate(v):'(vazio)'},
+  empenho:{get:r=>r.empenho||'',disp:v=>v||'(vazio)'},
+  emenda:{get:r=>r.emenda?(r.emenda+(r.emenda_ano?'/'+r.emenda_ano:'')):'',disp:v=>v||'(vazio)'},
+  contrato:{get:r=>r.contrato||'',disp:v=>v||'(vazio)'}
+};
+let _invHeaderFilters=Object.fromEntries(Object.keys(INV_HEADER_COLS).map(k=>[k,[]]));
+let _invHeaderCol=null, _invHeaderPending=[];
+let _invSortCol='data_recebimento', _invSortAsc=false;
+
+function _invHeaderUnique(col){
+  const cfg=INV_HEADER_COLS[col];
+  return [...new Set(inventarioRows.map(cfg.get).map(v=>v==null?'':String(v)))]
+    .sort((a,b)=>cfg.disp(a).localeCompare(cfg.disp(b),'pt-BR',{numeric:true}));
+}
+function _ensureInvHeaderDropdown(){
+  let dd=document.getElementById('inv-header-dropdown');
+  if(dd) return dd;
+  dd=document.createElement('div'); dd.id='inv-header-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:240px;padding:.625rem';
+  dd.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:.375rem">
+      <button onclick="invHeaderSort(true)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↑ Classificar A → Z</button>
+      <button onclick="invHeaderSort(false)" style="text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:4px">↓ Classificar Z → A</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:.375rem 0">
+    <input type="text" id="inv-header-search" placeholder="🔍 Buscar..." oninput="_invHeaderRenderList()" style="width:100%;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.375rem;outline:none;box-sizing:border-box;background:var(--surface);color:var(--text)">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.375rem">Selecionar <a href="#" onclick="_invHeaderSelectAll(true);return false" style="color:var(--blue);text-decoration:none">tudo: <span id="inv-header-count">0</span></a> — <a href="#" onclick="_invHeaderSelectAll(false);return false" style="color:var(--blue);text-decoration:none">Limpar</a></div>
+    <div id="inv-header-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeInvHeaderFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmInvHeaderFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd); return dd;
+}
+function openInvHeaderFilter(evento,col){
+  evento.stopPropagation();
+  const dd=_ensureInvHeaderDropdown();
+  if(_invHeaderCol===col&&dd.style.display==='block'){closeInvHeaderFilter();return;}
+  _invHeaderCol=col;
+  const todos=_invHeaderUnique(col), atuais=_invHeaderFilters[col]||[];
+  _invHeaderPending=atuais.length?[...atuais]:[...todos];
+  document.getElementById('inv-header-search').value='';
+  _invHeaderRenderList();
+  const rect=evento.currentTarget.getBoundingClientRect(), largura=dd.offsetWidth||240;
+  let left=rect.left;
+  if(left+largura>window.innerWidth-8) left=window.innerWidth-largura-8;
+  dd.style.left=Math.max(8,left)+'px'; dd.style.top=(rect.bottom+4)+'px'; dd.style.display='block';
+  setTimeout(()=>document.getElementById('inv-header-search')?.focus(),50);
+}
+function _invHeaderRenderList(){
+  if(!_invHeaderCol) return;
+  const cfg=INV_HEADER_COLS[_invHeaderCol], todos=_invHeaderUnique(_invHeaderCol);
+  const q=normalizar(document.getElementById('inv-header-search')?.value||'');
+  const visiveis=q?todos.filter(v=>normalizar(cfg.disp(v)).includes(q)):todos;
+  document.getElementById('inv-header-count').textContent=todos.length;
+  document.getElementById('inv-header-list').innerHTML=visiveis.map(v=>{
+    const checked=_invHeaderPending.includes(v)?'checked':'';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px"><input type="checkbox" value="${_sanEsc(v)}" ${checked} onchange="_invHeaderToggle(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${_sanEsc(cfg.disp(v))}</label>`;
+  }).join('')||'<div style="padding:10px;font-size:12px;color:var(--text3);text-align:center">Nenhum resultado</div>';
+}
+function _invHeaderToggle(cb){
+  if(cb.checked){if(!_invHeaderPending.includes(cb.value))_invHeaderPending.push(cb.value);}
+  else _invHeaderPending=_invHeaderPending.filter(v=>v!==cb.value);
+}
+function _invHeaderSelectAll(selecionar){
+  if(!_invHeaderCol) return;
+  _invHeaderPending=selecionar?_invHeaderUnique(_invHeaderCol):[];
+  _invHeaderRenderList();
+}
+function confirmInvHeaderFilter(){
+  if(!_invHeaderCol) return;
+  const todos=_invHeaderUnique(_invHeaderCol);
+  _invHeaderFilters[_invHeaderCol]=(_invHeaderPending.length===0||_invHeaderPending.length===todos.length)?[]:[..._invHeaderPending];
+  closeInvHeaderFilter(); filtrarInventario();
+}
+function closeInvHeaderFilter(){
+  const dd=document.getElementById('inv-header-dropdown'); if(dd) dd.style.display='none';
+  _invHeaderCol=null;
+}
+function _invUpdateHeaderIndicators(){
+  for(const col of Object.keys(INV_HEADER_COLS)){
+    document.getElementById('inv-hf-'+col)?.classList.toggle('active',(_invHeaderFilters[col]||[]).length>0);
+    const icon=document.getElementById('inv-si-'+col);
+    if(icon) icon.textContent=_invSortCol===col?(_invSortAsc?' ↑':' ↓'):'';
+  }
+}
+function invSort(col){
+  if(_invSortCol===col) _invSortAsc=!_invSortAsc;
+  else{_invSortCol=col;_invSortAsc=true;}
+  filtrarInventario();
+}
+function invHeaderSort(asc){
+  if(!_invHeaderCol) return;
+  _invSortCol=_invHeaderCol; _invSortAsc=asc;
+  closeInvHeaderFilter(); filtrarInventario();
+}
+function _invSortRows(a,b){
+  const cfg=INV_HEADER_COLS[_invSortCol]||INV_HEADER_COLS.data_recebimento;
+  const av=cfg.get(a),bv=cfg.get(b),aVazio=av==null||String(av)==='',bVazio=bv==null||String(bv)==='';
+  if(aVazio!==bVazio) return aVazio?1:-1;
+  let cmp=String(av||'').localeCompare(String(bv||''),'pt-BR',{numeric:true,sensitivity:'base'});
+  if(!_invSortAsc) cmp*=-1;
+  return cmp||String(a.item||'').localeCompare(String(b.item||''),'pt-BR',{sensitivity:'base'});
+}
+document.addEventListener('click',evento=>{
+  const dd=document.getElementById('inv-header-dropdown');
+  if(dd&&dd.style.display==='block'&&!dd.contains(evento.target)&&!evento.target.closest?.('.inv-header-filter')) closeInvHeaderFilter();
+});
+
 function _popularFiltrosInv(){
   const unidades=[...new Set(inventarioRows.map(r=>r.unidade).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const sel=document.getElementById('finv-unidade');
@@ -720,6 +837,8 @@ function clearAllInv(){
   const categoria=document.getElementById('finv-categoria');
   if(categoria){[...categoria.options].forEach(o=>o.selected=false);categoria._ss?.render();}
   const b=document.getElementById('finv-busca');if(b)b.value='';
+  Object.keys(_invHeaderFilters).forEach(col=>{_invHeaderFilters[col]=[];});
+  _invSortCol='data_recebimento'; _invSortAsc=false;
   filtrarInventario();
 }
 
@@ -735,8 +854,12 @@ function filtrarInventario(){
     if(categorias.length&&!((!r.categoria&&categorias.includes('__sem__'))||categorias.includes(r.categoria))) return false;
     if(situacao&&(r.situacao_atual||'ATIVO')!==situacao) return false;
     if(q){const hay=[r.item,r.categoria,r.marca,r.modelo,r.marca_modelo,r.empresa,r.patrimonio,r.empenho,r.nota_fiscal,r.emenda,r.contrato,r.unidade,r.unidade_origem,r.processo,r.numero_serie,r.emprestado_para].filter(Boolean).join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    for(const col of Object.keys(_invHeaderFilters)){
+      const selecionados=_invHeaderFilters[col];
+      if(selecionados.length&&!selecionados.includes(String(INV_HEADER_COLS[col].get(r)??''))) return false;
+    }
     return true;
-  });
+  }).sort(_invSortRows);
   const total=_invFiltered.length;
   const aq=_invFiltered.filter(r=>r.tipo==='Aquisição').length;
   const ata=_invFiltered.filter(r=>r.tipo==='ATA').length;
@@ -746,13 +869,14 @@ function filtrarInventario(){
   document.getElementById('inv-ata').textContent=ata;
   document.getElementById('inv-unids').textContent=unids;
   document.getElementById('inv-count').textContent=total+' item(s)';
+  _invUpdateHeaderIndicators();
   renderInventario();
 }
 
 function renderInventario(){
   const tbody=document.getElementById('inv-body');
   if(!_invFiltered.length){
-    tbody.innerHTML='<tr><td colspan="11"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item no inventário ainda. Confirme a entrega na unidade para que os itens apareçam aqui.</div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="12"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item encontrado com os filtros atuais.</div></td></tr>';
     return;
   }
   tbody.innerHTML=_invFiltered.map((r,i)=>{
@@ -768,6 +892,7 @@ function renderInventario(){
       <td style="padding:6px 8px;white-space:nowrap"><span class="inv-status inv-status-${situacaoClass}">${_sanEsc(situacaoLabel)}</span></td>
       <td style="padding:6px 8px;font-size:12px;max-width:160px;white-space:normal;word-break:break-word" title="${_sanEsc(r.empresa)}">${_sanEsc(r.empresa||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-weight:500">${_sanEsc(r.patrimonio||'—')}</td>
+      <td style="padding:6px 8px;white-space:nowrap">${r.data_recebimento?fmtDate(r.data_recebimento):'—'}</td>
       <td style="padding:6px 8px;white-space:nowrap">${r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):'—'}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-size:11px;color:var(--text2)">${_sanEsc(r.empenho||'—')}</td>
       <td style="padding:6px 8px;white-space:nowrap;font-size:11px;color:var(--text2)">${_sanEsc(emendaLabel)}</td>

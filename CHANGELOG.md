@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-03 — Datas e filtros no Inventário
+
+- O **Inventário Geral** passa a mostrar separadamente **Data da entrega** e **Data da
+  entrega na unidade** para aquisições e execuções de ATA.
+- A ordem inicial usa a data da entrega, da mais recente para a mais antiga, mantendo
+  registros sem data ao final.
+- Todas as colunas informativas ganharam filtro e ordenação no cabeçalho, no mesmo padrão
+  visual da aba Emendas.
+
 ## 2026-09-03 — Cadastro de parlamentar dentro da nova emenda
 
 - O campo **Parlamentar** da criação de emenda agora oferece **Cadastrar novo
