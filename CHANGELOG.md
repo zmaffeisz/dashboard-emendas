@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-03 — Valor licitado preservado após contratação
+
+- A coluna **Vl. licit.** da aba Emendas passa a exibir o valor unitário histórico da
+  licitação mesmo quando o item já foi contratado, recebido ou entregue.
+- A mesma informação histórica agora permanece disponível na ordenação, nos filtros e
+  na exportação Excel, sem alterar os valores armazenados no banco.
+
 ## 2026-09-03 — Datas e filtros no Inventário
 
 - O **Inventário Geral** passa a mostrar separadamente **Data da entrega** e **Data da
