@@ -169,6 +169,12 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue)}
 .form-group textarea{width:100%;resize:vertical}
 .form-group input[readonly]{background:var(--surface2);color:var(--text3)}
+.ne-parlamentar-novo{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;margin-top:3px}
+.ne-parlamentar-novo .btn-secondary{height:34px;padding:0 10px;white-space:nowrap}
+.ne-parlamentar-msg{min-height:14px;font-size:10px;line-height:1.35;color:var(--text3)}
+.ne-parlamentar-msg.ok{color:var(--green-text)}
+.ne-parlamentar-msg.err{color:var(--red)}
+@media(max-width:600px){.ne-parlamentar-novo{grid-template-columns:1fr 1fr}.ne-parlamentar-novo input{grid-column:1/-1}}
 
 /* Recebimento em lote: os campos dinâmicos também precisam de fundo explícito.
    Sem esta regra, o color-scheme do navegador pode renderizá-los pretos no tema claro. */

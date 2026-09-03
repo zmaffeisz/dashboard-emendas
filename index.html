@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260730-ata-reajustes-2">
+<link rel="stylesheet" href="styles.css?v=20260903-parlamentar-inline-1">
   <link rel="stylesheet" href="dashboard.css?v=20260901-servico-mensal-contrato-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -384,7 +384,13 @@
       <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="ne-emenda" placeholder="ex: 202300546528"></div>
       <div class="form-group"><div class="form-label">Ano *</div><input type="number" id="ne-ano" placeholder="ex: 2026" required></div>
       <div class="form-group"><div class="form-label">Parlamentar *</div>
-        <select id="ne-parlamentar-sel" required><option value="">Selecione...</option></select>
+        <select id="ne-parlamentar-sel" required onchange="neParlamentarChange()"><option value="">Selecione...</option></select>
+        <div id="ne-parlamentar-novo" class="ne-parlamentar-novo" style="display:none">
+          <input type="text" id="ne-parlamentar-nome" maxlength="160" placeholder="Nome completo do parlamentar" onkeydown="if(event.key==='Enter'){event.preventDefault();neCadastrarParlamentar()}">
+          <button type="button" id="ne-parlamentar-cadastrar" class="btn-secondary" onclick="neCadastrarParlamentar()">Cadastrar</button>
+          <button type="button" class="btn-secondary" onclick="neCancelarNovoParlamentar()">Cancelar</button>
+        </div>
+        <span id="ne-parlamentar-msg" class="ne-parlamentar-msg" aria-live="polite"></span>
       </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido GLOBAL (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000" oninput="neRecalc()"></div>
@@ -403,7 +409,7 @@
 
     <div class="form-actions" style="margin-top:1.25rem">
       <button class="btn-primary" onclick="salvarNovaEmenda()">Salvar emenda</button>
-      <button class="btn-secondary" onclick="limparForm('ne');neInitItens()">Limpar</button>
+      <button class="btn-secondary" onclick="limparForm('ne');neParlamentarChange();neInitItens()">Limpar</button>
       <button class="btn-secondary" onclick="fecharModalEdicao('nova-emenda')">Fechar</button>
       <span id="ne-msg" class="fmsg"></span>
     </div>
@@ -3301,8 +3307,8 @@
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260901-servico-mensal-contrato-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260901-categorias-licitacao-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260901-categorias-multiplas-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260830-dados-operacionais-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260903-parlamentar-inline-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260903-parlamentar-inline-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

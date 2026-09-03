@@ -1805,13 +1805,14 @@ function enhanceSelect(sel, opts){
     value.classList.toggle('ss-ph',!has);
   }
   function pick(o){
+    if(o.dataset.createOption==='true') sel.dataset.searchTerm=input.value.trim();
     sel.selectedIndex=[...sel.options].indexOf(o);
     sel.dispatchEvent(new Event('change',{bubbles:true}));
     renderValue(); close();
   }
   function renderDropdown(){
     const q=input.value.trim().toLowerCase();
-    const list=allOpts().filter(o=>o.textContent.toLowerCase().includes(q));
+    const list=allOpts().filter(o=>o.dataset.alwaysShow==='true'||o.textContent.toLowerCase().includes(q));
     if(!list.length){ dropdown.innerHTML='<div class="ss-empty">Nenhum resultado</div>'; return; }
     dropdown.innerHTML='';
     list.forEach((o,i)=>{

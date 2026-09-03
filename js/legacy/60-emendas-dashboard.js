@@ -1997,7 +1997,7 @@ function calcTotal(){
 }
 
 function showMsg(p,txt,tipo){const el=document.getElementById(p+"-msg");if(!el)return;el.textContent=txt;el.className="fmsg "+tipo;if(tipo==="ok")setTimeout(()=>el.className="fmsg",6000)}
-function limparForm(p){document.querySelectorAll(`[id^="${p}-"]`).forEach(el=>{if(el.tagName==="SELECT")el.selectedIndex=0;else el.value=""});showMsg(p,"","ok")}
+function limparForm(p){document.querySelectorAll(`[id^="${p}-"]`).forEach(el=>{if(el.tagName==="SELECT"){el.selectedIndex=0;el._ss?.render?.();}else el.value=""});showMsg(p,"","ok")}
 function limparStatus(){
   ["as-status","as-busca-item"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
   resetModalFilters();
@@ -2005,15 +2005,80 @@ function limparStatus(){
   showMsg("as","","ok");
 }
 
-async function preencherSelectParlamentares(){
+async function preencherSelectParlamentares(valorAtual){
   const sel=document.getElementById("ne-parlamentar-sel"); if(!sel) return;
-  const {data}=await sb.from('parlamentares').select('nome').eq('ativo',true).order('nome');
+  const manter=valorAtual||'';
+  const {data,error}=await sb.from('parlamentares').select('nome').eq('ativo',true).order('nome');
+  if(error){
+    _neParlamentarMsg('Não foi possível carregar os parlamentares.','err');
+    return;
+  }
   sel.innerHTML='<option value="">Selecione...</option>'
-    + (data||[]).map(p=>`<option value="${_sanEsc(p.nome)}">${_sanEsc(p.nome)}</option>`).join('');
+    + (data||[]).map(p=>`<option value="${_sanEsc(p.nome)}">${_sanEsc(p.nome)}</option>`).join('')
+    + '<option value="__novo__" data-always-show="true" data-create-option="true">➕ Cadastrar novo parlamentar</option>';
+  if(manter && (data||[]).some(p=>p.nome===manter)) sel.value=manter;
+  else sel.value='';
+  sel._ss?.render?.();
 }
 async function obterOuCriarParlamentar(nome){
-  if(!nome) return;
-  await sb.from('parlamentares').upsert({nome},{onConflict:'nome',ignoreDuplicates:true});
+  const nomeLimpo=String(nome||'').replace(/\s+/g,' ').trim();
+  if(!nomeLimpo) throw new Error('Informe o nome do parlamentar.');
+  const {data:existentes,error:erroBusca}=await sb.from('parlamentares').select('id,nome,ativo');
+  if(erroBusca) throw erroBusca;
+  const existente=(existentes||[]).find(p=>String(p.nome||'').trim().localeCompare(nomeLimpo,'pt-BR',{sensitivity:'accent'})===0);
+  if(existente){
+    if(existente.ativo===false){
+      const {error}=await sb.from('parlamentares').update({ativo:true}).eq('id',existente.id);
+      if(error) throw error;
+    }
+    return existente.nome;
+  }
+  const {data:novo,error}=await sb.from('parlamentares')
+    .insert({nome:nomeLimpo,revisado:typeof _isAdmin==='function'&&_isAdmin()})
+    .select('nome').single();
+  if(error) throw error;
+  return novo.nome;
+}
+function _neParlamentarMsg(texto,tipo){
+  const el=document.getElementById('ne-parlamentar-msg'); if(!el) return;
+  el.textContent=texto||''; el.className='ne-parlamentar-msg'+(tipo?(' '+tipo):'');
+}
+function neParlamentarChange(){
+  const sel=document.getElementById('ne-parlamentar-sel');
+  const wrap=document.getElementById('ne-parlamentar-novo');
+  const inp=document.getElementById('ne-parlamentar-nome');
+  if(!sel||!wrap||!inp) return;
+  const criando=sel.value==='__novo__';
+  wrap.style.display=criando?'grid':'none';
+  _neParlamentarMsg('');
+  if(criando){
+    inp.value=sel.dataset.searchTerm||'';
+    delete sel.dataset.searchTerm;
+    setTimeout(()=>inp.focus(),0);
+  }else inp.value='';
+}
+function neCancelarNovoParlamentar(){
+  const sel=document.getElementById('ne-parlamentar-sel');
+  if(sel){ sel.value=''; sel._ss?.render?.(); }
+  neParlamentarChange();
+}
+async function neCadastrarParlamentar(){
+  const inp=document.getElementById('ne-parlamentar-nome');
+  const btn=document.getElementById('ne-parlamentar-cadastrar');
+  const nome=String(inp?.value||'').replace(/\s+/g,' ').trim();
+  if(nome.length<3){ _neParlamentarMsg('Informe o nome completo do parlamentar.','err'); inp?.focus(); return; }
+  const rotulo=btn?.textContent;
+  if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
+  try{
+    const nomeSalvo=await obterOuCriarParlamentar(nome);
+    await preencherSelectParlamentares(nomeSalvo);
+    neParlamentarChange();
+    _neParlamentarMsg(`✓ ${nomeSalvo} cadastrado e selecionado.`,'ok');
+  }catch(error){
+    _neParlamentarMsg('Não foi possível cadastrar: '+(error.message||error),'err');
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=rotulo; }
+  }
 }
 
 async function preencherSelectUnidades(selId, comNovo){

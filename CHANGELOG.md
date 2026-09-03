@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-03 — Cadastro de parlamentar dentro da nova emenda
+
+- O campo **Parlamentar** da criação de emenda agora oferece **Cadastrar novo
+  parlamentar** dentro da própria lista pesquisável, salva o nome e já o deixa selecionado.
+- Cadastros com o mesmo nome são reutilizados e parlamentares inativos são reativados,
+  evitando duplicidade exata por diferença apenas entre maiúsculas e minúsculas.
+
 ## 2026-09-03 — Destino e patrimônio por unidade física de ATA
 
 - Restaurada e preservada a identificação `EMENDA ... - UNIDADE` no cabeçalho das
