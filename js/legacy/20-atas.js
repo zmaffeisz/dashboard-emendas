@@ -1372,11 +1372,12 @@ function _renderDetalheExecAta(exec){
   const linhas=detalhe.unidades.map((u,i)=>{
     const nf=detalhe.notas.get(String(u.nota_fiscal_id))||{};
     return `<tr onclick="verTudoUnidadeExecAta('${_sanEsc(exec.id)}','${_sanEsc(u.id)}')" title="Clique para ver os detalhes desta unidade" style="cursor:pointer">
-      <td>${u.unidade_seq||i+1}</td><td><strong>${_sanEsc(u.patrimonio||'—')}</strong></td><td>${_sanEsc(u.numero_serie||'—')}</td>
+      <td>${u.unidade_seq||i+1}</td><td><strong>${_sanEsc(u.patrimonio||'—')}</strong></td><td>${_sanEsc(u.numero_serie||'—')}</td><td>${_sanEsc(u.unidade_nome||exec.unidade||'—')}</td>
       <td>${_sanEsc(nf.numero||exec.nf||'—')}</td><td>${u.recebido_em?fmtDate(u.recebido_em):'—'}</td><td>${_sanEsc(u.recebido_por||'—')}</td>
+      <td>${u.data_entrega_unidade?fmtDate(u.data_entrega_unidade):'—'}</td>
     </tr>`;
   }).join('');
-  const unidadesHtml=detalhe.unidades.length?`<div class="ata-exec-units-wrap"><table class="ata-exec-units-table"><thead><tr><th>#</th><th>Patrimônio</th><th>Nº de série</th><th>NF</th><th>Recebido em</th><th>Recebido por</th></tr></thead><tbody>${linhas}</tbody></table></div>`:`<div class="ata-exec-consolidated">${exec.possui_patrimonio===false?'Item sem patrimônio: quantidade mantida consolidada.':'Nenhuma unidade física/patrimônio registrado nesta execução.'}</div>`;
+  const unidadesHtml=detalhe.unidades.length?`<div class="ata-exec-units-wrap"><table class="ata-exec-units-table"><thead><tr><th>#</th><th>Patrimônio</th><th>Nº de série</th><th>Unidade de destino</th><th>NF</th><th>Recebido em</th><th>Recebido por</th><th>Entrega na unidade</th></tr></thead><tbody>${linhas}</tbody></table></div>`:`<div class="ata-exec-consolidated">${exec.possui_patrimonio===false?'Item sem patrimônio: quantidade mantida consolidada.':'Nenhuma unidade física/patrimônio registrado nesta execução.'}</div>`;
   return `<tr class="ata-exec-detail-row"><td colspan="14"><div class="ata-exec-detail-panel">
     <div class="ata-exec-detail-title"><span>Patrimônios e unidades recebidas</span><span>${detalhe.unidades.length} unidade(s) física(s)</span></div>${unidadesHtml}${_renderHistoricoReajustesExecAta(exec.id)}
   </div></td></tr>`;
@@ -1391,13 +1392,13 @@ function verTudoUnidadeExecAta(execId,unidadeId){
   const em=detalhe.emenda||{}, ec=em.emendas||{};
   const campos=[
     ['Item',exec.item],['Marca / Modelo',exec.marca_modelo],['Patrimônio',u.patrimonio],['Número de série',u.numero_serie],['Sequência da unidade',u.unidade_seq],
-    ['Unidade de destino',exec.unidade],['Empresa / Fornecedor',exec.empresa],['CNPJ',exec.cnpj],['Processo / CPL',exec.cpl],
+    ['Unidade de destino',u.unidade_nome||exec.unidade],['Empresa / Fornecedor',exec.empresa],['CNPJ',exec.cnpj],['Processo / CPL',exec.cpl],
     ['Contrato / ATA',exec.sim],['Quantidade da execução',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
     ['Origem do recurso',_ataOrigemRecursoLabel(exec.origem_recurso)],['Código SIAM',exec.codigo_siam_secretaria],['E-mail do solicitante',exec.email_solicitante],['Empenho',exec.empenho],
     ['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],['Data do recebimento',u.recebido_em||exec.dt_entrega],
     ['Recebido por',u.recebido_por],['Nota fiscal',nf.numero||exec.nf],['Data da NF',nf.data_emissao],['Valor da NF',nf.valor_total?_fmtBRL(nf.valor_total):''],
     ['Emenda',ec.emenda?`${ec.emenda}${ec.ano?'/'+ec.ano:''}`:''],['Parlamentar',ec.parlamentar],['Item da Emenda',em.item],
-    ['Data de entrega na unidade',exec.data_entrega_unidade],['Responsável na unidade',exec.termo_responsavel],['Cargo',exec.termo_cargo],['Observações',u.obs||exec.confirmacao_obs]
+    ['Data de entrega na unidade',u.data_entrega_unidade||exec.data_entrega_unidade],['Responsável na unidade',exec.termo_responsavel],['Cargo',exec.termo_cargo],['Observações',u.obs||exec.confirmacao_obs]
   ].filter(([,v])=>v!=null&&String(v).trim()!=='');
   const modal=document.getElementById('modal-inv-detalhe');
   document.body.appendChild(modal);

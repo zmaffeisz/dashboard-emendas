@@ -195,7 +195,7 @@ async function loadInventario(){
     const ataExecIds=[...new Set(atInventario.map(r=>r.id).filter(Boolean))];
     for(const ids of _chunkArray(ataExecIds,200)){
       const {data:uns}=await sb.from('atas_execucao_unidades')
-        .select('id,exec_id,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
+        .select('id,exec_id,patrimonio,numero_serie,unidade_seq,unidade_id,unidade_nome,data_entrega_unidade,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
         .in('exec_id',ids)
         .order('unidade_seq',{ascending:true});
       (uns||[]).forEach(u=>{ (ataUnidadesPorExec[String(u.exec_id)]=ataUnidadesPorExec[String(u.exec_id)]||[]).push(u); });
@@ -252,6 +252,7 @@ async function loadInventario(){
           _unidadeFisica:true,
           _origemTipo:'ATA',
           qtde:1,
+          unidade:u.unidade_nome||base.unidade,
           patrimonio:u.patrimonio||'',
           numero_serie:u.numero_serie||'',
           nota_fiscal:u.notas_fiscais?.numero||base.nota_fiscal,
@@ -259,6 +260,7 @@ async function loadInventario(){
           nf_data:_toISODate(u.notas_fiscais?.data_emissao)||base.nf_data,
           nf_valor:u.notas_fiscais?.valor_total||base.nf_valor,
           data_recebimento:_toISODate(u.recebido_em)||base.data_recebimento,
+          data_entrega_unidade:_toISODate(u.data_entrega_unidade)||base.data_entrega_unidade,
           recebido_por:u.recebido_por||base.recebido_por
         }));
       }else{

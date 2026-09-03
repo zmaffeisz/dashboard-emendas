@@ -222,6 +222,16 @@ armazenar valor** (evita duplicidade).
 | `patrimonio`, `numero_serie` | text | individuais e opcionais |
 | `recebido_em` | date | |
 
+### `atas_execucao_unidades`
+
+Uma linha por unidade física permanente recebida em uma execução de ATA. Além de
+`patrimonio`, `numero_serie`, `nota_fiscal_id` e `recebido_em`, cada linha pode guardar
+`unidade_id`, `unidade_nome` e `data_entrega_unidade`. Assim, uma execução agregada pode
+ter patrimônios destinados a unidades diferentes sem alterar a quantidade, o histórico
+ou a identificação `EMENDA ... - UNIDADE` mantida no campo `unidade` da execução pai.
+do pedido pai. O Inventário usa essa destinação individual como origem; movimentações
+posteriores continuam preservadas em `inventario_movimentacoes`.
+
 ### `entregas_prazos_historico`
 
 Histórico imutável das alterações da data limite no Controle de Entregas. Cada linha
@@ -261,6 +271,7 @@ Três tabelas separam claramente os níveis de valor:
 | `notas_fiscais` (20 col.) | **uma linha por NF** | `valor_total` (valor total da NF, **uma única vez**) |
 | `nota_fiscal_itens` | **rateio por item ou execução de ATA** | `valor_unitario`, `valor_total`, `quantidade` |
 | `itens_entregas_unidades` | por unidade física | **sem campo de valor** — só referencia `nota_fiscal_id` |
+| `atas_execucao_unidades` | por unidade física de ATA | **sem campo de valor** — só referencia `nota_fiscal_id` |
 | `nf_checklist_documentos` | catálogo de documentações do checklist | sem valor; define nome, descrição, ordem automática e escopo global |
 | `nf_checklist_documento_contratos` | documentação + contratos selecionados | vínculo N:N, sem valor |
 | `nf_checklist_marcacoes` | contrato + documento + competência mensal | `concluido`, responsável e data da marcação |

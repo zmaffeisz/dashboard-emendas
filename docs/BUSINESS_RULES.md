@@ -416,7 +416,11 @@
   Patrimônio e número de série são atributos opcionais: sua ausência nunca mantém um bem
   permanente consolidado. Materiais de consumo não criam essas linhas, não entram no
   Inventário e são concluídos no recebimento administrativo pelo almoxarifado. O registro
-  pai preserva a quantidade e o histórico do lote/pedido. Na lista de execuções das Atas,
+  pai preserva a quantidade e o histórico do lote/pedido. Em ATA, unidade de destino e
+  data de entrega pertencem também à unidade física, permitindo que um mesmo pedido
+  agregado seja distribuído entre locais diferentes. Quando o campo de unidade do registro
+  pai contém a identificação da emenda (`EMENDA ... - UNIDADE`), ela é histórica e não
+  pode ser substituída pelo destino individual do patrimônio. Na lista de execuções das Atas,
   clicar nesse registro abre a ficha unificada **Vida do item** para o lote completo, com
   dados da origem, contratação, recebimento e documentos; não habilita movimentações
   patrimoniais. Bens permanentes preservam o detalhamento e a vida individual de cada

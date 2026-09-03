@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-03 — Destino e patrimônio por unidade física de ATA
+
+- Restaurada e preservada a identificação `EMENDA ... - UNIDADE` no cabeçalho das
+  execuções importadas; o destino real permanece no registro individual do patrimônio.
+- Unidades físicas de execuções de ATA passam a guardar a própria unidade de destino e
+  a data de entrega na unidade, sem obrigar todo o lote a ter a mesma destinação.
+- O detalhe da execução e a ficha **Vida do item** mostram o destino e a entrega de cada
+  patrimônio; o Inventário recebe a mesma origem quando ainda não houve movimentação.
+- Importação auditável da planilha `execucao ata monitor.xlsx` reconcilia os monitores do
+  CPL 017/2024 por item e empenho, rejeitando conflitos com patrimônios já cadastrados.
+- Lacunas patrimoniais de alta confiança foram documentadas individualmente; dados sem
+  evidência suficiente permanecem em branco em vez de serem inventados.
+
 ## 2026-09-02 — Editar itens sem vínculo no modal da emenda
 
 - **Editar emenda** lista os itens e permite ao administrador ajustar descrição,
