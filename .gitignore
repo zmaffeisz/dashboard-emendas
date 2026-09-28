@@ -1,0 +1,6 @@
+# Exportações locais do Supabase; não publicar dados/backups no site.
+/data.sql
+/roles.sql
+/schema.pre-backup-*.sql
+/supabase-storage.zip
+/supabase-storage/

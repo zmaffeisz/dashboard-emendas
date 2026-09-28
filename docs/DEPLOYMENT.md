@@ -65,8 +65,15 @@ supabase db reset       # aplica migrations + seed (supabase/seed.sql, se houver
 
 ## 6. Deploy de produção
 
-> **A confirmar:** a hospedagem atual do frontend. O repositório não contém configuração
-> de hosting (sem `vercel.json`, `netlify.toml`, GitHub Pages workflow, etc.).
+O frontend é publicado pelo **GitHub Pages**, a partir da raiz da branch `main`
+do repositório `zmaffeisz/dashboard-emendas` (configuração confirmada pela API do
+GitHub em 28/09/2026). Endereço: <https://zmaffeisz.github.io/dashboard-emendas/>.
+O envio de commits para `main` inicia a publicação automática; verificar o resultado
+do deploy e o conteúdo servido antes de considerar a publicação concluída.
+
+Exportações locais (`data.sql`, `roles.sql`, `schema.pre-backup-*.sql` e
+`supabase-storage`) devem ficar fora do repositório e não ser publicadas no site.
+O `.gitignore` protege contra a inclusão acidental desses backups conhecidos.
 
 Opções compatíveis com estático:
 - Qualquer host estático (Netlify, Vercel static, GitHub Pages, Nginx, S3+CloudFront).

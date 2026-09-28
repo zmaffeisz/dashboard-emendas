@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-28 — Termo mensal sem chamados corretivos
+
+- Medições de serviço mensal fixo criadas diretamente no contrato, inclusive as já
+  cadastradas, permitem baixar o termo sem um registro prévio em `termos_ateste`.
+- Quando não há OS vinculadas à medição, o termo informa que não houve ordens de
+  serviço de manutenção corretiva no mês da competência, sem incluir uma OS fictícia.
+- Falhas na consulta dos vínculos impedem emitir a declaração de ausência de OS.
+
 ## 2026-09-03 — Valor licitado preservado após contratação
 
 - A coluna **Vl. licit.** da aba Emendas passa a exibir o valor unitário histórico da

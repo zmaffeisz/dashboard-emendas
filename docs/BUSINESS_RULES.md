@@ -137,6 +137,13 @@
 - **Serviço mensal de valor fixo**: usar `periodicidade_pagamento = MENSAL` e
   `modelo_execucao = continuo_mensal_fixo`; a classificação exibida no filtro de modelo
   deriva desses campos padronizados.
+- **Termo mensal sem corretivas:** medições de serviço mensal fixo cadastradas
+  diretamente no contrato podem emitir o termo mesmo sem registro prévio de termo
+  ou chamados vinculados. Após consultar os vínculos da medição, a ausência de OS
+  gera a declaração de que não houve ordens de serviço de manutenção corretiva no
+  mês da competência. O documento mantém NF, valor líquido, fiscal e data do ateste,
+  sem criar uma OS fictícia. A regra não se estende a serviços por demanda ou ciclos
+  trimestrais; a emissão não altera o status da medição nem grava dados no banco.
 - **Serviço trimestral de valor fixo**:
   - o contrato permanece vigente e disponível para chamados corretivos durante toda a
     vigência; chamados são ilimitados, não consomem saldo e não geram cobrança individual;

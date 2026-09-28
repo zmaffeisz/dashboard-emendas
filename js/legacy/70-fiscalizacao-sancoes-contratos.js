@@ -634,7 +634,7 @@ function fiscSelecionarNFMedicao(){
 
 async function confirmarGerarTermo(){ return confirmarGerarMedicaoFiscalizacao(); }
 
-function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal,hoje}){
+function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal,hoje,semCorretivas=false}){
   const cpl=contrato?.cpl||selecionadas[0]?.cpl_contrato||"";
   const empresa=contrato?.prestador||selecionadas[0]?.empresa||"";
   const tabelaRows=selecionadas.map((r,i)=>{
@@ -668,13 +668,13 @@ function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal
     <div class="info-item"><span class="info-label">Fiscal responsavel:</span>${fiscal}</div>
     <div class="info-item"><span class="info-label">Total de OS fiscalizadas:</span>${selecionadas.length}</div>
   </div>
-  <table><thead><tr>
+  ${semCorretivas?`<p>Não houve ordens de serviço de manutenção corretiva durante o mês de <strong>${_sanEsc(_fiscMesTermo(competencia))}</strong>, referente a este contrato.</p>`:`<table><thead><tr>
     <th style="width:30px">#</th>
     <th>Protocolo</th><th>No OS</th><th>Unidade</th><th>Equipamento</th>
     <th>Servico realizado</th><th>Situacao</th><th>Ocorrencias</th>
-  </tr></thead><tbody>${tabelaRows}</tbody></table>
+  </tr></thead><tbody>${tabelaRows}</tbody></table>`}
   <div class="ateste-box">
-    <p>A fiscalizacao tecnica das ordens de servico listadas acima foi realizada na data de <strong>${hoje}</strong>,
+    <p>${semCorretivas?'O ateste da medição mensal foi realizado':'A fiscalizacao tecnica das ordens de servico listadas acima foi realizada'} na data de <strong>${hoje}</strong>,
     em conformidade com o disposto no art. 117 da Lei no 14.133/2021, atestando-se o recebimento definitivo
     dos servicos prestados${empresa?` pela empresa <strong>${empresa}</strong>`:''}${cpl?`, referentes ao contrato ${cpl}`:''},
     competencia <strong>${competencia}</strong>, conforme Nota Fiscal <strong>${nf}</strong>,
@@ -784,6 +784,20 @@ async function confirmarGerarMedicaoFiscalizacao(){
   if(window.toast) toast("Medição vinculada à NF existente e termo registrado no contrato.","success");
 }
 
+function _fiscMesTermo(competencia){
+  const texto=String(competencia||'').trim();
+  const iso=texto.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+  const br=texto.match(/^(\d{1,2})\/(\d{4})$/);
+  const mes=Number(iso?.[2]||br?.[1]);
+  const ano=iso?.[1]||br?.[2];
+  const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  return ano&&mes>=1&&mes<=12?`${meses[mes-1]} de ${ano}`:texto;
+}
+
+function _ctPermiteTermoMensalSemOS(contrato){
+  return !!contrato&&_ctModeloKey(contrato)==='servico_continuo_mensal_fixo';
+}
+
 async function baixarTermoAtesteMedicao(medicaoId){
   const med=(_ctMedicoesAtual||[]).find(m=>String(m.id)===String(medicaoId));
   if(!med){alert("Medicao nao encontrada.");return;}
@@ -793,12 +807,21 @@ async function baixarTermoAtesteMedicao(medicaoId){
   if(!protocolos.length&&termo?.protocolos&&typeof termo.protocolos==='string'){
     try{protocolos=JSON.parse(termo.protocolos)||[];}catch(_e){protocolos=[];}
   }
+  if(!Array.isArray(protocolos))protocolos=[];
+  const mensal=_ctPermiteTermoMensalSemOS(_ctAtual);
   let selecionadas=(fiscalizacaoRows||[]).filter(r=>protocolos.includes(r.protocolo));
+  // A ausência de termo/cache não comprova ausência de OS vinculadas à medição.
+  if(mensal&&!protocolos.length){
+    const {data:controle,error}=await sb.from('chamados_controle').select('*').eq('medicao_id',medicaoId);
+    if(error){alert('Não foi possível verificar os chamados da medição. Tente novamente.');return;}
+    selecionadas=(controle||[]).map(r=>({...r,_chamado:(fiscalizacaoRows||[]).find(c=>c.protocolo===r.protocolo)?._chamado||{}}));
+  }
+  const semCorretivas=mensal&&!protocolos.length&&!selecionadas.length;
   if(!selecionadas.length&&protocolos.length){
     const {data:controle}=await sb.from("chamados_controle").select("*").in("protocolo",protocolos);
     selecionadas=(controle||[]).map(r=>({...r,_chamado:{}}));
   }
-  if(!selecionadas.length){
+  if(!selecionadas.length&&!semCorretivas){
     selecionadas=[{
       protocolo:protocolos.join(", ")||"medicao-"+medicaoId,
       os:"",
@@ -812,6 +835,7 @@ async function baixarTermoAtesteMedicao(medicaoId){
   }
   const html=_fiscHtmlTermoAteste({
     selecionadas,
+    semCorretivas,
     contrato:_ctAtual,
     competencia:med.competencia||termo?.competencia||"",
     nf:nf?.numero||termo?.nf_referencia||"",
@@ -3613,7 +3637,7 @@ async function abrirDetalheContrato(id){
   const rowsMedicoes=medicoes.map(m=>{
     const nfCount=notas.filter(n=>String(n.medicao_id)===String(m.id)).length;
     const termo=termos.find(t=>String(t.medicao_id||'')===String(m.id));
-    const termoBtn=termo?`<button class="btn-secondary" data-medicao-id="${_sanEsc(String(m.id))}" onclick="baixarTermoAtesteMedicao(this.dataset.medicaoId)" style="font-size:11px;padding:3px 8px">Baixar termo</button>`:'—';
+    const termoBtn=(termo||_ctPermiteTermoMensalSemOS(_ctAtual))?`<button class="btn-secondary" data-medicao-id="${_sanEsc(String(m.id))}" onclick="baixarTermoAtesteMedicao(this.dataset.medicaoId)" style="font-size:11px;padding:3px 8px">Baixar termo</button>`:'—';
     const glosas=m.contratos_medicao_glosas||[];
     const medItens=m.contratos_medicao_itens||[];
     const itemResumo=medItens.length?medItens.map(mi=>`${mi.descricao||'Item'}${mi.quantidade_aceita||mi.quantidade_executada?` (${mi.quantidade_aceita??mi.quantidade_executada})`:''}`).join('; '):'—';
