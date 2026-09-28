@@ -284,7 +284,12 @@ async function loadLicitacoes(){
     _cpStatusOpts=so.data||[]; _cpStatusById={}; _cpStatusOpts.forEach(s=>_cpStatusById[s.id]=s);
     _cpSecretarias=secretarias.data||[]; _cpSecretariaById={}; _cpSecretarias.forEach(s=>_cpSecretariaById[s.id]=s);
     const filtro=document.getElementById('lic-f-orgao');
-    if(filtro) filtro.innerHTML='<option value="">Todas</option>'+_cpSecretarias.map(s=>`<option value="${s.sigla}">${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join('');
+    if(filtro){
+      const atuais=[...filtro.selectedOptions].map(o=>o.value).filter(Boolean);
+      filtro.innerHTML=_cpSecretarias.map(s=>`<option value="${_sanEsc(s.sigla)}">${_sanEsc(s.sigla)} — ${_sanEsc(s.nome)}</option>`).join('');
+      [...filtro.options].forEach(o=>o.selected=atuais.includes(o.value));
+      if(typeof enhanceMultiSelect==='function') enhanceMultiSelect(filtro,{placeholder:'Pesquisar secretarias...'});
+    }
     const filtroCategoria=document.getElementById('lic-f-categoria');
     if(filtroCategoria){
       const atuais=[...filtroCategoria.selectedOptions].map(o=>o.value).filter(Boolean);
@@ -302,6 +307,12 @@ async function loadLicitacoes(){
   renderLicitacoes();
 }
 function filtrarLicitacoes(){ renderLicitacoes(); }
+function _licSecretariasSelecionadas(){
+  return [...(document.getElementById('lic-f-orgao')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+}
+function _licCorrespondeSecretaria(itens,secretarias){
+  return !secretarias.length||itens.some(i=>secretarias.includes(_cpSituacao(i).orgao));
+}
 function _licItemExecutado(i){ if(i._situacaoFluxo) return false; const s=_cpStatusById[i.status_lic_id]; return !!(s&&s.automatico); }
 function _licItemContratado(i){ return !!i.contrato_id; }
 function _licItemOcorrencia(i){ return i?_licOcorrenciasByItem[String(i.id)]||null:null; }
@@ -314,7 +325,7 @@ function _licProcessosVisiveis(){
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
   const fTipo=document.getElementById('lic-f-tipo')?.value||'';
   const fCategorias=[...(document.getElementById('lic-f-categoria')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
-  const fOrg=document.getElementById('lic-f-orgao')?.value||'';
+  const fOrgaos=_licSecretariasSelecionadas();
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
   const somenteComEmenda=document.getElementById('lic-f-emenda')?.checked||false;
   const porProc={}; _cpItens.forEach(it=>{ (porProc[it.processo_id]=porProc[it.processo_id]||[]).push(it); });
@@ -330,7 +341,7 @@ function _licProcessosVisiveis(){
     if(somenteComEmenda&&!_licProcessoTemEmendaVinculada(p.id,x.todosItens)) return false;
     if(fTipo&&(p.tipo||'')!==fTipo) return false;
     if(fCategorias.length&&!((!p.categoria_id&&fCategorias.includes('__sem__'))||fCategorias.includes(String(p.categoria_id||'')))) return false;
-    if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; if(!fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean).includes(fOrg)) return false; }
+    if(!_licCorrespondeSecretaria(x.naLic.length?x.naLic:x.itensServico,fOrgaos)) return false;
     if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico,p.categoria_licitacao].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(x.itensServico.flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
@@ -340,7 +351,7 @@ function renderLicitacoes(){
   const busca=(document.getElementById('lic-busca')?.value||'').toLowerCase();
   const fTipo=document.getElementById('lic-f-tipo')?.value||'';
   const fCategorias=[...(document.getElementById('lic-f-categoria')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
-  const fOrg=document.getElementById('lic-f-orgao')?.value||'';
+  const fOrgaos=_licSecretariasSelecionadas();
   const incluirContratados=document.getElementById('lic-f-contratados')?.checked||false;
   const somenteComEmenda=document.getElementById('lic-f-emenda')?.checked||false;
   const podeEd=podeEditar('contratos');
@@ -363,7 +374,7 @@ function renderLicitacoes(){
     if(somenteComEmenda&&!_licProcessoTemEmendaVinculada(p.id,x.todosItens)) return false;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fCategorias.length&&!((!p.categoria_id&&fCategorias.includes('__sem__'))||fCategorias.includes(String(p.categoria_id||'')))) return false;
-    if(fOrg){ const fonteStatus=x.naLic.length?x.naLic:x.itensServico; const orgs=fonteStatus.map(i=>_cpSituacao(i).orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
+    if(!_licCorrespondeSecretaria(x.naLic.length?x.naLic:x.itensServico,fOrgaos)) return false;
     if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico,p.categoria_licitacao].concat(x.naLic.flatMap(i=>[i.descricao,i.codigo_siam,i.unidade_medida])).concat(_procServicoPeriodicoItens(p).flatMap(i=>[i.descricao,i.codigo_siam])).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });

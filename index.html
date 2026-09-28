@@ -1671,7 +1671,7 @@
       <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="lic-busca" placeholder="identificador, objeto, item..." oninput="filtrarLicitacoes()"></div>
       <div class="fg"><div class="fg-label">Tipo</div><select id="lic-f-tipo" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
       <div class="fg"><div class="fg-label">Categoria</div><select id="lic-f-categoria" multiple onchange="filtrarLicitacoes()"></select></div>
-      <div class="fg"><div class="fg-label">Secretaria</div><select id="lic-f-orgao" onchange="filtrarLicitacoes()"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fg-label">Secretaria</div><select id="lic-f-orgao" multiple onchange="filtrarLicitacoes()"></select></div>
       <div class="fg lic-filter-checks"><div class="fg-label">Opções</div><div class="lic-filter-check-options"><label><input type="checkbox" id="lic-f-contratados" onchange="filtrarLicitacoes()"> incluir já contratadas</label><label><input type="checkbox" id="lic-f-emenda" onchange="filtrarLicitacoes()"> somente com emenda vinculada</label></div></div>
     </div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Abra uma licitação para acompanhar valores e situações. Use <b>Aplicar a todos</b> na rotina; a edição individual fica disponível no botão de cada item. &nbsp; <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span> automático (o sistema controla 🔒)</span></div>
@@ -3313,7 +3313,7 @@
 <script src="js/legacy/00-core.js?v=20260827-hierarquia-org-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20260901-categorias-multiplas-1"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20260901-servico-mensal-contrato-1"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20260928-filtro-secretarias-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260901-categorias-licitacao-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260903-parlamentar-inline-1"></script>

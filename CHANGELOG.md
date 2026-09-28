@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-28 — Filtro de secretarias nas licitações
+
+- O filtro **Secretaria** em **Licitações em andamento** aceita várias secretarias
+  simultaneamente. Sem seleção, mostra todas; a mesma seleção vale para a lista
+  e as exportações Excel.
+
 ## 2026-09-28 — Termo mensal sem chamados corretivos
 
 - Medições de serviço mensal fixo criadas diretamente no contrato, inclusive as já

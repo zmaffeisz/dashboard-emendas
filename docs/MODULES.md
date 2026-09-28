@@ -161,6 +161,9 @@ Processos (`processos`, `vw_processos_resumo`) e status de licitação por **ite
 (`itens.status_lic_id`). Tela "Controle de processos". O status viaja por item; a emenda
 apenas lê o status.
 
+O filtro **Secretaria** aceita várias escolhas; sem nenhuma, mostra todas. A seleção
+é aplicada à lista e às duas exportações Excel de licitações.
+
 No cadastro de itens, o botão **Baixar planilha modelo** entrega um arquivo específico para
 ATA de RP ou Aquisição. A colagem tabular, iniciada em **Descrição**, segue a ordem
 Descrição, Quantidade, Unidade de medida, Valor unitário estimado, Prazo e Código SIAM; em
