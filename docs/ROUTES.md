@@ -47,6 +47,24 @@ Navegação por `showTab('<name>')` ([index.html:2799](../index.html)).
 
 Algumas abas têm subvisões internas (não são rotas):
 
+- **Contratos em execução**: `ctShowSub('contratos' | 'financeiro')` alterna a
+  lista/gestão dos contratos e **Notas fiscais e medições** em página inteira.
+  A nova área consulta todos os contratos permitidos pela RLS, inclusive encerrados
+  e concluídos, excluindo ATAs. O atalho da ficha abre o contrato já selecionado.
+  Ao entrar pela subaba, os registros e totais aparecem somente depois de selecionar
+  um contrato ou digitar na busca. Apenas os demais filtros não iniciam a consulta;
+  limpar seleção e busca oculta os resultados. O seletor mostra processo antes do contrato.
+  Há duas guias internas (**Notas fiscais** e **Medições**), filtros por contrato,
+  texto, competência inicial/final, status e vínculo, ordenação, totais do filtro,
+  detalhes expansíveis e exportação CSV de todos os registros filtrados.
+  As tabelas usam a rolagem da página, com 25 registros por página; em telas estreitas
+  há rolagem horizontal apenas na tabela. Cadastros continuam em formulários modais.
+  Salvar NF/medição ou alterar status recarrega a consulta, preservando filtros da
+  mesma guia. Alterar a guia limpa os filtros específicos de status e vínculo.
+  O intervalo de competência inclui ciclos trimestrais que cruzam os meses
+  selecionados, usando as datas do ciclo da medição; não usa a emissão como competência.
+  A gestão do contrato concentra saldos, ajustes, prorrogações, documentos e histórico.
+
 - **Itens / Controle de Entregas**: `itensShowSub('entregas' | 'confirmacao' | 'empenhos')`
   alterna sub-views. `entregas` mostra itens aguardando AF/prazo; `confirmacao` mostra
   itens com AF/execução para confirmar entrega na unidade; `empenhos` gerencia vínculos.

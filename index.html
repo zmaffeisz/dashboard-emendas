@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260903-parlamentar-inline-1">
+<link rel="stylesheet" href="css/contratos-financeiro.css?v=20260929-2">
   <link rel="stylesheet" href="dashboard.css?v=20260901-servico-mensal-contrato-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2449,6 +2450,11 @@
 <div id="panel-contratos" class="panel">
   <div id="contratos-loading" class="loading"><span class="spinner"></span>Carregando contratos...</div>
   <div id="contratos-main" style="display:none">
+    <nav class="ct-workspace-tabs" aria-label="Áreas de contratos em execução">
+      <button type="button" id="ct-sub-contratos" class="active" aria-pressed="true" onclick="ctShowSub('contratos')">Contratos</button>
+      <button type="button" id="ct-sub-financeiro" aria-pressed="false" onclick="ctShowSub('financeiro')">Notas fiscais e medições</button>
+    </nav>
+    <section id="ct-contratos-view">
 
     <div class="filters" style="margin-bottom:1rem">
       <div class="fg">
@@ -2536,7 +2542,8 @@
         </table>
       </div>
     </div>
-
+    </section>
+    <section id="ct-financeiro-view" class="ct-financeiro" hidden aria-label="Notas fiscais e medições"></section>
   </div>
 </div>
 
@@ -3326,10 +3333,10 @@
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260901-categorias-licitacao-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260903-parlamentar-inline-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260929-prorrogacao-previa-1"></script>
-<script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260929-financeiro-1"></script>
+<script src="js/legacy/75-notas-fiscais.js?v=20260929-financeiro-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>
-<script type="module" src="js/app.js?v=20260901-categorias-licitacao-1"></script>
+<script type="module" src="js/app.js?v=20260929-financeiro-2"></script>
 </body>
 </html>

@@ -426,6 +426,7 @@ async function salvarCadastroNotaFiscal(){
   fecharCadastroNotaFiscal();
   if(window.toast) toast(`NF ${nota.numero} cadastrada e disponível para medição.`,'success');
   if(window._activeTab==='notas-fiscais')nfShowSub('todas');
+  if(window.ContratosFinanceiro?.isActive()) await window.ContratosFinanceiro.refresh('notas');
 }
 
 function _nfOrigem(row){

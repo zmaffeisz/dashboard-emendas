@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Contratos — teste local NF e medições</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../dashboard.css"><link rel="stylesheet" href="../css/contratos-financeiro.css"></head>
+<body><main style="padding:24px"><p id="resultado">Carregando teste local sem acesso ao banco…</p><div id="fixture"></div></main>
+<script>
+  window.fixtureEditable=true;
+  window.fixtureError=false;
+  window.fixtureOperations=[];
+  window.fixtureContracts=[
+    {id:10,numero_contrato:'703/2024',cpl:'014/2024',prestador:'Fornecedor de teste',objeto:'Manutenção de compressores',status:'VIGENTE',tipo_instrumento:'CONTRATO',modelo_contrato:'servico_continuo_mensal_fixo',fiscalizacao:'José',secao:'SUEQ',valor_inicial_num:10000,valor_atual_num:10000},
+    {id:20,numero_contrato:'22/2024',cpl:'022/2024',prestador:'Fornecedor encerrado',status:'ENCERRADO',tipo_instrumento:'CONTRATO'},
+    {id:30,numero_contrato:'ATA 1',tipo_instrumento:'ATA'}
+  ];
+  window.fixtureTables={
+    contratos:fixtureContracts,fornecedores:[],contratos_historico:[],contratos_vigencias:[],itens:[],contratos_fiscalizadores:[],contratos_documentos:[],
+    contratos_medicoes:[
+      {id:'m1',contrato_id:10,competencia:'2026-09',tipo_medicao:'competencia',data_medicao:'2026-09-29',status:'aprovada_pelo_fiscal',valor_bruto:100,valor_glosa:10,valor_liquido:90,fiscal_responsavel:'José',observacoes:'Texto detalhado da medição',contratos_medicao_itens:[{descricao:'Compressor',quantidade_executada:1,quantidade_aceita:1}]},
+      {id:'m2',contrato_id:10,competencia:'2026-08',status:'rascunho',valor_bruto:200,valor_liquido:200}
+    ],
+    notas_fiscais:[
+      {id:'n1',contrato_id:10,medicao_id:'m1',numero:'108',competencia:'2026-09',data_emissao:'2026-09-10',data_recebimento:'2026-09-11',status:'aprovada',valor_total:100,valor_glosa:10,valor_aprovado:90,arquivo_url:'teste/nf.pdf',observacoes:'Observação completa '+('Texto longo para testar leitura. '.repeat(12))},
+      {id:'n2',contrato_id:10,numero:'109',competencia:'2026-08',status:'recebida',valor_total:200,valor_aprovado:200},
+      {id:'n3',contrato_id:20,numero:'110',competencia:'2025-01',status:'aprovada',valor_total:300,valor_aprovado:300}
+    ],termos_ateste:[]
+  };
+  const sb={from(table){
+    let predicates=[],patch=null,insert=null;
+    const query={select(){return this},order(){return this},eq(k,v){predicates.push(r=>String(r[k])===String(v));return this},neq(k,v){predicates.push(r=>r[k]!==v);return this},in(k,ids){predicates.push(r=>ids.includes(r[k]));return this},is(k,v){predicates.push(r=>(r[k]??null)===v);return this},limit(){return this},
+      update(value){patch=value;return this},insert(value){insert=value;return this},
+      async single(){const result=await this.run();return result.error?result:{data:result.data[0]};},
+      async range(start,end){return (await this.run()).data?{data:(await this.run()).data.slice(start,end+1)}:this.run()},
+      async run(){
+        if(fixtureError&&table==='notas_fiscais')return {error:{message:'Falha simulada'}};
+        let rows=(fixtureTables[table]||[]).filter(r=>predicates.every(p=>p(r)));
+        if(patch){rows.forEach(r=>Object.assign(r,patch));fixtureOperations.push({table,patch});patch=null;}
+        if(insert){fixtureOperations.push({table,insert});const added={id:'novo-'+fixtureOperations.length,...insert};(fixtureTables[table]||=[]).push(added);rows=[added];insert=null;}
+        return {data:structuredClone(rows)};
+      },then(resolve,reject){return this.run().then(resolve,reject)}};
+    return query;
+  }};
+  const _sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const userCanView=()=>true, podeEditar=()=>fixtureEditable, bloquearSeVisualiz=()=>!fixtureEditable;
+  const currentProfile={nome:'Fiscal teste'},setHeaderH=()=>{},normalizar=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const parseDataBR=v=>v?new Date(v):null,fmtFull=v=>String(v),uiConfirm=async()=>true;
+  const showTab=()=>{},fecharSidebar=()=>{};
+  const baixarArquivoStoragePrivado=async(bucket,path)=>fixtureOperations.push({attachment:bucket,path});
+</script>
+<script type="module">
+  try {
+    // Usa o HTML real para detectar alterações incompatíveis nos painéis e modais.
+    const doc=new DOMParser().parseFromString(await (await fetch('../index.html')).text(),'text/html');
+    const panel=doc.getElementById('panel-contratos');panel.classList.add('active');panel.querySelector('#contratos-main').style.display='block';panel.querySelector('#contratos-loading').style.display='none';
+    document.getElementById('fixture').append(panel);
+    for(const id of ['modal-contrato-detalhe','modal-ct-medicao','modal-ct-nf','modal-nf-cadastro']) document.getElementById('fixture').append(doc.getElementById(id));
+    for(const name of ['70-fiscalizacao-sancoes-contratos.js','75-notas-fiscais.js']){
+      await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='../js/legacy/'+name;s.onload=resolve;s.onerror=reject;document.body.append(s);});
+    }
+    contratosRows=fixtureContracts;contratosCarregado=true;
+    await import('../js/app.js');
+    await ctShowSub('financeiro');
+    if(document.querySelector('.ct-fin-table')||!document.getElementById('ct-fin-metrics').hidden)throw new Error('Registros ou totais apareceram antes de selecionar/pesquisar.');
+    const select=document.querySelector('[data-filter="contract"]');
+    if(!select.querySelector('[value="10"]').textContent.startsWith('Processo 014/2024 · Contrato 703/2024'))throw new Error('O processo deve aparecer antes do contrato.');
+    const search=document.querySelector('[data-filter="search"]');
+    search.value='Fornecedor';search.dispatchEvent(new Event('input',{bubbles:true}));
+    if(document.querySelector('#ct-fin-count').textContent.indexOf('3 registro')<0)throw new Error('Busca sem seleção não incluiu contratos encerrados.');
+    search.value='   ';search.dispatchEvent(new Event('input',{bubbles:true}));
+    if(document.querySelector('.ct-fin-table')||!document.getElementById('ct-fin-metrics').hidden)throw new Error('Busca vazia deve ocultar registros e totais.');
+    search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));
+    if(document.querySelector('#modal-contrato-detalhe').classList.contains('active'))throw new Error('Consulta abriu modal.');
+    if(document.querySelector('[data-filter="contract"]').textContent.includes('ATA 1'))throw new Error('ATA entrou na área de contratos.');
+    document.getElementById('resultado').textContent='PASSOU: painel real e consultas simuladas carregadas. Disponível para testar filtros, detalhes e ações sem gravar no banco.';
+    window.fixtureReady=true;
+  }catch(error){document.getElementById('resultado').textContent='FALHOU: '+error.message;console.error(error);}
+</script></body></html>

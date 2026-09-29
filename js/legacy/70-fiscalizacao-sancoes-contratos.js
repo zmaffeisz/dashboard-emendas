@@ -1176,6 +1176,7 @@ const CT_MEDICAO_STATUS_LABELS={
   cancelada:'Cancelada'
 };
 const CT_NF_STATUS_LABELS={
+  recebida:'Recebida',
   pendente:'Pendente',
   em_conferencia:'Em conferência',
   aprovada:'Aprovada',
@@ -1195,7 +1196,7 @@ function _ctStatusBadge(status,map){
 }
 function _ctStatusSelectHtml(status,map,entity,id){
   const current=String(status||'').toLowerCase();
-  const options=Object.entries(map).map(([key,label])=>`<option value="${key}"${key===current?' selected':''}>${_sanEsc(label)}</option>`).join('');
+  const options=(!map[current]?`<option value="${_sanEsc(current)}" selected>${_sanEsc(_ctHumanize(current||'sem_status'))}</option>`:'')+Object.entries(map).map(([key,label])=>`<option value="${key}"${key===current?' selected':''}>${_sanEsc(label)}</option>`).join('');
   const handler=entity==='medicao'?'alterarStatusMedicaoContrato':'alterarStatusNotaFiscalContrato';
   return `<select aria-label="Alterar status" data-entity-id="${_sanEsc(String(id))}" onchange="${handler}(this.dataset.entityId,this.value)" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer">${options}</select>`;
 }
@@ -3442,6 +3443,10 @@ function fecharContratoIndividual(){
 }
 
 function ctOpenContratoTab(tab){
+  if(['medicoes','notas'].includes(tab)){
+    ctAbrirFinanceiroContrato(_ctAtual?.id,tab);
+    return;
+  }
   document.querySelectorAll('.ct-detail-tab').forEach(btn=>{
     const active=btn.dataset.tab===tab;
     btn.classList.toggle('active',active);
@@ -3462,13 +3467,14 @@ async function abrirContratoPorHash(){
 window.addEventListener('hashchange',abrirContratoPorHash);
 setTimeout(abrirContratoPorHash,0);
 
-async function abrirDetalheContrato(id){
+async function abrirDetalheContrato(id,{somenteDados=false}={}){
   _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||null;
   const el=document.getElementById("modal-contrato-detalhe");
   if(!el) return;
-  el.classList.add("active");
+  if(!somenteDados) el.classList.add("active");
 
   if(!_ctAtual){
+    if(somenteDados) throw new Error('Contrato não encontrado ou sem acesso.');
     document.getElementById("mcd-titulo").textContent="Contrato não encontrado";
     document.getElementById("mcd-corpo").innerHTML=`<div style="padding:1.25rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2)">
       <div style="font-weight:700;margin-bottom:.375rem">Não foi possível localizar o contrato.</div>
@@ -3513,6 +3519,11 @@ async function abrirDetalheContrato(id){
   _ctHistoricoAtual=hist;
   _ctItensAtual=itens;
   _ctFiscaisAtual=fiscais;
+  if(somenteDados){
+    const erro=[itemRes,medRes,nfRes,termoRes,fiscRes].find(res=>res.error)?.error;
+    if(erro) throw new Error('Não foi possível preparar os dados do contrato: '+erro.message);
+    return;
+  }
   const aquisicao=_ctEhAquisicao(c,itens);
   const eventosContrato=_ctHistoricoToEvents(hist);
   const medicoesNorm=medicoes.map(m=>({
@@ -3569,8 +3580,6 @@ async function abrirDetalheContrato(id){
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         ${actionBtn('itens','Ajustes por item (reajuste/aditivo/supressão)',"abrirModalItensEventos()")}
         ${acaoProrrogacao}
-        ${actionBtn('medicoes','Nova medição','abrirModalMedicaoContrato()',true)}
-        ${actionBtn('notas','Cadastrar NF','abrirModalNotaFiscalContrato()')}
         ${actionBtn('documentos','Registrar documento','abrirModalDocumentoContrato()')}
       </div>
     </div>`:'';
@@ -3633,43 +3642,6 @@ async function abrirDetalheContrato(id){
   const rowsAditivos=rowsEvento(['aditivo'],true);
   const rowsSupressoes=rowsEvento(['supressao','supress'],true);
   const rowsProrrogacoes=histPorTipo(['prorrogacao','renovacao']).map(h=>`<tr><td>${fmtDate(h.data_evento||(h.created_at||'').substring(0,10))}</td><td>${_sanEsc(h.tipo||'Prorrogação')}</td><td>${fmtDate(h.vigencia_nova_inicio)}</td><td>${fmtDate(h.vigencia_nova_fim)}</td><td>${_sanEsc(h.obs||'')}</td></tr>`).join('');
-  const medicaoLabel=(m)=>`${_sanEsc(m.competencia||'sem competência')} · ${_sanEsc(CT_MEDICAO_STATUS_LABELS[m.status]||m.status||'status')}`;
-  const rowsMedicoes=medicoes.map(m=>{
-    const nfCount=notas.filter(n=>String(n.medicao_id)===String(m.id)).length;
-    const termo=termos.find(t=>String(t.medicao_id||'')===String(m.id));
-    const termoBtn=(termo||_ctPermiteTermoMensalSemOS(_ctAtual))?`<button class="btn-secondary" data-medicao-id="${_sanEsc(String(m.id))}" onclick="baixarTermoAtesteMedicao(this.dataset.medicaoId)" style="font-size:11px;padding:3px 8px">Baixar termo</button>`:'—';
-    const glosas=m.contratos_medicao_glosas||[];
-    const medItens=m.contratos_medicao_itens||[];
-    const itemResumo=medItens.length?medItens.map(mi=>`${mi.descricao||'Item'}${mi.quantidade_aceita||mi.quantidade_executada?` (${mi.quantidade_aceita??mi.quantidade_executada})`:''}`).join('; '):'—';
-    return `<tr>
-      <td>${_sanEsc(m.competencia||'—')}<br><span style="font-size:11px;color:var(--text3)">${fmtDate(m.data_medicao)}</span></td>
-      <td>${_sanEsc(_ctHumanize(m.tipo_medicao||'competencia'))}</td>
-      <td class="td-wrap" style="max-width:220px">${_sanEsc(itemResumo)}</td>
-      <td>${_sanEsc(m.fiscal_responsavel||'—')}</td>
-      <td style="text-align:right">${_ctMoney(m.valor_bruto)}</td>
-      <td style="text-align:right;color:${_ctNum(m.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(m.valor_glosa)}</td>
-      <td style="text-align:right;font-weight:700">${_ctMoney(m.valor_liquido)}</td>
-      <td>${editor?_ctStatusSelectHtml(m.status,CT_MEDICAO_STATUS_LABELS,'medicao',m.id):_ctStatusBadge(m.status,CT_MEDICAO_STATUS_LABELS)}</td>
-      <td>${nfCount?nfCount+' NF(s)':'—'}</td>
-      <td class="td-wrap" style="max-width:220px">${m.data_execucao_preventiva?`<strong>Preventiva/calibração:</strong> ${fmtDate(m.data_execucao_preventiva)}<br>`:''}${m.relatorio_servico_referencia?`<strong>Relatório:</strong> ${_sanEsc(m.relatorio_servico_referencia)}<br>`:''}${_sanEsc(m.observacoes||glosas.map(g=>g.motivo).filter(Boolean).join('; ')||'—')}</td>
-      <td>${termoBtn}</td>
-    </tr>`;
-  }).join('');
-  const rowsNotas=notas.map(n=>{
-    const med=medicoes.find(m=>String(m.id)===String(n.medicao_id));
-    return `<tr>
-      <td>${_sanEsc(n.numero||'—')}${n.serie?`<br><span style="font-size:11px;color:var(--text3)">Série ${_sanEsc(n.serie)}</span>`:''}</td>
-      <td>${med?medicaoLabel(med):'<span style="color:var(--red)">Sem medição</span>'}</td>
-      <td>${fmtDate(n.data_emissao)||'—'}<br><span style="font-size:11px;color:var(--text3)">Receb.: ${fmtDate(n.data_recebimento)||'—'}</span></td>
-      <td style="text-align:right">${_ctMoney(n.valor_total)}</td>
-      <td style="text-align:right;color:${_ctNum(n.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(n.valor_glosa)}</td>
-      <td style="text-align:right;font-weight:700">${_ctMoney(n.valor_aprovado??n.valor_total)}</td>
-      <td>${editor?_ctStatusSelectHtml(n.status,CT_NF_STATUS_LABELS,'nota',n.id):_ctStatusBadge(n.status,CT_NF_STATUS_LABELS)}</td>
-      <td class="td-wrap" style="max-width:220px">${_sanEsc(n.observacoes||'—')}</td>
-    </tr>`;
-  }).join('');
-  const medError=medRes.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">A estrutura de medições ainda não está disponível no banco: ${_sanEsc(medRes.error.message||'erro ao consultar contratos_medicoes')}.</div>`:'';
-  const nfError=nfRes.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Não foi possível carregar notas fiscais: ${_sanEsc(nfRes.error.message||'erro ao consultar notas_fiscais')}.</div>`:'';
   const docError=docRes.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">A estrutura de documentos ainda não está disponível no banco: ${_sanEsc(docRes.error.message||'erro ao consultar contratos_documentos')}.</div>`:'';
   const rowsDocumentos=documentos.map(d=>{
     const link=d.url_arquivo?`<a href="${_sanEsc(d.url_arquivo)}" target="_blank" rel="noopener" style="color:var(--blue)">Abrir referência</a>`:'—';
@@ -3713,6 +3685,7 @@ async function abrirDetalheContrato(id){
       ${pendencias.map(([t,bg,color])=>`<span class="badge" style="background:${bg};color:${color};font-size:11px">${t}</span>`).join('')}
     </div>
 
+    <div style="margin-bottom:1rem"><button class="btn-secondary" onclick="ctAbrirFinanceiroContrato(_ctAtual.id)">Abrir notas fiscais e medições ↗</button></div>
     ${quickActions}
 
     <div class="metrics" style="margin-bottom:1rem">
@@ -3730,7 +3703,7 @@ async function abrirDetalheContrato(id){
 
     <div style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:1rem">
       ${[
-        ['geral','Visão geral'],['itens','Itens'],['reajustes','Reajustes'],['aditivos','Aditivos'],['supressoes','Supressões'],['prorrogacoes','Prorrogações'],['medicoes','Medições'],['notas','Notas fiscais'],['documentos','Documentos'],['historico','Histórico']
+        ['geral','Visão geral'],['itens','Itens'],['reajustes','Reajustes'],['aditivos','Aditivos'],['supressoes','Supressões'],['prorrogacoes','Prorrogações'],['documentos','Documentos'],['historico','Histórico']
       ].map(([key,label],idx)=>`<button class="ct-detail-tab ${idx===0?'active':''}" data-tab="${key}" onclick="ctOpenContratoTab('${key}')" style="border:none;border-bottom:2px solid ${idx===0?'var(--blue)':'transparent'};background:none;color:var(--text);padding:8px 10px;cursor:pointer;font-weight:600">${label}</button>`).join('')}
     </div>
 
@@ -3785,22 +3758,6 @@ async function abrirDetalheContrato(id){
         ${editor?(aquisicao?'<button class="btn-secondary" type="button" disabled title="Use o Controle de Entregas">Registrar prorrogação</button>':'<button class="btn-secondary" onclick="abrirModalContratoOp(\'prorrogacao\')">Registrar prorrogação</button>'):''}
       </div>
       ${rowsProrrogacoes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Nova vigência inicial</th><th>Nova vigência final</th><th>Obs.</th></tr></thead><tbody>${rowsProrrogacoes}</tbody></table></div>`:(rowsVigs?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Início</th><th>Fim</th><th>Valor</th><th>Obs.</th></tr></thead><tbody>${rowsVigs}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma prorrogação ou vigência registrada para este contrato.</div>')}
-    </div>
-    <div class="ct-detail-pane" data-tab="medicoes" style="display:none">
-      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
-        <div style="font-size:13px;color:var(--text2)">Medições vinculadas ao contrato. Rascunhos, recusadas e canceladas não compõem o valor executado.</div>
-        ${editor?'<button class="btn-secondary" onclick="abrirModalMedicaoContrato()">Nova medição</button>':''}
-      </div>
-      ${medError}
-      ${rowsMedicoes?`<div class="table-wrap ct-medicoes-table" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Competência</th><th>Tipo</th><th>Item</th><th>Fiscal</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor líquido</th><th>Status</th><th>NF</th><th>Obs.</th><th>Termo</th></tr></thead><tbody>${rowsMedicoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma medição registrada para este contrato.</div>'}
-    </div>
-    <div class="ct-detail-pane" data-tab="notas" style="display:none">
-      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
-        <div style="font-size:13px;color:var(--text2)">Notas fiscais do contrato. NFs cadastradas antecipadamente ficam "Sem medição" até serem selecionadas em uma nova medição.</div>
-        ${editor?'<button class="btn-secondary" onclick="abrirModalNotaFiscalContrato()">Cadastrar NF</button>':''}
-      </div>
-      ${nfError}
-      ${rowsNotas?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Número</th><th>Medição</th><th>Datas</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor aprovado</th><th>Status</th><th>Obs.</th></tr></thead><tbody>${rowsNotas}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma nota fiscal vinculada a este contrato.</div>'}
     </div>
     <div class="ct-detail-pane" data-tab="documentos" style="display:none">
       <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
@@ -4449,8 +4406,7 @@ function abrirModalNotaFiscalContrato(){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
   if(typeof abrirCadastroNotaFiscal==='function'){
-    abrirCadastroNotaFiscal(_ctAtual.id);
-    return;
+    return abrirCadastroNotaFiscal(_ctAtual.id);
   }
   document.getElementById('ctnf-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — NF sempre vinculada a uma medição; não há controle de pagamento.`;
   const sel=document.getElementById('ctnf-medicao');
@@ -4486,6 +4442,11 @@ function ctPreencherValoresNFPorMedicao(){
 }
 
 async function _ctReabrirAbaContrato(tab){
+  if(['medicoes','notas'].includes(tab)){
+    if(window.ContratosFinanceiro?.isActive()) await window.ContratosFinanceiro.refresh(tab);
+    else await ctAbrirFinanceiroContrato(_ctAtual?.id,tab);
+    return;
+  }
   if(!_ctAtual?.id) return;
   await abrirDetalheContrato(_ctAtual.id);
   ctOpenContratoTab(tab);
@@ -4673,8 +4634,7 @@ async function salvarMedicaoContrato(){
   document.getElementById('modal-ct-medicao').classList.remove('active');
   delete ctItensPorContrato[_ctAtual.id];
   if(window.toast) toast(`Medição registrada e vinculada à NF ${notaVinculada.numero||''}.`,'success');
-  await abrirDetalheContrato(_ctAtual.id);
-  ctOpenContratoTab('medicoes');
+  await _ctReabrirAbaContrato('medicoes');
 }
 
 async function salvarNotaFiscalContrato(){
@@ -4769,8 +4729,7 @@ async function salvarNotaFiscalContrato(){
   if(btn)btn.disabled=false;
   document.getElementById('modal-ct-nf').classList.remove('active');
   if(window.toast) toast('Nota fiscal vinculada à medição.','success');
-  await abrirDetalheContrato(_ctAtual.id);
-  ctOpenContratoTab('notas');
+  await _ctReabrirAbaContrato('notas');
 }
 
 function ctDocAtualizarEntidadesRelacionadas(){
@@ -4948,6 +4907,64 @@ function ctAtualizarPreviaProrrogacao(){
   set('ctpr-total-previa',_ctMoney(previa.total));
   if(previa.extraDays) set('ctpr-calculo-nota','Estimativa proporcional aos dias do último período. Apenas informativa, sem reajustes futuros.');
 }
+
+async function ctShowSub(sub,contratoId=null,tab=null){
+  if(!userCanView('contratos')) return;
+  const financeiro=sub==='financeiro';
+  if(financeiro) fecharContratoIndividual();
+  document.getElementById('ct-contratos-view').hidden=financeiro;
+  document.getElementById('ct-financeiro-view').hidden=!financeiro;
+  ['contratos','financeiro'].forEach(key=>{
+    const btn=document.getElementById('ct-sub-'+key);
+    btn.classList.toggle('active',key===sub);
+    btn.setAttribute('aria-pressed',String(key===sub));
+  });
+  if(financeiro) await window.ContratosFinanceiro?.open(contratoId,tab);
+  else{
+    window.ContratosFinanceiro?.close();
+    await loadContratos();
+  }
+}
+
+async function ctAbrirFinanceiroContrato(id,tab='notas'){
+  if(!userCanView('contratos')) return;
+  showTab('contratos');
+  await ctShowSub('financeiro',id,tab);
+}
+
+window.ctFinanceiroAdapter={
+  canView:()=>userCanView('contratos'),
+  canEdit:()=>podeEditar('contratos'),
+  ensureContracts:async()=>{if(!contratosCarregado) await loadContratos();},
+  contracts:()=>contratosRows,
+  client:()=>sb,
+  labels:type=>type==='notas'?CT_NF_STATUS_LABELS:CT_MEDICAO_STATUS_LABELS,
+  statusLabel:value=>_ctHumanize(value||'sem_status'),
+  statusBadge:(status,type)=>_ctStatusBadge(status,type==='notas'?CT_NF_STATUS_LABELS:CT_MEDICAO_STATUS_LABELS),
+  statusSelect:(status,type,id)=>_ctStatusSelectHtml(status,type==='notas'?CT_NF_STATUS_LABELS:CT_MEDICAO_STATUS_LABELS,type==='notas'?'nota':'medicao',id).replace(/ onchange="[^"]*"/,''),
+  canGenerateTerm:contrato=>_ctPermiteTermoMensalSemOS(contrato),
+  canRegisterNF:contrato=>!_nfContratoEncerrado(contrato),
+  openContract:id=>abrirDetalheContrato(id),
+  async create(id,action){
+    if(!id||bloquearSeVisualiz('contratos')) return;
+    await abrirDetalheContrato(id,{somenteDados:true});
+    if(action==='new-nf') await abrirModalNotaFiscalContrato();
+    else await abrirModalMedicaoContrato();
+  },
+  async changeStatus(contratoId,type,id,status){
+    if(bloquearSeVisualiz('contratos')) return;
+    await abrirDetalheContrato(contratoId,{somenteDados:true});
+    if(type==='notas') await alterarStatusNotaFiscalContrato(id,status);
+    else await alterarStatusMedicaoContrato(id,status);
+  },
+  async downloadTerm(contratoId,id){
+    await abrirDetalheContrato(contratoId,{somenteDados:true});
+    await baixarTermoAtesteMedicao(id);
+  },
+  async downloadAttachment(path){
+    await baixarArquivoStoragePrivado('notas-fiscais',path);
+  }
+};
 
 function abrirModalContratoOp(op,tabPermissao){
   if(bloquearSeVisualiz(tabPermissao)) return;

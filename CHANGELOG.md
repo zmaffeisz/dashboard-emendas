@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-29 — Seleção e consulta inicial de NF/medições
+
+- O seletor exibe o processo antes do número do contrato, seguido do fornecedor
+  e status. A entrada na subaba permanece sem registros, totais ou paginação até
+  selecionar um contrato ou digitar na busca; limpar a seleção e a busca volta
+  ao estado vazio. O atalho da gestão mantém a abertura com contrato selecionado.
+
+## 2026-09-29 — Área própria para notas fiscais e medições dos contratos
+
+- Criada a subaba **Notas fiscais e medições** em **Contratos em execução**, fora
+  do modal de gestão, com consulta de todos os contratos acessíveis ou de um
+  contrato selecionado, incluindo histórico de encerrados/concluídos e excluindo ATAs.
+- Filtros combináveis por contrato, busca, intervalo de competência, status e
+  vínculo; ordenação, paginação de 25 registros, exportação CSV e totais do filtro.
+  Observações, fiscal, validação, itens e glosas ficam em detalhes expansíveis.
+- Cadastro de NF/medição, alteração de status, download de NF anexada e termo de
+  ateste usam os fluxos e permissões existentes. O salvamento volta para a nova
+  área e recarrega os registros. NFs recebidas preservam seu status na seleção.
+- O modal mantém saldos, itens, reajustes, aditivos, supressões, prorrogações,
+  documentos e histórico, com atalho para a nova área. Nenhuma alteração de schema.
 ## 2026-09-29 — Notas fiscais legadas do processo 014/2024
 
 - Importadas em produção 22 NFs de setembro/2024 a junho/2026, no total de

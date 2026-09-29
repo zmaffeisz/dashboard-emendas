@@ -13,6 +13,19 @@
 
 ## 2. Roteiro de teste manual (smoke)
 
+### Regressão — notas fiscais e medições em Contratos em execução
+
+- `node tests/contratos-financeiro.test.mjs`: filtros combinados, competências
+  desconhecidas, totais por status e carregamento além do limite de 1.000 registros.
+- Abrir `tests/contratos-financeiro-ui.html` via HTTP: usa o painel e os formulários
+  reais com dados simulados, sem acesso ao Supabase. Deve mostrar **PASSOU**.
+  Testar filtros, detalhes, guias, cadastro, aprovação e visualização sem edição.
+- Com login: abrir **Contratos em execução → Notas fiscais e medições**; conferir
+  os registros/totais de um contrato conhecido e o histórico dos encerrados.
+  Conferir vínculo NF/medição, download de NF anexada e termo conforme o modelo.
+  Salvar um registro autorizado, verificar recarga e voltar para **Contratos**.
+  O modal de gestão deve manter as demais guias e apenas um atalho para NF/medição.
+
 ### Regressão — edição de itens livres na emenda
 
 - `node tests/emenda-edicao-livre.test.mjs`: valida alterações, exclusões e bloqueios.

@@ -156,6 +156,14 @@ Aba-**matriz** de todos os instrumentos contratuais (`contratos`). Inclui vigên
 admin** (`abrirEditarContrato`/`abrirDetalheContrato`). É a fonte de verdade de onde a aba
 Atas Rp deriva sua visão.
 
+**Notas fiscais e medições** é uma subaba própria desta área, implementada em
+`js/modules/contratos/financeiro.workspace.js`, inicializada por `js/app.js`.
+`ctFinanceiroAdapter` em `js/legacy/70-fiscalizacao-sancoes-contratos.js` conecta a
+consulta aos cadastros, aprovações e termos existentes. Preparar os dados de um
+contrato para uma ação não abre o modal de gestão. A consulta mantém os vínculos
+`contratos_medicoes`/`notas_fiscais` e a RLS existente; não cria cópias dos registros.
+As regras de execução e de termo permanecem específicas do modelo do contrato.
+
 ## 12. Licitações em andamento
 Processos (`processos`, `vw_processos_resumo`) e status de licitação por **item**
 (`itens.status_lic_id`). Tela "Controle de processos". O status viaja por item; a emenda
