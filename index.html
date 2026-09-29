@@ -3065,10 +3065,19 @@
   <div class="modal-box" style="width:420px">
     <div class="modal-title">📅 Prorrogação</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctpr-info"></div>
+    <div style="padding:12px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.6">
+      <div>Vigência atual: <strong id="ctpr-vigencia-atual">—</strong></div>
+      <div><span id="ctpr-valor-label">Valor mensal atual</span>: <strong id="ctpr-valor-atual">—</strong></div>
+    </div>
     <div class="form-grid">
-      <div class="form-group"><div class="form-label">Nova data fim *</div><input type="date" id="ctpr-data-fim"></div>
+      <div class="form-group"><div class="form-label">Nova data fim *</div><input type="date" id="ctpr-data-fim" oninput="ctAtualizarPreviaProrrogacao()"></div>
       <div class="form-group"><div class="form-label">Status *</div><select id="ctpr-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctpr-obs" placeholder="ex: Prorrogado por 12 meses..."></div>
+    </div>
+    <div aria-live="polite" style="padding:12px;margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.6">
+      <div id="ctpr-periodo-previa">Informe a nova data final para calcular.</div>
+      <div>Total estimado da prorrogação: <strong id="ctpr-total-previa">—</strong></div>
+      <div id="ctpr-calculo-nota" style="color:var(--text3)">Prévia informativa com o valor vigente, sem reajustes futuros.</div>
     </div>
     <div class="form-actions">
       <button class="btn-primary" onclick="salvarOperacaoContrato('prorrogacao')">Salvar prorrogação</button>
@@ -3317,7 +3326,7 @@
 <script src="js/legacy/40-itens-entregas.js?v=20260828-unidade-medida-ata-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260901-categorias-licitacao-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260903-parlamentar-inline-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260929-reajuste-mensal-2"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260929-prorrogacao-previa-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260812-central-nf-2"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

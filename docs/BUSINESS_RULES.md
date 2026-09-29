@@ -214,6 +214,12 @@
   `valor_mensal` e `valor_periodico_num`; trimestrais, apenas o valor periódico.
   O valor global mantém o cálculo do impacto pelos períodos considerados,
   separado do valor mensal/trimestral. Outros modelos não recebem essa atualização.
+- A prévia informativa da prorrogação usa o valor mensal/trimestral vigente e
+  considera somente a extensão, do dia seguinte ao vencimento até a nova data
+  final inclusive. Ciclos completos usam o valor integral; o ciclo final parcial
+  usa a fração de dias do próprio ciclo, com indicação de estimativa. Não antecipa
+  reajustes futuros, não altera valores ao salvar e não aplica essa regra a ATAs
+  ou serviços por demanda. A vigência exibida usa o vencimento atual persistido.
 - `contratos.data_base_reajuste` é uma informação contratual opcional para todos os tipos
   de instrumento. Ela é exibida nos detalhes e, nas ATAs, também na lista de itens, mas
   não cria reajuste automaticamente.

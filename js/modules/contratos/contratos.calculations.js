@@ -106,6 +106,25 @@ export function calculateRemainingMonths(contractEndDate, additiveStartDate) {
   return Math.max(months, 0);
 }
 
+// Prévia informativa: ciclos completos e fração dos dias do último ciclo.
+export function calculateExtensionPreview(currentEndDate, newEndDate, periodicValue, periodMonths = 1) {
+  const currentEnd = parseDate(currentEndDate), end = parseDate(newEndDate);
+  if (!currentEnd || !end || end <= currentEnd) return null;
+  const start = new Date(currentEnd.getFullYear(), currentEnd.getMonth(), currentEnd.getDate() + 1);
+  const endExclusive = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
+  const size = periodMonths === 3 ? 3 : 1;
+  let completePeriods = Math.floor(((endExclusive.getFullYear()-start.getFullYear())*12+endExclusive.getMonth()-start.getMonth())/size);
+  if (addCalendarMonths(start, completePeriods*size) > endExclusive) completePeriods--;
+  completePeriods = Math.max(completePeriods, 0);
+  const lastStart = addCalendarMonths(start, completePeriods*size);
+  const nextStart = addCalendarMonths(start, (completePeriods+1)*size);
+  const day = date => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())/86400000;
+  const extraDays = day(endExclusive)-day(lastStart);
+  const periods = completePeriods + extraDays/(day(nextStart)-day(lastStart));
+  return { startDate: formatISODate(start), endDate: formatISODate(end), completePeriods, extraDays,
+    total: roundMoney(toContractNumber(periodicValue)*periods) };
+}
+
 export function buildContractPeriods(contractStartDate, contractEndDate, periodMonths = 3) {
   const start = parseDate(contractStartDate);
   const end = parseDate(contractEndDate);

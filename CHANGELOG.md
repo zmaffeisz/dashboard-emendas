@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-29 — Prévia informativa da prorrogação
+
+- O modal mostra a vigência atual, o valor mensal/trimestral vigente e a estimativa
+  do total da extensão ao preencher a nova data final. A extensão começa no dia
+  seguinte ao vencimento atual; períodos parciais têm estimativa proporcional
+  explicitada. Essa prévia não altera os valores gravados do contrato.
+
 ## 2026-09-29 — Valor mensal após ajustes por item
 
 - O salvamento de reajuste/aditivo/supressão recalcula o valor do período a partir

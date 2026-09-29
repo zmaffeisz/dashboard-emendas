@@ -4922,6 +4922,33 @@ async function abrirFiscalizadoresContratoDireto(id){
   abrirModalContratoOp('fiscal','contratos');
 }
 
+function ctAtualizarPreviaProrrogacao(){
+  const set=(id,text)=>{ const el=document.getElementById(id); if(el) el.textContent=text; };
+  const c=_ctAtual||{};
+  const inicioAtual=String(c.vigencia_atual||'').match(/\d{2}\/\d{2}\/\d{4}/)?.[0]||c.data_inicio;
+  set('ctpr-vigencia-atual',`${inicioAtual?fmtDate(inicioAtual):'Início não informado'} a ${c.vencimento?fmtDate(c.vencimento):'fim não informado'}`);
+  const periodicidade=_ctPeriodicidade(c), trimestral=periodicidade==='TRIMESTRAL';
+  const valor=_ctValorPeriodico(c);
+  const valorCadastrado=c.valor_periodico_num??c.valor_mensal_num??c.valor_mensal;
+  const suportado=['MENSAL','TRIMESTRAL'].includes(periodicidade)&&c.tipo_instrumento!=='ATA';
+  set('ctpr-valor-label',trimestral?'Valor trimestral atual':'Valor mensal atual');
+  set('ctpr-valor-atual',suportado&&valorCadastrado!=null&&valorCadastrado!==''?_ctMoney(valor):'Não informado');
+  set('ctpr-total-previa','—');
+  set('ctpr-calculo-nota','Prévia informativa com o valor vigente, sem reajustes futuros.');
+  const fim=document.getElementById('ctpr-data-fim')?.value;
+  if(!fim){set('ctpr-periodo-previa','Informe a nova data final para calcular.');return;}
+  if(!suportado||valorCadastrado==null||valorCadastrado===''){
+    set('ctpr-periodo-previa','Prévia disponível para serviço de valor mensal ou trimestral fixo cadastrado.');return;
+  }
+  const calcular=_ctModule().calculateExtensionPreview;
+  const previa=typeof calcular==='function'?calcular(c.vencimento,fim,valor,trimestral?3:1):null;
+  if(!previa){set('ctpr-periodo-previa','Confira o vencimento atual e informe uma data final posterior a ele.');return;}
+  const unidade=trimestral?'trimestre(s)':'mês(es)';
+  set('ctpr-periodo-previa',`${fmtDate(previa.startDate)} a ${fmtDate(previa.endDate)} · ${previa.completePeriods} ${unidade}${previa.extraDays?` e ${previa.extraDays} dia(s)`:''}`);
+  set('ctpr-total-previa',_ctMoney(previa.total));
+  if(previa.extraDays) set('ctpr-calculo-nota','Estimativa proporcional aos dias do último período. Apenas informativa, sem reajustes futuros.');
+}
+
 function abrirModalContratoOp(op,tabPermissao){
   if(bloquearSeVisualiz(tabPermissao)) return;
   if(op==='prorrogacao'&&_ctEhAquisicao()){
@@ -4944,6 +4971,8 @@ function abrirModalContratoOp(op,tabPermissao){
   }
   if(op==="prorrogacao"){
     const st=document.getElementById('ctpr-status'); if(st) st.value='rascunho';
+    const fim=document.getElementById('ctpr-data-fim'); if(fim) fim.value='';
+    ctAtualizarPreviaProrrogacao();
   }
   if(op==="fiscal"){
     preencherSelectPessoas('ctfi-nome', true);

@@ -40,6 +40,7 @@ export {
   calculateAdditiveLimit,
   calculateAvailableAdditiveBalance,
   calculateRemainingMonths,
+  calculateExtensionPreview,
   buildContractPeriods,
   calculateRemainingPeriods,
   calculateNextPeriodStart,
