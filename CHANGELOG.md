@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-29 — Notas fiscais legadas do processo 014/2024
+
+- Importadas em produção 22 NFs de setembro/2024 a junho/2026, no total de
+  R$ 267.302,93, com 22 medições por competência no contrato 703/2024.
+  Aprovação histórica confirmada pelo usuário; nenhuma indicação de pagamento.
+- Seis datas de emissão de 2026 ficaram em branco porque não aparecem nas imagens.
+  Datas das medições usam a data da importação, explicitada nas observações.
+  Notas e medição previamente existentes foram preservadas.
+
 ## 2026-09-29 — Prévia informativa da prorrogação
 
 - O modal mostra a vigência atual, o valor mensal/trimestral vigente e a estimativa

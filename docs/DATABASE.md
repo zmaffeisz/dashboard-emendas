@@ -6,6 +6,29 @@
 
 ## 1. Ambientes
 
+### Importação de NFs legadas — processo 014/2024, 29/09/2026
+
+Lote `legado-014-2024-20260929`, em produção `qpvgpfwuurqcqprnpxua`:
+22 NFs e 22 medições de competência no contrato 703/2024 (`id=274`, processo 29),
+de 2024-09 a 2026-06. Total R$ 267.302,93: NF 2042 de setembro/2024 por
+R$ 5.810,93 e as demais por R$ 12.452,00 cada. Números, por competência:
+2042, 2060, 2078, 2093, 2106, 2117, 2148, 2162, 2180, 2193, 2209,
+2227, 2242, 2257, 2275, 4, 22, 45, 64, 78, 94 e 108.
+
+Fonte: quatro imagens de planilha fornecidas pelo usuário. O usuário confirmou
+que todas já estavam atestadas/aprovadas; NFs em `aprovada`, medições em
+`aprovada_pelo_fiscal`. Não foram inventados fiscal, data de ateste, retenções,
+pagamento, PDFs ou ordens de serviço. Como `data_medicao` é obrigatória, foi usada
+a data da importação, com ressalva explícita em cada medição. As seis datas de
+emissão de janeiro a junho/2026 não estavam visíveis e permanecem nulas.
+Valores transcritos sem aplicar os reajustes atuais ao legado; sem glosa informada.
+
+Execução transacional com trava do contrato e checagem prévia de número/competência.
+Verificação: 22 vínculos válidos, zero divergências com a transcrição e soma
+R$ 267.302,93. NF 128 (julho/2026, aprovada), NF 153 (agosto/2026, recebida)
+e medição preexistente preservadas. Identificação do lote em `origem_codigo`,
+`raw_data` e observações; não houve alteração de schema.
+
 | Artefato | Onde |
 |---|---|
 | **Produção (usada pelo app)** | Supabase nuvem `qpvgpfwuurqcqprnpxua` (`contratos-dag`) |
