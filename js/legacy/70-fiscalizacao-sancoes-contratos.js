@@ -1279,7 +1279,7 @@ function _ctHistoricoToEvents(hist=[]){
       eventType,
       tipo:eventType,
       status:_ctEventStatus(h),
-      percentage:h.percentual,
+      percentage:h.related_entity_type==='contractItem'&&h.valor_unitario_periodo!=null?null:h.percentual,
       impactValue:h.valor_impacto??h.impact_value??(eventType==='reajuste'?null:h.valor_novo),
       adjustedValueAfter:h.valor_reajustado??h.adjusted_value_after??(eventType==='reajuste'?h.valor_novo:null),
       affectsValue:eventType!=='reajuste',
@@ -3933,7 +3933,7 @@ function ctMesesRestantesEvento(dataInicio){
 
 // ═══ Ajustes por item: reajuste/aditivo/supressão num único modal, uma linha por item ═══
 // Aditivo e supressão alteram QUANTIDADE; o valor unitário usado é sempre o vigente do item,
-// não editável nesta tela. Reajuste altera o VALOR UNITÁRIO, via percentual.
+// não editável nesta tela. Reajuste usa o novo VALOR UNITÁRIO informado; percentual é informativo.
 const CIE_LIMITE_ADITIVO_PCT=0.25;
 function _cieItensAtivos(){
   return (_ctItensAtual||[]).filter(i=>!['inativo','cancelado'].includes(String(i.status||'').toLowerCase()));
@@ -3976,8 +3976,8 @@ function abrirModalItensEventos(){
         <td style="padding:4px 6px"><input type="number" class="cie-ad-qtde" step="any" min="0" oninput="_cieAtualizarImpactoItem('${i.id}')" style="width:80px"></td>
         <td style="padding:4px 6px"><input type="text" class="cie-ad-valor" value="${unitFmt}" readonly disabled title="${roTitle}" style="width:95px;background:var(--surface2);color:var(--text3);cursor:not-allowed"></td>
         <td style="padding:4px 6px;border-right:1px solid var(--border)"><span class="cie-ad-imp" style="font-size:12px;color:var(--green)">—</span></td>
-        <td style="padding:4px 6px"><input type="number" class="cie-re-pct" step="0.01" oninput="_cieAtualizarImpactoItem('${i.id}')" style="width:70px"></td>
-        <td style="padding:4px 6px;border-right:1px solid var(--border)"><span class="cie-re-novo-unit" style="font-size:11px;color:var(--text2)">—</span><br><span class="cie-re-imp" style="font-size:12px;color:var(--text2)">—</span></td>
+        <td style="padding:4px 6px"><input type="number" class="cie-re-pct" step="any" aria-label="Percentual informativo" title="Opcional. Apenas para registro; não altera os cálculos." style="width:70px"></td>
+        <td style="padding:4px 6px;border-right:1px solid var(--border)"><input type="number" class="cie-re-novo-unit" step="any" min="0" aria-label="Novo valor unitário" placeholder="${unit}" oninput="_cieAtualizarImpactoItem('${i.id}')" style="width:110px"><br><span class="cie-re-imp" style="font-size:12px;color:var(--text2)">—</span></td>
         <td style="padding:4px 6px"><input type="number" class="cie-su-qtde" step="any" min="0" max="${qtde}" oninput="_cieAtualizarImpactoItem('${i.id}')" style="width:80px"></td>
         <td style="padding:4px 6px"><input type="text" class="cie-su-valor" value="${unitFmt}" readonly disabled title="${roTitle}" style="width:95px;background:var(--surface2);color:var(--text3);cursor:not-allowed"></td>
         <td style="padding:4px 6px"><span class="cie-su-imp" style="font-size:12px;color:var(--red)">—</span></td>
@@ -3995,10 +3995,10 @@ function _cieRecalcularMeses(){
   _cieAtualizarTotais();
 }
 // Impacto de UM item, comparando o cenário mensal ANTES × DEPOIS do ajuste:
-//   1. reajuste atualiza o valor unitário: novoUnit = unitVigente × (1 + %/100)
+//   1. reajuste usa o novo valor unitário digitado; campo vazio mantém o vigente.
 //   2. aditivo/supressão mudam a quantidade: novaQtde = qtdeAtual + adQtde − suQtde
 //   3. valorMensalDepois = novaQtde × novoUnit; a diferença mensal × meses restantes = impacto total.
-// Aditivo/supressão são valorados pelo unitário JÁ reajustado (se houver % na mesma sessão),
+// Aditivo/supressão são valorados pelo unitário JÁ reajustado (se informado na mesma sessão),
 // porque a quantidade nova será paga ao preço novo. Em contratos não mensais, meses = 1.
 function _cieImpactosItem(item,row){
   const usaMeses=ctEventoUsaMesesRestantes();
@@ -4007,17 +4007,23 @@ function _cieImpactosItem(item,row){
   const unitVigente=_ctNum(item.valor_contratado??item.valor_estimado);
   const adQtde=_ctNum(row.querySelector('.cie-ad-qtde')?.value);
   const suQtde=_ctNum(row.querySelector('.cie-su-qtde')?.value);
-  const rePct=_ctNum(row.querySelector('.cie-re-pct')?.value);
-  const novoValorUnitario=unitVigente*(1+rePct/100);
+  const pctTexto=String(row.querySelector('.cie-re-pct')?.value??'').trim();
+  const rePct=pctTexto===''?null:_ctNum(pctTexto);
+  const novoInput=row.querySelector('.cie-re-novo-unit');
+  const novoTexto=String(novoInput?.value??'').trim();
+  const valorInformado=Number(novoTexto.replace(',','.'));
+  const valorInvalido=!!novoInput?.validity?.badInput||(novoTexto!==''&&(!Number.isFinite(valorInformado)||valorInformado<0));
+  const novoValorUnitario=novoTexto!==''&&!valorInvalido?valorInformado:unitVigente;
+  const reajusteAlterado=!valorInvalido&&novoTexto!==''&&novoValorUnitario!==unitVigente;
   const novaQtde=Math.max(qtdeAtual+adQtde-suQtde,0);
   const valorMensalAntes=qtdeAtual*unitVigente;
   const impactoAditivo=(adQtde>0&&novoValorUnitario>0)?adQtde*novoValorUnitario*meses:0;
   const impactoSupressao=(suQtde>0&&novoValorUnitario>0)?suQtde*novoValorUnitario*meses:0;
-  const impactoReajuste=rePct?(novoValorUnitario-unitVigente)*qtdeAtual*meses:0;
+  const impactoReajuste=reajusteAlterado?(novoValorUnitario-unitVigente)*qtdeAtual*meses:0;
   const valorMensalDepois=novaQtde*novoValorUnitario;
   const impactoTotal=impactoAditivo+impactoReajuste-impactoSupressao;
   return {impactoAditivo,impactoReajuste,impactoSupressao,impactoTotal,novoValorUnitario,novaQtde,
-          valorMensalAntes,valorMensalDepois,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses};
+          valorMensalAntes,valorMensalDepois,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses,reajusteAlterado,valorInvalido};
 }
 function _cieAtualizarImpactoItem(itemId){
   const row=document.querySelector(`#cie-tbody tr[data-item="${itemId}"]`);
@@ -4051,10 +4057,8 @@ function _cieBaseReajustadaSessao(base,valorMensalBase){
   let impactoBaseReajuste=0;
   document.querySelectorAll('#cie-tbody tr[data-item]').forEach(row=>{
     const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) return;
-    const qtdeAtual=Number(item.qtde)||0;
-    const unitVigente=_ctNum(item.valor_contratado??item.valor_estimado);
-    const rePct=_ctNum(row.querySelector('.cie-re-pct')?.value);
-    if(rePct) impactoBaseReajuste+=qtdeAtual*unitVigente*(rePct/100)*mesesBase;
+    const {qtdeAtual,unitVigente,novoValorUnitario}=_cieImpactosItem(item,row);
+    impactoBaseReajuste+=qtdeAtual*(novoValorUnitario-unitVigente)*mesesBase;
   });
   return {
     baseReajustada:Math.max(base+impactoBaseReajuste,0),
@@ -4068,12 +4072,11 @@ function _cieAtualizarTotais(){
   const meses=usaMeses?(_ctNum(document.getElementById('cie-meses')?.value)||1):1;
   document.querySelectorAll('#cie-tbody tr[data-item]').forEach(row=>{
     const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) return;
-    const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,rePct,valorMensalAntes,valorMensalDepois,unitVigente}=_cieImpactosItem(item,row);
+    const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,valorMensalAntes,valorMensalDepois}=_cieImpactosItem(item,row);
     totAd+=impactoAditivo; totRe+=impactoReajuste; totSu+=impactoSupressao;
     totMensalAntes+=valorMensalAntes; totMensalDepois+=valorMensalDepois;
     const adImp=row.querySelector('.cie-ad-imp'); if(adImp) adImp.textContent=impactoAditivo?_ctMoney(impactoAditivo):'—';
     const reImp=row.querySelector('.cie-re-imp'); if(reImp) reImp.textContent=impactoReajuste?_ctMoney(impactoReajuste):'—';
-    const reNovo=row.querySelector('.cie-re-novo-unit'); if(reNovo) reNovo.textContent=rePct?_ctMoney(novoValorUnitario):'—';
     const suImp=row.querySelector('.cie-su-imp'); if(suImp) suImp.textContent=impactoSupressao?_ctMoney(impactoSupressao):'—';
     // Valor unit. exibido nas colunas de aditivo/supressão acompanha o reajuste digitado na mesma linha.
     const adValor=row.querySelector('.cie-ad-valor'); if(adValor) adValor.value=novoValorUnitario?_ctMoney(novoValorUnitario):'—';
@@ -4150,7 +4153,8 @@ async function salvarItensEventosContrato(){
   if(suUltrapassou){setMsg("A supressão ultrapassa o saldo disponível do limite de 25% (supressão). Reduza a quantidade suprimida.",false);return;}
   for(const row of rows){
     const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) continue;
-    const {suQtde,qtdeAtual}=_cieImpactosItem(item,row);
+    const {suQtde,qtdeAtual,valorInvalido}=_cieImpactosItem(item,row);
+    if(valorInvalido){setMsg(`Informe um novo valor unitário válido, maior ou igual a zero, para "${item.descricao||item.id}".`,false);return;}
     if(suQtde>qtdeAtual){setMsg(`Supressão de "${item.descricao||item.id}" (${suQtde}) não pode ser maior que a quantidade atual do item (${qtdeAtual}).`,false);return;}
     if(suQtde<0||_cieImpactosItem(item,row).adQtde<0){setMsg("Quantidades não podem ser negativas.",false);return;}
   }
@@ -4159,22 +4163,22 @@ async function salvarItensEventosContrato(){
   try{
     for(const row of rows){
       const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) continue;
-      const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses}=_cieImpactosItem(item,row);
+      const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses,reajusteAlterado}=_cieImpactosItem(item,row);
       const periodicidade=_ctPeriodicidade();
       const periodosTexto=_ctEhTrimestral()?'Trimestres considerados':'Meses considerados';
-      if(impactoAditivo){
-        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Aditivo",action_type:"aditivo",titulo:"Aditivo registrado",data_evento:data,status_evento:status,valor_impacto:impactoAditivo,related_entity_type:"contractItem",related_entity_id:String(item.id),periodicidade_calculo:periodicidade,periodos_considerados:meses,quantidade_alterada:adQtde,valor_unitario_periodo:novoValorUnitario,obs:`Item: ${item.descricao||item.id}. Qtde acrescida: ${adQtde}. Valor unitário usado: ${_ctMoney(novoValorUnitario)}${rePct?` (vigente ${_ctMoney(unitVigente)} reajustado em ${rePct}%)`:''}. ${periodosTexto}: ${meses}. Impacto ${_ctMoney(impactoAditivo)}. Status: ${status}.${obs?". "+obs:""}`});
+      if(adQtde>0){
+        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Aditivo",action_type:"aditivo",titulo:"Aditivo registrado",data_evento:data,status_evento:status,valor_impacto:impactoAditivo,related_entity_type:"contractItem",related_entity_id:String(item.id),periodicidade_calculo:periodicidade,periodos_considerados:meses,quantidade_alterada:adQtde,valor_unitario_periodo:novoValorUnitario,obs:`Item: ${item.descricao||item.id}. Qtde acrescida: ${adQtde}. Valor unitário usado: ${_ctMoney(novoValorUnitario)}${reajusteAlterado?` (anterior ${_ctMoney(unitVigente)})`:''}. ${periodosTexto}: ${meses}. Impacto ${_ctMoney(impactoAditivo)}. Status: ${status}.${obs?". "+obs:""}`});
         if(error) throw error;
         totalImpacto+=impactoAditivo; eventosGerados++;
       }
-      if(impactoReajuste){
-        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Reajuste",action_type:"reajuste",titulo:"Reajuste registrado",data_evento:data,percentual:rePct,status_evento:status,valor_impacto:impactoReajuste,related_entity_type:"contractItem",related_entity_id:String(item.id),periodicidade_calculo:periodicidade,periodos_considerados:meses,valor_unitario_periodo:novoValorUnitario,obs:`Item: ${item.descricao||item.id}. ${rePct}% sobre valor unitário vigente (${_ctMoney(unitVigente)} → ${_ctMoney(novoValorUnitario)}). Qtde atual: ${qtdeAtual}. ${periodosTexto}: ${meses}. Impacto ${_ctMoney(impactoReajuste)}. Status: ${status}.${obs?". "+obs:""}`});
+      if(reajusteAlterado){
+        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Reajuste",action_type:"reajuste",titulo:"Reajuste registrado",data_evento:data,percentual:rePct,status_evento:status,valor_impacto:impactoReajuste,related_entity_type:"contractItem",related_entity_id:String(item.id),periodicidade_calculo:periodicidade,periodos_considerados:meses,valor_unitario_periodo:novoValorUnitario,obs:`Item: ${item.descricao||item.id}. Novo valor unitário informado: ${_ctMoney(unitVigente)} → ${_ctMoney(novoValorUnitario)}.${rePct!==null?` Percentual informativo: ${rePct}% (não utilizado no cálculo).`:''} Qtde atual: ${qtdeAtual}. ${periodosTexto}: ${meses}. Impacto ${_ctMoney(impactoReajuste)}. Status: ${status}.${obs?". "+obs:""}`});
         if(error) throw error;
         if(status==="formalizado"){ const {error:e2}=await sb.from("itens").update({valor_contratado:novoValorUnitario}).eq("id",item.id); if(e2) throw e2; }
         totalImpacto+=impactoReajuste; eventosGerados++;
       }
-      if(impactoSupressao){
-        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Supressao",action_type:"supressao",titulo:"Supressao registrada",data_evento:data,status_evento:status,valor_impacto:impactoSupressao,related_entity_type:"contractItem",related_entity_id:String(item.id),periodicidade_calculo:periodicidade,periodos_considerados:meses,quantidade_alterada:-suQtde,valor_unitario_periodo:novoValorUnitario,obs:`Item: ${item.descricao||item.id}. Qtde suprimida: ${suQtde}. Valor unitário usado: ${_ctMoney(novoValorUnitario)}${rePct?` (vigente ${_ctMoney(unitVigente)} reajustado em ${rePct}%)`:''}. ${periodosTexto}: ${meses}. Impacto redutor ${_ctMoney(impactoSupressao)}. Status: ${status}.${obs?". "+obs:""}`});
+      if(suQtde>0){
+        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Supressao",action_type:"supressao",titulo:"Supressao registrada",data_evento:data,status_evento:status,valor_impacto:impactoSupressao,related_entity_type:"contractItem",related_entity_id:String(item.id),periodicidade_calculo:periodicidade,periodos_considerados:meses,quantidade_alterada:-suQtde,valor_unitario_periodo:novoValorUnitario,obs:`Item: ${item.descricao||item.id}. Qtde suprimida: ${suQtde}. Valor unitário usado: ${_ctMoney(novoValorUnitario)}${reajusteAlterado?` (anterior ${_ctMoney(unitVigente)})`:''}. ${periodosTexto}: ${meses}. Impacto redutor ${_ctMoney(impactoSupressao)}. Status: ${status}.${obs?". "+obs:""}`});
         if(error) throw error;
         totalImpacto-=impactoSupressao; eventosGerados++;
       }
@@ -4188,9 +4192,32 @@ async function salvarItensEventosContrato(){
       }
     }
     if(!eventosGerados){setMsg("Preencha ao menos um campo de aditivo, reajuste ou supressão em algum item.",false);return;}
-    if(status==="formalizado"&&totalImpacto){
-      const novoTotal=Math.max(_ctValorAtual(_ctAtual)+totalImpacto,0);
-      await sb.from("contratos").update({valor_atual:novoTotal,valor_atual_num:novoTotal}).eq("id",id);
+    if(status==="formalizado"){
+      const atualizacao={};
+      if(totalImpacto){
+        const novoTotal=Math.max(_ctValorAtual(_ctAtual)+totalImpacto,0);
+        atualizacao.valor_atual=novoTotal;
+        atualizacao.valor_atual_num=novoTotal;
+      }
+      const periodicidade=_ctPeriodicidade();
+      if(periodicidade==='MENSAL'||periodicidade==='TRIMESTRAL'){
+        // Releitura inclui os itens sem ajuste e usa os preços/quantidades efetivamente salvos.
+        const {data:itensSalvos,error:erroItens}=await sb.from('itens').select('qtde,valor_contratado,valor_estimado,status').eq('contrato_id',id);
+        if(erroItens) throw erroItens;
+        if(!Array.isArray(itensSalvos)||!itensSalvos.length) throw new Error('Não foi possível conferir os itens para atualizar o valor do período.');
+        const valorPeriodo=Number(itensSalvos.filter(i=>!['inativo','cancelado'].includes(String(i.status||'').toLowerCase()))
+          .reduce((s,i)=>s+_ctNum(i.qtde)*_ctNum(i.valor_contratado??i.valor_estimado),0).toFixed(2));
+        atualizacao.valor_periodico_num=valorPeriodo;
+        if(periodicidade==='MENSAL'){
+          atualizacao.valor_mensal_num=valorPeriodo;
+          atualizacao.valor_mensal=String(valorPeriodo);
+        }
+      }
+      if(Object.keys(atualizacao).length){
+        const {data:salvos,error:erroContrato}=await sb.from('contratos').update(atualizacao).eq('id',id).select('id');
+        if(erroContrato) throw erroContrato;
+        if(!salvos?.length) throw new Error('Os ajustes dos itens foram registrados, mas os valores do contrato não foram atualizados. Verifique a permissão de edição.');
+      }
     }
     setMsg(`${eventosGerados} evento(s) formalizado(s).`,true);
     await loadContratos();

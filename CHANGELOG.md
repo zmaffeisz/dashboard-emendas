@@ -1,5 +1,48 @@
 # Changelog
 
+## 2026-09-29 — Valor mensal após ajustes por item
+
+- O salvamento de reajuste/aditivo/supressão recalcula o valor do período a partir
+  de todos os itens ativos persistidos, sincronizando o valor mensal nos contratos
+  mensais e o valor periódico nos trimestrais. Falhas de leitura ou atualização
+  do contrato são informadas, sem mensagem de sucesso.
+- Regularizado em produção o valor mensal do contrato 703/2024 para R$ 13.502,10,
+  conforme seus 10 itens já reajustados, preservando os valores inicial e global.
+
+## 2026-09-29 — Reajuste por novo valor unitário
+
+- Em Ajustes por item, o novo valor unitário é digitado diretamente e determina
+  os impactos, totais e a base reajustada dos limites de aditivo/supressão.
+- O percentual é opcional e informativo, preservado no histórico sem calcular
+  preços. Campo de preço vazio mantém o vigente; zero é aceito e valores
+  negativos ou inválidos impedem salvar. Itens com quantidade zero também
+  recebem o novo preço, mesmo sem impacto financeiro imediato.
+
+## 2026-09-29 — Regularização do processo legado 014/2024
+
+- **Reaplicada após a correção dos preços pelo usuário:** 10 itens vinculados ao
+  contrato 703/2024, sem pendências na licitação. Conferidos R$ 12.452,00 mensais
+  e R$ 298.848,00 em 24 meses, iguais aos valores históricos preservados.
+- **Desfeita a pedido do usuário na mesma data:** removidos os 10 itens vinculados
+  e limpa a lista de itens mensais do processo, incluindo os totais calculados,
+  para novo lançamento com os preços unitários iniciais corretos. Contrato
+  703/2024 e valores históricos preservados. O processo volta à listagem padrão.
+- Os 10 itens de serviço mensal foram materializados em `itens` e vinculados
+  ao contrato existente 703/2024 em produção, com status `contratado`, retirando
+  o processo da listagem padrão de Licitações em andamento.
+- Quantidades, preços e valores históricos do contrato foram preservados.
+  A soma dos itens (R$ 324.050,40 em 24 meses) difere do valor inicial/atual
+  cadastrado (R$ 298.848,00); esse lançamento foi posteriormente desfeito acima.
+
+## 2026-09-29 — Regularização do processo legado 038/2021
+
+- Os 47 itens de serviço mensal do processo foram materializados em `itens` e
+  vinculados ao contrato existente 374/2021 em produção, com status `contratado`.
+  O processo passa a ser ocultado pelo filtro padrão de Licitações em andamento.
+- Quantidades e preços informados foram preservados, inclusive 12 linhas com
+  quantidade zero. Valores e situação do contrato foram mantidos; a divergência
+  entre a soma dos itens e os valores históricos permanece para conferência.
+
 ## 2026-09-28 — Filtro de secretarias nas licitações
 
 - O filtro **Secretaria** em **Licitações em andamento** aceita várias secretarias

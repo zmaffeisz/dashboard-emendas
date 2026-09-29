@@ -20,7 +20,59 @@
 
 ## 2. Migrations aplicadas em produção
 
+### Regularização pontual de dados — 29/09/2026
+
+No projeto `qpvgpfwuurqcqprnpxua`, os 47 registros de
+`processos.servico_mensal_itens` do processo 038/2021 (`id=36`) foram
+materializados em `itens`, com origem `servico_mensal`, status `contratado` e
+vínculo ao contrato 374/2021 (`id=273`). A operação foi transacional, com bloqueio
+dos registros de origem e destino e exigência de ausência de itens anteriores.
+Não houve alteração de schema nem criação de outro contrato.
+
+Verificação após a gravação: 47 itens vinculados, nenhuma divergência de descrição,
+quantidade ou preço em relação à origem, nenhum item pendente de contratação e
+12 linhas com quantidade zero preservadas. A soma mensal é R$ 8.468,87
+(R$ 203.252,88 em 24 meses); os valores históricos do contrato permanecem
+R$ 178.237,92 inicial/atual e R$ 7.789,52 mensal, pendentes de conciliação.
+O JSON de origem e o status do contrato foram preservados. O filtro existente de
+Licitações oculta processos cujos itens estão todos contratados; não foi usado
+encerramento por fracasso/deserção.
+
+Na mesma data, o processo 014/2024 (`id=29`) recebeu a mesma regularização:
+10 itens de `servico_mensal_itens` materializados e vinculados ao contrato
+703/2024 (`id=274`), com origem `servico_mensal` e status `contratado`.
+A transação também exigiu ausência de itens anteriores e bloqueou processo e
+contrato. A conferência confirmou 10 vínculos, nenhuma divergência de descrição,
+quantidade ou preço e nenhum item pendente de contratação. Soma mensal dos itens:
+R$ 13.502,10 (R$ 324.050,40 em 24 meses). Valores históricos preservados:
+R$ 298.848,00 inicial/atual e R$ 12.452,00 mensal; conciliação pendente.
+O JSON de origem e o status do contrato foram mantidos, sem alteração de schema.
+
+**Reversão do 014/2024 na mesma data, a pedido do usuário:** os 10 itens criados
+na operação foram excluídos após conferir que não tinham registros dependentes.
+A lista `servico_mensal_itens` foi esvaziada e os campos `valor_estimado`,
+`servico_mensal_valor_mensal` e `servico_mensal_valor_global` foram limpos para
+recadastro dos preços unitários iniciais. Prazo de 24 meses e demais dados do
+processo mantidos. Contrato 703/2024, seus valores históricos e a regularização
+do 038/2021 preservados. Conferência: zero itens no processo/contrato 014/2024,
+lista mensal vazia e os 47 vínculos do 038/2021 mantidos.
+
+**Reaplicação do 014/2024 após correção pelo usuário:** os 10 itens corrigidos
+foram novamente materializados e vinculados ao contrato 703/2024 em transação,
+exigindo ausência de itens anteriores e conferência dos totais contra o contrato.
+Verificação posterior: nenhuma divergência de descrição, quantidade ou preço,
+10 itens contratados, nenhum pendente, R$ 12.452,00 mensais e R$ 298.848,00
+em 24 meses. A divergência anterior foi resolvida pelo recadastro dos preços.
+Os dados e valores históricos do contrato foram preservados.
+
 Listadas via `list_migrations` (ordem cronológica):
+
+Regularização complementar em 29/09/2026: após os reajustes lançados pelo usuário
+no contrato 703/2024 (`id=274`), seus 10 itens somavam R$ 13.502,10 mensais, mas
+`valor_mensal_num` permanecia em R$ 12.452,00. Foram sincronizados
+`valor_mensal_num`, `valor_mensal` e `valor_periodico_num` para R$ 13.502,10.
+Operação transacional com bloqueio e conferência da soma, sem alterar itens,
+histórico, valor inicial (R$ 298.848,00) ou global persistido (R$ 313.919,12).
 
 | Versão | Nome |
 |---|---|

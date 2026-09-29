@@ -203,6 +203,17 @@
   timbrado institucional da SES. O aceite lê os dados atuais do pedido, identifica a unidade
   e seu Código SIAM, e apresenta duas assinaturas: o usuário emissor como **Fiscal de
   Contrato** e o nome/cargo da ficha única `secretario_atual`.
+- No modal **Ajustes por item**, o reajuste é calculado pelo novo valor unitário
+  informado. O percentual é opcional e apenas informativo no histórico; não
+  determina preços, impactos ou a base dos limites de aditivo/supressão.
+  Preço vazio mantém o vigente, zero é válido e preço negativo/inválido impede
+  salvar. Um novo preço também é registrado para item com quantidade zero.
+- Após formalizar ajustes por item, o valor vigente do período é recalculado pela
+  soma de quantidade × preço vigente de todos os itens persistidos, excluindo
+  inativos/cancelados. Contratos mensais sincronizam `valor_mensal_num`,
+  `valor_mensal` e `valor_periodico_num`; trimestrais, apenas o valor periódico.
+  O valor global mantém o cálculo do impacto pelos períodos considerados,
+  separado do valor mensal/trimestral. Outros modelos não recebem essa atualização.
 - `contratos.data_base_reajuste` é uma informação contratual opcional para todos os tipos
   de instrumento. Ela é exibida nos detalhes e, nas ATAs, também na lista de itens, mas
   não cria reajuste automaticamente.
