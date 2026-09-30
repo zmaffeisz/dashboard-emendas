@@ -6,6 +6,30 @@
 
 ## 1. Princípios gerais (obrigatórios)
 
+### Coordenação e dados históricos das unidades (30/09/2026)
+
+- A ficha atual da unidade mantém endereço, telefone, e-mail institucional e
+  `coordenador_id` referenciando Pessoas. Troca de coordenador ocorre em
+  **Cadastros → Unidades → Editar unidade**; pessoas novas são cadastradas em Pessoas.
+- Contatos e coordenação só são alterados por admin aprovado. A supervisão da
+  planilha não foi convertida em coordenação nem em permissão de acesso.
+- `unidades_historico` guarda cópias completas a cada alteração da ficha e dos
+  dados de uma pessoa vinculada como coordenadora. O histórico é somente leitura
+  para admin, preservando também a ficha conhecida antes da importação.
+- `itens_entregas.unidade_snapshot` e `atas_execucao.unidade_snapshot` congelam a
+  ficha na primeira AF/termo/confirmação. Depois disso, alterações de nome,
+  endereço, contato ou coordenador não atualizam essa cópia, nem mesmo quando o
+  registro de entrega é editado. Caronas guardam somente o nome operacional do
+  destinatário, sem atribuir a coordenação de uma unidade municipal ao solicitante.
+- O responsável que efetivamente recebe/assina continua independente do
+  coordenador cadastral. Não se altera automaticamente o signatário de um termo.
+- PDFs/termos anexados e dados históricos já copiados em chamados e sanções
+  continuam usando seus próprios registros. Para documentos anteriores à
+  implantação, só se preserva a informação disponível; não se inventa o passado.
+- SAME é o cadastro usado para SAME/CMAE. Saúde Mental – Palácio é uma unidade
+  própria, com endereço no Palácio da Saúde. PA Laranjeiras usa Erica Juliana
+  Leonor e `ejleonor@sorocaba.sp.gov.br`, informados pelo usuário.
+
 | # | Regra | Status no código |
 |---|---|---|
 | G1 | **Fonte única da verdade** no banco; abas são views da mesma base. | Implementado (recarregamento + views) |

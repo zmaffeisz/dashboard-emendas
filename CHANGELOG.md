@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-09-30 — Coordenadores, contatos e histórico das unidades
+
+- Cadastros → Unidades passa a ter busca por unidade/coordenador/endereço, fichas
+  com edição de nome, endereço, telefone, e-mail e seleção de coordenador cadastrado
+  em Pessoas. Inativas ficam ocultas por padrão, com opção de consulta.
+- Importadas as 38 unidades da tabela de coordenadores de 01/09/2026: 37 registros
+  existentes reutilizados e Saúde Mental – Palácio criada separadamente. SAME foi
+  reutilizado; PA Laranjeiras vinculado a Erica Juliana Leonor, conforme o usuário.
+- Histórico de fichas preserva as alterações de contato e coordenação, inclusive
+  mudanças nos dados da pessoa coordenadora. Consulta restrita a admin aprovado.
+- AF/termos em aquisições e ATAs congelam os dados da unidade no banco; edição
+  cadastral não atualiza as cópias já guardadas. A confirmação e as AFs usam o nome
+  congelado, e os detalhes mostram endereço/contatos/coordenação preservados.
+- Registros anteriores recebem a ficha conhecida antes da importação. Não se
+  reconstrói um endereço ou coordenador passado que não foi registrado. PDFs e
+  termos anexados, chamados e snapshots de sanções permanecem preservados.
+
 ## 2026-09-30 — Detalhes expansíveis na confirmação de entrega
 
 - O clique na própria linha da **Confirmação de Entrega na Unidade** expande/recolhe

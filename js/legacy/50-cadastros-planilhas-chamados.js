@@ -43,6 +43,7 @@ async function carregarCadastros(){
   try{ await carregarRevisao(); }catch(e){ console.warn('revisão cadastros:',e); }
 }
 async function abrirCadastroLista(ent){
+  if(ent==='unidades' && window.UnidadesCadastro){ _cadAtual=ent; return window.UnidadesCadastro.abrir(); }
   const def=CADASTRO_DEFS[ent]; _cadAtual=ent;
   document.getElementById('cad-hub').style.display='none';
   const wrap=document.getElementById('cad-lista'); wrap.style.display='block';
@@ -65,6 +66,7 @@ async function abrirCadastroLista(ent){
   tb.innerHTML=novo+linhas;
 }
 async function cadastroSalvar(ent, btn){
+  if(bloquearSeVisualiz('cadastros')) return;
   const def=CADASTRO_DEFS[ent];
   const tr=btn.closest('tr');
   const dados={};
@@ -94,7 +96,7 @@ const REV_DEFS = {
   parlamentares: {titulo:'🏛️ Parlamentares', keyCol:'nome', label:r=>r.nome, tipo:'txt',
     refs:[['emendas','parlamentar']]},
   pessoas:       {titulo:'👤 Pessoas / Fiscais', keyCol:'nome', label:r=>r.nome, tipo:'txt',
-    refs:[['contratos_fiscalizadores','nome'],['chamados','fiscalizado_por'],['chamados_controle','fiscalizado_por'],['termos_ateste','fiscalizado_por']]},
+    refs:[['contratos_fiscalizadores','nome'],['chamados','fiscalizado_por'],['chamados_controle','fiscalizado_por'],['termos_ateste','fiscalizado_por'],['unidades','coordenador_id','fk']]},
   secoes:        {titulo:'🏢 Seções', keyCol:'sigla', label:r=>(r.sigla+(r.nome?(' — '+r.nome):'')), tipo:'txt',
     refs:[['contratos','secao'],['processos','secao']]},
   fornecedores:  {titulo:'🏭 Empresas', keyCol:'razao_social', label:r=>(r.razao_social||r.nome_fantasia||('#'+r.id)), tipo:'fk',
@@ -170,10 +172,10 @@ async function revAprovar(ent, id){
   if(error){ toast('Erro: '+error.message,'error'); return; }
   toast('Cadastro aprovado.','success'); carregarRevisao();
 }
-async function _revContarRefs(def, fromVal){
+async function _revContarRefs(def, fromVal, fromId){
   let total=0; const detalhe=[];
-  for(const [ct,cc] of def.refs){
-    const {count,error}=await sb.from(ct).select('id',{count:'exact',head:true}).eq(cc,fromVal);
+  for(const [ct,cc,tipoRef] of def.refs){
+    const {count,error}=await sb.from(ct).select('id',{count:'exact',head:true}).eq(cc,tipoRef==='fk'?fromId:fromVal);
     if(!error && count){ total+=count; detalhe.push(`${ct}: ${count}`); }
   }
   return {total,detalhe};
@@ -189,14 +191,14 @@ async function revMesclar(ent, dupId){
   if(!dup||!keep){ toast('Registro não encontrado.','error'); return; }
   const fromVal=def.tipo==='fk'?dupId:dup[def.keyCol];
   const toVal=def.tipo==='fk'?keepId:keep[def.keyCol];
-  const {total,detalhe}=await _revContarRefs(def,fromVal);
+  const {total,detalhe}=await _revContarRefs(def,fromVal,dupId);
   const msg=`Mesclar "${def.label(dup)}" → "${def.label(keep)}".\n\n`+
     (total?`Vou reapontar ${total} referência(s) para o cadastro correto:\n• ${detalhe.join('\n• ')}\n\n`:'Nenhuma referência usa o duplicado.\n\n')+
     `Depois apago o duplicado. Continuar?`;
   if(!await uiConfirm(msg)) return;
   // 1) reaponta referências
-  for(const [ct,cc] of def.refs){
-    const {error}=await sb.from(ct).update({[cc]:toVal}).eq(cc,fromVal);
+  for(const [ct,cc,tipoRef] of def.refs){
+    const {error}=await sb.from(ct).update({[cc]:tipoRef==='fk'?keepId:toVal}).eq(cc,tipoRef==='fk'?dupId:fromVal);
     if(error){ toast(`Erro ao reapontar ${ct}: ${error.message}`,'error'); return; }
   }
   // 2) apaga o duplicado
@@ -210,7 +212,7 @@ async function revExcluir(ent, id){
   const def=REV_DEFS[ent];
   const dup=(await sb.from(ent).select('*').eq('id',id).single()).data;
   const fromVal=def.tipo==='fk'?id:(dup?dup[def.keyCol]:null);
-  const {total,detalhe}= fromVal!=null ? await _revContarRefs(def,fromVal) : {total:0,detalhe:[]};
+  const {total,detalhe}= fromVal!=null ? await _revContarRefs(def,fromVal,id) : {total:0,detalhe:[]};
   if(total){ if(!await uiConfirm(`Atenção: ${total} referência(s) ainda usam este cadastro (${detalhe.join(', ')}). Excluir vai deixá-las órfãs/sem vínculo. Prefira "Mesclar". Excluir mesmo assim?`)) return; }
   else if(!await uiConfirm('Excluir este cadastro?')) return;
   const {error}=await sb.from(ent).delete().eq('id',id);

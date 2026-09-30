@@ -6,6 +6,19 @@
 
 ## 1. Mapa de domínios
 
+### Complemento de unidades e histórico (30/09/2026)
+
+- `unidades.email`: e-mail institucional da unidade.
+- `unidades.coordenador_id`: FK opcional para `pessoas.id`, com índice próprio.
+- `unidades_historico`: `id`, `unidade_id`, `registrado_em`, `registrado_por`,
+  `dados` (JSONB com ficha e cópia dos dados do coordenador). Sem FK de unidade
+  para preservar histórico mesmo em deduplicações; sem escrita por anon/authenticated.
+  RLS libera SELECT somente para admin aprovado. Inserções são internas por trigger
+  privado com privilégios delimitados e EXECUTE revogado para usuários.
+- `itens_entregas.unidade_snapshot` e `atas_execucao.unidade_snapshot`: JSONB
+  preenchido no banco na primeira emissão e preservado em updates posteriores.
+  Inclui `capturado_em`; reimpressão/consulta não resolve a ficha cadastral atual.
+
 | Domínio | Tabelas principais |
 |---|---|
 | **Emendas** | `emendas`, `emenda_itens`, `parlamentares`, `unidades` |

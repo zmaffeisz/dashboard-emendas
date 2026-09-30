@@ -1282,7 +1282,7 @@ async function loadItensEntregas(){
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
   const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,tipo_material,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,tipo_material,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs,unidade_snapshot')
     .order('af_data',{ascending:false});
   if(e1b) console.warn('AF base:',e1b.message);
   const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
@@ -1326,7 +1326,7 @@ async function loadItensEntregas(){
       empresa:it.fornecedores?.razao_social||'', item:it.descricao||'',
       marca:it.marca||'', modelo:it.modelo||'',
       numero_serie:r.numero_serie||'',
-      unidade:it.unidades?.nome||'', af_numero:r.af_numero||'',
+      unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (it.unidades?.nome||''), unidade_snapshot:r.unidade_snapshot||null, af_numero:r.af_numero||'',
       af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
       saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
       observacoes:_obsPorEntrega[String(r.id)]||[],
@@ -1395,7 +1395,7 @@ async function loadItensEntregas(){
     const seriesAta=[...new Set(unidadesAta.map(u=>String(u.numero_serie||'').trim()).filter(Boolean))].join('; ');
     out.push({
       tipo:'ATA', exec_id:r.id, ata_item_id:r.ata_item_id||null, emenda_id:r.emenda_id||null, emenda_item_id:r.emenda_item_id||null, processo:r.cpl||ai.cpl||'', contrato:r.sim||ai.sim||'', contrato_id:ai.contrato_id||null,
-      empresa:ai.empresa||'', item:r.item||ai.item||'', marca:r.marca_modelo||ai.marca||'', modelo:'', unidade:r.unidade||'', af_numero:r.af_numero||'', empenho:empAta,
+      empresa:ai.empresa||'', item:r.item||ai.item||'', marca:r.marca_modelo||ai.marca||'', modelo:'', unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (r.unidade||''), unidade_snapshot:r.unidade_snapshot||null, af_numero:r.af_numero||'', empenho:empAta,
       origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
@@ -1461,7 +1461,7 @@ async function loadItensEntregas(){
         emenda_id:it.emenda_id||null, emenda_item_id:it.emenda_item_id||null,
         empresa:it.fornecedores?.razao_social||'', item:it.descricao||'',
         marca:it.marca||'', modelo:it.modelo||'', numero_serie:r.numero_serie||'',
-        unidade:it.unidades?.nome||'', af_numero:r.af_numero||'',
+        unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (it.unidades?.nome||''), unidade_snapshot:r.unidade_snapshot||null, af_numero:r.af_numero||'',
         af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
         saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
         observacoes:_obsPorEntrega[String(r.id)]||[],
@@ -1511,7 +1511,7 @@ async function loadItensEntregas(){
       processo:it.processos?.identificador||'',contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
       contrato_id:it.contrato_id||null,fornecedor_id:it.fornecedor_id||null,
       empresa:it.fornecedores?.razao_social||'',item:it.descricao||'(item '+r.item_id+')',
-      unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
+      unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (it.unidades?.nome||''),unidade_snapshot:r.unidade_snapshot||null,af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       observacoes:_obsPorEntrega[String(r.id)]||[],
       prazo_entrega_dias:it.prazo_entrega_dias,
@@ -1535,7 +1535,7 @@ async function loadItensEntregas(){
       processo:it.processos?.identificador||'',contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
       contrato_id:it.contrato_id||null,fornecedor_id:it.fornecedor_id||null,
       empresa:it.fornecedores?.razao_social||'',item:it.descricao||'(item '+r.item_id+')',
-      unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
+      unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (it.unidades?.nome||''),unidade_snapshot:r.unidade_snapshot||null,af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       observacoes:_obsPorEntrega[String(r.id)]||[],
       prazo_entrega_dias:it.prazo_entrega_dias,
@@ -3478,7 +3478,7 @@ async function loadConfirmacoes(){
     rows.push({
       tipo:'Aquisição', id:r.id, item_id:r.item_id,
       processo:it.processos?.identificador||'', contrato:[it.contratos?.cpl,it.contratos?.numero_contrato].filter(Boolean).join(' · '),
-      empresa:it.fornecedores?.razao_social||'', item:it.descricao||'', unidade:it.unidades?.nome||'',
+      empresa:it.fornecedores?.razao_social||'', item:it.descricao||'', unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (it.unidades?.nome||''), unidade_snapshot:r.unidade_snapshot||null,
       qtde:Number(r.qtde_recebida)||Number(r.qtde_autorizada)||0, patrimonio:r.patrimonio||'', empenho:r.empenhos?.numero||r.empenho||empVinculado||'',
       nota_fiscal:nfAq, af_numero:r.af_numero||'', af_data:_toISODate(r.af_data), data_recebimento:_toISODate(r.data_recebimento),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
@@ -3531,7 +3531,7 @@ async function loadConfirmacoes(){
     if(!dataRec || !nfAta) return;
     rows.push({
       tipo:'ATA', id:r.id, processo:r.cpl||ai.cpl||ai.contratos?.cpl||'', contrato:r.sim||ai.sim||ai.contratos?.numero_contrato||'', empresa:ai.empresa||ai.contratos?.prestador||'',
-      item:r.item||ai.item||emInfo.item||'', unidade:r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'', qtde:Number(r.qtde)||0, patrimonio:(ataPatrimoniosPorExec[String(r.id)]||[]).join('; ')||emInfo.patrimonio||r.patrimonio||'',
+      item:r.item||ai.item||emInfo.item||'', unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||''), unidade_snapshot:r.unidade_snapshot||null, qtde:Number(r.qtde)||0, patrimonio:(ataPatrimoniosPorExec[String(r.id)]||[]).join('; ')||emInfo.patrimonio||r.patrimonio||'',
       empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, af_numero:r.af_numero||'', af_data:_toISODate(r.data_af), data_recebimento:dataRec,
       origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
@@ -3562,6 +3562,10 @@ function _confDetalhesHtml(row){
   const campos=[
     ['Tipo',row.tipo],['Processo/CPL',row.processo],['Contrato/Ata',row.contrato],
     ['Fornecedor',row.empresa],['Item',row.item],['Unidade',row.unidade],
+    ['Endereço preservado da unidade',row.unidade_snapshot?.endereco],
+    ['Coordenador preservado',row.unidade_snapshot?.coordenador?.nome],
+    ['E-mail preservado da unidade',row.unidade_snapshot?.email],
+    ['Telefone preservado da unidade',row.unidade_snapshot?.telefone],
     ['Quantidade',row.qtde],['AF',row.af_numero],['Data da AF',row.af_data?fmtDate(row.af_data):''],
     ['Empenho',row.empenho],['Nota fiscal',row.nota_fiscal],['Patrimônios',row.patrimonio],
     ['Recebimento',row.data_recebimento?fmtDate(row.data_recebimento):''],

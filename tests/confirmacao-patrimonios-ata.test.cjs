@@ -70,7 +70,7 @@ const execucao = (id, emenda_item_id = null) => ({
 
 (async () => {
   const tabelas = {
-    atas_execucao: [execucao('micro', 'em1'), execucao('ox', 'em2'), execucao('outro', 'em2'),
+    atas_execucao: [{ ...execucao('micro', 'em1'), unidade: 'Nome alterado depois', unidade_snapshot: { nome: 'Unidade na emissão', endereco: 'Endereço na emissão', coordenador: { nome: 'Coordenador na emissão' } } }, execucao('ox', 'em2'), execucao('outro', 'em2'),
       execucao('legado', 'em2'), execucao('sem-numero'),
       { ...execucao('consumo'), tipo_material: 'CONSUMO' },
       { ...execucao('pendente'), dt_entrega: null }],
@@ -82,7 +82,7 @@ const execucao = (id, emenda_item_id = null) => ({
       { exec_id: 'outro', patrimonio: ' 400000 ', unidade_seq: 1 },
       { exec_id: 'sem-numero', patrimonio: null, unidade_seq: 1 }
     ],
-    itens_entregas: [{ id: 'aq', af_numero: 'AF 1', qtde_recebida: 1, nota_fiscal: '10', patrimonio: '123' }]
+    itens_entregas: [{ id: 'aq', af_numero: 'AF 1', qtde_recebida: 1, nota_fiscal: '10', patrimonio: '123', itens: { unidades: { nome: 'Nome atual' } }, unidade_snapshot: { nome: 'Nome anterior' } }]
   };
   const resultado = await carregar(tabelas);
   const porId = Object.fromEntries(resultado.rows.map(r => [r.id, r]));
@@ -92,6 +92,11 @@ const execucao = (id, emenda_item_id = null) => ({
   assert.equal(porId.legado.patrimonio, 'RESUMO ANTIGO');
   assert.equal(porId['sem-numero'].patrimonio, '');
   assert.equal(porId.aq.patrimonio, '123');
+  assert.equal(porId.aq.unidade, 'Nome anterior', 'Aquisição usa a unidade congelada, mesmo após edição do cadastro.');
+  assert.equal(porId.micro.unidade, 'Unidade na emissão', 'ATA usa a unidade congelada.');
+  const historicoHtml = resultado.contexto._confDetalhesHtml(porId.micro);
+  assert(historicoHtml.includes('Endereço na emissão') && historicoHtml.includes('Coordenador na emissão'));
+  assert(!historicoHtml.includes('Nome alterado depois'));
   assert(!porId.consumo && !porId.pendente);
   assert(resultado.elementos['confirmacao-wrap'].innerHTML.includes('Pat: 399392'));
   const chaveOx = resultado.contexto._confKey(porId.ox);

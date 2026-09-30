@@ -397,3 +397,14 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .ss-single .ss-caret{color:var(--text3);font-size:11px;margin-left:6px;pointer-events:none}
 .ss-single .ss-input{min-width:40px}
 .login-label{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;display:block}
+.cad-unidades-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
+.cad-unidades-toolbar>input{flex:1;min-width:220px}
+.cad-unidades-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}
+.cad-unidade-card{padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow-wrap:anywhere}
+.cad-unidade-card h3{margin:0 0 12px;font-size:16px}
+.cad-unidade-card dt{font-size:11px;color:var(--text2);margin-top:9px}
+.cad-unidade-card dd{margin:3px 0;font-size:13px}
+.cad-unidades-ajuda{font-size:12px;color:var(--text2);line-height:1.5}
+.cad-unidade-card label{display:block;font-size:12px}
+.cad-unidade-card input:not([type=checkbox]),.cad-unidade-card select,.cad-unidades-toolbar>input{width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);margin-top:5px}
+.cad-unidade-versao{border-top:1px solid var(--border);padding:12px 0;font-size:12px}
