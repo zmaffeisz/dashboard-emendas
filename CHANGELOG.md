@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-30 — Detalhes expansíveis na confirmação de entrega
+
+- O clique na própria linha da **Confirmação de Entrega na Unidade** expande/recolhe
+  os dados completos, incluindo todos os patrimônios,
+  item, unidade, fornecedor, documentos, datas, responsável/cargo e observações.
+  O painel quebra textos longos sem truncar e preserva a seleção para confirmação.
+- Botões e caixas de seleção mantêm suas ações sem expandir/recolher a linha.
+  Também é possível expandir pelo teclado com Enter ou Espaço na linha.
+
+## 2026-09-30 — Patrimônios de ATA na confirmação de entrega
+
+- A **Confirmação de Entrega na Unidade** passa a buscar os patrimônios nas unidades
+  físicas de cada pedido de ATA (`atas_execucao_unidades`), exibindo todos os números
+  cadastrados mesmo quando o campo legado da Emenda está vazio. Os números também
+  participam da busca e dos detalhes de confirmação. Campos legados continuam como
+  alternativa para recebimentos sem números nas unidades físicas.
+- Corrigida a consulta da tela, sem alterar cadastros ou schema do banco.
+
 ## 2026-09-29 — Seleção e consulta inicial de NF/medições
 
 - O seletor exibe o processo antes do número do contrato, seguido do fornecedor

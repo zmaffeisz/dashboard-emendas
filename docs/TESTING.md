@@ -98,6 +98,18 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 - [ ] Confirmar entrega na unidade (data, responsável, termo) e voltar para **Emendas**:
       o item deve mostrar status derivado do fluxo, data de entrega, empenho/NF/patrimônio
       quando existirem; item sem AF deve aparecer como "aguardando AF".
+- [ ] Na confirmação de uma ATA com patrimônio cadastrado apenas nas unidades físicas,
+      conferir todos os números na coluna **Documentos** e localizar o pedido pela busca
+      do patrimônio. Repetir com dois pedidos ligados à mesma Emenda: cada pedido deve
+      exibir seus próprios números, preservando a alternativa dos campos legados quando
+      as unidades não têm patrimônio cadastrado.
+- [ ] Expandir/recolher uma linha da confirmação clicando nas células e conferir
+      todos os patrimônios e textos longos sem reticências, inclusive em janela estreita.
+      Expandir várias linhas, alterar filtros e marcar itens: a seleção deve permanecer
+      independente da expansão. Conferir também com usuário de consulta.
+- [ ] Clicar em **Confirmar/Editar**, **Abrir termo**, **E-mail** e nas caixas de seleção:
+      somente a ação do controle deve ocorrer, sem expandir/recolher a linha. Usar
+      Enter/Espaço com a linha focada e conferir a expansão e a manutenção do foco.
 - [ ] Em um recebimento de ATA originado por **Carona**, conferir na subaba **Confirmação de
       Entrega na Unidade** o botão de e-mail; o destinatário deve ser o solicitante cadastrado,
       com cópia para `sueq.equipamentos@sorocaba.sp.gov.br`, e o corpo deve trazer Ata, NF

@@ -83,6 +83,15 @@ Ciclo de vida do item após a contratação:
   aquisições ou execuções de ATA, para confirmar a entrega real na unidade, termo e responsável. A confirmação alimenta
   a aba Emendas. Recebimentos de Carona também oferecem um e-mail de aviso de retirada ao
   solicitante cadastrado, com cópia para a SUEQ e os dados da NF, item e quantidade.
+- **Patrimônios na confirmação de ATA**: a lista consulta `atas_execucao_unidades`
+  por `exec_id` e exibe os números na ordem de `unidade_seq`, inclusive na busca e
+  nos detalhes de confirmação. Os campos legados da Emenda/execução são usados
+  somente quando não há números cadastrados nas unidades físicas do pedido.
+- **Detalhes da confirmação**: clicar na própria linha expande/recolhe um painel
+  com os dados completos da linha, sem cortar patrimônios ou textos longos.
+  A expansão também está disponível para quem tem apenas permissão de consulta.
+  Botões e caixas de seleção não acionam a expansão. Enter/Espaço na linha também
+  permitem expandir/recolher pelo teclado.
 - **Empenhos**: cadastro e vínculo de empenhos; a confirmação/Emendas pode herdar o empenho
   de `empenho_itens`, do contrato ou de `atas_execucao.empenho`.
 - **AF (Autorização de Fornecimento)** — aquisição: `abrirModalAF`, `abrirAFLote` →

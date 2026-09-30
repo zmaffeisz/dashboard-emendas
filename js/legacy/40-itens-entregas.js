@@ -3350,6 +3350,7 @@ window.normalizarNumeroDocumento=normalizarNumeroDocumento;
 // Fase 7 — confirmação de entrega na unidade + termo
 let confirmacaoRows=[], confirmacoesCarregado=false, _confRowsVisiveis=[];
 let _confSelecionados=new Set(), _confModoLote=false;
+const _confExpandidos=new Set();
 function _confStatus(row){ return row.data_entrega_unidade?'confirmado':'pendente'; }
 function _confKey(row){ return `${row?.tipo||''}::${row?.id||''}`; }
 function _confPodeEditarRow(row){ return row?.tipo==='ATA'?podeEditar('atas'):podeEditar('itens'); }
@@ -3499,6 +3500,26 @@ async function loadConfirmacoes(){
     const {data:aiInfo}=await sb.from('atas_itens').select('id,cpl,sim,item,empresa,contratos(cpl,numero_contrato,prestador,status)').in('id',ataItemIds);
     (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
   }
+  // O patrimônio pertence às unidades físicas do pedido. A Emenda pode estar
+  // vazia ou guardar um resumo antigo de outro recebimento.
+  const ataPatrimoniosPorExec={};
+  const ataExecIds=[...new Set((at||[]).map(r=>r.id).filter(Boolean))];
+  for(const ids of _chunkArray(ataExecIds,200)){
+    for(let offset=0;;offset+=1000){
+      const {data:unidades,error}=await sb.from('atas_execucao_unidades')
+        .select('exec_id,patrimonio,unidade_seq')
+        .in('exec_id',ids)
+        .order('exec_id',{ascending:true})
+        .order('unidade_seq',{ascending:true})
+        .range(offset,offset+999);
+      if(error){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (patrimônios das atas): '+_sanEsc(error.message)+'</div>'; return; }
+      (unidades||[]).forEach(u=>{
+        const patrimonio=String(u.patrimonio||'').trim();
+        if(patrimonio) (ataPatrimoniosPorExec[String(u.exec_id)]=ataPatrimoniosPorExec[String(u.exec_id)]||[]).push(patrimonio);
+      });
+      if((unidades||[]).length<1000) break;
+    }
+  }
   (at||[]).forEach(r=>{
     if(r.tipo_material==='CONSUMO') return;
     const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
@@ -3510,8 +3531,8 @@ async function loadConfirmacoes(){
     if(!dataRec || !nfAta) return;
     rows.push({
       tipo:'ATA', id:r.id, processo:r.cpl||ai.cpl||ai.contratos?.cpl||'', contrato:r.sim||ai.sim||ai.contratos?.numero_contrato||'', empresa:ai.empresa||ai.contratos?.prestador||'',
-      item:r.item||ai.item||emInfo.item||'', unidade:r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'', qtde:Number(r.qtde)||0, patrimonio:emInfo.patrimonio||r.patrimonio||'',
-      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, af_numero:r.af_numero||'', data_recebimento:dataRec,
+      item:r.item||ai.item||emInfo.item||'', unidade:r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'', qtde:Number(r.qtde)||0, patrimonio:(ataPatrimoniosPorExec[String(r.id)]||[]).join('; ')||emInfo.patrimonio||r.patrimonio||'',
+      empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, af_numero:r.af_numero||'', af_data:_toISODate(r.data_af), data_recebimento:dataRec,
       origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
       termo_responsavel:r.termo_responsavel||'', termo_cargo:r.termo_cargo||'', confirmacao_obs:r.confirmacao_obs||'',
@@ -3522,6 +3543,35 @@ async function loadConfirmacoes(){
   _confLimparSelecaoInvalida();
   confirmacoesCarregado=true;
   renderConfirmacoes();
+}
+function _confToggleDetalhes(encodedKey){
+  const key=decodeURIComponent(encodedKey||'');
+  if(_confExpandidos.has(key)) _confExpandidos.delete(key); else _confExpandidos.add(key);
+  renderConfirmacoes();
+}
+function _confAcionarLinha(event,encodedKey){
+  if(event.target.closest('button,input,select,textarea,a,label,[role="button"]')) return;
+  if(event.type==='keydown'){
+    if(event.target!==event.currentTarget || !['Enter',' '].includes(event.key)) return;
+    event.preventDefault();
+  }
+  _confToggleDetalhes(encodedKey);
+  if(event.type==='keydown') document.getElementById('conf-linha-'+encodedKey)?.focus();
+}
+function _confDetalhesHtml(row){
+  const campos=[
+    ['Tipo',row.tipo],['Processo/CPL',row.processo],['Contrato/Ata',row.contrato],
+    ['Fornecedor',row.empresa],['Item',row.item],['Unidade',row.unidade],
+    ['Quantidade',row.qtde],['AF',row.af_numero],['Data da AF',row.af_data?fmtDate(row.af_data):''],
+    ['Empenho',row.empenho],['Nota fiscal',row.nota_fiscal],['Patrimônios',row.patrimonio],
+    ['Recebimento',row.data_recebimento?fmtDate(row.data_recebimento):''],
+    ['Entrega na unidade',row.data_entrega_unidade?fmtDate(row.data_entrega_unidade):''],
+    ['Responsável',row.termo_responsavel],['Cargo',row.termo_cargo],
+    ['Status',_confStatus(row)==='confirmado'?'Confirmado':'Pendente'],['Observações',row.confirmacao_obs]
+  ];
+  return `<dl class="conf-detalhes-grid">${campos.map(([label,valor])=>
+    `<div${['Item','Unidade','Patrimônios','Observações'].includes(label)?' class="conf-detalhes-amplo"':''}><dt>${label}</dt><dd>${_sanEsc(valor||'—')}</dd></div>`
+  ).join('')}</dl>`;
 }
 function renderConfirmacoes(){
   const wrap=document.getElementById('confirmacao-wrap'); if(!wrap) return;
@@ -3548,12 +3598,13 @@ function renderConfirmacoes(){
       const termo=r.termo_arquivo?`<button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Abrir</button>`:'—';
       const pode=_confPodeEditarRow(r);
       const selecionavel=_confSelecionavel(r), key=_confKey(r), marcado=_confSelecionados.has(key);
+      const expandido=_confExpandidos.has(key), detalhesId='conf-detalhes-'+encodeURIComponent(key);
       const btn=pode?`<button onclick="abrirConfirmacaoUnidade('${r.tipo}','${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap">${r.data_entrega_unidade?'Editar':'Confirmar'}</button>`:'—';
       const emailCarona=r.tipo==='ATA'&&String(r.origem_recurso||'').toLowerCase()==='carona'
         ?`<button onclick="prepararEmailRetiradaCarona('${encodeURIComponent(String(r.id))}')" title="Preparar aviso de retirada para o solicitante da Carona" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid #7c3aed;background:#f5f3ff;color:#6d28d9;cursor:pointer;white-space:nowrap">✉ E-mail</button>`
         :'';
       const acoes=[emailCarona,btn==='—'?'':btn].filter(Boolean).join(' ')||'—';
-      return `<tr style="border-bottom:1px solid var(--border)">
+      return `<tr id="conf-linha-${encodeURIComponent(key)}" class="conf-linha" tabindex="0" onclick="_confAcionarLinha(event,'${encodeURIComponent(key)}')" onkeydown="_confAcionarLinha(event,'${encodeURIComponent(key)}')" aria-expanded="${expandido}" aria-controls="${detalhesId}" aria-label="${expandido?'Recolher':'Expandir'} detalhes de ${_sanEsc(r.item||'entrega')}" title="Clique na linha para ${expandido?'recolher':'expandir'} os detalhes" style="border-bottom:1px solid var(--border)">
         <td style="padding:6px 8px;text-align:center"><input type="checkbox" ${marcado?'checked':''} ${selecionavel?'':'disabled'} onchange="_confToggle('${encodeURIComponent(key)}',this.checked)" title="${selecionavel?'Selecionar para confirmação coletiva':'Somente pendências editáveis podem ser selecionadas'}" style="width:15px;height:15px;accent-color:var(--green);cursor:${selecionavel?'pointer':'not-allowed'}"></td>
         <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
         <td style="padding:6px 8px;white-space:nowrap">${_sanEsc(r.processo||'—')}</td>
@@ -3568,7 +3619,7 @@ function renderConfirmacoes(){
         <td style="padding:6px 8px">${termo}</td>
         <td style="padding:6px 8px">${_confBadge(_confStatus(r))}</td>
         <td style="padding:6px 8px;white-space:nowrap">${acoes}</td>
-      </tr>`;
+      </tr>${expandido?`<tr id="${detalhesId}" class="conf-detalhes"><td colspan="14">${_confDetalhesHtml(r)}</td></tr>`:''}`;
     }).join('')}</tbody></table>`;
   _confAtualizarSelecaoUI();
 }

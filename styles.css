@@ -283,6 +283,15 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 #confirmacao-wrap{overflow-x:hidden!important}
 #confirmacao-wrap table{table-layout:fixed}
 #confirmacao-wrap th,#confirmacao-wrap td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
+#confirmacao-wrap .conf-linha{cursor:pointer}
+#confirmacao-wrap .conf-linha:hover{background:var(--row-hover)}
+#confirmacao-wrap .conf-linha:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+#confirmacao-wrap .conf-detalhes>td{padding:14px 18px;overflow:visible;white-space:normal;background:var(--surface2);border-bottom:1px solid var(--border)}
+.conf-detalhes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px 20px;margin:0}
+.conf-detalhes-grid>div{min-width:0}
+.conf-detalhes-grid dt{margin-bottom:4px;font-size:11px;font-weight:600;color:var(--text3)}
+.conf-detalhes-grid dd{margin:0;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.conf-detalhes-grid .conf-detalhes-amplo{grid-column:1/-1}
 /* Gestão do contrato: a tabela de medições ocupa o modal sem rolagem lateral. */
 .ct-medicoes-table{overflow-x:auto!important}.ct-medicoes-table table{width:100%;min-width:1200px;table-layout:fixed}.ct-medicoes-table th,.ct-medicoes-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}.ct-medicoes-table th:nth-child(8),.ct-medicoes-table td:nth-child(8){width:165px;min-width:165px}
 /* Fiscalizadores no modal do contrato: sem rolagem lateral desnecessária. */
