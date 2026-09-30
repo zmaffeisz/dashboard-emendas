@@ -260,6 +260,17 @@
         <div class="fg-label">Filtro livre por palavra</div>
         <input type="text" id="se-busca" placeholder="Busque por emenda, parlamentar, unidade, status..." oninput="renderSaldoEmendas()" style="width:100%;background:var(--surface);color:var(--text)">
       </div>
+      <div class="fg" style="min-width:210px">
+        <label class="fg-label" for="se-filtro-saldo">Saldo disponível</label>
+        <select id="se-filtro-saldo" onchange="renderSaldoEmendas()" style="width:100%;background:var(--surface);color:var(--text)">
+          <option value="">Todos os saldos</option>
+          <option value="positivo">Só positivos (excluir zerados e negativos)</option>
+          <option value="nao-negativo">Excluir negativos</option>
+          <option value="nao-zerado">Excluir zerados</option>
+          <option value="zerado">Só zerados</option>
+          <option value="negativo">Só negativos</option>
+        </select>
+      </div>
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
         <span style="font-size:12px;color:var(--text3);font-weight:600">Mostrar municipais antigas:</span>
         <button type="button" id="se-muni-2022" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('se',2022,renderSaldoEmendas)" title="Mostrar ou ocultar emendas municipais de 2022" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2022</button>
@@ -270,7 +281,7 @@
       <button onclick="limparFiltrosSaldo()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;cursor:pointer">Limpar filtros</button>
     </div>
     <div class="table-card">
-      <div class="table-hdr"><span class="table-hdr-title">Saldo consolidado por emenda</span><span class="table-hdr-count" id="se-count">—</span></div>
+      <div class="table-hdr"><span class="table-hdr-title">Saldo consolidado por emenda</span><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="table-hdr-count" id="se-count">—</span><button type="button" id="se-exportar" class="btn-secondary" onclick="exportarSaldoEmendas()" title="Baixar as emendas dos filtros atuais, sem os itens detalhados">Baixar Excel</button></div></div>
       <div class="table-wrap">
         <table>
           <thead><tr>
@@ -3332,7 +3343,7 @@
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20260928-filtro-secretarias-1"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260930-unidades-historico-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260930-unidades-1"></script>
-<script src="js/legacy/60-emendas-dashboard.js?v=20260903-parlamentar-inline-1"></script>
+<script src="js/legacy/60-emendas-dashboard.js?v=20260930-filtro-saldo-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260929-financeiro-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260929-financeiro-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>

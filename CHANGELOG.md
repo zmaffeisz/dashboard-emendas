@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-30 — Filtro por saldo disponível
+
+- Saldo das Emendas permite mostrar só positivos, zerados ou negativos, excluir
+  negativos ou excluir zerados. O filtro combina com busca, filtros de coluna e
+  anos, atualiza os totais e também é respeitado pelo download em Excel.
+- Limpar filtros restaura todos os saldos. Resíduos numéricos inferiores a
+  R$ 0,000000001 são tratados como zero apenas na classificação do filtro.
+
+## 2026-09-30 — Download do saldo consolidado das emendas
+
+- Botão **Baixar Excel** em Saldo das Emendas exporta somente as linhas resumidas,
+  com as colunas da tabela, sem os itens detalhados. Respeita busca, filtros de
+  coluna, anos municipais e ordenação atuais. Números de emenda são texto; valores
+  e percentuais permanecem numéricos, com formatação de moeda e percentual.
+
 ## 2026-09-30 — Coordenadores, contatos e histórico das unidades
 
 - Cadastros → Unidades passa a ter busca por unidade/coordenador/endereço, fichas

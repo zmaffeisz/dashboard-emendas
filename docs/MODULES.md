@@ -43,6 +43,15 @@ Leitura da view `vw_emendas_saldo`: planejado, executado, comprometido, saldo
 remanescente e status de execução por emenda. Visível apenas para quem pode **editar**
 o dashboard (regra de `aplicarVisibilidadeAbas`).
 
+O botão **Baixar Excel** exporta as linhas consolidadas com as colunas da tabela,
+respeitando busca, filtros, anos e ordenação. Não inclui os itens detalhados;
+“Itens” representa apenas a quantidade agregada. Valores e percentuais são
+numéricos na planilha; números de emenda são preservados como texto.
+
+O filtro **Saldo disponível** permite consultar só positivos (exclui zerados e
+negativos), excluir negativos, excluir zerados, só zerados ou só negativos.
+Combina com os demais filtros e atualiza tabela, totais e exportação.
+
 ## 3. Consulta rápida
 Pesquisa transversal de dados (busca global). Somente leitura.
 

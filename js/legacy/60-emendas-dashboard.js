@@ -1285,14 +1285,30 @@ function sortSaldoEmendas(col){
   renderSaldoEmendas();
 }
 function limparFiltrosSaldo(){
+  const filtroSaldo=document.getElementById('se-filtro-saldo'); if(filtroSaldo) filtroSaldo.value='';
   document.getElementById('se-busca').value=''; saldoHeaderFilters={}; saldoSortCol=null; saldoSortAsc=true; resetMunicipalAnos('se'); closeSaldoHeaderFilter(); renderSaldoEmendas();
+}
+function _saldoAtendeFiltro(valor,filtro){
+  const saldo=Number(valor)||0;
+  // Evita classificar resíduos de ponto flutuante como saldos reais.
+  const positivo=saldo>1e-9, negativo=saldo<-1e-9, zerado=!positivo&&!negativo;
+  switch(filtro){
+    case 'positivo': return positivo;
+    case 'nao-negativo': return !negativo;
+    case 'nao-zerado': return !zerado;
+    case 'zerado': return zerado;
+    case 'negativo': return negativo;
+    default: return true;
+  }
 }
 function _saldoRowsVisiveis(){
   const busca=normalizar(document.getElementById('se-busca')?.value||'');
+  const filtroSaldo=document.getElementById('se-filtro-saldo')?.value||'';
   _updateMunicipalAnoButtons('se');
   const rows=saldoEmendasRows.map(_saldoComPercentual).filter(r=>{
     // municipais históricas ficam ocultas por padrão e aparecem só pelo botão do respectivo ano
     if(!_municipalAntigaVisivel('se',r)) return false;
+    if(!_saldoAtendeFiltro(r.saldo_remanescente,filtroSaldo)) return false;
     if(busca&&!normalizar([r.numero_emenda,r.tipo,r.parlamentar,r.unidade,r.status_execucao,r.valor_cedido,r.total_planejado,r.total_estimado_licitacao,r.total_executado,r.total_comprometido,r.saldo_remanescente,r.qtd_itens].join(' ')).includes(busca)) return false;
     return Object.entries(saldoHeaderFilters).every(([col,selecionados])=>selecionados.includes(_saldoFilterValue(col,r)));
   });
@@ -1305,6 +1321,39 @@ function _saldoRowsVisiveis(){
     });
   }
   return rows;
+}
+async function exportarSaldoEmendas(){
+  if(!podeEditar('dashboard')) return;
+  // A mesma seleção da tela: busca, filtros de coluna, anos e ordenação.
+  const rows=_saldoRowsVisiveis();
+  if(!rows.length){ toast('Nenhuma emenda nos filtros atuais para baixar.','info'); return; }
+  const btn=document.getElementById('se-exportar');
+  if(btn) btn.disabled=true;
+  try{
+    await ensureLib('xlsx');
+    const colunas=['Nº Emenda','Tipo','Parlamentar','Unidade','Valor cedido','Total planejado','Estimado licitação','Total executado','Comprometido','Saldo disponível','% exec.','Status','Itens'];
+    const dados=rows.map(r=>[
+      String(r.numero_emenda??''),r.tipo||'',r.parlamentar||'',r.unidade||'',
+      ...['valor_cedido','total_planejado','total_estimado_licitacao','total_executado','total_comprometido','saldo_remanescente'].map(c=>Number(r[c])||0),
+      r._percentual/100,r.status_execucao||'',Number(r.qtd_itens)||0
+    ]);
+    const ws=XLSX.utils.aoa_to_sheet([colunas,...dados]);
+    ws['!cols']=[22,14,36,36,20,20,20,20,20,20,12,30,10].map(wch=>({wch}));
+    ws['!autofilter']={ref:ws['!ref']};
+    for(let linha=1;linha<=dados.length;linha++){
+      for(let coluna=4;coluna<=9;coluna++) ws[XLSX.utils.encode_cell({r:linha,c:coluna})].z='"R$" #,##0.00########';
+      ws[XLSX.utils.encode_cell({r:linha,c:10})].z='0%';
+    }
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Saldo das Emendas');
+    const data=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    XLSX.writeFile(wb,`saldo_emendas_${data}.xlsx`);
+  }catch(e){
+    console.error('Exportação do saldo das emendas:',e);
+    toast('Não foi possível baixar a planilha. Tente novamente.','error');
+  }finally{
+    if(btn) btn.disabled=false;
+  }
 }
 function renderSaldoEmendas(){
   const rows=_saldoRowsVisiveis();
