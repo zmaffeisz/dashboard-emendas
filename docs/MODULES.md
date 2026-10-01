@@ -15,6 +15,7 @@
 | Fiscalização | `chamados`, `fiscalizacao_historico`, `termos_ateste` | chamados | fiscalização/ateste |
 | Inventário | `inventario_ac` | importação/cadastro | edição inventário |
 | Controle de Entregas (Itens) | `itens`, `itens_entregas`, `itens_entregas_unidades`, `empenhos`, `notas_fiscais` | espelhamento do contrato/ata | AF, recebimento, NF, termo |
+| Requisição de materiais (Confirmação de Entrega) | `requisicoes_materiais`, `requisicoes_materiais_emails`, unidades e recebimentos | geração após conferência do destino | nova versão; histórico imutável |
 | Atas Rp Vigentes | `contratos` (tipo ATA), `atas_itens`, `atas_execucao` | matriz de contratos | execução de ata |
 | Contratos em execução | `contratos` (**matriz**), `contratos_vigencias`, `contratos_historico`, `fornecedores` | cadastro de contrato | edição (admin) |
 | Licitações em andamento | `processos`, `vw_processos_resumo`, `itens` | processos | status por item |
@@ -24,6 +25,10 @@
 | Planilhas | importações/exports | — | export/import |
 
 ---
+
+O fluxo de [requisição de materiais](REQUISICOES_MATERIAIS.md) fica em módulos
+nativos `js/modules/execucao/requisicao.*.js`, com adaptador global criado por
+`js/app.js`. O legado apenas carrega o histórico e expõe os botões da subaba.
 
 ## 1. Emendas (dashboard)
 Aba inicial e única visível sem permissões adicionais. Lista emendas e seus itens

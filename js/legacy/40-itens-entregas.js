@@ -3362,6 +3362,7 @@ function _confLimparSelecaoInvalida(){
 }
 function _confAtualizarSelecaoUI(){
   const selecionados=_confRowsSelecionados();
+  globalThis.RequisicaoMateriais?.atualizarSelecao(selecionados);
   const btn=document.getElementById('conf-confirmar-selecionados');
   if(btn){
     btn.style.display=selecionados.length?'':'none';
@@ -3503,11 +3504,12 @@ async function loadConfirmacoes(){
   // O patrimônio pertence às unidades físicas do pedido. A Emenda pode estar
   // vazia ou guardar um resumo antigo de outro recebimento.
   const ataPatrimoniosPorExec={};
+  const ataDestinosPorExec={};
   const ataExecIds=[...new Set((at||[]).map(r=>r.id).filter(Boolean))];
   for(const ids of _chunkArray(ataExecIds,200)){
     for(let offset=0;;offset+=1000){
       const {data:unidades,error}=await sb.from('atas_execucao_unidades')
-        .select('exec_id,patrimonio,unidade_seq')
+        .select('exec_id,patrimonio,unidade_seq,unidade_id,unidade_nome')
         .in('exec_id',ids)
         .order('exec_id',{ascending:true})
         .order('unidade_seq',{ascending:true})
@@ -3516,6 +3518,8 @@ async function loadConfirmacoes(){
       (unidades||[]).forEach(u=>{
         const patrimonio=String(u.patrimonio||'').trim();
         if(patrimonio) (ataPatrimoniosPorExec[String(u.exec_id)]=ataPatrimoniosPorExec[String(u.exec_id)]||[]).push(patrimonio);
+        if(u.unidade_id&&u.unidade_nome) (ataDestinosPorExec[String(u.exec_id)]=ataDestinosPorExec[String(u.exec_id)]||new Map()).set(String(u.unidade_id),u.unidade_nome);
+        else (ataDestinosPorExec[String(u.exec_id)]=ataDestinosPorExec[String(u.exec_id)]||new Map()).set('', '');
       });
       if((unidades||[]).length<1000) break;
     }
@@ -3527,11 +3531,13 @@ async function loadConfirmacoes(){
     if(String(ai.contratos?.status||'').toUpperCase().startsWith('ENCERRAD')) return;
     const nfAta=r.nf||emInfo.nota_fiscal||'';
     const dataRec=_toISODate(r.dt_entrega);
+    const destinosFisicos=ataDestinosPorExec[String(r.id)];
+    const destinoFisico=destinosFisicos?.size===1?[...destinosFisicos.values()][0]:'';
     // ATA so aparece aqui apos recebimento administrativo com NF.
     if(!dataRec || !nfAta) return;
     rows.push({
       tipo:'ATA', id:r.id, processo:r.cpl||ai.cpl||ai.contratos?.cpl||'', contrato:r.sim||ai.sim||ai.contratos?.numero_contrato||'', empresa:ai.empresa||ai.contratos?.prestador||'',
-      item:r.item||ai.item||emInfo.item||'', unidade:r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||''), unidade_snapshot:r.unidade_snapshot||null, qtde:Number(r.qtde)||0, patrimonio:(ataPatrimoniosPorExec[String(r.id)]||[]).join('; ')||emInfo.patrimonio||r.patrimonio||'',
+      item:r.item||ai.item||emInfo.item||'', unidade:destinoFisico||(r.unidade_snapshot ? (r.unidade_snapshot.nome||'') : (r.unidade||emInfo.unidade_entrega||emInfo.unidade_beneficiada||'')), unidade_snapshot:r.unidade_snapshot||null, qtde:Number(r.qtde)||0, patrimonio:(ataPatrimoniosPorExec[String(r.id)]||[]).join('; ')||emInfo.patrimonio||r.patrimonio||'',
       empenho:r.empenho||emInfo.empenho||'', nota_fiscal:nfAta, af_numero:r.af_numero||'', af_data:_toISODate(r.data_af), data_recebimento:dataRec,
       origem_recurso:(r.origem_recurso||'').trim(), email_solicitante:(r.email_solicitante||'').trim(),
       data_entrega_unidade:_toISODate(r.data_entrega_unidade), termo_arquivo:r.termo_arquivo||'',
@@ -3542,6 +3548,7 @@ async function loadConfirmacoes(){
   confirmacaoRows=rows;
   _confLimparSelecaoInvalida();
   confirmacoesCarregado=true;
+  await globalThis.RequisicaoMateriais?.carregar();
   renderConfirmacoes();
 }
 function _confToggleDetalhes(encodedKey){
@@ -3596,7 +3603,7 @@ function renderConfirmacoes(){
   if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhuma entrega encontrada para os filtros atuais.</div>'; _confAtualizarSelecaoUI(); return; }
   wrap.innerHTML=`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px;width:30px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="conf-selecionar-visiveis" onchange="_confToggleVisiveis(this.checked)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/Ata</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Recebimento</th><th style="padding:7px 8px">Entrega unidade</th><th style="padding:7px 8px">Responsável</th><th style="padding:7px 8px">Termo</th><th style="padding:7px 8px">Status</th><th style="padding:7px 8px">Ações</th>
+      <th style="padding:7px 8px;width:30px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="conf-selecionar-visiveis" onchange="_confToggleVisiveis(this.checked)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px">Processo/CPL</th><th style="padding:7px 8px">Contrato/Ata</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Recebimento</th><th style="padding:7px 8px">Entrega unidade</th><th style="padding:7px 8px">Responsável</th><th style="padding:7px 8px">Termo de entrega</th><th style="padding:7px 8px">Requisição</th><th style="padding:7px 8px">Status</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
       const termo=r.termo_arquivo?`<button onclick="abrirTermoEntrega('${encodeURIComponent(r.termo_arquivo)}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Abrir</button>`:'—';
@@ -3621,9 +3628,10 @@ function renderConfirmacoes(){
         <td style="padding:6px 8px;white-space:nowrap">${r.data_entrega_unidade?fmtDate(r.data_entrega_unidade):'—'}</td>
         <td style="padding:6px 8px">${_sanEsc(r.termo_responsavel||'—')}${r.termo_cargo?('<br><span style="color:var(--text3)">'+_sanEsc(r.termo_cargo)+'</span>'):''}</td>
         <td style="padding:6px 8px">${termo}</td>
+        <td style="padding:6px 8px">${globalThis.RequisicaoMateriais?.celula(r)||'—'}</td>
         <td style="padding:6px 8px">${_confBadge(_confStatus(r))}</td>
         <td style="padding:6px 8px;white-space:nowrap">${acoes}</td>
-      </tr>${expandido?`<tr id="${detalhesId}" class="conf-detalhes"><td colspan="14">${_confDetalhesHtml(r)}</td></tr>`:''}`;
+      </tr>${expandido?`<tr id="${detalhesId}" class="conf-detalhes"><td colspan="15">${_confDetalhesHtml(r)}</td></tr>`:''}`;
     }).join('')}</tbody></table>`;
   _confAtualizarSelecaoUI();
 }

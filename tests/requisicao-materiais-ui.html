@@ -1,0 +1,67 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Teste de requisição de materiais</title>
+<link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../css/requisicao-materiais.css">
+<body><h1>Teste isolado — sem conexão com o banco</h1><button id="conf-gerar-requisicao-selecionados" onclick="RequisicaoMateriais.abrir()">Gerar selecionados</button><span id="conf-requisicao-ajuda"></span><table><tbody id="linhas"></tbody></table><p id="toast"></p>
+<script type="module">
+import { createRequisicaoWorkspace } from '../js/modules/execucao/requisicao.workspace.js';
+const clone = v => structuredClone(v);
+const perfil = { id: '00000000-0000-0000-0000-000000000001', nome: 'Patrick Santos Maffei' };
+const unidade = { id: 38, nome: 'PA Laranjeiras', ativo: true, endereco: 'Rua Sônia Bernuncio, 24', telefone: '(15) 3226-9190', coordenador: { nome: 'Erica Juliana Leonor', email: 'ejleonor@sorocaba.sp.gov.br' } };
+const outro = { ...clone(unidade), id: 27, nome: 'UBS Laranjeiras' };
+const itens = [
+  { tipo: 'ATA', id: 'a', item: 'MICROONDAS 31 L - BRANCA', qtde: 1, unidade_id: 38, unidade_nome: unidade.nome, patrimonios: ['399392'], unidades_fisicas: [{ id: 'fa', patrimonio: '399392', unidade_id: 38, unidade_nome: unidade.nome }], empenho: '23208/2025', processo: 'CPL 055/2024', contrato: 'SIAM 792/2025', nota_fiscal: '1695', secao_id: 1 },
+  { tipo: 'ATA', id: 'b', item: 'FRIGOBAR 120 L', qtde: 1, unidade_id: 38, unidade_nome: unidade.nome, patrimonios: ['399354'], unidades_fisicas: [{ id: 'fb', patrimonio: '399354', unidade_id: 38, unidade_nome: unidade.nome }], empenho: '15187/2026', processo: 'CPL 055/2024', contrato: 'SIAM 793/2025', nota_fiscal: '3402', secao_id: 1 },
+  { tipo: 'ATA', id: 'c', item: 'Material de outra unidade', qtde: 1, unidade_id: 27, unidade_nome: outro.nome, patrimonios: ['999999'], unidades_fisicas: [{ id: 'fc', patrimonio: '999999', unidade_id: 27, unidade_nome: outro.nome }], nota_fiscal: '999', secao_id: 1 },
+  { tipo: 'ATA', id: 'd', item: 'Pedido com destinos distintos', qtde: 2, unidade_id: null, unidade_nome: 'Várias unidades', patrimonios: ['111111', '222222'], unidades_fisicas: [{ id: 'fd', patrimonio: '111111', unidade_id: 38, unidade_nome: unidade.nome }, { id: 'fe', patrimonio: '222222', unidade_id: 27, unidade_nome: outro.nome }], destinos_multiplos: true, nota_fiscal: '100', secao_id: 1 }
+];
+const dados = { requisicoes_materiais: [], requisicoes_materiais_emails: [], unidades: [unidade, outro] }, arquivos = new Map();
+const fixture = window.fixture = { dados, arquivos, itens, unidade, selecionados: ['a', 'b'], emails: [], falharUpload: false };
+function consulta(tabela) {
+  let op = 'select', valores, filtros = [], inicio = 0, fim = Infinity, resultado;
+  const q = {
+    select() { return q; }, order() { return q; }, range(a, b) { inicio = a; fim = b; return q; },
+    eq(c, v) { filtros.push([c, v]); return q; }, insert(v) { op = 'insert'; valores = v; return q; }, update(v) { op = 'update'; valores = v; return q; },
+    single() { return Promise.resolve(executar(true)); }, then(a, b) { return Promise.resolve(executar(false)).then(a, b); }
+  };
+  function executar(single) {
+    if (resultado) return resultado;
+    if (op === 'insert') {
+      const novo = clone(valores); novo.id = crypto.randomUUID();
+      if (tabela === 'requisicoes_materiais') Object.assign(novo, { solicitante_id: perfil.id, solicitante_nome: perfil.nome, gerado_em: new Date().toISOString(), pdf_path: novo.id + '/termo.pdf', pdf_pronto: false });
+      else Object.assign(novo, { clicado_em: new Date().toISOString(), clicado_por: perfil.id, clicado_por_nome: perfil.nome });
+      dados[tabela].push(novo); return resultado = { data: clone(novo) };
+    }
+    let lista = dados[tabela].filter(r => filtros.every(([k, v]) => r[k] === v));
+    if (op === 'update') lista.forEach(r => Object.assign(r, valores));
+    lista = lista.slice(inicio, fim + 1).map(r => ({ ...clone(r), ...(tabela === 'requisicoes_materiais' ? { requisicoes_materiais_emails: clone(dados.requisicoes_materiais_emails.filter(e => e.requisicao_id === r.id)) } : {}) }));
+    return resultado = { data: single ? lista[0] : lista };
+  }
+  return q;
+}
+const sb = { from: consulta, rpc: async (nome, args) => {
+  if (nome === 'ficha_unidade_requisicao') return { data: clone(dados.unidades.find(u => u.id === args.p_id)) };
+  return { data: args.p_itens.map(ref => {
+    const i = clone(itens.find(i => i.id === ref.id));
+    if (ref.unidades_ids) {
+      i.unidades_fisicas = i.unidades_fisicas.filter(f => ref.unidades_ids.includes(f.id));
+      i.qtde = i.unidades_fisicas.length; i.patrimonios = i.unidades_fisicas.map(f => f.patrimonio);
+      const ids = [...new Set(i.unidades_fisicas.map(f => f.unidade_id))];
+      i.unidade_id = ids.length === 1 ? ids[0] : null; i.destinos_multiplos = ids.length > 1;
+    }
+    return i;
+  }) };
+}, storage: { from: () => ({
+  download: async path => arquivos.has(path) ? { data: arquivos.get(path) } : { error: { message: 'Arquivo não existe' } },
+  upload: async (path, blob) => {
+    if (fixture.falharUpload) return { error: { message: 'Falha simulada de upload' } };
+    arquivos.set(path, blob); return { data: { path } };
+  }
+}) } };
+function render() { document.getElementById('linhas').innerHTML = itens.map(i => `<tr><td>${i.item}</td><td>${RequisicaoMateriais.celula(i)}</td></tr>`).join(''); }
+window.RequisicaoMateriais = createRequisicaoWorkspace({ sb, esc: v => String(v || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]),
+  toast: msg => document.getElementById('toast').textContent = msg,
+  ensureLib: async () => { if (!window.PDFLib) throw new Error('Carregue PDFLib no teste.'); },
+  rows: () => itens, selecionados: () => itens.filter(i => fixture.selecionados.includes(i.id)), podeEditar: () => true,
+  perfil: () => perfil, usuario: () => perfil, render, abrirEmail: url => fixture.emails.push(url)
+});
+await RequisicaoMateriais.carregar(); render(); RequisicaoMateriais.atualizarSelecao(itens.slice(0, 2)); window.pronto = true;
+</script></body></html>

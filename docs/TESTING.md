@@ -13,6 +13,30 @@
 
 ## 2. Roteiro de teste manual (smoke)
 
+### Regressão — requisição de materiais
+
+- `node tests/requisicao-materiais.test.mjs`: assunto até 180 caracteres, patrimônios
+  inteiros, corpo completo, data local, bloqueio de seleção de outra unidade e
+  etapas por versão: refazer não herda o envio, nem modifica o histórico anterior.
+- `tests/requisicao-materiais-ui.html`: interface real com Supabase simulado, sem
+  escrita externa. Carregar PDFLib 1.17.1 para testar PDF; a fixture aceita injeção
+  da distribuição local ou do CDN usado pelo sistema. Testar lote microondas +
+  frigobar, conferência obrigatória, histórico, destinatário vazio, seleção parcial
+  de pedido misto, falha de upload e retomada sem outra requisição. Conferir ações
+  progressivas: gerar → download/e-mail → botão único; refazer preserva seleção do
+  lote e PDF anterior, usa contatos atuais e volta a indicar e-mail pendente.
+  Menu deve funcionar por teclado (setas/Escape) e fora do recorte da tabela.
+- `tests/requisicao-materiais.sql`: transação com `ROLLBACK`, exclusivamente na
+  produção oficial. Usa os dois patrimônios que o usuário corrigiu para PA
+  Laranjeiras e um admin aprovado; não altera permanentemente unidade, termo ou
+  arquivo. Confere quantidades, destinos, autoria, rejeição de prévia adulterada,
+  corrida de cadastro, PDF obrigatório, imutabilidade e isolamento de leitura.
+- Renderizar PDFs de um item, lote, muitos patrimônios e observações longas;
+  verificar cabeçalho original, textos completos, linhas e assinatura sem cortes.
+- Com login, consultar a coluna **Requisição** na confirmação; gerar após conferir
+  contatos, baixar novamente e conferir **Requisição ▾ → E-mails enviados**. Abrir o cliente de
+  e-mail é ação do usuário; o teste automatizado usa um adaptador que só guarda URL.
+
 ### Regressão — notas fiscais e medições em Contratos em execução
 
 - `node tests/contratos-financeiro.test.mjs`: filtros combinados, competências

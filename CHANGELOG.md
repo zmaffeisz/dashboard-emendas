@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-10-01 — Ações da requisição conforme a etapa
+
+- Antes da primeira geração, aparece somente **Gerar termo**. Com PDF pronto e
+  e-mail pendente, ficam **Baixar PDF** (com seta para opções) e **Escrever e-mail**.
+  Após o e-mail, todas as ações ficam em **Requisição ▾**, incluindo **Refazer
+  termo**, **Reescrever e-mail**, **E-mails enviados** e consulta dos termos.
+- Refazer abre a prévia com os recebimentos, bens selecionados e observações do
+  termo original, incluindo termos em lote. Usa a ficha corrente da unidade e
+  cria nova versão imutável, mantendo PDFs e e-mails anteriores.
+- Uma nova versão não herda o envio da anterior: aparece **e-mail pendente** e
+  **Reescrever e-mail** até seu próprio clique ser registrado. A cobertura do
+  envio considera as versões atuais de cada bem, preservando os envios parciais.
+- Menu flutuante evita cortes nas bordas da tabela e permite navegação por teclado.
+  Histórico separa **Termos gerados** de **E-mails enviados**.
+
+## 2026-09-30 — Requisição de materiais e registro de e-mails
+
+- Confirmação de Entrega na Unidade ganha geração de requisição individual ou em
+  lote para o mesmo destino, com seleção dos bens físicos de pedidos com várias
+  unidades. Prévia exige unidade cadastrada, coordenador, endereço, telefone e
+  conferência dos contatos antes de gerar.
+- PDF usa o cabeçalho e partes fixas do modelo fornecido; solicitante vem do perfil
+  logado. Materiais, quantidades e patrimônios são conferidos no banco. PDF privado
+  e ficha do termo ficam imutáveis; download posterior recupera o arquivo salvo.
+- Escrever e-mail abre o cliente com destinatário vazio, título limitado a 180
+  caracteres sem cortar patrimônios, e corpo com todos os dados do recebimento.
+  Cada clique registra título, texto, data e autor e marca enviado ao almoxarifado.
+  Histórico permite copiar o título para pesquisar e consultar o texto registrado.
+- Gerações interrompidas podem ser retomadas pelo autor, preservando a mesma
+  requisição. Termo de entrega assinado e confirmação física continuam separados.
+- Conforme confirmação expressa do usuário, os bens 399392 (microondas) e 399354
+  (frigobar) tiveram seu destino físico não identificado corrigido para PA
+  Laranjeiras. Não foram reescritos documentos ou a unidade beneficiada da emenda.
+
+
 ## 2026-09-30 — Filtro por saldo disponível
 
 - Saldo das Emendas permite mostrar só positivos, zerados ou negativos, excluir
