@@ -378,3 +378,11 @@ profiles ─< user_tab_permissions ; profiles >─ divisoes / secoes
 ```
 
 > A lista completa de chaves estrangeiras está consolidada em [DATABASE.md](DATABASE.md#chaves-estrangeiras).
+
+### Prazo de locação no processo
+
+`processos.locacao_meses` (integer, opcional no banco para cadastros antigos) guarda
+a quantidade de meses da locação; quando informado, deve ser positivo. O formulário
+exige inteiro positivo para LOCAÇÃO. `vw_processos_resumo` expõe o campo com
+`security_invoker=true`. Os preços dos itens continuam mensais; `valor_estimado`
+do processo guarda mensal × meses nas locações salvas pelo formulário atualizado.

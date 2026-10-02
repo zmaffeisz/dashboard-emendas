@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-02 — Prazo em meses e valor global da locação
+
+- Locação ganha **Quantidade de meses** obrigatória, preservada ao editar.
+- Formulário exibe total mensal e valor global estimado (mensal × meses);
+  o valor estimado do processo passa a guardar o global ao salvar.
+- `processos.locacao_meses` e a view de licitações preservam o prazo sem
+  reutilizar campos ou regras de serviço mensal fixo. Processos antigos
+  precisam ter os meses informados na próxima edição; nenhum prazo é presumido.
+
 ## 2026-10-02 — Itens de locação nas licitações
 
 - Criar e editar processos de **LOCAÇÃO** permite cadastrar itens com descrição,

@@ -1735,6 +1735,8 @@
       <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="proc-objeto" placeholder="Objeto do processo"></div>
       <div class="form-group"><div class="form-label">Modalidade</div><input type="text" id="proc-modalidade" placeholder="ex: Pregão Eletrônico"></div>
       <div class="form-group"><div class="form-label">Valor estimado (R$)</div><input type="number" id="proc-valor" step="0.01" placeholder="ex: 50000"></div>
+      <div class="form-group" id="proc-locacao-meses-wrap" style="display:none"><div class="form-label">Quantidade de meses da locação *</div><input type="number" id="proc-locacao-meses" min="1" step="1" placeholder="ex: 24" oninput="_recalcProcValorEstimado()"></div>
+      <div class="form-group" id="proc-locacao-mensal-wrap" style="display:none"><div class="form-label">Valor mensal estimado (R$)</div><input type="number" id="proc-locacao-valor-mensal" step="0.01" readonly placeholder="soma dos itens" style="background:var(--surface2);opacity:.85"></div>
       <div class="form-group full"><div class="form-label">Observação / andamento</div><input type="text" id="proc-obs" placeholder="anotações livres"></div>
     </div>
     <div id="proc-itens-section" style="display:none;margin-top:1.25rem;border-top:1px solid var(--border);padding-top:1rem">
@@ -3343,7 +3345,7 @@
 <script src="js/legacy/00-core.js?v=20260930-requisicao-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20260901-categorias-multiplas-1"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20261002-locacao-itens-1"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20261002-locacao-meses-2"></script>
 <script src="js/legacy/40-itens-entregas.js?v=20260930-requisicao-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260930-unidades-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260930-filtro-saldo-1"></script>
