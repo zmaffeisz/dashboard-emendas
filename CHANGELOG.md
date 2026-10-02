@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-02 — Itens de locação nas licitações
+
+- Criar e editar processos de **LOCAÇÃO** permite cadastrar itens com descrição,
+  quantidade, unidade de medida, valor mensal unitário e fonte de recurso.
+- O valor mensal estimado é a soma de quantidade × preço mensal unitário dos itens;
+  a listagem identifica os valores de locação como mensais. Exige ao menos um item
+  e quantidade/preço positivos antes de salvar.
+- Itens usam origem `locacao`, sem prazo de entrega obrigatório e sem entrar no
+  fluxo de recebimento/inventário de aquisições ou no serviço mensal fixo.
+
 ## 2026-10-01 — Ações da requisição conforme a etapa
 
 - Antes da primeira geração, aparece somente **Gerar termo**. Com PDF pronto e

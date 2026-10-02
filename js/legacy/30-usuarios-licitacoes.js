@@ -420,7 +420,7 @@ function renderLicitacoes(){
       <div class="lic-process-card-header" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
         <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
-          <div class="lic-process-heading"><div class="lic-process-ident"><div>${_procIdentificadorHtml(p)}</div><span class="lic-process-total">Total considerado: ${fmtFull(totalProcesso)}</span>${valorPeriodoContrato!==null?`<span class="lic-process-period-total">${periodoContratoLabel} do contrato: ${fmtFull(valorPeriodoContrato)}${quantidadePeriodosContrato?` · ${quantidadePeriodosContrato} ${_procProcessoEhTrimestral(p)?'ciclos':'meses'}`:''}</span>`:''}</div><span class="lic-process-object">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
+          <div class="lic-process-heading"><div class="lic-process-ident"><div>${_procIdentificadorHtml(p)}</div><span class="lic-process-total">${p.natureza==='LOCAÇÃO'?'Total mensal considerado':'Total considerado'}: ${fmtFull(totalProcesso)}</span>${valorPeriodoContrato!==null?`<span class="lic-process-period-total">${periodoContratoLabel} do contrato: ${fmtFull(valorPeriodoContrato)}${quantidadePeriodosContrato?` · ${quantidadePeriodosContrato} ${_procProcessoEhTrimestral(p)?'ciclos':'meses'}`:''}</span>`:''}</div><span class="lic-process-object">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
           <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · ${_sanEsc(p.categoria_licitacao||'SEM CATEGORIA')} · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
         </div>
         ${_cpStatusBadge(roll)}
@@ -437,7 +437,7 @@ function renderLicitacoes(){
           <button onclick="${bulkFn}(${p.id})" style="font-size:12px;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">Aplicar</button>
         </div>`;
       }
-      bloco+=`<div class="lic-items-table-wrap"><table class="lic-items-table"><thead><tr><th>Item</th><th class="num">Quantidade</th><th class="money">Valor unitário</th><th class="money">Valor total</th><th>Acompanhamento</th><th class="actions">Ações</th></tr></thead><tbody>`;
+      bloco+=`<div class="lic-items-table-wrap"><table class="lic-items-table"><thead><tr><th>Item</th><th class="num">Quantidade</th><th class="money">${p.natureza==='LOCAÇÃO'?'Valor mensal unitário':'Valor unitário'}</th><th class="money">${p.natureza==='LOCAÇÃO'?'Valor mensal total':'Valor total'}</th><th>Acompanhamento</th><th class="actions">Ações</th></tr></thead><tbody>`;
       if(!items.length&&itensServico.length){
         itensServico.forEach((it,idx)=>{
           const chave=_cpVisualItemKey(p.id,idx,'servico');
@@ -1265,6 +1265,8 @@ async function salvarProcesso(){
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
   if(_procEhServicoDemanda()&&!document.querySelectorAll('#proc-itens-lista .proc-item-card').length){showMsg('proc','Servico por demanda/execucao precisa de pelo menos 1 item cadastrado.','err');return;}
   if(_procEhServicoDemanda()&&servicoDemandaMeses<=0){showMsg('proc','Informe a vigencia em meses do servico por demanda/execucao.','err');return;}
+  const erroLocacao=_procValidarItensLocacao();
+  if(erroLocacao){showMsg('proc',erroLocacao,'err');return;}
   const erroPrazo=_procValidarPrazosEntrega(natureza);
   if(erroPrazo){showMsg('proc',erroPrazo,'err');return;}
   let categoriaId;
@@ -1302,7 +1304,7 @@ async function salvarProcesso(){
     : await sb.from('processos').insert(dados).select('id').single();
   if(res.error){btn.disabled=false;showMsg('proc','Erro: '+res.error.message,'err');return;}
   const procId=res.data?.id||_procEditId;
-  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||_procEhServicoDemanda()){
+  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||natureza==='LOCAÇÃO'||_procEhServicoDemanda()){
     try{ await _persistProcItens(procId, natureza); }
     catch(e){ btn.disabled=false; showMsg('proc','Processo salvo, mas erro nos itens: '+(e.message||e),'err'); await loadLicitacoes(); return; }
   }
@@ -1518,7 +1520,7 @@ function _procNumeroColado(valor){
 }
 function _procCamposPlanilhaItens(){
   const base=['.pi-desc','.pi-qtde','.pi-unidade-medida','.pi-valor'];
-  if(!_procEhServicoDemanda()) base.push('.pi-prazo');
+  if(!_procEhServicoDemanda()&&!_procEhLocacao()) base.push('.pi-prazo');
   base.push('.pi-siam');
   if(!_procEhAta()&&!_procEhServicoDemanda()) base.push('.pi-unidade','.pi-fonte');
   return base;
@@ -1736,7 +1738,7 @@ function procTipoServicoChange(){
 
 function procNaturezaChange(){
   const nat=document.getElementById('proc-natureza').value;
-  const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP'||_procEhServicoDemanda());
+  const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP'||nat==='LOCAÇÃO'||_procEhServicoDemanda());
   const showServico=(nat==='SERVIÇO');
   const tipoServicoWrap=document.getElementById('proc-tipo-servico-wrap');
   const tipoServico=document.getElementById('proc-tipo-servico');
@@ -1757,7 +1759,7 @@ function procNaturezaChange(){
 }
 function _recalcProcValorEstimado(){
   const nat=document.getElementById('proc-natureza').value;
-  if(nat!=='AQUISIÇÃO'&&nat!=='ATA DE RP'&&!_procEhServicoDemanda()) return;
+  if(nat!=='AQUISIÇÃO'&&nat!=='ATA DE RP'&&nat!=='LOCAÇÃO'&&!_procEhServicoDemanda()) return;
   let soma=0;
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{
     const q=parseFloat(c.querySelector('.pi-qtde')?.value)||0;
@@ -1773,19 +1775,41 @@ function _renderProcItensVazio(){
 }
 // Item 3: ATA DE RP não exige emenda/unidade/fonte na criação do processo.
 function _procEhAta(){ return document.getElementById('proc-natureza')?.value==='ATA DE RP'; }
+function _procEhLocacao(){ return document.getElementById('proc-natureza')?.value==='LOCAÇÃO'; }
+function _procValidarItensLocacao(){
+  if(!_procEhLocacao()) return '';
+  const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
+  if(!cards.length) return 'Locação precisa de pelo menos 1 item cadastrado.';
+  for(const c of cards){
+    if(c.dataset.terminal==='1') continue;
+    const descricao=c.querySelector('.pi-desc')?.value.trim();
+    const qtde=Number(c.querySelector('.pi-qtde')?.value);
+    const valor=Number(c.querySelector('.pi-valor')?.value);
+    if(!descricao||!Number.isFinite(qtde)||qtde<=0||!Number.isFinite(valor)||valor<=0) return 'Cada item da locação precisa de descrição, quantidade maior que zero e valor mensal unitário maior que zero.';
+    if(!_procUnidadeMedidaValor(c.querySelector('.pi-unidade-medida')?.value)||!c.querySelector('.pi-fonte')?.value) return 'Informe a unidade de medida e a fonte de recurso de cada item da locação.';
+    if(!_procCodigoSiamValido(_procCodigoSiam(c.querySelector('.pi-siam')?.value))) return `O Código SIAM do item "${descricao}" deve conter somente números, pontos e hífen.`;
+  }
+  return '';
+}
 function _procAplicarModoAta(){
   const ata=_procEhAta();
   const demanda=_procEhServicoDemanda();
+  const locacao=_procEhLocacao();
+  const valorLabel=document.getElementById('proc-valor')?.closest('.form-group')?.querySelector('.form-label');
+  if(valorLabel) valorLabel.textContent=locacao?'Valor mensal estimado (R$)':'Valor estimado (R$)';
   // botão "Puxar de emenda" some na ATA (vínculo de emenda só na execução da ata)
   const btn=document.getElementById('proc-btn-puxar-emenda'); if(btn) btn.style.display=(ata||demanda)?'none':'';
-  const modelo=document.getElementById('proc-btn-modelo-itens'); if(modelo) modelo.style.display=demanda?'none':'';
+  const modelo=document.getElementById('proc-btn-modelo-itens'); if(modelo) modelo.style.display=(demanda||locacao)?'none':'';
   if(ata||demanda){ const box=document.getElementById('proc-import-box'); if(box){ box.style.display='none'; box.innerHTML=''; } }
   // dica do cabeçalho
   const hint=document.getElementById('proc-itens-hint');
-  if(hint) hint.textContent=ata?'(ata de registro de preços — sem emenda/unidade/fonte nesta fase)':(demanda?'(serviço por demanda — pelo menos 1 item obrigatório)':'(fonte de recurso obrigatória por item)');
+  if(hint) hint.textContent=ata?'(ata de registro de preços — sem emenda/unidade/fonte nesta fase)':(demanda?'(serviço por demanda — pelo menos 1 item obrigatório)':(locacao?'(valor mensal por unidade; total mensal = quantidade × valor unitário; fonte obrigatória)':'(fonte de recurso obrigatória por item)'));
   // em cada card de item, oculta Unidade destino e a linha de Fonte
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{
-    const p=c.querySelector('.pi-prazo-col'); if(p) p.style.display=demanda?'none':'';
+    const p=c.querySelector('.pi-prazo-col'); if(p) p.style.display=(demanda||locacao)?'none':'';
+    const prazo=c.querySelector('.pi-prazo'); if(prazo) prazo.required=!demanda&&!locacao;
+    const valorLabel=c.querySelector('.pi-valor-label'); if(valorLabel) valorLabel.textContent=locacao?'Vl. mensal unit. *':'Vl. unit. estimado';
+    const valor=c.querySelector('.pi-valor'); if(valor) valor.required=locacao;
     const u=c.querySelector('.pi-unidade-col'); if(u) u.style.display=(ata||demanda)?'none':'';
     const f=c.querySelector('.pi-fonte-row'); if(f) f.style.display=(ata||demanda)?'none':'';
   });
@@ -1855,7 +1879,7 @@ function procAddItemRow(data,opcoes={}){
     <div style="display:grid;grid-template-columns:90px minmax(190px,1.35fr) 130px 100px minmax(150px,1fr);gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade de medida *</div><div class="pi-unidade-medida-wrap"><input type="text" class="pi-unidade-medida"${termDis} maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Busque por código, nome ou uso" value="${_sanEsc(String(data.unidade_medida||'')).replace(/"/g,'&quot;')}" oninput="_procRenderUnidadesMedida(this)" onfocus="_procRenderUnidadesMedida(this)" onkeydown="_procUnidadeMedidaTecla(event)" onblur="_procFecharUnidadeMedida(this)" onpaste="_procColarPlanilha(event)" style="${inp}"><div class="pi-unidade-medida-menu" hidden></div></div></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor"${termDis} placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
+      <div><div class="pi-valor-label" style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor"${termDis} placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias) *</div><input type="number" class="pi-prazo"${termDis} min="1" step="1" required placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" oninput="_procPrazoInput(this)" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
     </div>
@@ -1979,7 +2003,9 @@ async function _carregarProcItens(processoId){
 async function _persistProcItens(processoId, natureza){
   const ehAta=(natureza==='ATA DE RP');
   const ehDemanda=_procEhServicoDemanda();
-  const origem=ehAta?'ata':(ehDemanda?'servico_demanda':'aquisicao');
+  const ehLocacao=(natureza==='LOCAÇÃO');
+  const erroLocacao=_procValidarItensLocacao(); if(erroLocacao) throw new Error(erroLocacao);
+  const origem=ehAta?'ata':(ehDemanda?'servico_demanda':(ehLocacao?'locacao':'aquisicao'));
   const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
   const current=[];
   for(const c of cards){
@@ -1994,7 +2020,7 @@ async function _persistProcItens(processoId, natureza){
     const qtde=parseFloat(g('pi-qtde').value);
     const fonte_tipo=g('pi-fonte').value;
     const prazoNumero=Number(g('pi-prazo')?.value);
-    const prazoEntrega=(!ehDemanda&&Number.isInteger(prazoNumero)&&prazoNumero>0)?prazoNumero:null;
+    const prazoEntrega=(!ehDemanda&&!ehLocacao&&Number.isInteger(prazoNumero)&&prazoNumero>0)?prazoNumero:null;
     // Item 3: ATA DE RP não exige fonte/emenda/unidade nesta fase (vínculo ocorre na execução da ata)
     if(!unidadeMedida) throw new Error(`Informe a unidade de medida do item "${descricao||'sem descrição'}".`);
     _procRegistrarUnidadeMedida(unidadeMedida);
@@ -2004,7 +2030,7 @@ async function _persistProcItens(processoId, natureza){
     }else{
       if(!descricao||!qtde||!fonte_tipo) throw new Error('Cada item precisa de descrição, quantidade e fonte de recurso.');
     }
-    if(!ehDemanda&&!prazoEntrega) throw new Error(`O prazo de entrega do item "${descricao||'sem descrição'}" é obrigatório e deve ser maior que zero.`);
+    if(!ehDemanda&&!ehLocacao&&!prazoEntrega) throw new Error(`O prazo de entrega do item "${descricao||'sem descrição'}" é obrigatório e deve ser maior que zero.`);
     if(!_procCodigoSiamValido(codigoSiam)) throw new Error(`O Código SIAM do item "${descricao||'sem descrição'}" deve conter somente números, pontos e hífen.`);
     let emenda_id=null, emenda_item_id=null, fonte_descricao=null;
     if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){

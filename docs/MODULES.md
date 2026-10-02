@@ -195,6 +195,15 @@ apenas lê o status.
 O filtro **Secretaria** aceita várias escolhas; sem nenhuma, mostra todas. A seleção
 é aplicada à lista e às duas exportações Excel de licitações.
 
+Processos de **LOCAÇÃO** também cadastram itens no mesmo modal: descrição, quantidade,
+unidade de medida, **valor mensal unitário**, unidade destino opcional e fonte de recurso.
+O valor mensal estimado é a soma de quantidade × valor mensal unitário, sem multiplicação
+por vigência. Exige ao menos um item e quantidades/preços positivos. Prazo de entrega não
+é obrigatório. A colagem segue Descrição, Quantidade, Unidade de medida, Valor mensal
+unitário, Código SIAM, Unidade de destino e Fonte. A origem `locacao` preserva a separação
+dos fluxos de aquisição/inventário e de serviço mensal fixo; não define execução/pagamento
+do futuro contrato. A edição recarrega os mesmos registros em `itens`.
+
 No cadastro de itens, o botão **Baixar planilha modelo** entrega um arquivo específico para
 ATA de RP ou Aquisição. A colagem tabular, iniciada em **Descrição**, segue a ordem
 Descrição, Quantidade, Unidade de medida, Valor unitário estimado, Prazo e Código SIAM; em
