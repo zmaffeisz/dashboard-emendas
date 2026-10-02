@@ -2412,6 +2412,8 @@ function ecTipoInstrumentoChange(){
   const wrap=document.getElementById("ec-valor-mensal-wrap");
   if(wrap) wrap.style.display=ata?"none":"";
   if(ata) document.getElementById("ec-valor-mensal").value="";
+  const classificacao=document.getElementById('ec-classificacao-wrap'); if(classificacao) classificacao.style.display=ata?'none':'';
+  if(ata&&document.getElementById('ec-classificacao')) document.getElementById('ec-classificacao').value='';
 }
 
 async function salvarNovoContrato(){
@@ -2435,6 +2437,9 @@ async function salvarNovoContrato(){
     ?document.getElementById("nc-secao-novo").value.trim()
     :(secSelEarly?.value||'');
   if(!window._gerarContratoProcesso){showMsg("nc","Selecione o processo (licitação) (*).","err");return;}
+  const erroContexto=_ncValidarContextoProcesso(window._gerarContratoProcesso);
+  if(erroContexto){showMsg('nc',erroContexto,'err');return;}
+  const secaoProcesso=_ncResolverSecaoProcesso(window._gerarContratoProcesso);
   if(!cpl){showMsg("nc","Selecione o processo (*)","err");return;}
   if(!numeroContrato){showMsg("nc","Informe o número do contrato/SIM (*).","err");return;}
   if(servTrimestralNC&&!inicioContrato){showMsg("nc","Informe a data de início do contrato trimestral (*). Ela ancora os ciclos de preventiva/calibração e pagamento.","err");return;}
@@ -2488,8 +2493,8 @@ async function salvarNovoContrato(){
     numero_contrato:numeroContrato||null,
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
-    secao:secaoVal,
-    secao_id:_secoesOrganizacionais.find(s=>s.sigla===secaoVal)?.id||null,
+    secao:secaoProcesso.sigla,
+    secao_id:secaoProcesso.id,
     status:document.getElementById("nc-status").value,
     data_inicio:inicioContrato,
     data_assinatura:document.getElementById("nc-assinatura").value||null,
@@ -3122,6 +3127,33 @@ async function manterStatusContratos(){
 }
 
 let _ctEdicaoId=null;
+let _ecFiscaisCarregando=false;
+function _ecColetarFiscais(){
+  const sel=document.getElementById('ec-fiscalizacao');
+  return [...new Set([...(sel?.selectedOptions||[])].map(o=>o.value.trim()).filter(Boolean))];
+}
+async function _ecPreencherFiscais(contrato){
+  const sel=document.getElementById('ec-fiscalizacao'); if(!sel) return;
+  _ecFiscaisCarregando=true;
+  const atuais=[...new Set(String(contrato.fiscalizacao||'').split(',').map(n=>n.trim()).filter(Boolean))];
+  // Preserve fiscais antigos/inativos e a seleção mesmo se o catálogo falhar.
+  const render=(nomes,selecionados=atuais)=>{
+    sel.innerHTML=nomes.map(nome=>`<option value="${_sanEsc(nome)}"${selecionados.includes(nome)?' selected':''}>${_sanEsc(nome)}</option>`).join('');
+    enhanceMultiSelect(sel,{placeholder:'Pesquisar fiscal...'});
+  };
+  render(atuais);
+  try{
+    const {data,error}=await sb.from('pessoas').select('nome').eq('ativo',true).order('nome');
+    if(String(_ctEdicaoId)!==String(contrato.id)) return;
+    if(error) throw error;
+    const nomes=[...new Set((data||[]).map(p=>p.nome).concat(atuais).filter(Boolean))];
+    render(nomes,_ecColetarFiscais());
+  }catch(e){
+    if(String(_ctEdicaoId)===String(contrato.id)) showMsg('ec','Não foi possível carregar o catálogo de fiscais. Os fiscais atuais foram preservados.','err');
+  }finally{
+    if(String(_ctEdicaoId)===String(contrato.id)) _ecFiscaisCarregando=false;
+  }
+}
 const CT_EDIT_FIELDS={
   'ec-tipo':'tipo_instrumento','ec-cpl':'cpl','ec-numero':'numero_contrato','ec-objeto':'objeto','ec-email':'email_empresa','ec-prefixo':'prefixo_chamado','ec-secao':'secao','ec-status':'status','ec-inicio':'data_inicio','ec-assinatura':'data_assinatura','ec-data-base-reajuste':'data_base_reajuste','ec-vigencia':'vigencia_atual','ec-vencimento':'vencimento','ec-valor-inicial':'valor_inicial','ec-valor-atual':'valor_atual','ec-valor-mensal':'valor_mensal','ec-fonte':'fonte','ec-fiscalizacao':'fiscalizacao','ec-contato':'contato','ec-obs':'obs'
 };
@@ -3130,12 +3162,18 @@ function abrirEditarContrato(id){
   const contrato=contratosRows.find(r=>String(r.id)===String(id));
   if(!contrato) return;
   _ctEdicaoId=contrato.id;
+  const classificacao=document.getElementById('ec-classificacao');
+  if(classificacao){
+    classificacao.value='';
+    classificacao.disabled=_ctEhTrimestral(contrato);
+    classificacao.options[0].textContent=`Manter classificação atual: ${_ctModeloLabel(contrato)}`;
+  }
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
   if(_ctEhTrimestral(contrato)) document.getElementById('ec-valor-mensal').value=contrato.valor_periodico_num??'';
   const periodoLabel=document.getElementById('ec-valor-periodico-label');
   if(periodoLabel) periodoLabel.textContent=_ctEhTrimestral(contrato)?'Valor trimestral':'Valor mensal';
   preencherSelectSecoes('ec-secao', false, contrato.secao).then(()=>aplicarSecaoTextoFormulario('ec-secao',contrato.secao||''));
-  preencherSelectPessoas('ec-fiscalizacao', false, contrato.fiscalizacao).then(()=>{ const s=document.getElementById('ec-fiscalizacao'); if(s) s.value=contrato.fiscalizacao||''; });
+  _ecPreencherFiscais(contrato);
   // combobox de fornecedor
   const _ecLabel=document.getElementById('ec-fornecedor-label');
   if(_ecLabel){_ecLabel.textContent='Selecione ou pesquise a empresa...';_ecLabel.classList.add('company-combobox-placeholder');}
@@ -3158,11 +3196,21 @@ function abrirEditarContrato(id){
 }
 async function salvarEdicaoContrato(){
   if(!_isAdmin()||!_ctEdicaoId) return;
+  if(_ecFiscaisCarregando){showMsg('ec','Aguarde o carregamento dos fiscais antes de salvar.','err');return;}
   const numeroContrato=document.getElementById('ec-numero').value.trim();
   if(!numeroContrato){showMsg('ec','Informe o número do contrato/SIM (*).','err');return;}
   const prefixo=document.getElementById('ec-prefixo').value.trim().toUpperCase();
   if(prefixo&&!/^[A-Z]+$/.test(prefixo)){showMsg('ec','O prefixo deve conter somente letras.','err');return;}
   const dados={};
+  const correcaoMensal=document.getElementById('ec-classificacao')?.value==='mensal_fixo';
+  const contratoAtual=contratosRows.find(r=>String(r.id)===String(_ctEdicaoId));
+  if(correcaoMensal&&(_ctEhTrimestral(contratoAtual)||document.getElementById('ec-tipo').value==='ATA')){
+    showMsg('ec','Esta correção é exclusiva de contratos de manutenção mensal fixa.','err');return;
+  }
+  if(correcaoMensal){
+    dados.periodicidade_pagamento='MENSAL';
+    dados.modelo_execucao='continuo_mensal_fixo';
+  }
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{
     let valor=document.getElementById(campo).value;
     if(['valor_inicial','valor_atual','valor_mensal'].includes(coluna)) valor=valor===''?null:Number(valor);
@@ -3171,6 +3219,7 @@ async function salvarEdicaoContrato(){
   });
   delete dados.valor_inicial;
   delete dados.valor_atual;
+  dados.fiscalizacao=_ecColetarFiscais().join(', ')||null;
   if(_ctEhTrimestral(contratosRows.find(r=>String(r.id)===String(_ctEdicaoId)))){
     dados.valor_periodico_num=dados.valor_mensal;
     dados.valor_mensal=null;
@@ -3200,6 +3249,7 @@ async function salvarEdicaoContrato(){
   if(error){showMsg('ec','Erro: '+error.message,'err');return;}
   showMsg('ec','✓ Contrato atualizado.','ok');
   contratosCarregado=false;await loadContratos();
+  if(correcaoMensal) await window.ContratosFinanceiro?.refresh();
   if(atasContratos&&atasContratos.length) await loadAtas(); // mantém Atas Rp Vigentes em sincronia se estava carregada
   setTimeout(()=>document.getElementById('modal-editar-contrato').classList.remove('active'),700);
 }

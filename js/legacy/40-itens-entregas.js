@@ -3837,6 +3837,8 @@ window.removerTermosEntrega=removerTermosEntrega;
 
 async function gerarContratoDoProcesso(id){
   const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
+  const erroContexto=_ncValidarContextoProcesso(p);
+  if(erroContexto){alert(erroContexto);return;}
   await abrirModalNovoContrato();
   _ncFixarProcessoContrato(p);
   if(window.toast) toast('Contrato será ligado ao processo '+(p.identificador||''),'info');
@@ -3883,6 +3885,20 @@ async function preencherSelectProcessos(currentId){
     lista.map(p=>`<option value="${p.id}">${_sanEsc(p.identificador||('#'+p.id))}${p.objeto?(' — '+_sanEsc(String(p.objeto).slice(0,70))):''}</option>`).join('');
 }
 // Ao escolher um processo: liga processo, preenche CPL/objeto e carrega itens (Fase 3)
+function _ncResolverSecaoProcesso(processo,secoes=_secoesOrganizacionais){
+  const id=Number(processo?.secao_id);
+  const secao=secoes.find(s=>id>0?Number(s.id)===id:s.sigla===processo?.secao);
+  return {id:secao?.id||(Number.isInteger(id)&&id>0?id:null),sigla:secao?.sigla||processo?.secao||''};
+}
+function _ncValidarContextoProcesso(processo){
+  if(!podeEditar('contratos')) return 'Sem permissão para cadastrar contratos.';
+  const secao=_ncResolverSecaoProcesso(processo);
+  if(!secao.id) return 'A licitação está sem seção válida. Corrija a seção do processo antes de gerar o contrato.';
+  if(!_secoesPermitidasContexto().some(s=>String(s.id)===String(secao.id))){
+    return `Esta licitação pertence à seção ${secao.sigla||secao.id}. Selecione essa seção no contexto organizacional do cabeçalho antes de gerar o contrato. O contrato deve manter a seção da licitação.`;
+  }
+  return '';
+}
 function ncProcessoChange(){
   const sel=document.getElementById('nc-processo');
   const cplH=document.getElementById('nc-cpl');
@@ -3910,8 +3926,9 @@ function ncProcessoChange(){
   if(gm) gm.checked=!!p.gera_mais_contratos;
   // A seção já foi definida na licitação. Herdá-la evita uma segunda seleção no contrato.
   const secSel=document.getElementById('nc-secao');
-  const secaoProc=p.secao||(_secoesOrganizacionais.find(s=>String(s.id)===String(p.secao_id||''))?.sigla)||'';
+  const secaoProc=_ncResolverSecaoProcesso(p).sigla;
   if(secSel && secaoProc){
+    if(![...secSel.options].some(o=>o.value===secaoProc)) secSel.insertAdjacentHTML('beforeend',`<option value="${_sanEsc(secaoProc)}">${_sanEsc(secaoProc)}</option>`);
     secSel.value=secaoProc;
     secSel.disabled=true;
     const secNovo=document.getElementById('nc-secao-novo');

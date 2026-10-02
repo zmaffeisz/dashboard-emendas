@@ -2675,8 +2675,9 @@
       <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01" disabled title="Valor original preservado. Use reajuste, aditivo ou supressão para alterar valores de gestão."></div>
       <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01" disabled title="Valor de gestão preservado. Use eventos formalizados para alterar o valor atual."></div>
       <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label" id="ec-valor-periodico-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
+      <div class="form-group" id="ec-classificacao-wrap"><div class="form-label">Classificação do pagamento</div><select id="ec-classificacao"><option value="">Manter classificação atual</option><option value="mensal_fixo">Mensal fixo — manutenção</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">Selecione mensal fixo para corrigir contratos de manutenção que foram cadastrados sem essa classificação.</div></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
-      <div class="form-group"><div class="form-label">Fiscalização</div><select id="ec-fiscalizacao"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><div class="form-label">Fiscais responsáveis</div><select id="ec-fiscalizacao" multiple size="4" style="min-height:88px"></select><div style="font-size:11px;color:var(--text3);margin-top:4px">Pesquise e selecione um ou mais fiscais.</div></div>
       <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
       <div class="form-group full"><div class="form-label">Observações</div><textarea id="ec-obs" rows="3" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px"></textarea></div>
     </div>
@@ -3346,10 +3347,10 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20260901-categorias-multiplas-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20261002-locacao-meses-2"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20260930-requisicao-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20261002-contrato-secao-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20260930-unidades-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20260930-filtro-saldo-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20260929-financeiro-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261002-fiscais-multiplos-3"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20260929-financeiro-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

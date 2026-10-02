@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-02 — Vários fiscais na edição do contrato
+
+- **Editar contrato → Fiscais responsáveis** passa a permitir seleção múltipla
+  com pesquisa, seguindo o componente usado na criação do contrato.
+- Salvar e reabrir preserva todos os nomes, inclusive fiscais antigos ou inativos
+  que não aparecem no catálogo atual. Não cria nem encerra designações históricas.
+- Impede salvar durante o carregamento do catálogo e preserva a seleção se a consulta falhar.
+
+## 2026-10-02 — Seção na geração de contrato da licitação
+
+- Geração de contrato preserva o ID e a sigla da seção da licitação, mesmo
+  quando a seção não aparece nas opções do contexto atual.
+- Antes de abrir o cadastro e antes de salvar, valida a permissão e o contexto
+  da seção. Uma licitação de SAC exige contexto que inclua SAC; a mensagem
+  orienta a seleção no cabeçalho antes do preenchimento. Mantém a RLS existente.
+
+## 2026-10-02 — Correção administrativa da classificação mensal
+
+- Edição administrativa do contrato permite selecionar **Mensal fixo — manutenção**
+  para contratos cadastrados sem essa classificação. Grava periodicidade `MENSAL` e
+  modelo `continuo_mensal_fixo` pela sessão autenticada, preservando a proteção do banco.
+- Após salvar, atualiza a consulta financeira para liberar o termo sem corretivas
+  conforme a regra mensal existente. A correção não é oferecida para ATAs ou trimestrais.
+
 ## 2026-10-02 — Prazo em meses e valor global da locação
 
 - Locação ganha **Quantidade de meses** obrigatória, preservada ao editar.

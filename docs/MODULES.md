@@ -259,3 +259,27 @@ Contratos ──▶ Chamados / Fiscalização / Sanções
 
 Alterar um contrato reflete em Atas Rp (recarregada sempre), em Itens (espelhados) e nos
 saldos. Ver regras em [BUSINESS_RULES.md](BUSINESS_RULES.md).
+
+### Correção de classificação mensal na edição administrativa
+
+No modal Editar contrato, **Classificação do pagamento → Mensal fixo — manutenção**
+grava `periodicidade_pagamento=MENSAL` e `modelo_execucao=continuo_mensal_fixo`.
+A ação exige administrador tanto no cliente quanto no banco. Manter classificação atual
+não altera esses campos. Não permite converter ATAs ou contratos trimestrais por essa
+correção. A consulta financeira recarrega após salvar para atualizar a ação Baixar termo.
+
+### Seção ao gerar contrato da licitação
+
+O contrato herda `secao_id` e `secao` do processo, resolvidos pelo cadastro
+organizacional; a seleção visual não pode trocar a origem. A ação Gerar contrato
+valida edição de Contratos e seção no contexto ativo antes de abrir o cadastro,
+e repete a validação ao salvar. Quando o processo pertence a outra seção, a
+mensagem pede a mudança de contexto no cabeçalho. A RLS permanece autoritativa.
+
+### Vários fiscais na edição cadastral
+
+Editar contrato usa seleção múltipla com pesquisa em **Fiscais responsáveis**.
+`contratos.fiscalizacao` continua guardando os nomes separados por vírgula. Ao reabrir,
+a tela restaura a seleção de cada nome e conserva nomes antigos/inativos ausentes
+no catálogo `pessoas`. Essa edição cadastral não cria nem encerra linhas históricas
+em `contratos_fiscalizadores`; designações com datas usam o fluxo próprio de fiscais.
