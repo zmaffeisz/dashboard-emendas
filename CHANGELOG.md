@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-08 — Complementos e cabeçalhos mais claros na aba Emendas
+
+- Itens pagos por uma única fonte deixam de exibir uma linha redundante de rateio.
+  Quando houver complemento ativo, a tabela mostra somente **Complementado com**, seguido
+  das fontes complementares e dos respectivos valores.
+- Os cabeçalhos abreviados da tabela por emenda passam a usar os nomes completos, com
+  quebra em duas ou mais linhas para melhorar a leitura sem aumentar a largura da tabela.
+
 ## 2026-10-08 — Complementos com Fonte 01 e outras fontes
 
 - A área **Fontes de recurso do item** deixa de limitar complementos a outras emendas.
