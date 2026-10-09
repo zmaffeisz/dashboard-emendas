@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-08 — Contraste dos cards de itens da licitação
+
+- Os cards de equipamentos no modal de processo passam a usar fundo cinza-azulado mais
+  escuro que o modal, borda reforçada e sombra discreta, facilitando distinguir onde um
+  item termina e o seguinte começa. O tema escuro e os cards de item encerrado preservam
+  cores próprias.
+
 ## 2026-10-08 — Rateio de um item entre várias emendas
 
 - Itens de aquisição passam a guardar o preço e a quantidade reais da compra separados

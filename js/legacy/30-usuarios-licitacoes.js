@@ -1978,7 +1978,7 @@ function procAddItemRow(data,opcoes={}){
   div.dataset.emendaSaldo=data.emenda_saldo_atual??'';
   div.dataset.terminal=terminal?'1':'0';
   div.dataset.rateioBloqueado=rateioBloqueado?'1':'0';
-  div.style.cssText=`background:${terminal?'var(--red-bg)':'var(--surface2)'};border:1px solid ${terminal?'var(--red)':'var(--border)'};border-radius:var(--radius-sm);padding:.6rem .75rem`;
+  div.style.cssText='border-radius:var(--radius-sm);padding:.6rem .75rem';
   const fonte=data.fonte_tipo||'';
   const isEm=fonte==='emenda';
   const showDesc=(fonte && fonte!=='emenda' && fonte!=='sem_emenda');
