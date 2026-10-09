@@ -72,10 +72,11 @@
   principal também mostra o rateio completo.
 - Complemento salvo não é apagado. Seu cancelamento exige justificativa, muda o vínculo
   para `CANCELADO`, mantém a parcela histórica negativa na prestação de contas e retira o
-  valor do comprometimento/saldo consumido. Não se convertem automaticamente descrições
-  antigas digitadas como complemento. Após contrato/Ata, fracasso/deserção ou início da
-  entrega, o rateio inteiro torna-se histórico imutável: valores e vínculos não podem ser
-  alterados nem cancelados.
+  valor do comprometimento/saldo consumido. Descrições antigas não são reinterpretadas em
+  tempo de execução. A migration `migrar_complementos_legados` converte apenas os oito
+  vínculos históricos inventariados e validados, preservando seus valores e históricos.
+  Após contrato/Ata, fracasso/deserção ou início da entrega, o rateio inteiro torna-se
+  histórico imutável: valores e vínculos não podem ser alterados nem cancelados.
 - **Cadastro de nova emenda (modal "Nova emenda" com itens inline)**: cria **1 linha em
   `emendas`** com `valor_cedido` = **valor global** informado, e os itens são cadastrados
   no mesmo modal. Cada item tem valor unitário e uma ou mais unidades com quantidade; o

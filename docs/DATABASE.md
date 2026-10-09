@@ -144,6 +144,7 @@ histórico, valor inicial (R$ 298.848,00) ou global persistido (R$ 313.919,12).
 | 20260901005743 | `ampliar_categorias_e_reclassificar_dmmhf` — adiciona 11 categorias específicas da DMMHF, reclassifica vínculos inequívocos e remove inferências conflitantes |
 | 20261008234849 | `rateio_financeiro_itens_licitacao` — separa o item comprado das parcelas principal/complementares de emendas, preserva cancelamentos justificados e recalcula o saldo |
 | 20261009000444 | `bloquear_rateio_apos_formalizacao` — torna as parcelas imutáveis depois de contrato/Ata, ocorrência ou início da entrega |
+| 20261009002734 | `migrar_complementos_legados` — converte oito itens artificiais de complemento em parcelas financeiras dos respectivos itens reais, preservando valores e históricos |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de

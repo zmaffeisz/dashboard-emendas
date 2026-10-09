@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08 — Conversão dos complementos históricos
+
+- Oito itens cadastrados manualmente como compras separadas foram convertidos em
+  complementos financeiros reais dos respectivos itens nas emendas 325, 836, 851, 1080,
+  37, 457, 734 e 117.
+- A conversão preserva emenda de origem, valor financeiro, autoria, datas e histórico de
+  andamento. As oito linhas artificiais saem da licitação e passam a aparecer como parcelas
+  dos itens reais, sem alterar os valores históricos informados pelo usuário.
+
 ## 2026-10-08 — Contraste dos cards de itens da licitação
 
 - Os cards de equipamentos no modal de processo passam a usar fundo cinza-azulado mais
@@ -18,8 +27,9 @@
 - Cancelar um complemento exige justificativa, preserva o histórico como valor negativo e
   libera o saldo, sem apagar a intenção registrada no processo. Depois da formalização,
   encerramento ou início da entrega, todo o rateio fica imutável.
-- O cadastro histórico existente foi apenas vinculado como fonte principal. Descrições
-  antigas de complemento não são reinterpretadas nem têm seus valores corrigidos.
+- O cadastro histórico existente foi inicialmente vinculado como fonte principal, sem
+  reinterpretar descrições nem corrigir valores automaticamente. Uma migração posterior
+  converteu somente os oito complementos entre emendas identificados de forma inequívoca.
 
 ## 2026-10-02 — Vários fiscais na edição do contrato
 
