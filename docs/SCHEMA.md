@@ -199,21 +199,25 @@ Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → en
 | `valor_estimado`, `valor_contratado` | numeric | **valores monetários** |
 
 ### `licitacao_item_recursos`
-Rateio financeiro N:N de uma compra licitada entre emendas. Não representa item físico.
+Rateio financeiro N:N de uma compra licitada entre emendas e fontes não parlamentares.
+Não representa item físico.
 
 | Campo | Tipo | Observação |
 |---|---|---|
 | `item_id` | FK → `itens.id` | compra única cujo total é rateado |
-| `emenda_id`, `emenda_item_id` | FK | parcela e seu espelho na Emenda |
+| `fonte_tipo` | text | `emenda`, `recurso_proprio` (Fonte 01) ou `outra` |
+| `fonte_descricao` | text | identificação da fonte não parlamentar |
+| `emenda_id`, `emenda_item_id` | FK, nullable | preenchidos somente para parcela de emenda |
 | `tipo` | text | `PRINCIPAL` ou `COMPLEMENTO` |
-| `valor_alocado` | numeric(14,2) | quanto desta emenda paga o item |
+| `valor_alocado` | numeric(14,2) | quanto desta fonte paga o item |
 | `status` | text | `ATIVO` ou `CANCELADO` |
 | `emenda_item_gerado` | boolean | complemento cujo `emenda_itens` nasceu automaticamente |
 | `justificativa_cancelamento`, `cancelado_em`, `cancelado_por` | — | histórico obrigatório do cancelamento |
 | `secao_id` | FK → `secoes.id` | escopo da RLS |
 
-Há no máximo uma fonte principal ativa e uma parcela ativa da mesma emenda por item.
-Cancelados permanecem armazenados e não podem ser reutilizados como itens livres.
+Há no máximo uma fonte principal ativa, uma parcela ativa da mesma emenda e uma parcela
+ativa com a mesma identificação de fonte não parlamentar por item. Cancelados permanecem
+armazenados e não podem ser reutilizados como itens livres.
 
 ### `itens_entregas`
 Autorização de Fornecimento (AF) / recebimento agregado por item.

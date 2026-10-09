@@ -65,11 +65,14 @@
 - O valor real de um item licitado é sempre `quantidade × valor unitário` no próprio item.
   As fontes que pagam a compra ficam separadas em `licitacao_item_recursos`: uma parcela
   `PRINCIPAL` (o item trazido por **Puxar de emenda**) e zero ou mais parcelas
-  `COMPLEMENTO`. Uma parcela é valor financeiro e não cria quantidade fictícia.
-- Cada complemento cria automaticamente um `emenda_itens` de representação. Esse registro
-  mostra a descrição, a quantidade e o valor unitário da compra vinculada, mas o campo
-  **Recurso desta emenda** é o montante efetivamente atribuído àquela emenda. A emenda
-  principal também mostra o rateio completo.
+  `COMPLEMENTO` vindas de outra emenda, da **Fonte 01 (recurso próprio)** ou de outra fonte
+  descrita. Uma parcela é valor financeiro e não cria quantidade fictícia.
+- Complemento de outra emenda cria automaticamente um `emenda_itens` de representação.
+  Esse registro mostra a descrição, a quantidade e o valor unitário da compra vinculada,
+  mas o campo **Recurso desta emenda** é o montante efetivamente atribuído àquela emenda.
+  Fonte 01 e outras fontes ficam somente no item/processo, sem criar item fictício em
+  Emendas ou consumir seu saldo. A emenda principal mostra o rateio completo de todas as
+  fontes.
 - Complemento salvo não é apagado. Seu cancelamento exige justificativa, muda o vínculo
   para `CANCELADO`, mantém a parcela histórica negativa na prestação de contas e retira o
   valor do comprometimento/saldo consumido. Descrições antigas não são reinterpretadas em

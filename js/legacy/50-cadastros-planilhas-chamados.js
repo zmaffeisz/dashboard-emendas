@@ -1114,10 +1114,18 @@ async function _fetchAtaFlowData(eiIds){
   return {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec};
 }
 async function _fetchRateiosEmendaFlow(eiIds){
-  const chunks=await Promise.all(_chunkArray(eiIds,200).map(slice=>
+  const seedChunks=await Promise.all(_chunkArray(eiIds,200).map(slice=>
     sb.from('licitacao_item_recursos')
-      .select('id,item_id,emenda_id,emenda_item_id,tipo,valor_alocado,status,emenda_item_gerado,justificativa_cancelamento,cancelado_em,emendas(emenda,ano,parlamentar),itens(id,descricao,qtde,valor_estimado,valor_contratado,processo_id,contrato_id,emenda_item_id,unidade_medida,processos(id,identificador,tipo,link_publico_sei),contratos(cpl,numero_contrato),unidades(nome))')
+      .select('item_id')
       .in('emenda_item_id',slice)
+  ));
+  const erroSeed=seedChunks.find(r=>r.error)?.error; if(erroSeed) throw erroSeed;
+  const itemIds=[...new Set(seedChunks.flatMap(r=>(r.data||[]).map(x=>x.item_id)).filter(Boolean))];
+  if(!itemIds.length) return [];
+  const chunks=await Promise.all(_chunkArray(itemIds,200).map(slice=>
+    sb.from('licitacao_item_recursos')
+      .select('id,item_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,tipo,valor_alocado,status,emenda_item_gerado,justificativa_cancelamento,cancelado_em,emendas(emenda,ano,parlamentar),itens(id,descricao,qtde,valor_estimado,valor_contratado,processo_id,contrato_id,emenda_item_id,unidade_medida,processos(id,identificador,tipo,link_publico_sei),contratos(cpl,numero_contrato),unidades(nome))')
+      .in('item_id',slice)
   ));
   const erro=chunks.find(r=>r.error)?.error; if(erro) throw erro;
   return chunks.flatMap(r=>r.data||[]);
@@ -1176,7 +1184,7 @@ function _aplicarRateiosEmendaFlow(flow,rateios){
         // A unidade fisica pertence ao item da compra, nao a cada parcela financeira.
         f.unidades=[]; f.unidadesFisicas=0; f.patrimonios=new Set(); f.series=new Set();
       }
-      flow[r.emenda_item_id]=f;
+      if(r.emenda_item_id) flow[r.emenda_item_id]=f;
     });
   });
 }

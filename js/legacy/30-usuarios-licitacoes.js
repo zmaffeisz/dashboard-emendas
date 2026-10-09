@@ -1873,28 +1873,56 @@ function _procEmendaRotulo(id){
   const e=_procEmendaInfo(id);
   return e.emenda?`Emenda ${e.emenda}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+e.parlamentar):''}`:'Emenda não identificada';
 }
+function _procRecursoRotulo(fonteTipo,fonteDescricao,emendaId){
+  const tipo=String(fonteTipo||'emenda').toLowerCase();
+  if(tipo==='emenda') return _procEmendaRotulo(emendaId);
+  if(tipo==='recurso_proprio') return fonteDescricao||'Fonte 01 (recurso próprio)';
+  return fonteDescricao||'Outra fonte';
+}
+function _procRecursoFonteTipoChange(sel){
+  const row=sel.closest('.pi-recurso-row'); if(!row) return;
+  const tipo=sel.value||'emenda';
+  row.dataset.fonteTipo=tipo;
+  row.dataset.emendaId='';
+  const emendaWrap=row.querySelector('.pi-recurso-emenda-wrap');
+  const descWrap=row.querySelector('.pi-recurso-desc-wrap');
+  if(emendaWrap) emendaWrap.style.display=tipo==='emenda'?'block':'none';
+  if(descWrap) descWrap.style.display=tipo==='outra'?'block':'none';
+  procRecalcRateio(row.closest('.proc-item-card'));
+  _renderProcEmendaSaldoResumo();
+}
 function _procRecursoRowHtml(recurso,bloqueado=false){
   const r=recurso||{}, tipo=String(r.tipo||'COMPLEMENTO').toUpperCase();
   const cancelado=String(r.status||'ATIVO').toUpperCase()==='CANCELADO';
   const existente=!!r.id, principal=tipo==='PRINCIPAL';
   const valor=Number(r.valor_alocado)||'';
   const emendaId=r.emenda_id||'';
-  const label=_procEmendaRotulo(emendaId);
+  const fonteTipo=String(r.fonte_tipo||'emenda').toLowerCase();
+  const fonteDescricao=r.fonte_descricao||'';
+  const label=_procRecursoRotulo(fonteTipo,fonteDescricao,emendaId);
   const motivo=r.justificativa_cancelamento||'';
   const attr=(v)=>_sanEsc(String(v||'')).replace(/"/g,'&quot;');
   if(cancelado){
-    return `<div class="pi-recurso-row pi-recurso-cancelado" data-recurso-id="${attr(r.id)}" data-emenda-id="${attr(emendaId)}" data-emenda-item-id="${attr(r.emenda_item_id)}" data-tipo="${tipo}" data-status="CANCELADO" style="border:1px solid var(--red);background:var(--red-bg);border-radius:6px;padding:7px 9px;color:var(--red-text)">
+    return `<div class="pi-recurso-row pi-recurso-cancelado" data-recurso-id="${attr(r.id)}" data-emenda-id="${attr(emendaId)}" data-emenda-item-id="${attr(r.emenda_item_id)}" data-fonte-tipo="${attr(fonteTipo)}" data-fonte-descricao="${attr(fonteDescricao)}" data-tipo="${tipo}" data-status="CANCELADO" style="border:1px solid var(--red);background:var(--red-bg);border-radius:6px;padding:7px 9px;color:var(--red-text)">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:11px;font-weight:700">COMPLEMENTO CANCELADO · ${_sanEsc(label)}</span><strong style="white-space:nowrap">-${fmtFull(Number(r.valor_alocado)||0)}</strong></div>
       <div style="font-size:10px;margin-top:3px">Não consome saldo · Justificativa: ${_sanEsc(motivo||'não informada')}</div>
     </div>`;
   }
   const seletor=principal||existente
     ?`<div class="pi-recurso-emenda-label" style="font-size:11px;font-weight:600;padding:7px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2)">${_sanEsc(label)}${principal?' <span style="color:var(--blue)">(principal)</span>':' <span style="color:var(--amber)">(complemento)</span>'}</div>`
-    :`<select class="pi-recurso-emenda" onchange="procRecalcRateio(this.closest('.proc-item-card'));_renderProcEmendaSaldoResumo()" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%">${_procEmendaOpts(emendaId)}</select>`;
+    :`<div style="display:grid;grid-template-columns:190px minmax(210px,1fr);gap:7px">
+        <select class="pi-recurso-fonte-tipo" onchange="_procRecursoFonteTipoChange(this)" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%">
+          <option value="emenda"${fonteTipo==='emenda'?' selected':''}>Emenda</option>
+          <option value="recurso_proprio"${fonteTipo==='recurso_proprio'?' selected':''}>Fonte 01 (recurso próprio)</option>
+          <option value="outra"${fonteTipo==='outra'?' selected':''}>Outra fonte</option>
+        </select>
+        <div class="pi-recurso-emenda-wrap" style="display:${fonteTipo==='emenda'?'block':'none'}"><select class="pi-recurso-emenda" onchange="procRecalcRateio(this.closest('.proc-item-card'));_renderProcEmendaSaldoResumo()" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%">${_procEmendaOpts(emendaId)}</select></div>
+        <div class="pi-recurso-desc-wrap" style="display:${fonteTipo==='outra'?'block':'none'}"><input type="text" class="pi-recurso-fonte-desc" maxlength="160" placeholder="Descreva a outra fonte" value="${attr(fonteDescricao)}" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box"></div>
+      </div>`;
   const acao=principal||bloqueado?'':`<button type="button" onclick="${existente?'procCancelarComplemento(this)':'procRemoveComplemento(this)'}" title="${existente?'Cancelar complemento e preservar histórico':'Remover complemento ainda não salvo'}" style="border:1px solid var(--red);background:var(--surface);color:var(--red);border-radius:5px;padding:5px 8px;cursor:pointer">${existente?'Cancelar':'Remover'}</button>`;
-  return `<div class="pi-recurso-row" data-recurso-id="${attr(r.id)}" data-emenda-id="${attr(emendaId)}" data-emenda-item-id="${attr(r.emenda_item_id)}" data-tipo="${tipo}" data-status="ATIVO" style="display:grid;grid-template-columns:minmax(220px,1fr) 150px auto;gap:7px;align-items:end">
-    <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">${principal?'Fonte principal':'Emenda complementar'} *</div>${seletor}</div>
-    <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Valor desta emenda *</div><input type="number" min="0.01" step="0.01" class="pi-recurso-valor" value="${attr(valor)}" ${bloqueado?'disabled':''} oninput="procRecalcRateio(this.closest('.proc-item-card'));_renderProcEmendaSaldoResumo()" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:${bloqueado?'var(--surface2)':'var(--surface)'};color:var(--text);width:100%;box-sizing:border-box"></div>
+  return `<div class="pi-recurso-row" data-recurso-id="${attr(r.id)}" data-emenda-id="${attr(emendaId)}" data-emenda-item-id="${attr(r.emenda_item_id)}" data-fonte-tipo="${attr(fonteTipo)}" data-fonte-descricao="${attr(fonteDescricao)}" data-tipo="${tipo}" data-status="ATIVO" style="display:grid;grid-template-columns:minmax(320px,1fr) 150px auto;gap:7px;align-items:end">
+    <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">${principal?'Fonte principal':'Fonte complementar'} *</div>${seletor}</div>
+    <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Valor desta fonte *</div><input type="number" min="0.01" step="0.01" class="pi-recurso-valor" value="${attr(valor)}" ${bloqueado?'disabled':''} oninput="procRecalcRateio(this.closest('.proc-item-card'));_renderProcEmendaSaldoResumo()" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:${bloqueado?'var(--surface2)':'var(--surface)'};color:var(--text);width:100%;box-sizing:border-box"></div>
     ${acao}
   </div>`;
 }
@@ -1903,7 +1931,7 @@ function _procRecursosIniciais(data){
   if(!data.emenda_item_id) return [];
   const totalPlanejado=Number(data.valor_recurso_principal);
   const totalItem=(Number(data.qtde)||0)*(Number(data.valor_estimado)||0);
-  return [{tipo:'PRINCIPAL',status:'ATIVO',emenda_id:data.emenda_id,emenda_item_id:data.emenda_item_id,valor_alocado:totalPlanejado>0?totalPlanejado:totalItem}];
+  return [{tipo:'PRINCIPAL',status:'ATIVO',fonte_tipo:'emenda',emenda_id:data.emenda_id,emenda_item_id:data.emenda_item_id,valor_alocado:totalPlanejado>0?totalPlanejado:totalItem}];
 }
 function procAddComplemento(btn){
   const card=btn.closest('.proc-item-card'), lista=card?.querySelector('.pi-recursos-lista'); if(!lista) return;
@@ -1917,7 +1945,7 @@ function procRemoveComplemento(btn){
 async function procCancelarComplemento(btn){
   const row=btn.closest('.pi-recurso-row'), card=btn.closest('.proc-item-card'), id=row?.dataset.recursoId;
   if(!id) return procRemoveComplemento(btn);
-  const justificativa=prompt('Justifique o cancelamento do complemento. O histórico permanecerá na Emenda e o valor deixará de consumir saldo:','Não há mais necessidade do complemento.');
+  const justificativa=prompt('Justifique o cancelamento do complemento. O histórico permanecerá no processo e o valor deixará de consumir o recurso:','Não há mais necessidade do complemento.');
   if(justificativa===null) return;
   if(justificativa.trim().length<5){ alert('Informe uma justificativa com pelo menos 5 caracteres.'); return; }
   btn.disabled=true; btn.textContent='Cancelando...';
@@ -1925,10 +1953,10 @@ async function procCancelarComplemento(btn){
   if(error){ btn.disabled=false; btn.textContent='Cancelar'; alert('Erro ao cancelar complemento: '+error.message); return; }
   const valor=Number(row.querySelector('.pi-recurso-valor')?.value)||Number(data?.valor_alocado)||0;
   const emendaId=row.dataset.emendaId;
-  row.outerHTML=_procRecursoRowHtml({id,emenda_id:emendaId,emenda_item_id:row.dataset.emendaItemId,tipo:'COMPLEMENTO',status:'CANCELADO',valor_alocado:valor,justificativa_cancelamento:justificativa.trim()});
+  row.outerHTML=_procRecursoRowHtml({id,fonte_tipo:row.dataset.fonteTipo,fonte_descricao:row.dataset.fonteDescricao,emenda_id:emendaId,emenda_item_id:row.dataset.emendaItemId,tipo:'COMPLEMENTO',status:'CANCELADO',valor_alocado:valor,justificativa_cancelamento:justificativa.trim()});
   procRecalcRateio(card);
   await _renderProcEmendaSaldoResumo();
-  if(window.toast) toast('Complemento cancelado. O histórico foi preservado e o saldo liberado.','success');
+  if(window.toast) toast('Complemento cancelado. O histórico foi preservado e o recurso liberado.','success');
 }
 function procRecalcRateio(card){
   if(!card) return;
@@ -1939,23 +1967,35 @@ function procRecalcRateio(card){
   const diferenca=Number((totalItem-totalRecursos).toFixed(2));
   const cor=Math.abs(diferenca)<0.005?'var(--green)':'var(--amber)';
   const texto=Math.abs(diferenca)<0.005?'Rateio fechado':(diferenca>0?`Falta vincular ${fmtFull(diferenca)}`:`Excesso de ${fmtFull(Math.abs(diferenca))}`);
-  box.innerHTML=`<span>Total do item: <b>${fmtFull(totalItem)}</b></span><span>Vinculado às emendas: <b>${fmtFull(totalRecursos)}</b></span><span style="color:${cor};font-weight:700">${texto}</span>`;
+  box.innerHTML=`<span>Total do item: <b>${fmtFull(totalItem)}</b></span><span>Vinculado às fontes: <b>${fmtFull(totalRecursos)}</b></span><span style="color:${cor};font-weight:700">${texto}</span>`;
 }
 function _procLerRecursosCard(card){
   const rows=[...card.querySelectorAll('.pi-recurso-row[data-status="ATIVO"]')];
   if(!rows.length) throw new Error(`Informe ao menos a fonte principal do item "${card.querySelector('.pi-desc')?.value||'sem descrição'}".`);
   const vistos=new Set();
   return rows.map(row=>{
-    const emendaId=row.dataset.emendaId||row.querySelector('.pi-recurso-emenda')?.value||'';
+    const fonteTipo=String(row.dataset.fonteTipo||row.querySelector('.pi-recurso-fonte-tipo')?.value||'emenda').toLowerCase();
+    const emendaId=fonteTipo==='emenda'?(row.dataset.emendaId||row.querySelector('.pi-recurso-emenda')?.value||''):'';
+    const fonteDescricao=fonteTipo==='recurso_proprio'
+      ?'FONTE 01'
+      :fonteTipo==='outra'
+      ?String(row.dataset.fonteDescricao||row.querySelector('.pi-recurso-fonte-desc')?.value||'').trim()
+      :'';
     const valor=Number(row.querySelector('.pi-recurso-valor')?.value);
-    if(!emendaId) throw new Error('Selecione a emenda de cada complemento.');
-    if(!Number.isFinite(valor)||valor<=0) throw new Error(`Informe um valor positivo para ${_procEmendaRotulo(emendaId)}.`);
-    if(vistos.has(String(emendaId))) throw new Error('A mesma emenda não pode aparecer duas vezes no rateio do item.');
-    vistos.add(String(emendaId));
+    if(!['emenda','recurso_proprio','outra'].includes(fonteTipo)) throw new Error('Selecione um tipo válido para cada fonte complementar.');
+    if(fonteTipo==='emenda'&&!emendaId) throw new Error('Selecione a emenda do complemento.');
+    if(fonteTipo==='outra'&&!fonteDescricao) throw new Error('Descreva a outra fonte usada no complemento.');
+    const label=_procRecursoRotulo(fonteTipo,fonteDescricao,emendaId);
+    if(!Number.isFinite(valor)||valor<=0) throw new Error(`Informe um valor positivo para ${label}.`);
+    const chave=fonteTipo==='emenda'?`emenda:${emendaId}`:`${fonteTipo}:${fonteDescricao.toLocaleLowerCase('pt-BR')}`;
+    if(vistos.has(chave)) throw new Error(`A fonte "${label}" não pode aparecer duas vezes no rateio do item.`);
+    vistos.add(chave);
     return {
       id:row.dataset.recursoId||null,
-      emenda_id:emendaId,
-      emenda_item_id:row.dataset.emendaItemId||null,
+      fonte_tipo:fonteTipo,
+      fonte_descricao:fonteDescricao||null,
+      emenda_id:emendaId||null,
+      emenda_item_id:fonteTipo==='emenda'?(row.dataset.emendaItemId||null):null,
       tipo:row.dataset.tipo,
       valor_alocado:Number(valor.toFixed(2))
     };
@@ -2010,7 +2050,7 @@ function procAddItemRow(data,opcoes={}){
       <div class="pi-fonte-desc-wrap" style="display:${showDesc?'block':'none'}"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Detalhe da fonte</div><input type="text" class="pi-fonte-desc" placeholder="ex: recurso próprio 2026" value="${_sanEsc(String(data.fonte_descricao||'')).replace(/"/g,'&quot;')}" style="${inp}"></div>
     </div>
     <div class="pi-rateio" style="display:${isEm?'block':'none'};margin-top:8px;border-top:1px dashed var(--border);padding-top:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">💰 Fontes de recurso do item${rateioBloqueado?' · vínculo preservado 🔒':''}</div><div style="font-size:10px;color:var(--text3)">${rateioBloqueado?'O item já foi encerrado ou formalizado; o rateio permanece somente para consulta.':'O preço e a quantidade pertencem ao item; aqui informe somente quanto sai de cada emenda.'}</div></div>${rateioBloqueado?'':`<button type="button" onclick="procAddComplemento(this)" style="font-size:11px;padding:5px 9px;border:1px solid var(--amber);border-radius:5px;background:var(--surface);color:var(--amber);cursor:pointer;white-space:nowrap">+ Adicionar complemento</button>`}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">💰 Fontes de recurso do item${rateioBloqueado?' · vínculo preservado 🔒':''}</div><div style="font-size:10px;color:var(--text3)">${rateioBloqueado?'O item já foi encerrado ou formalizado; o rateio permanece somente para consulta.':'O preço e a quantidade pertencem ao item; informe quanto sai da emenda principal, de outras emendas, da Fonte 01 ou de outra fonte.'}</div></div>${rateioBloqueado?'':`<button type="button" onclick="procAddComplemento(this)" style="font-size:11px;padding:5px 9px;border:1px solid var(--amber);border-radius:5px;background:var(--surface);color:var(--amber);cursor:pointer;white-space:nowrap">+ Adicionar complemento</button>`}</div>
       <div class="pi-recursos-lista" style="display:flex;flex-direction:column;gap:7px">${recursos.map(r=>_procRecursoRowHtml(r,rateioBloqueado)).join('')}</div>
       <div class="pi-rateio-resumo" style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--text2);margin-top:7px"></div>
     </div>`;
@@ -2133,7 +2173,7 @@ async function _carregarProcItens(processoId){
     ]);
     const itemIds=(data||[]).map(i=>i.id);
     const recursoResp=itemIds.length
-      ?await sb.from('licitacao_item_recursos').select('id,item_id,emenda_id,emenda_item_id,tipo,valor_alocado,status,justificativa_cancelamento,cancelado_em,emendas(emenda,ano,parlamentar)').in('item_id',itemIds)
+      ?await sb.from('licitacao_item_recursos').select('id,item_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,tipo,valor_alocado,status,justificativa_cancelamento,cancelado_em,emendas(emenda,ano,parlamentar)').in('item_id',itemIds)
       :{data:[],error:null};
     if(recursoResp.error) throw recursoResp.error;
     const recursos=recursoResp.data||[];
@@ -2144,7 +2184,7 @@ async function _carregarProcItens(processoId){
       if(ocorrenciaPorItem[String(it.id)]) return;
       const rates=(recursosPorItem[String(it.id)]||[]).filter(r=>r.status==='ATIVO');
       if(rates.length){
-        rates.forEach(r=>{ _procEditOldByEmenda[r.emenda_id]=(_procEditOldByEmenda[r.emenda_id]||0)+(Number(r.valor_alocado)||0); });
+        rates.forEach(r=>{ if(r.emenda_id) _procEditOldByEmenda[r.emenda_id]=(_procEditOldByEmenda[r.emenda_id]||0)+(Number(r.valor_alocado)||0); });
       }else if(it.emenda_id){
         const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0;
         _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor;

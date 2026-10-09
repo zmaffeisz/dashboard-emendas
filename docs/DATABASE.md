@@ -145,6 +145,7 @@ histórico, valor inicial (R$ 298.848,00) ou global persistido (R$ 313.919,12).
 | 20261008234849 | `rateio_financeiro_itens_licitacao` — separa o item comprado das parcelas principal/complementares de emendas, preserva cancelamentos justificados e recalcula o saldo |
 | 20261009000444 | `bloquear_rateio_apos_formalizacao` — torna as parcelas imutáveis depois de contrato/Ata, ocorrência ou início da entrega |
 | 20261009002734 | `migrar_complementos_legados` — converte oito itens artificiais de complemento em parcelas financeiras dos respectivos itens reais, preservando valores e históricos |
+| 20261009005009 | `permitir_complementos_outras_fontes` — amplia o rateio para Fonte 01 e outras fontes sem criar espelho em `emenda_itens` |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -204,7 +205,7 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `rls_auto_enable()` | | Habilita RLS automaticamente (hardening). |
 | `registrar_reajuste_item_ata(...)` | item, vigência, percentual, novo valor e observação | Registra uma versão de preço do item sem sobrescrever o valor original. |
 | `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
-| `salvar_licitacao_item_recursos(...)` | item e array JSONB de parcelas | Cria/atualiza o rateio e gera automaticamente o `emenda_itens` do complemento. |
+| `salvar_licitacao_item_recursos(...)` | item e array JSONB de parcelas | Cria/atualiza o rateio; gera `emenda_itens` apenas quando o complemento é outra emenda. |
 | `cancelar_licitacao_item_recurso(...)` | parcela e justificativa | Cancela complemento sem apagar o histórico e libera o saldo. |
 | `registrar_movimentacao_inventario(...)` | unidade física, tipo, data, destino/responsáveis e documento | Acrescenta o evento e atualiza atomicamente o estado corrente do item. |
 | `registrar_recebimento_aquisicao_lote(...)` | nota e itens em JSONB | Valida/classifica o tipo de material e grava atomicamente NF, rateios e recebimentos; bens permanentes preenchem por `upsert` as sequências físicas materializadas pelo trigger, sem duplicá-las. |

@@ -215,9 +215,10 @@ devem usar **Puxar de emenda** para preservar o vínculo com `emenda_itens`.
 
 Itens trazidos por **Puxar de emenda** exibem a área **Fontes de recurso do item**. Nela, a
 parcela principal pode ser ajustada e complementos são acrescentados escolhendo outra
-emenda e informando somente o valor. A soma é comparada ao total real do item. Complemento
-já salvo só pode ser cancelado com justificativa; ele permanece no histórico e deixa de
-consumir saldo. O processo não pode ser removido pela interface apagando esse histórico.
+emenda, **Fonte 01 (recurso próprio)** ou outra fonte descrita, além do valor. A soma é
+comparada ao total real do item. Complemento já salvo só pode ser cancelado com
+justificativa; ele permanece no histórico e deixa de consumir o recurso. O processo não
+pode ser removido pela interface apagando esse histórico.
 
 ## 13. Sanções
 Solicitação (`sancoes_solicitadas` + `sancao_itens`) e aplicação

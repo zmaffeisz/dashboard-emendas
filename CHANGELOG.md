@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08 — Complementos com Fonte 01 e outras fontes
+
+- A área **Fontes de recurso do item** deixa de limitar complementos a outras emendas.
+  Agora aceita **Emenda**, **Fonte 01 (recurso próprio)** ou **Outra fonte** com descrição.
+- Complementos não parlamentares ficam vinculados diretamente ao item e ao processo, sem
+  criar um item fictício na aba Emendas nem interferir no saldo de nenhuma emenda.
+- A emenda principal passa a mostrar o rateio completo, incluindo a parcela da Fonte 01 ou
+  da outra fonte. Cancelamento continua exigindo justificativa e preservando o histórico.
+
 ## 2026-10-08 — Conversão dos complementos históricos
 
 - Oito itens cadastrados manualmente como compras separadas foram convertidos em

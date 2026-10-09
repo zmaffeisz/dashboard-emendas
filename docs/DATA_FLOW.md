@@ -112,10 +112,11 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
 
    **Rateio financeiro da aquisição:** `itens` continua sendo a compra única, com sua
    quantidade e seu preço reais. `licitacao_item_recursos` distribui o total entre a
-   emenda principal e complementares. A inclusão de complemento cria o `emenda_itens`
-   correspondente; o cancelamento preserva esse espelho e a justificativa, exibe a parcela
-   negativa e deixa de comprometê-la. Bens físicos continuam pertencendo ao item da compra,
-   não a cada parcela financeira.
+   emenda principal e complementos de outra emenda, da Fonte 01 ou de outra fonte descrita.
+   Somente complemento de emenda cria o `emenda_itens` correspondente; fontes não
+   parlamentares permanecem vinculadas ao item/processo. O cancelamento preserva o vínculo
+   e a justificativa e deixa de comprometê-lo. Bens físicos continuam pertencendo ao item
+   da compra, não a cada parcela financeira.
 
    **Espelhamento em Licitações (aquisições):** a cada abertura/atualização da aba,
    `licitacoes-fluxo.js` consulta entregas e empenhos pelos IDs dos itens, com paginação,

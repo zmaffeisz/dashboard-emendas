@@ -924,6 +924,12 @@ function _emMovimentacaoIndicador(r){
   return `<span class="em-movement-marker" title="Este item possui movimentação no Inventário.${atual} A unidade desta coluna é a unidade originalmente cadastrada na Emenda.">*</span>`;
 }
 function _emRateioEmendaRotulo(recurso){
+  const fonteTipo=String(recurso?.fonte_tipo||'emenda').toLowerCase();
+  if(fonteTipo!=='emenda'){
+    if(recurso?.fonte_descricao) return recurso.fonte_descricao;
+    if(fonteTipo==='recurso_proprio') return 'Fonte 01 (recurso próprio)';
+    return 'Outra fonte';
+  }
   const e=recurso?.emendas||{};
   return e.emenda?`Emenda ${e.emenda}${e.ano?('/'+e.ano):''}`:'Emenda';
 }
