@@ -584,11 +584,12 @@ async function exportarExcel(){
     "UNIDADE DE ENTREGA","DATA DE RECEBIMENTO PELA SECRETARIA",
     "DATA DE ENTREGA NA UNIDADE","ORDEM DE PAGAMENTO"
   ];
-  colunas.splice(8,0,"VALOR UNITARIO (R$) PLANEJADO","VALOR TOTAL (R$) PLANEJADO","VALOR UNITARIO (R$) LICITACAO","VALOR TOTAL (R$) LICITACAO");
+  colunas.splice(8,0,"VALOR UNITARIO (R$) PLANEJADO","VALOR TOTAL (R$) PLANEJADO","RECURSO DESTA EMENDA (R$)","TIPO DE VINCULO FINANCEIRO","JUSTIFICATIVA DO CANCELAMENTO","VALOR UNITARIO (R$) LICITACAO","VALOR TOTAL (R$) LICITACAO");
   const dados=filtered.map(r=>[
     r.tipo, r.emenda, r.parlamentar, r.sei_emenda, r.valor_cedido,
     r.unidade, r.item, r.qtde,
     r.vl_unitario_cadastrado, r.vl_total_cadastrado,
+    r._recurso?r.valor_recurso:null, r._recurso?r._recurso.tipo:'', r._recurso?.justificativa_cancelamento||'',
     r.valor_licitacao_unit, r.valor_licitacao,
     r.vl_unitario, r.vl_total,
     r.cpl, r.status_raw,

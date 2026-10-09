@@ -142,6 +142,8 @@ histórico, valor inicial (R$ 298.848,00) ou global persistido (R$ 313.919,12).
 | 20260901003312 | `corrigir_trigger_categoria_licitacao` — restringe a leitura dos campos de origem ao tipo correto de cada gatilho compartilhado |
 | 20260901004527 | `classificar_contratacoes_existentes` — classifica por inferência os 99 processos históricos e propaga a categoria para itens, contratos e itens de ATA |
 | 20260901005743 | `ampliar_categorias_e_reclassificar_dmmhf` — adiciona 11 categorias específicas da DMMHF, reclassifica vínculos inequívocos e remove inferências conflitantes |
+| 20261008234849 | `rateio_financeiro_itens_licitacao` — separa o item comprado das parcelas principal/complementares de emendas, preserva cancelamentos justificados e recalcula o saldo |
+| 20261009000444 | `bloquear_rateio_apos_formalizacao` — torna as parcelas imutáveis depois de contrato/Ata, ocorrência ou início da entrega |
 
 > Os arquivos em `supabase/migrations/` nem sempre têm o mesmo *naming* das versões
 > aplicadas em prod (há arquivos `20260624_*`, `20260625_*`, `20260626_*` com nomes de
@@ -157,6 +159,11 @@ Desde a migration `fluxo_itens_licitacao_fracassados_desertos`, a view também d
 do comprometimento os itens encerrados, preserva seus valores históricos de licitação e
 expõe `total_ocorrencias_negativas` e `qtd_itens_ocorrencia`. O `total_executado` exibido
 é o contratado menos o valor encerrado, permitindo representar a liberação como negativo.
+
+Desde `rateio_financeiro_itens_licitacao`, itens vinculados usam
+`licitacao_item_recursos.valor_alocado`: parcelas ativas compõem o comprometimento e
+parcelas canceladas aparecem no histórico negativo sem consumir saldo. O caminho legado
+continua valendo apenas para itens ainda sem rateio.
 
 ```sql
 SELECT e.id, e.emenda AS numero_emenda, e.ano, e.tipo, e.parlamentar,
@@ -196,6 +203,8 @@ Resumo de processos (inclui `status`, `valor_estimado`, e `natureza` — recriad
 | `rls_auto_enable()` | | Habilita RLS automaticamente (hardening). |
 | `registrar_reajuste_item_ata(...)` | item, vigência, percentual, novo valor e observação | Registra uma versão de preço do item sem sobrescrever o valor original. |
 | `registrar_reajuste_execucao_ata(...)` | reajuste, execução, fonte, emenda, quantidade, empenho e NF | Grava atomicamente o complemento e, quando aplicável, a linha executada na emenda. |
+| `salvar_licitacao_item_recursos(...)` | item e array JSONB de parcelas | Cria/atualiza o rateio e gera automaticamente o `emenda_itens` do complemento. |
+| `cancelar_licitacao_item_recurso(...)` | parcela e justificativa | Cancela complemento sem apagar o histórico e libera o saldo. |
 | `registrar_movimentacao_inventario(...)` | unidade física, tipo, data, destino/responsáveis e documento | Acrescenta o evento e atualiza atomicamente o estado corrente do item. |
 | `registrar_recebimento_aquisicao_lote(...)` | nota e itens em JSONB | Valida/classifica o tipo de material e grava atomicamente NF, rateios e recebimentos; bens permanentes preenchem por `upsert` as sequências físicas materializadas pelo trigger, sem duplicá-las. |
 | `obter_dados_operacionais_contrato(...)` | contrato | Retorna somente os campos do editor operacional e informa se a data-base já foi bloqueada por reajuste. |

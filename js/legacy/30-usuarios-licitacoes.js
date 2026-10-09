@@ -1775,6 +1775,7 @@ function _recalcProcValorEstimado(){
   const meses=Number(document.getElementById('proc-locacao-meses')?.value);
   const total=nat==='LOCAÇÃO'?(Number.isInteger(meses)&&meses>0?soma*meses:0):soma;
   const el=document.getElementById('proc-valor'); if(el) el.value=total?total.toFixed(2):'';
+  document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(procRecalcRateio);
   _renderProcEmendaSaldoResumo();
 }
 function _renderProcItensVazio(){
@@ -1861,9 +1862,110 @@ function _procValidarPrazosEntrega(natureza){
   return '';
 }
 
+function _procUuid(){
+  if(globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0,v=c==='x'?r:(r&3|8); return v.toString(16);
+  });
+}
+function _procEmendaInfo(id){ return (cachedEmendas||[]).find(e=>String(e.id)===String(id))||{}; }
+function _procEmendaRotulo(id){
+  const e=_procEmendaInfo(id);
+  return e.emenda?`Emenda ${e.emenda}${e.ano?('/'+e.ano):''}${e.parlamentar?(' · '+e.parlamentar):''}`:'Emenda não identificada';
+}
+function _procRecursoRowHtml(recurso,bloqueado=false){
+  const r=recurso||{}, tipo=String(r.tipo||'COMPLEMENTO').toUpperCase();
+  const cancelado=String(r.status||'ATIVO').toUpperCase()==='CANCELADO';
+  const existente=!!r.id, principal=tipo==='PRINCIPAL';
+  const valor=Number(r.valor_alocado)||'';
+  const emendaId=r.emenda_id||'';
+  const label=_procEmendaRotulo(emendaId);
+  const motivo=r.justificativa_cancelamento||'';
+  const attr=(v)=>_sanEsc(String(v||'')).replace(/"/g,'&quot;');
+  if(cancelado){
+    return `<div class="pi-recurso-row pi-recurso-cancelado" data-recurso-id="${attr(r.id)}" data-emenda-id="${attr(emendaId)}" data-emenda-item-id="${attr(r.emenda_item_id)}" data-tipo="${tipo}" data-status="CANCELADO" style="border:1px solid var(--red);background:var(--red-bg);border-radius:6px;padding:7px 9px;color:var(--red-text)">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-size:11px;font-weight:700">COMPLEMENTO CANCELADO · ${_sanEsc(label)}</span><strong style="white-space:nowrap">-${fmtFull(Number(r.valor_alocado)||0)}</strong></div>
+      <div style="font-size:10px;margin-top:3px">Não consome saldo · Justificativa: ${_sanEsc(motivo||'não informada')}</div>
+    </div>`;
+  }
+  const seletor=principal||existente
+    ?`<div class="pi-recurso-emenda-label" style="font-size:11px;font-weight:600;padding:7px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2)">${_sanEsc(label)}${principal?' <span style="color:var(--blue)">(principal)</span>':' <span style="color:var(--amber)">(complemento)</span>'}</div>`
+    :`<select class="pi-recurso-emenda" onchange="procRecalcRateio(this.closest('.proc-item-card'));_renderProcEmendaSaldoResumo()" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%">${_procEmendaOpts(emendaId)}</select>`;
+  const acao=principal||bloqueado?'':`<button type="button" onclick="${existente?'procCancelarComplemento(this)':'procRemoveComplemento(this)'}" title="${existente?'Cancelar complemento e preservar histórico':'Remover complemento ainda não salvo'}" style="border:1px solid var(--red);background:var(--surface);color:var(--red);border-radius:5px;padding:5px 8px;cursor:pointer">${existente?'Cancelar':'Remover'}</button>`;
+  return `<div class="pi-recurso-row" data-recurso-id="${attr(r.id)}" data-emenda-id="${attr(emendaId)}" data-emenda-item-id="${attr(r.emenda_item_id)}" data-tipo="${tipo}" data-status="ATIVO" style="display:grid;grid-template-columns:minmax(220px,1fr) 150px auto;gap:7px;align-items:end">
+    <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">${principal?'Fonte principal':'Emenda complementar'} *</div>${seletor}</div>
+    <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Valor desta emenda *</div><input type="number" min="0.01" step="0.01" class="pi-recurso-valor" value="${attr(valor)}" ${bloqueado?'disabled':''} oninput="procRecalcRateio(this.closest('.proc-item-card'));_renderProcEmendaSaldoResumo()" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:${bloqueado?'var(--surface2)':'var(--surface)'};color:var(--text);width:100%;box-sizing:border-box"></div>
+    ${acao}
+  </div>`;
+}
+function _procRecursosIniciais(data){
+  if(Array.isArray(data.recursos)&&data.recursos.length) return data.recursos;
+  if(!data.emenda_item_id) return [];
+  const totalPlanejado=Number(data.valor_recurso_principal);
+  const totalItem=(Number(data.qtde)||0)*(Number(data.valor_estimado)||0);
+  return [{tipo:'PRINCIPAL',status:'ATIVO',emenda_id:data.emenda_id,emenda_item_id:data.emenda_item_id,valor_alocado:totalPlanejado>0?totalPlanejado:totalItem}];
+}
+function procAddComplemento(btn){
+  const card=btn.closest('.proc-item-card'), lista=card?.querySelector('.pi-recursos-lista'); if(!lista) return;
+  lista.insertAdjacentHTML('beforeend',_procRecursoRowHtml({tipo:'COMPLEMENTO',status:'ATIVO'}));
+  procRecalcRateio(card);
+  _renderProcEmendaSaldoResumo();
+}
+function procRemoveComplemento(btn){
+  const card=btn.closest('.proc-item-card'); btn.closest('.pi-recurso-row')?.remove(); procRecalcRateio(card); _renderProcEmendaSaldoResumo();
+}
+async function procCancelarComplemento(btn){
+  const row=btn.closest('.pi-recurso-row'), card=btn.closest('.proc-item-card'), id=row?.dataset.recursoId;
+  if(!id) return procRemoveComplemento(btn);
+  const justificativa=prompt('Justifique o cancelamento do complemento. O histórico permanecerá na Emenda e o valor deixará de consumir saldo:','Não há mais necessidade do complemento.');
+  if(justificativa===null) return;
+  if(justificativa.trim().length<5){ alert('Informe uma justificativa com pelo menos 5 caracteres.'); return; }
+  btn.disabled=true; btn.textContent='Cancelando...';
+  const {data,error}=await sb.rpc('cancelar_licitacao_item_recurso',{p_recurso_id:id,p_justificativa:justificativa.trim()});
+  if(error){ btn.disabled=false; btn.textContent='Cancelar'; alert('Erro ao cancelar complemento: '+error.message); return; }
+  const valor=Number(row.querySelector('.pi-recurso-valor')?.value)||Number(data?.valor_alocado)||0;
+  const emendaId=row.dataset.emendaId;
+  row.outerHTML=_procRecursoRowHtml({id,emenda_id:emendaId,emenda_item_id:row.dataset.emendaItemId,tipo:'COMPLEMENTO',status:'CANCELADO',valor_alocado:valor,justificativa_cancelamento:justificativa.trim()});
+  procRecalcRateio(card);
+  await _renderProcEmendaSaldoResumo();
+  if(window.toast) toast('Complemento cancelado. O histórico foi preservado e o saldo liberado.','success');
+}
+function procRecalcRateio(card){
+  if(!card) return;
+  const box=card.querySelector('.pi-rateio-resumo'); if(!box) return;
+  const totalItem=(Number(card.querySelector('.pi-qtde')?.value)||0)*(Number(card.querySelector('.pi-valor')?.value)||0);
+  const totalRecursos=[...card.querySelectorAll('.pi-recurso-row[data-status="ATIVO"] .pi-recurso-valor')]
+    .reduce((s,input)=>s+(Number(input.value)||0),0);
+  const diferenca=Number((totalItem-totalRecursos).toFixed(2));
+  const cor=Math.abs(diferenca)<0.005?'var(--green)':'var(--amber)';
+  const texto=Math.abs(diferenca)<0.005?'Rateio fechado':(diferenca>0?`Falta vincular ${fmtFull(diferenca)}`:`Excesso de ${fmtFull(Math.abs(diferenca))}`);
+  box.innerHTML=`<span>Total do item: <b>${fmtFull(totalItem)}</b></span><span>Vinculado às emendas: <b>${fmtFull(totalRecursos)}</b></span><span style="color:${cor};font-weight:700">${texto}</span>`;
+}
+function _procLerRecursosCard(card){
+  const rows=[...card.querySelectorAll('.pi-recurso-row[data-status="ATIVO"]')];
+  if(!rows.length) throw new Error(`Informe ao menos a fonte principal do item "${card.querySelector('.pi-desc')?.value||'sem descrição'}".`);
+  const vistos=new Set();
+  return rows.map(row=>{
+    const emendaId=row.dataset.emendaId||row.querySelector('.pi-recurso-emenda')?.value||'';
+    const valor=Number(row.querySelector('.pi-recurso-valor')?.value);
+    if(!emendaId) throw new Error('Selecione a emenda de cada complemento.');
+    if(!Number.isFinite(valor)||valor<=0) throw new Error(`Informe um valor positivo para ${_procEmendaRotulo(emendaId)}.`);
+    if(vistos.has(String(emendaId))) throw new Error('A mesma emenda não pode aparecer duas vezes no rateio do item.');
+    vistos.add(String(emendaId));
+    return {
+      id:row.dataset.recursoId||null,
+      emenda_id:emendaId,
+      emenda_item_id:row.dataset.emendaItemId||null,
+      tipo:row.dataset.tipo,
+      valor_alocado:Number(valor.toFixed(2))
+    };
+  });
+}
+
 function procAddItemRow(data,opcoes={}){
   data=data||{};
   const terminal=!!data.ocorrencia;
+  const rateioBloqueado=!!(terminal||data.contrato_id||data.ata_item_id);
   const locked=!!(terminal || data.fromEmenda || data.emenda_item_id); // item vindo da emenda: descrição/qtde/unidade/fonte fixas
   const lista=document.getElementById('proc-itens-lista');
   const div=document.createElement('div');
@@ -1875,10 +1977,12 @@ function procAddItemRow(data,opcoes={}){
   div.dataset.emendaNumero=data.emenda_numero||'';
   div.dataset.emendaSaldo=data.emenda_saldo_atual??'';
   div.dataset.terminal=terminal?'1':'0';
+  div.dataset.rateioBloqueado=rateioBloqueado?'1':'0';
   div.style.cssText=`background:${terminal?'var(--red-bg)':'var(--surface2)'};border:1px solid ${terminal?'var(--red)':'var(--border)'};border-radius:var(--radius-sm);padding:.6rem .75rem`;
   const fonte=data.fonte_tipo||'';
   const isEm=fonte==='emenda';
   const showDesc=(fonte && fonte!=='emenda' && fonte!=='sem_emenda');
+  const recursos=_procRecursosIniciais(data);
   const inp='font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:100%';
   const ro=locked?'background:var(--surface2);opacity:.7;':'';
   const dis=locked?' disabled':'';
@@ -1904,16 +2008,29 @@ function procAddItemRow(data,opcoes={}){
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Fonte de recurso *</div><select class="pi-fonte" onchange="procFonteChange(this)"${dis} style="${inp};${ro}"><option value="">Selecione...</option>${_procFonteOpts(fonte)}</select></div>
       <div class="pi-emenda-wrap" style="display:${isEm?'block':'none'}"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Emenda *</div><select class="pi-emenda"${dis} style="${inp};${ro}">${_procEmendaOpts(data.emenda_id)}</select></div>
       <div class="pi-fonte-desc-wrap" style="display:${showDesc?'block':'none'}"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Detalhe da fonte</div><input type="text" class="pi-fonte-desc" placeholder="ex: recurso próprio 2026" value="${_sanEsc(String(data.fonte_descricao||'')).replace(/"/g,'&quot;')}" style="${inp}"></div>
+    </div>
+    <div class="pi-rateio" style="display:${isEm?'block':'none'};margin-top:8px;border-top:1px dashed var(--border);padding-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">💰 Fontes de recurso do item${rateioBloqueado?' · vínculo preservado 🔒':''}</div><div style="font-size:10px;color:var(--text3)">${rateioBloqueado?'O item já foi encerrado ou formalizado; o rateio permanece somente para consulta.':'O preço e a quantidade pertencem ao item; aqui informe somente quanto sai de cada emenda.'}</div></div>${rateioBloqueado?'':`<button type="button" onclick="procAddComplemento(this)" style="font-size:11px;padding:5px 9px;border:1px solid var(--amber);border-radius:5px;background:var(--surface);color:var(--amber);cursor:pointer;white-space:nowrap">+ Adicionar complemento</button>`}</div>
+      <div class="pi-recursos-lista" style="display:flex;flex-direction:column;gap:7px">${recursos.map(r=>_procRecursoRowHtml(r,rateioBloqueado)).join('')}</div>
+      <div class="pi-rateio-resumo" style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--text2);margin-top:7px"></div>
     </div>`;
   div.querySelector('.pi-emenda-wrap')?.remove();
   lista.appendChild(div);
+  procRecalcRateio(div);
   if(!opcoes.adiarAtualizacao){
     _renderProcItensVazio();
     _recalcProcValorEstimado();
     _procAplicarModoAta();
   }
 }
-function procRemoveItemCard(btn){const c=btn.closest('.proc-item-card');if(c)c.remove();_renderProcItensVazio();_recalcProcValorEstimado();}
+function procRemoveItemCard(btn){
+  const c=btn.closest('.proc-item-card');
+  if(c?.querySelector('.pi-recurso-row[data-tipo="COMPLEMENTO"][data-recurso-id]')){
+    alert('Este item possui histórico de complemento financeiro. Cancele os complementos quando necessário; o item não pode ser removido apagando esse histórico.');
+    return;
+  }
+  if(c)c.remove();_renderProcItensVazio();_recalcProcValorEstimado();
+}
 
 async function _procSaldoAtual(emendaId){
   if(!emendaId) return null;
@@ -1937,9 +2054,13 @@ async function _renderProcEmendaSaldoResumo(){
   if(!cards.length){box.style.display='none';box.innerHTML='';return;}
   const groups={};
   for(const card of cards){
-    const id=String(card.dataset.emendaId), saldo=await _procSaldoAtual(id);
-    const g=groups[id]||(groups[id]={numero:card.dataset.emendaNumero||saldo?.numero_emenda||id,baseSaldo:(Number(saldo?.saldo_remanescente)||Number(card.dataset.emendaSaldo)||0)+(_procEditOldByEmenda[id]||0),novoTotal:0});
-    g.novoTotal+=(Number(card.querySelector('.pi-qtde')?.value)||0)*(Number(card.querySelector('.pi-valor')?.value)||0);
+    const rows=[...card.querySelectorAll('.pi-recurso-row[data-status="ATIVO"]')];
+    for(const row of rows){
+      const id=String(row.dataset.emendaId||row.querySelector('.pi-recurso-emenda')?.value||''); if(!id) continue;
+      const saldo=await _procSaldoAtual(id), info=_procEmendaInfo(id);
+      const g=groups[id]||(groups[id]={numero:info.emenda||saldo?.numero_emenda||id,baseSaldo:(Number(saldo?.saldo_remanescente)||Number(card.dataset.emendaSaldo)||0)+(_procEditOldByEmenda[id]||0),novoTotal:0});
+      g.novoTotal+=Number(row.querySelector('.pi-recurso-valor')?.value)||0;
+    }
   }
   box.innerHTML=_procRenderSaldoRows(groups); box.style.display='block';
 }
@@ -1998,7 +2119,7 @@ function procConfirmImport(){
   const emendaId=document.getElementById('proc-import-emenda').value;
   const chks=[...document.querySelectorAll('.proc-imp-chk:checked')];
   if(!chks.length){ return; }
-  chks.forEach(ch=>procAddItemRow({descricao:ch.dataset.desc, qtde:ch.dataset.qtde||'', valor_estimado:ch.dataset.valor||'', unidade_destino_id:ch.dataset.unidade||'', fonte_tipo:'emenda', emenda_id:emendaId, emenda_item_id:ch.dataset.id, emenda_numero:ch.dataset.emendaNumero, emenda_saldo_atual:ch.dataset.emendaSaldo, fromEmenda:true}));
+  chks.forEach(ch=>procAddItemRow({descricao:ch.dataset.desc, qtde:ch.dataset.qtde||'', valor_estimado:ch.dataset.valor||'', valor_recurso_principal:ch.dataset.planejado||'', unidade_destino_id:ch.dataset.unidade||'', fonte_tipo:'emenda', emenda_id:emendaId, emenda_item_id:ch.dataset.id, emenda_numero:ch.dataset.emendaNumero, emenda_saldo_atual:ch.dataset.emendaSaldo, fromEmenda:true}));
   const box=document.getElementById('proc-import-box'); box.style.display='none'; box.innerHTML='';
 }
 
@@ -2010,9 +2131,26 @@ async function _carregarProcItens(processoId){
       sb.from('itens').select('*').eq('processo_id',processoId).order('created_at'),
       sb.from('licitacao_item_ocorrencias').select('item_id,tipo,numero_pregao,numero_lote').eq('processo_id',processoId)
     ]);
+    const itemIds=(data||[]).map(i=>i.id);
+    const recursoResp=itemIds.length
+      ?await sb.from('licitacao_item_recursos').select('id,item_id,emenda_id,emenda_item_id,tipo,valor_alocado,status,justificativa_cancelamento,cancelado_em,emendas(emenda,ano,parlamentar)').in('item_id',itemIds)
+      :{data:[],error:null};
+    if(recursoResp.error) throw recursoResp.error;
+    const recursos=recursoResp.data||[];
     const ocorrenciaPorItem=Object.fromEntries((ocorrencias||[]).map(o=>[String(o.item_id),o]));
-    (data||[]).forEach(it=>{ if(it.emenda_id&&!ocorrenciaPorItem[String(it.id)]){ const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0; _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor; } });
-    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); _procRegistrarUnidadeMedida(it.unidade_medida); procAddItemRow({id:it.id, descricao:it.descricao, codigo_siam:it.codigo_siam, unidade_medida:it.unidade_medida, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
+    const recursosPorItem={};
+    (recursos||[]).forEach(r=>{ (recursosPorItem[String(r.item_id)]=recursosPorItem[String(r.item_id)]||[]).push(r); });
+    (data||[]).forEach(it=>{
+      if(ocorrenciaPorItem[String(it.id)]) return;
+      const rates=(recursosPorItem[String(it.id)]||[]).filter(r=>r.status==='ATIVO');
+      if(rates.length){
+        rates.forEach(r=>{ _procEditOldByEmenda[r.emenda_id]=(_procEditOldByEmenda[r.emenda_id]||0)+(Number(r.valor_alocado)||0); });
+      }else if(it.emenda_id){
+        const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0;
+        _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor;
+      }
+    });
+    (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); _procRegistrarUnidadeMedida(it.unidade_medida); procAddItemRow({id:it.id, descricao:it.descricao, codigo_siam:it.codigo_siam, unidade_medida:it.unidade_medida, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao,contrato_id:it.contrato_id,ata_item_id:it.ata_item_id,recursos:recursosPorItem[String(it.id)]||[],ocorrencia:ocorrenciaPorItem[String(it.id)]||null}); });
   }
   _renderProcItensVazio();
   _recalcProcValorEstimado();
@@ -2056,7 +2194,8 @@ async function _persistProcItens(processoId, natureza){
       if(!emenda_item_id && !c.dataset.itemId) throw new Error('Itens com fonte = Emenda devem ser adicionados pelo botÃ£o Puxar de emenda.');
     }
     else if(!ehAta && !ehDemanda){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
-    current.push({id:c.dataset.itemId||null, row:{
+    const rateios=(!ehAta&&!ehDemanda&&fonte_tipo==='emenda'&&c.dataset.rateioBloqueado!=='1')?_procLerRecursosCard(c):[];
+    current.push({id:c.dataset.itemId||_procUuid(), novo:!c.dataset.itemId, rateios, row:{
       processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, codigo_siam:codigoSiam, unidade_medida:unidadeMedida, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
@@ -2065,10 +2204,14 @@ async function _persistProcItens(processoId, natureza){
       status:'em licitação'
     }});
   }
-  const atuais=current.filter(x=>x.id).map(x=>String(x.id));
+  const atuais=current.filter(x=>!x.novo).map(x=>String(x.id));
   const toDelete=_procItensLoaded.filter(id=>!atuais.includes(id));
   if(toDelete.length){ const {error}=await sb.from('itens').delete().in('id',toDelete).is('contrato_id',null); if(error) throw error; }
-  const inserts=current.filter(x=>!x.id&&!x.skip).map(x=>x.row);
+  const inserts=current.filter(x=>x.novo&&!x.skip).map(x=>({id:x.id,...x.row}));
   if(inserts.length){ const {error}=await sb.from('itens').insert(inserts); if(error) throw error; }
-  for(const x of current.filter(x=>x.id&&!x.skip)){ const {error}=await sb.from('itens').update(x.row).eq('id',x.id); if(error) throw error; }
+  for(const x of current.filter(x=>!x.novo&&x.id&&!x.skip)){ const {error}=await sb.from('itens').update(x.row).eq('id',x.id); if(error) throw error; }
+  for(const x of current.filter(x=>!x.skip&&x.rateios?.length)){
+    const {error}=await sb.rpc('salvar_licitacao_item_recursos',{p_item_id:x.id,p_recursos:x.rateios});
+    if(error) throw new Error(`Rateio financeiro: ${error.message}`);
+  }
 }

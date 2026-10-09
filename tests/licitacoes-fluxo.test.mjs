@@ -5,8 +5,39 @@ import { derivarSituacaoAquisicao, carregarSituacoesAquisicoes } from '../js/mod
 
 const origem = fs.readFileSync('js/legacy/50-cadastros-planilhas-chamados.js', 'utf8');
 const ctx = vm.createContext({ Map, Set });
+vm.runInContext(origem.slice(origem.indexOf('function _cloneFlowRateio('), origem.indexOf('async function _enriquecerUnidadesComMovimentacaoInventario(')), ctx);
 vm.runInContext(origem.slice(origem.indexOf('function _flowStatusLicitacaoFromFlow('), origem.indexOf('function _expandirLinhaEmendaPorUnidades(')), ctx);
+Object.assign(ctx, {
+  _unidadeFisicaTemId: u => Boolean(u?.id),
+  _unidadeFisicaLabel: u => u?.patrimonio || '—'
+});
+vm.runInContext(origem.slice(origem.indexOf('function _expandirLinhaEmendaPorUnidades(')), ctx);
 const status = ctx._flowStatusFromFlow;
+
+const flowRateado = {
+  ep: {
+    qtde: 3, valorLicitacaoDetalheUnit: 559.9, temProcesso: true,
+    af: {}, empenhos: new Set(), notas: new Set(), patrimonios: new Set(),
+    series: new Set(), statusLicitacao: new Map(), ocorrencias: [],
+    unidades: [{ id: 'u1' }, { id: 'u2' }, { id: 'u3' }]
+  }
+};
+const itemRateado = { id: 'ir', emenda_item_id: 'ep', descricao: 'Arquivo de aço', qtde: 3, valor_estimado: 559.9, processo_id: 10, processos: { identificador: '10/2026' } };
+ctx._aplicarRateiosEmendaFlow(flowRateado, [
+  { id: 'rp', item_id: 'ir', emenda_item_id: 'ep', emenda_id: 'e1', tipo: 'PRINCIPAL', status: 'ATIVO', valor_alocado: 684.7, itens: itemRateado },
+  { id: 'rc', item_id: 'ir', emenda_item_id: 'ec', emenda_id: 'e2', tipo: 'COMPLEMENTO', status: 'ATIVO', valor_alocado: 995, itens: itemRateado }
+]);
+assert.equal(flowRateado.ep.valorLicitacao, 684.7);
+assert.equal(flowRateado.ec.valorLicitacao, 995);
+assert.equal(flowRateado.ec.itemValorTotal, 1679.7, 'O valor real continua sendo quantidade × unitário.');
+assert.equal(flowRateado.ec.unidades.length, 0, 'A parcela complementar não duplica unidades físicas.');
+const unidadesRateadas = ctx._expandirLinhaEmendaPorUnidades({
+  id: 'ep', _recurso: { id: 'rp' }, valor_recurso: 10, valor_comprometido: 10,
+  valor_licitacao: 10, valor_contratado: 0, valor_ocorrencia_negativo: 0,
+  qtde_cadastrada: '3', vl_unitario: 1, vl_unitario_cadastrado: 1
+}, [{ id: 'u1' }, { id: 'u2' }, { id: 'u3' }]);
+assert.deepEqual(Array.from(unidadesRateadas, u => u.valor_recurso), [3.33, 3.33, 3.34]);
+assert.equal(unidadesRateadas.reduce((s, u) => s + u.valor_comprometido, 0), 10);
 const item = { id: 'i1', processo_id: 313, qtde: 1, contrato_id: 424, status_lic_id: null };
 const af = { id: 'e1', item_id: 'i1', qtde_autorizada: 1, af_data: '2026-07-30', status: 'af_emitida' };
 const recebido = { ...af, qtde_recebida: 1, data_recebimento: '2026-08-03', status: 'recebido' };
@@ -83,4 +114,4 @@ elementos['lic-f-contratados'] = { checked: true };
 assert.equal(ctx._licProcessosVisiveis().length, 1);
 vm.runInContext("_licOcorrenciasByItem={i1:{tipo:'FRACASSADO'}}", ctx);
 assert.equal(ctx._cpSituacao(ctx.itemRecebido).nome, 'FRACASSADO', 'Ocorrência prevalece.');
-console.log('PASSOU: etapas compartilhadas com Emendas, parciais, canceladas, consumo, paginação, filtros, resumo, datas e ambas as exportações.');
+console.log('PASSOU: rateio entre emendas, unidades físicas, etapas compartilhadas, parciais, canceladas, consumo, paginação, filtros, resumo, datas e exportações.');

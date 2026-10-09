@@ -1,7 +1,7 @@
 # Esquema do Banco de Dados — dashboard-emendas
 
 > Banco: PostgreSQL 17 no Supabase de produção (nuvem, projeto `qpvgpfwuurqcqprnpxua`, `contratos-dag`), schema `public`.
-> 50 tabelas base + 3 views. Levantado diretamente do banco em produção.
+> 51 tabelas base + 3 views. Levantado diretamente do banco em produção.
 > Detalhes de migrations, funções, RLS e triggers em [DATABASE.md](DATABASE.md).
 
 ## 1. Mapa de domínios
@@ -197,6 +197,23 @@ Item materializado que "viaja" pelo fluxo (origem emenda/ata → contrato → en
 | `status_lic_desde` | timestamptz | |
 | `qtde` | numeric | |
 | `valor_estimado`, `valor_contratado` | numeric | **valores monetários** |
+
+### `licitacao_item_recursos`
+Rateio financeiro N:N de uma compra licitada entre emendas. Não representa item físico.
+
+| Campo | Tipo | Observação |
+|---|---|---|
+| `item_id` | FK → `itens.id` | compra única cujo total é rateado |
+| `emenda_id`, `emenda_item_id` | FK | parcela e seu espelho na Emenda |
+| `tipo` | text | `PRINCIPAL` ou `COMPLEMENTO` |
+| `valor_alocado` | numeric(14,2) | quanto desta emenda paga o item |
+| `status` | text | `ATIVO` ou `CANCELADO` |
+| `emenda_item_gerado` | boolean | complemento cujo `emenda_itens` nasceu automaticamente |
+| `justificativa_cancelamento`, `cancelado_em`, `cancelado_por` | — | histórico obrigatório do cancelamento |
+| `secao_id` | FK → `secoes.id` | escopo da RLS |
+
+Há no máximo uma fonte principal ativa e uma parcela ativa da mesma emenda por item.
+Cancelados permanecem armazenados e não podem ser reutilizados como itens livres.
 
 ### `itens_entregas`
 Autorização de Fornecimento (AF) / recebimento agregado por item.

@@ -2541,12 +2541,16 @@ async function _neEmendaItensJaUsados(ids,{incluirPlanejamento=true}={}){
   if(!clean.length) return set;
   const consultas=[
     sb.from('itens').select('emenda_item_id').in('emenda_item_id',clean),
-    sb.from('atas_execucao').select('emenda_item_id').in('emenda_item_id',clean)
+    sb.from('atas_execucao').select('emenda_item_id').in('emenda_item_id',clean),
+    // Inclui também complementos financeiros gerados automaticamente. Mesmo
+    // cancelados, eles são histórico do processo e não podem voltar ao seletor.
+    sb.from('licitacao_item_recursos').select('emenda_item_id').in('emenda_item_id',clean)
   ];
   if(incluirPlanejamento) consultas.push(sb.from('ata_planejamento_emendas').select('emenda_item_id').in('emenda_item_id',clean).neq('status','CANCELADO'));
-  const [itRes,ataRes,planRes]=await Promise.all(consultas);
+  const [itRes,ataRes,recursoRes,planRes]=await Promise.all(consultas);
   (itRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
   (ataRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
+  (recursoRes.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
   (planRes?.data||[]).forEach(r=>{ if(r.emenda_item_id) set.add(String(r.emenda_item_id)); });
   return set;
 }

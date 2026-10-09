@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-08 — Rateio de um item entre várias emendas
+
+- Itens de aquisição passam a guardar o preço e a quantidade reais da compra separados
+  das parcelas financeiras que saem de cada emenda. O fluxo **Puxar de emenda** continua
+  sendo a origem do vínculo principal e aceita um ou mais complementos em valor.
+- Ao adicionar um complemento, o sistema cria automaticamente seu registro na Emenda e
+  mostra, nas duas emendas, o item comprado, a quantidade da compra, o valor unitário real,
+  a parcela de cada fonte e o rateio completo. A planilha Excel inclui os mesmos campos.
+- Cancelar um complemento exige justificativa, preserva o histórico como valor negativo e
+  libera o saldo, sem apagar a intenção registrada no processo. Depois da formalização,
+  encerramento ou início da entrega, todo o rateio fica imutável.
+- O cadastro histórico existente foi apenas vinculado como fonte principal. Descrições
+  antigas de complemento não são reinterpretadas nem têm seus valores corrigidos.
+
 ## 2026-10-02 — Vários fiscais na edição do contrato
 
 - **Editar contrato → Fiscais responsáveis** passa a permitir seleção múltipla

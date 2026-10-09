@@ -62,6 +62,20 @@
   - `saldo_remanescente` = `valor_cedido − total_comprometido`.
   - `status_execucao`: `Executada` se executado ≥ 99% do cedido; `Em andamento` se > 0;
     senão `Não iniciada`.
+- O valor real de um item licitado é sempre `quantidade × valor unitário` no próprio item.
+  As fontes que pagam a compra ficam separadas em `licitacao_item_recursos`: uma parcela
+  `PRINCIPAL` (o item trazido por **Puxar de emenda**) e zero ou mais parcelas
+  `COMPLEMENTO`. Uma parcela é valor financeiro e não cria quantidade fictícia.
+- Cada complemento cria automaticamente um `emenda_itens` de representação. Esse registro
+  mostra a descrição, a quantidade e o valor unitário da compra vinculada, mas o campo
+  **Recurso desta emenda** é o montante efetivamente atribuído àquela emenda. A emenda
+  principal também mostra o rateio completo.
+- Complemento salvo não é apagado. Seu cancelamento exige justificativa, muda o vínculo
+  para `CANCELADO`, mantém a parcela histórica negativa na prestação de contas e retira o
+  valor do comprometimento/saldo consumido. Não se convertem automaticamente descrições
+  antigas digitadas como complemento. Após contrato/Ata, fracasso/deserção ou início da
+  entrega, o rateio inteiro torna-se histórico imutável: valores e vínculos não podem ser
+  alterados nem cancelados.
 - **Cadastro de nova emenda (modal "Nova emenda" com itens inline)**: cria **1 linha em
   `emendas`** com `valor_cedido` = **valor global** informado, e os itens são cadastrados
   no mesmo modal. Cada item tem valor unitário e uma ou mais unidades com quantidade; o
@@ -96,6 +110,8 @@
   prestação de contas; o valor do encerramento aparece como execução negativa e deixa de
   integrar o total comprometido, devolvendo exatamente esse montante ao saldo remanescente.
   O negativo é um indicador contábil do recurso liberado, não um pagamento negativo.
+- Quando um item possui rateio entre emendas, fracasso/deserção fotografa separadamente
+  cada parcela ativa; todas deixam de consumir saldo sem perder o vínculo com a compra.
 - Se o item estava apenas planejado para uma futura Ata, os vínculos com as Emendas são
   preservados no evento e os planejamentos ativos são cancelados, sem apagar o histórico.
 

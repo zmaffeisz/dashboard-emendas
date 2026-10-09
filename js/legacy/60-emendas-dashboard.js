@@ -44,6 +44,11 @@ async function loadData(){
     allRows=raw.flatMap(i=>{
       const e=i.emendas||{};
       const f=_flow[i.id]||null;
+      const recurso=f?.recurso||null;
+      const rateiosItem=f?.rateiosItem||[];
+      const ehComplemento=recurso?.tipo==='COMPLEMENTO';
+      const complementoCancelado=ehComplemento&&recurso?.status==='CANCELADO';
+      const recursoPrincipal=rateiosItem.find(r=>r.tipo==='PRINCIPAL')||null;
       // valores derivados do fluxo (fallback: só preenchem o que está vazio no cadastro manual)
       const cplStored=(i.cpl||"").toString().trim();
       const cplFlow=f?(f.cpl||""):"";
@@ -58,7 +63,9 @@ async function loadData(){
       // Quando o item já está no fluxo, a etapa real prevalece sobre os campos legados
       // de emenda_itens. Itens apenas em licitação não são execução; ao contratar/usar
       // ATA, o valor do fluxo passa a ser a fonte exibida como executado.
-      const vlUnitExec=fluxoOcorrencia
+      const vlUnitExec=complementoCancelado
+        ?Number(f?.itemValorUnitario)||0
+        :fluxoOcorrencia
         ? Number(((Number(f.valorContratado)||0)-(Number(f.valorOcorrencia)||0))/Math.max(qtdeExec||Number(f.qtde)||1,1)).toFixed(2)
         : fluxoContratado
         ? Number(f.valorUnit)||0
@@ -97,11 +104,11 @@ async function loadData(){
         unidade:((i.unidade_beneficiada||e.unidade)||"").toString().trim(),
         unidade_beneficiada_id:i.unidade_beneficiada_id||null,
         // ── executado ──
-        item:(i.item||"").toString().trim(),
+        item:((recurso&&f?.itemDescricao)||i.item||"").toString().trim(),
         marca:f&&f.marcas?Array.from(f.marcas).filter(Boolean).join("; "):"",
         modelo:f&&f.modelos?Array.from(f.modelos).filter(Boolean).join("; "):"",
         marca_modelo:f&&f.marcasModelos?Array.from(f.marcasModelos).filter(Boolean).join("; "):"",
-        qtde:(i.qtde!=null?i.qtde:"").toString().trim(),
+        qtde:(recurso?(f?.itemQuantidade??''):(i.qtde!=null?i.qtde:"")).toString().trim(),
         vl_unitario:vlUnitExec,
         vl_total:vlTotalFinal,
         valor_comprometido:f?Number((f.valorComprometido||0).toFixed(2)):0,
@@ -113,20 +120,28 @@ async function loadData(){
           ?Number(Number(f.valorLicitacaoDetalheUnit).toFixed(2))
           :(f&&f.qtdeLicitacao?Number((f.valorLicitacao/f.qtdeLicitacao).toFixed(2)):0),
         valor_licitacao_detalhe_unit:f&&f.valorLicitacaoDetalheUnit?Number(f.valorLicitacaoDetalheUnit):0,
-        valor_contratado_unit:f&&f.qtdeContratado?Number((f.valorContratado/f.qtdeContratado).toFixed(2)):0,
+        valor_contratado_unit:recurso&&f?.temContrato?Number(f.itemValorUnitario)||0:(f&&f.qtdeContratado?Number((f.valorContratado/f.qtdeContratado).toFixed(2)):0),
         valor_ocorrencia_negativo:f?-Number((f.valorOcorrencia||0).toFixed(2)):0,
         // ── plano de trabalho aprovado (cadastrado/planejado) ──
-        item_cadastrado:(i.item_cadastrado||"").toString().trim(),
-        qtde_cadastrada:(i.qtde_cadastrada!=null?i.qtde_cadastrada:"").toString().trim(),
-        vl_unitario_cadastrado:num(i.vl_unitario_cadastrado),
-        vl_total_cadastrado:num(i.vl_total_cadastrado),
+        item_cadastrado:((recurso&&f?.itemDescricao)||i.item_cadastrado||"").toString().trim(),
+        qtde_cadastrada:(recurso?(f?.itemQuantidade??''):(i.qtde_cadastrada!=null?i.qtde_cadastrada:"")).toString().trim(),
+        vl_unitario_cadastrado:ehComplemento?(Number(f?.valorLicitacaoDetalheUnit)||0):num(i.vl_unitario_cadastrado),
+        vl_total_cadastrado:ehComplemento?(Number(recurso?.valor_alocado)||0):num(i.vl_total_cadastrado),
+        valor_recurso:recurso?Number(recurso.valor_alocado)||0:0,
+        _recurso:recurso,
+        _rateiosItem:rateiosItem,
+        _ehComplemento:ehComplemento,
+        _complementoCancelado:complementoCancelado,
+        _emendaPrincipalRateio:recursoPrincipal?.emendas||null,
+        _itemValorTotal:recurso?Number(f?.itemValorTotal)||0:0,
+        _itemUnidadeMedida:recurso?String(f?.itemUnidadeMedida||''):'' ,
         cpl:cplFinal,
         processo_id:(f&&f.processoId)||null,
         processo_tipo:(f&&f.processoTipo)||'',
         processo_link_publico:(f&&f.processoLink)||'',
         contrato_sim:(f?f.sim:"")||"",
         fornecedor_fluxo:(f?f.fornecedor:"")||"",
-        status_raw:statusFinal,
+        status_raw:complementoCancelado?`COMPLEMENTO CANCELADO — ${recurso.justificativa_cancelamento||'sem justificativa'}`:statusFinal,
         // O status manual da licitação vale somente até o item virar contrato.
         // Depois disso, a aba Emendas exibe o andamento operacional derivado
         // de empenhos, AFs, recebimentos e confirmações na unidade.
@@ -210,6 +225,7 @@ const HDR_FILTER_COLS = {
   qtde:{label:'Qtde', get:r=>r.qtde, disp:v=>v||'(vazio)'},
   vl_unitario_cadastrado:{label:'Vl. unit. plan.', get:r=>r.vl_unitario_cadastrado, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   vl_total_cadastrado:{label:'Vl. total plan.', get:r=>r.vl_total_cadastrado, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
+  valor_recurso:{label:'Recurso desta emenda', get:r=>r.valor_recurso, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   valor_licitacao_unit:{label:'Vl. unit. licit.', get:r=>r.valor_licitacao_unit, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   valor_licitacao:{label:'Vl. total licit.', get:r=>r.valor_licitacao, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   vl_unitario:{label:'Vl. unit. exec.', get:r=>r.vl_unitario, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
@@ -868,6 +884,7 @@ function _emItemParaNovoProcesso(item){
     descricao:item.item_cadastrado||item.item||'',
     qtde:_emValorPlanejado(item.qtde_cadastrada,item.qtde),
     valor_estimado:_emValorPlanejado(item.vl_unitario_cadastrado,item.vl_unitario),
+    valor_recurso_principal:_emValorPlanejado(item.vl_total_cadastrado,(Number(item.qtde)||0)*(Number(item.vl_unitario)||0)),
     unidade_destino_id:unidadeId,
     fonte_tipo:'emenda',
     emenda_id:item.emenda_id,
@@ -906,6 +923,34 @@ function _emMovimentacaoIndicador(r){
   const atual=r._unidadeAtual?` Localização atual: ${_sanEsc(r._unidadeAtual)}.`:'';
   return `<span class="em-movement-marker" title="Este item possui movimentação no Inventário.${atual} A unidade desta coluna é a unidade originalmente cadastrada na Emenda.">*</span>`;
 }
+function _emRateioEmendaRotulo(recurso){
+  const e=recurso?.emendas||{};
+  return e.emenda?`Emenda ${e.emenda}${e.ano?('/'+e.ano):''}`:'Emenda';
+}
+function _emRateioDetalheHtml(r){
+  if(!r?._recurso) return '';
+  const recursos=r._rateiosItem||[];
+  const valor=Number(r.valor_recurso)||0;
+  const principal=recursos.find(x=>x.tipo==='PRINCIPAL');
+  if(r._ehComplemento){
+    const origem=_emRateioEmendaRotulo(principal);
+    const cancelado=r._complementoCancelado;
+    const cor=cancelado?'var(--red)':'var(--amber)';
+    const motivo=cancelado?` · ${_sanEsc(r._recurso.justificativa_cancelamento||'sem justificativa')}`:'';
+    return `<div style="font-size:10px;color:${cor};margin-top:3px;line-height:1.35"><b>${cancelado?'COMPLEMENTO CANCELADO':'COMPLEMENTO FINANCEIRO'}</b> · ${cancelado?'-':''}${fmtFull(valor)} para ${_sanEsc(origem)}${motivo}<br><span style="color:var(--text3)">Compra vinculada: ${_sanEsc(r.qtde||'—')} ${_sanEsc(r._itemUnidadeMedida||'un.')} × ${fmtFull(Number(r.valor_licitacao_detalhe_unit)||Number(r.vl_unitario_cadastrado)||0)} = ${fmtFull(Number(r._itemValorTotal)||0)}</span></div>`;
+  }
+  const partes=recursos.filter(x=>x.status==='ATIVO').map(x=>`${_emRateioEmendaRotulo(x)}: ${fmtFull(Number(x.valor_alocado)||0)}`);
+  return partes.length?`<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.35"><b>Rateio:</b> ${partes.map(x=>_sanEsc(x)).join(' + ')}</div>`:'';
+}
+function _emItemComRateioHtml(r){
+  const badge=r?._ehComplemento?`<span style="display:inline-block;font-size:9px;font-weight:800;color:${r._complementoCancelado?'var(--red)':'var(--amber)'};border:1px solid currentColor;border-radius:999px;padding:1px 5px;margin-right:5px">${r._complementoCancelado?'CANCELADO':'COMPLEMENTO'}</span>`:'';
+  return `${badge}${_sanEsc(r?.item||'—')}${_emRateioDetalheHtml(r)}`;
+}
+function _emValorRecursoHtml(r){
+  if(!r?._recurso) return '—';
+  const negativo=r._complementoCancelado;
+  return `<span style="font-weight:700;color:${negativo?'var(--red)':'var(--blue)'};white-space:nowrap">${negativo?'-':''}${fmtFull(Number(r.valor_recurso)||0)}</span>`;
+}
 function renderEmPorEmenda(){
   const box=document.getElementById('em-view-por-emenda'); if(!box) return;
   const grupos={};
@@ -940,14 +985,15 @@ function renderEmPorEmenda(){
         </div>
       </div>`;
     if(aberto){
-      h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1280px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em">${_emPodeGerarLicitacao()?'<th style="padding:7px 8px;text-align:center">Selecionar</th>':''}<th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
+      h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1380px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em">${_emPodeGerarLicitacao()?'<th style="padding:7px 8px;text-align:center">Selecionar</th>':''}<th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Recurso desta emenda</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
       items.forEach(i=>{
         h+=`<tr onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i._unidade_row_id||i.id))}'))" title="Clique para ver os detalhes deste item" style="border-top:1px solid var(--border);cursor:pointer;${i._temOcorrencia?'background:var(--red-bg)':''}">
           ${_emPodeGerarLicitacao()?`<td onclick="event.stopPropagation()" style="padding:8px;text-align:center">${_emCheckboxLicitacao(i)}</td>`:''}
-          <td style="padding:8px 14px;${i._temOcorrencia?'color:var(--red);font-weight:800':''}">${_sanEsc(i.item||'—')}</td>
+          <td style="padding:8px 14px;${i._temOcorrencia?'color:var(--red);font-weight:800':''}">${_emItemComRateioHtml(i)}</td>
           <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}${_emMovimentacaoIndicador(i)}</td>
-          <td style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}</td>
+          <td title="${i._ehComplemento?'Quantidade total da compra vinculada':'Quantidade do item'}" style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}${i._ehComplemento?' <small>(compra)</small>':''}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap">${Number(i.vl_unitario_cadastrado)>0?fmtFull(i.vl_unitario_cadastrado):'—'}</td>
+          <td style="padding:8px;text-align:right;white-space:nowrap">${_emValorRecursoHtml(i)}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--blue)">${Number(i.valor_licitacao_unit)>0?fmtFull(i.valor_licitacao_unit):'—'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${Number(i.valor_contratado_unit)>0?fmtFull(i.valor_contratado_unit):'—'}</td>
           <td style="padding:8px;text-align:right;white-space:nowrap;color:${i._temOcorrencia?'var(--red)':'var(--green)'};font-weight:800">${Number(i.vl_total)!==0?fmtFull(i.vl_total):'—'}</td>
@@ -966,11 +1012,12 @@ function renderEmPorEmenda(){
     h=h.replace(/<th style="padding:7px 14px;text-align:right">[^<]*<\/th>/,'')
       .replace(/<td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem[^]*?<\/button><\/td>/g,'');
     // Cabeçalhos curtos impedem que a largura seja definida pelos rótulos longos.
-    h=h.replace('width:100%;min-width:1280px','width:100%;min-width:1080px')
+    h=h.replace('width:100%;min-width:1380px','width:100%;min-width:1180px')
       .replace('letter-spacing:.035em','letter-spacing:.02em')
       .replace('<th style="padding:7px 8px;text-align:center">Selecionar</th>','<th title="Selecionar" style="width:38px;padding:7px 4px;text-align:center">Sel.</th>')
       .replace('padding:8px;text-align:center','padding:8px 4px;text-align:center')
       .replace('>Valor unit. planejado</th>',' title="Valor unitário planejado" style="width:92px;padding:7px 6px;text-align:right">Vl. plan.</th>')
+      .replace('>Recurso desta emenda</th>',' title="Parcela financeira atribuída a esta emenda" style="width:110px;padding:7px 6px;text-align:right">Rec. emenda</th>')
       .replace(/>Valor unit\.[^<]*<\/th>/,' title="Valor unitário em licitação" style="width:92px;padding:7px 6px;text-align:right">Vl. licit.</th>')
       .replace('>Valor unit. contratado</th>',' title="Valor unitário contratado" style="width:100px;padding:7px 6px;text-align:right">Vl. contrat.</th>')
       .replace('>Total executado</th>',' title="Total executado" style="width:96px;padding:7px 6px;text-align:right">Total exec.</th>')
@@ -1191,9 +1238,9 @@ function _renderSaldoDetalhes(emendaId){
   const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
   if(!itens.length) return '<div style="padding:12px;color:var(--text3)">Nenhum item encontrado para esta emenda.</div>';
   const money=(v)=>Number(v)!==0?fmtFull(v):'—';
-  return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="min-width:1400px;font-size:11px;background:var(--surface)">
-    <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor unit. planejado</th><th style="text-align:right">Valor unit. licitação</th><th style="text-align:right">Valor unit. contratado</th><th style="text-align:right">Total executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
-    <tbody>${itens.map(r=>`<tr style="${r._temOcorrencia?'background:var(--red-bg)':''}"><td style="${r._temOcorrencia?'color:var(--red);font-weight:700':''}">${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:${r._temOcorrencia?'var(--red)':'var(--green)'};font-weight:700">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${_emStatusBadge(r)}</td><td>${_emProcessoHtml(r)}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="min-width:1500px;font-size:11px;background:var(--surface)">
+    <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor unit. planejado</th><th style="text-align:right">Recurso desta emenda</th><th style="text-align:right">Valor unit. licitação</th><th style="text-align:right">Valor unit. contratado</th><th style="text-align:right">Total executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
+    <tbody>${itens.map(r=>`<tr style="${r._temOcorrencia?'background:var(--red-bg)':''}"><td style="${r._temOcorrencia?'color:var(--red);font-weight:700':''}">${_emItemComRateioHtml(r)}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}${r._ehComplemento?' <span style="font-size:9px;color:var(--text3)">(compra)</span>':''}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right">${_emValorRecursoHtml(r)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:${r._temOcorrencia?'var(--red)':'var(--green)'};font-weight:700">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${_emStatusBadge(r)}</td><td>${_emProcessoHtml(r)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function toggleSaldoEmenda(emendaId,button){
   const detalhe=document.getElementById(_seDomId(emendaId));
@@ -1538,7 +1585,7 @@ function renderTable(){
     rows.sort((a,b)=>{
       let va=sortCol==="saldo_emenda"?_saldoEmendaValor(a.emenda_id):a[sortCol],vb=sortCol==="saldo_emenda"?_saldoEmendaValor(b.emenda_id):b[sortCol];
       // Numérico
-      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"||sortCol==="valor_licitacao_unit"||sortCol==="valor_licitacao"||sortCol==="saldo_emenda"||sortCol==="ano"){
+      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"||sortCol==="valor_recurso"||sortCol==="valor_licitacao_unit"||sortCol==="valor_licitacao"||sortCol==="saldo_emenda"||sortCol==="ano"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
       } else if(sortCol==="qtde"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
@@ -1560,7 +1607,7 @@ function renderTable(){
   document.getElementById("table-count").textContent=`${filtered.length.toLocaleString("pt-BR")} itens${filtered.length>500?" (mostrando 500)":""}`;
   document.getElementById("table-body").innerHTML=rows.map(r=>{
     const actionId=String(r._unidade_row_id||r.id);
-    const podeEditarLinha=!r._unidadeFisica&&!r._temOcorrencia;
+    const podeEditarLinha=!r._unidadeFisica&&!r._temOcorrencia&&!r._ehComplemento;
     return `<tr style="${r._temOcorrencia?'background:var(--red-bg)':''}">
     ${podeSelecionar?`<td style="text-align:center">${_emCheckboxLicitacao(r)}</td>`:''}
     <td style="white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" title="Ver tudo sobre este item" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap">🔎 Ver tudo</button>${_isAdmin()&&podeEditarLinha?`<button onclick="abrirEditarItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" style="background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">✏️ Editar</button>`:''}${podeEditar('dashboard')&&podeEditarLinha?`<button onclick="excluirEmendaItem(decodeURIComponent('${encodeURIComponent(actionId)}'))" title="Excluir item não executado e limpar vínculos" style="background:var(--surface);color:var(--red);border:1px solid var(--red-bg);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;white-space:nowrap;margin-left:4px">🗑️ Excluir</button>`:''}</td>
@@ -1568,10 +1615,11 @@ function renderTable(){
     <td style="font-size:11px;color:var(--text3)">${r.emenda||"—"}</td>
     <td class="em-parlamentar-cell" style="white-space:nowrap;font-size:12px">${r.parlamentar||"—"}</td>
     <td style="white-space:nowrap;font-size:12px">${r.unidade||"—"}${_emMovimentacaoIndicador(r)}</td>
-    <td class="td-trunc em-item-cell" title="${_sanEsc(r.item)}" style="${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.item||"—"}</td>
-    <td style="text-align:right">${r.qtde||"—"}</td>
+    <td class="td-trunc em-item-cell" title="${_sanEsc(r.item)}" style="${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${_emItemComRateioHtml(r)}</td>
+    <td title="${r._ehComplemento?'Quantidade total da compra vinculada':'Quantidade do item'}" style="text-align:right">${r.qtde||"—"}${r._ehComplemento?' (compra)':''}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_unitario_cadastrado?fmtFull(r.vl_unitario_cadastrado):"—"}</td>
     <td style="text-align:right;white-space:nowrap">${r.vl_total_cadastrado?fmtFull(r.vl_total_cadastrado):"—"}</td>
+    <td style="text-align:right;white-space:nowrap">${_emValorRecursoHtml(r)}</td>
     <td class="em-vl-unit-exec" style="text-align:right;white-space:nowrap;${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.vl_unitario?fmtFull(r.vl_unitario):"—"}</td>
     <td style="text-align:right;white-space:nowrap;${r._temOcorrencia?'color:var(--red);font-weight:800':''}">${r.vl_total?fmtFull(r.vl_total):"—"}</td>
     <td style="font-size:11px;color:var(--text3);white-space:nowrap">${_emProcessoHtml(r)}${r.contrato_sim?('<br><span style="color:var(--text3)">SIM '+_sanEsc(r.contrato_sim)+'</span>'):''}</td>

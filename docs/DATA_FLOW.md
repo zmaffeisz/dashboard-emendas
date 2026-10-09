@@ -110,6 +110,13 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    Enquanto o item está na licitação, o nome detalhado de `itens.status_lic_id` é exibido e
    o painel é recarregado logo após a alteração na aba Licitações.
 
+   **Rateio financeiro da aquisição:** `itens` continua sendo a compra única, com sua
+   quantidade e seu preço reais. `licitacao_item_recursos` distribui o total entre a
+   emenda principal e complementares. A inclusão de complemento cria o `emenda_itens`
+   correspondente; o cancelamento preserva esse espelho e a justificativa, exibe a parcela
+   negativa e deixa de comprometê-la. Bens físicos continuam pertencendo ao item da compra,
+   não a cada parcela financeira.
+
    **Espelhamento em Licitações (aquisições):** a cada abertura/atualização da aba,
    `licitacoes-fluxo.js` consulta entregas e empenhos pelos IDs dos itens, com paginação,
    e usa `_flowStatusFromFlow`, a mesma regra de rótulos de Emendas. O acompanhamento
@@ -126,8 +133,8 @@ O sistema mantém **uma fonte única** no banco; as abas são *views*. Mecanismo
    `Requisição → AF → Recebimento` e passa a consumir saldo.
    Para ATA, `atas_execucao` também alimenta esse painel: empenho vinculado, AF, prazo
    calculado e entrega precisam refletir no item da emenda correspondente.
-5. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens`
-   sempre que lida (não há valor "congelado" duplicado).
+6. **Views derivadas** — `vw_emendas_saldo` recalcula saldo a partir de `emenda_itens` e
+   dos rateios ativos sempre que lida (não há valor "congelado" duplicado).
 
 Na aba **Empenhos**, a linha de cada empenho abre uma ficha consolidada somente leitura.
 Ela parte de `empenhos` e percorre `empenho_itens` para reunir aquisições em `itens` e
@@ -144,7 +151,8 @@ respeitam a RLS da sessão autenticada.
    `emenda_itens` (com `vl_total_cadastrado` = planejado).
 2. **Licitação** — cria-se o `processo`; cada `emenda_itens.processo_id` aponta para ele.
    O status de licitação evolui por item (`status_lic_id`). Quando informado, o código do
-   catálogo interno acompanha o item em `itens.codigo_siam`.
+   catálogo interno acompanha o item em `itens.codigo_siam`. Se duas emendas financiarem
+   a mesma compra, `licitacao_item_recursos` guarda o valor de cada uma sem duplicar o item.
 3. **Contrato/ATA** — homologado, cria-se o registro em `contratos` com
    `tipo_instrumento = 'ATA'`, vinculado ao `processo_id` e `fornecedor_id`. Os itens são
    **espelhados** para `atas_itens`, preservando também `codigo_siam`.

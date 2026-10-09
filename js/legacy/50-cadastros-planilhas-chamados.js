@@ -1113,6 +1113,73 @@ async function _fetchAtaFlowData(eiIds){
   });
   return {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec};
 }
+async function _fetchRateiosEmendaFlow(eiIds){
+  const chunks=await Promise.all(_chunkArray(eiIds,200).map(slice=>
+    sb.from('licitacao_item_recursos')
+      .select('id,item_id,emenda_id,emenda_item_id,tipo,valor_alocado,status,emenda_item_gerado,justificativa_cancelamento,cancelado_em,emendas(emenda,ano,parlamentar),itens(id,descricao,qtde,valor_estimado,valor_contratado,processo_id,contrato_id,emenda_item_id,unidade_medida,processos(id,identificador,tipo,link_publico_sei),contratos(cpl,numero_contrato),unidades(nome))')
+      .in('emenda_item_id',slice)
+  ));
+  const erro=chunks.find(r=>r.error)?.error; if(erro) throw erro;
+  return chunks.flatMap(r=>r.data||[]);
+}
+function _cloneFlowRateio(base){
+  const vazio={cpl:'',sim:'',fornecedor:'',unidade:'',valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:'',afData:'',dataRecebimento:'',dataEntregaUnidade:''},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),statusLicitacao:new Map(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+  const f={...vazio,...(base||{})};
+  f.af={...vazio.af,...(base?.af||{})};
+  ['empenhos','notas','patrimonios','series'].forEach(k=>{f[k]=new Set(base?.[k]||[]);});
+  f.statusLicitacao=new Map(base?.statusLicitacao||[]);
+  f.unidades=[...(base?.unidades||[])];
+  f.ocorrencias=[...(base?.ocorrencias||[])];
+  return f;
+}
+function _aplicarRateiosEmendaFlow(flow,rateios){
+  const porItem={};
+  (rateios||[]).forEach(r=>{(porItem[String(r.item_id)]=porItem[String(r.item_id)]||[]).push(r);});
+  Object.values(porItem).forEach(grupo=>{
+    const principal=grupo.find(r=>r.tipo==='PRINCIPAL')||grupo[0];
+    const item=principal?.itens||{};
+    const base=flow[principal?.emenda_item_id]||flow[item.emenda_item_id]||null;
+    const q=Number(item.qtde)||Number(base?.qtde)||0;
+    const unitEstimado=Number(item.valor_estimado)||Number(base?.valorLicitacaoDetalheUnit)||0;
+    const temContrato=item.valor_contratado!==null&&item.valor_contratado!==undefined;
+    const unitAtual=temContrato?(Number(item.valor_contratado)||0):unitEstimado;
+    grupo.forEach(r=>{
+      const f=_cloneFlowRateio(base), valor=Number(r.valor_alocado)||0;
+      f.recurso=r; f.rateiosItem=grupo;
+      f.itemDescricao=item.descricao||''; f.itemQuantidade=q; f.itemUnidadeMedida=item.unidade_medida||'';
+      f.itemValorUnitario=unitAtual; f.itemValorTotal=Number((q*unitAtual).toFixed(2));
+      f.qtde=q; f.qtdeLicitacao=q; f.qtdeContratado=temContrato?q:0;
+      f.valorLicitacaoDetalheUnit=unitEstimado;
+      f.valorUnit=temContrato?unitAtual:null;
+      f.processoId=f.processoId||item.processo_id||item.processos?.id||null;
+      f.processoTipo=f.processoTipo||item.processos?.tipo||'';
+      f.processoLink=f.processoLink||item.processos?.link_publico_sei||'';
+      f.cpl=f.cpl||item.contratos?.cpl||item.processos?.identificador||'';
+      f.sim=f.sim||item.contratos?.numero_contrato||'';
+      f.unidade=f.unidade||item.unidades?.nome||'';
+      f.temProcesso=!!(f.temProcesso||item.processo_id);
+      f.temContrato=!!(f.temContrato||item.contrato_id);
+      f.valor=0; f.valorComprometido=0; f.valorLicitacao=0; f.valorContratado=0; f.valorOcorrencia=0;
+      if(r.status==='CANCELADO'){
+        const oc={id:`recurso:${r.id}`,item_id:r.item_id,tipo:'COMPLEMENTO CANCELADO',data_ocorrencia:r.cancelado_em?String(r.cancelado_em).slice(0,10):'',observacao:r.justificativa_cancelamento||'',processo_id:item.processo_id,processo_identificador_snapshot:item.processos?.identificador||'',item_descricao_snapshot:item.descricao||'',quantidade_snapshot:q,valor_unitario_snapshot:unitAtual,valor_total_snapshot:valor};
+        f.temOcorrencia=true; f.valorLicitacao=valor; f.valorOcorrencia=valor; f.valorExecucaoNegativa=-valor;
+        f.statusLicitacao.set(`recurso:${r.id}`,{id:`recurso:${r.id}`,nome:'COMPLEMENTO CANCELADO',ordem:-101});
+        f.ocorrencias=[oc];
+      }else if(base?.temOcorrencia){
+        f.temOcorrencia=true; f.valorLicitacao=valor; f.valorOcorrencia=valor; f.valorExecucaoNegativa=-valor;
+      }else if(temContrato){
+        f.valor=valor; f.valorComprometido=valor; f.valorContratado=valor;
+      }else{
+        f.valorComprometido=valor; f.valorLicitacao=valor;
+      }
+      if(r.tipo==='COMPLEMENTO'){
+        // A unidade fisica pertence ao item da compra, nao a cada parcela financeira.
+        f.unidades=[]; f.unidadesFisicas=0; f.patrimonios=new Set(); f.series=new Set();
+      }
+      flow[r.emenda_item_id]=f;
+    });
+  });
+}
 async function _enriquecerUnidadesComMovimentacaoInventario(flow){
   // O painel público preserva a Emenda sem consultar dados internos do inventário.
   if(typeof currentUser==='undefined'||!currentUser) return;
@@ -1147,7 +1214,7 @@ async function _carregarFluxoEmendaItens(eiIds){
   // As duas trilhas (itens→entregas/empenhos/NF e atas_execucao→atas_itens/unidades) são
   // independentes entre si: buscar em paralelo em vez de encadeadas em série.
   console.time('fluxo:itens+atas (paralelo)');
-  const [itensData,ataData,planejamentoData,ocorrenciaChunks]=await Promise.all([
+  const [itensData,ataData,planejamentoData,ocorrenciaChunks,rateiosData]=await Promise.all([
     _fetchItensFlowData(eiIds),
     _fetchAtaFlowData(eiIds).catch(e=>{ console.error('_carregarFluxoEmendaItens ATA:', e); return null; }),
     sb.from('ata_planejamento_emendas')
@@ -1159,7 +1226,8 @@ async function _carregarFluxoEmendaItens(eiIds){
       sb.from('licitacao_item_ocorrencia_emendas')
         .select('emenda_item_id,quantidade_snapshot,valor_unitario_snapshot,valor_total_snapshot,licitacao_item_ocorrencias(id,item_id,tipo,numero_pregao,numero_lote,data_ocorrencia,observacao,documento_path,documento_nome,processo_id,processo_identificador_snapshot,item_descricao_snapshot)')
         .in('emenda_item_id',slice)
-    ))
+    )),
+    _fetchRateiosEmendaFlow(eiIds).catch(e=>{ console.error('_carregarFluxoEmendaItens rateio:',e); return []; })
   ]);
   console.timeEnd('fluxo:itens+atas (paralelo)');
   const {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem,statusLicById}=itensData;
@@ -1314,6 +1382,7 @@ async function _carregarFluxoEmendaItens(eiIds){
     (nfByItem[it.id]||new Set()).forEach(v=>f.notas.add(v));
     f.unidadesFisicas += Number(unidadeByItem[it.id])||0;
   });
+  _aplicarRateiosEmendaFlow(flow,rateiosData);
   await _enriquecerUnidadesComMovimentacaoInventario(flow);
   return flow;
 }
@@ -1353,6 +1422,16 @@ function _expandirLinhaEmendaPorUnidades(base, unidades){
   if(!fisicas.length) return [base];
   const vlUnit=Number(base.vl_unitario)||0;
   const vlUnitCad=Number(base.vl_unitario_cadastrado)||0;
+  // Uma parcela financeira pertence ao item inteiro. Ao individualizar bens
+  // permanentes, rateamos os centavos para que o painel não multiplique o
+  // recurso da emenda pela quantidade de unidades físicas recebidas.
+  const parcela=(valor,idx)=>{
+    const centavos=Math.round((Number(valor)||0)*100);
+    const baseCentavos=Math.floor(centavos/fisicas.length);
+    return (idx===fisicas.length-1
+      ?centavos-(baseCentavos*(fisicas.length-1))
+      :baseCentavos)/100;
+  };
   return fisicas.map((u,idx)=>({
     ...base,
     id:base.id,
@@ -1369,6 +1448,11 @@ function _expandirLinhaEmendaPorUnidades(base, unidades){
     qtde_cadastrada:base.qtde_cadastrada?'1':base.qtde_cadastrada,
     vl_total:vlUnit||base.vl_total,
     vl_total_cadastrado:vlUnitCad||base.vl_total_cadastrado,
+    valor_recurso:base._recurso?parcela(base.valor_recurso,idx):base.valor_recurso,
+    valor_comprometido:base._recurso?parcela(base.valor_comprometido,idx):base.valor_comprometido,
+    valor_licitacao:base._recurso?parcela(base.valor_licitacao,idx):base.valor_licitacao,
+    valor_contratado:base._recurso?parcela(base.valor_contratado,idx):base.valor_contratado,
+    valor_ocorrencia_negativo:base._recurso?parcela(base.valor_ocorrencia_negativo,idx):base.valor_ocorrencia_negativo,
     patrimonio:_unidadeFisicaLabel(u),
     nota_fiscal:u.nota_fiscal||base.nota_fiscal,
     data_recebimento:u.data_recebimento||base.data_recebimento,
