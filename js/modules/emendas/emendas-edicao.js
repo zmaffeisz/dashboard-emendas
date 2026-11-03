@@ -1,6 +1,8 @@
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const moeda = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 
+const vinculosDoBloqueio = texto => String(texto ?? '').split(';').map(v => v.trim()).filter(Boolean);
+
 export function prepararAlteracoes(originais, editados) {
   const porId = new Map(originais.map(i => [String(i.id), i]));
   const vistos = new Set(), alteracoes = [];
@@ -12,7 +14,7 @@ export function prepararAlteracoes(originais, editados) {
     const qtde = Number(editado.qtde), valor = Number(editado.valor);
     const mudou = editado.excluir || item !== String(original.item ?? '').trim() || qtde !== Number(original.qtde) || valor !== Number(original.valor);
     if (!mudou) continue;
-    if (original.bloqueio) throw new Error(`O item “${original.item}” está vinculado: ${original.bloqueio}.`);
+    if (original.bloqueio) throw new Error(`O item “${original.item}” está vinculado (${original.bloqueio}). Desvincule antes de editar ou excluir.`);
     if (!editado.excluir && (!item || !Number.isFinite(qtde) || qtde <= 0 || !Number.isFinite(valor) || valor <= 0 || !Number.isFinite(qtde * valor))) {
       throw new Error(`Confira descrição, quantidade e valor unitário do item “${original.item}”: os números devem ser maiores que zero.`);
     }
@@ -31,7 +33,8 @@ export function montarEditorItens(container, itens) {
         <label class="form-group" style="flex:1;min-width:130px;margin:0"><span class="form-label" style="display:block">Valor unit. planejado</span><input type="number" step="any" min="0" data-campo="valor" aria-label="Valor do item ${indice+1}" value="${esc(i.valor)}"></label>
         <button type="button" class="btn-secondary" data-excluir style="color:var(--red)">Excluir item</button>
       </div>
-      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px"><span data-situacao>${i.bloqueio?'🔒 '+esc(i.bloqueio):'Sem vínculo — edição permitida'}</span><strong data-total></strong></div>
+      ${i.bloqueio?`<div data-vinculos style="margin-top:8px;font-size:12px;color:var(--red-text, var(--red))"><b>🔒 Não pode ser excluído nem editado: está vinculado a</b><ul style="margin:4px 0 0 18px;padding:0">${vinculosDoBloqueio(i.bloqueio).map(v => `<li>${esc(v)}</li>`).join('')}</ul><div style="margin-top:4px;color:var(--text2)">Desvincule tudo isso nas telas de origem, reabra a emenda e tente excluir novamente.</div></div>`:''}
+      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px"><span data-situacao>${i.bloqueio?'':'Sem vínculo — edição permitida'}</span><strong data-total></strong></div>
     </fieldset>`).join('') : '<p>Nenhum item cadastrado nesta emenda.</p>';
   const rows = [...container.querySelectorAll('fieldset')];
   const coletar = () => rows.map((row, indice) => ({

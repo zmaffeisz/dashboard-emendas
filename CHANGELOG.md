@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-03 — Editar emenda: lápis volta a abrir e exclusão de item lista todos os vínculos
+
+- Corrigido o lápis da aba Emendas, que não abria nada: o modal **Editar emenda** não tinha
+  o contêiner `#edem-itens`/`[data-resumo-itens]` e `abrirEditarEmenda` falhava em silêncio.
+  O modal agora lista os itens da emenda, com **Excluir item** (somente admins).
+- Item com qualquer vínculo continua **sem poder ser editado nem excluído**; a tela agora
+  mostra **todos** os vínculos (com contagem) e orienta a desvincular antes de tentar de novo.
+- Migration `20261103120000_emenda_item_vinculos_detalhados`: `private.emenda_item_bloqueio_edicao`
+  devolve todos os vínculos separados por `; ` e passa a considerar `licitacao_item_recursos`.
+
 ## 2026-10-08 — Complementos e cabeçalhos mais claros na aba Emendas
 
 - Itens pagos por uma única fonte deixam de exibir uma linha redundante de rateio.
