@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-11 — Termo de ateste vira Relatório de Fiscalização (IN CGM 06/2026)
+
+- O documento gerado pelo botão de medição/termo (Fiscalização e aba do contrato) passa a ser o
+  **Relatório de Fiscalização e Termo de Ateste**, com as 8 seções exigidas pelos arts. 8º e 9º:
+  identificação (processo, objeto, gestor = Secretário cadastrado em `secretario_atual`), critérios e
+  evidências, execução por OS (unidade, equipamento, prazo), ocorrências, valores (apresentado = atestado; contratos sem glosa), providências, sanções do contrato e conclusão.
+- O modal ganhou **Evidências adicionais** e **Providências** (opcionais; gravados em
+  `termos_ateste.observacao` como JSON).
+- Reimpressão do PDF agora busca unidade/equipamento do chamado (saíam "-") e lê sanções/processo.
+- Sem alteração de schema.
+
 ## 2026-11-03 — Editar emenda: lápis volta a abrir e exclusão de item lista todos os vínculos
 
 - Corrigido o lápis da aba Emendas, que não abria nada: o modal **Editar emenda** não tinha

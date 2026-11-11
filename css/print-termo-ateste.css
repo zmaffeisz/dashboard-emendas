@@ -78,6 +78,35 @@ th {
   margin: 0 auto 8px;
 }
 
+.rel-sec {
+  margin-bottom: 14px;
+}
+
+.rel-sec-t {
+  font-weight: bold;
+  color: #1a5fa8;
+  border-bottom: 1px solid #1a5fa8;
+  margin-bottom: 6px;
+  padding-bottom: 2px;
+  font-size: 13px;
+  page-break-after: avoid;
+}
+
+.rel-sec p,
+.rel-sec li {
+  margin: 4px 0;
+  line-height: 1.45;
+}
+
+table.valores {
+  width: 60%;
+}
+
+table.valores td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
 @media print {
   body {
     margin: 15mm;

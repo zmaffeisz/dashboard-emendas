@@ -604,6 +604,7 @@ async function gerarMedicaoFiscalizacao(){
   const contratoTxt=contrato?`${contrato.numero_contrato||contrato.cpl||contrato.id} - ${contrato.prestador||''}`:(selecionadas[0].cpl_contrato||'contrato selecionado');
   document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} para ${contratoTxt}. Escolha uma NF já cadastrada e ainda sem medição. A situação de cada OS continuará editável depois da medição.`;
   document.getElementById("mta-competencia").value="";
+  ["mta-evidencias","mta-providencias"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const nfSel=document.getElementById("mta-nf");
   if(nfSel) nfSel.innerHTML='<option value="">Carregando notas fiscais disponíveis...</option>';
   const nfData=document.getElementById("mta-nf-data"); if(nfData) nfData.value="";
@@ -634,57 +635,117 @@ function fiscSelecionarNFMedicao(){
 
 async function confirmarGerarTermo(){ return confirmarGerarMedicaoFiscalizacao(); }
 
-function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal,hoje,semCorretivas=false}){
+
+function _fiscExtrasTermo(raw){
+  if(!raw) return {};
+  try{const o=typeof raw==='string'?JSON.parse(raw):raw;return o&&typeof o==='object'?o:{};}catch(_e){return {};}
+}
+
+async function _fiscContextoRelatorio(contrato){
+  const ctx={processo:'',sancoes:[],gestor:''};
+  try{
+    const sec=typeof obterSecretarioAtual==='function'?await obterSecretarioAtual():null;
+    if(sec?.nome) ctx.gestor=`${sec.nome}${sec.cargo?` - ${sec.cargo}`:''}`;
+  }catch(_e){}
+  try{
+    if(contrato?.processo_id){
+      const {data}=await sb.from('processos').select('identificador').eq('id',contrato.processo_id).maybeSingle();
+      ctx.processo=data?.identificador||'';
+    }
+    if(contrato?.id){
+      const {data}=await sb.from('sancoes_administrativas').select('tipo,status,valor,data_evento,observacao').eq('contrato_id',contrato.id);
+      ctx.sancoes=data||[];
+    }
+  }catch(_e){}
+  return ctx;
+}
+
+function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal,hoje,semCorretivas=false,processo='',gestor='',sancoes=[],extras={}}){
+  const E=v=>_sanEsc(String(v??''));
   const cpl=contrato?.cpl||selecionadas[0]?.cpl_contrato||"";
   const empresa=contrato?.prestador||selecionadas[0]?.empresa||"";
+  const aferido=Number(valor)||0;
+  const nOk=selecionadas.filter(r=>r.situacao_os==='conforme').length;
+  const nRes=selecionadas.filter(r=>r.situacao_os==='conforme_ressalva').length;
+  const nOutras=selecionadas.length-nOk-nRes;
+  const comRessalva=nRes>0||nOutras>0;
   const tabelaRows=selecionadas.map((r,i)=>{
     const ch=r._chamado||{};
     const sit=SITUACAO_FISC[r.situacao_os]?.label||r.situacao_os||"-";
-    return `<tr style="border-bottom:1px solid #e0e0e0">
-      <td style="padding:5px 8px;font-size:12px">${i+1}</td>
-      <td style="padding:5px 8px;font-size:12px">${r.protocolo||"-"}</td>
-      <td style="padding:5px 8px;font-size:12px">${r.os||"-"}</td>
-      <td style="padding:5px 8px;font-size:12px">${ch.unidade||"-"}</td>
-      <td style="padding:5px 8px;font-size:12px">${ch.equipamento||"-"}</td>
-      <td style="padding:5px 8px;font-size:12px">${r.servico_realizado||r.feito||"-"}</td>
-      <td style="padding:5px 8px;font-size:12px;font-weight:600">${sit}</td>
-      <td style="padding:5px 8px;font-size:12px">${r.ocorrencias||"-"}</td>
+    const abertura=ch.carimbo||ch.data_solicitacao||null;
+    const dias=typeof _diasEntreDatas==='function'?_diasEntreDatas(abertura,r.data_atendimento_os||null):null;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${E(r.protocolo||"-")}</td>
+      <td>${E(r.os||"-")}</td>
+      <td>${E(ch.unidade||"-")}</td>
+      <td>${E(ch.equipamento||"-")}${ch.patrimonio?`<br><small>Patr.: ${E(ch.patrimonio)}</small>`:''}</td>
+      <td>${E(ch.descricao||ch.problema||"-")}</td>
+      <td>${E(r.servico_realizado||r.feito||"-")}</td>
+      <td>${r.data_atendimento_os?E(fmtDate(r.data_atendimento_os)):'-'}${dias!==null&&dias!==undefined?`<br><small>${dias} dia(s) após abertura</small>`:''}</td>
+      <td><strong>${E(sit)}</strong></td>
+      <td>${E(r.ocorrencias||"-")}</td>
     </tr>`;
   }).join("");
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Termo de Ateste</title>
+  const ocorr=selecionadas.filter(r=>(r.ocorrencias||'').trim()||['conforme_ressalva','parcial','nao_conforme','pendente'].includes(r.situacao_os));
+  const sancoesHtml=sancoes.length
+    ?`<ul>${sancoes.map(s=>`<li>${E(s.tipo||'Sanção')} - ${E(s.status||'')}${s.data_evento?` (${E(fmtDate(s.data_evento))})`:''}${s.valor?` - ${E(_ctMoney(s.valor))}`:''}${s.observacao?`: ${E(s.observacao)}`:''}</li>`).join('')}</ul>`
+    :'<p>Não há propostas de apuração de infração nem sanções registradas no sistema para este contrato.</p>';
+  const evid=(extras.evidencias||'').trim();
+  const prov=(extras.providencias||'').trim();
+  const secao=(n,t,body)=>`<div class="rel-sec"><div class="rel-sec-t">${n}. ${t}</div>${body}</div>`;
+  const unidades=[...new Set(selecionadas.map(r=>r._chamado?.unidade).filter(Boolean))].length;
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório de Fiscalização e Termo de Ateste</title>
   <link rel="stylesheet" href="css/print-termo-ateste.css"></head><body>
   <div class="header">
-    <h2>SECRETARIA MUNICIPAL DA SAUDE - SOROCABA</h2>
-    <h3>Secao de Aquisicao e Manutencao de Equipamentos e Mobiliarios da Saude - SUEQ</h3>
-    <h2 style="margin-top:8px">TERMO DE ATESTE - RECEBIMENTO DEFINITIVO DE SERVICOS</h2>
+    <h2>SECRETARIA MUNICIPAL DA SAÚDE - SOROCABA</h2>
+    <h3>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde - SUEQ</h3>
+    <h2 style="margin-top:8px">RELATÓRIO DE FISCALIZAÇÃO E TERMO DE ATESTE</h2>
+    <h3>Recebimento definitivo de serviços - Instrução Normativa CGM nº 06/2026</h3>
   </div>
-  <div class="info-grid">
-    <div class="info-item"><span class="info-label">Contrato / CPL:</span><strong>${cpl||"-"}</strong></div>
-    <div class="info-item"><span class="info-label">Empresa contratada:</span><strong>${empresa||"-"}</strong></div>
-    <div class="info-item"><span class="info-label">Competencia:</span><strong>${competencia}</strong></div>
-    <div class="info-item"><span class="info-label">Nota Fiscal:</span><strong>${nf}</strong></div>
-    <div class="info-item"><span class="info-label">Valor atestado:</span><strong>${_ctMoney(valor)}</strong></div>
-    <div class="info-item"><span class="info-label">Data do ateste:</span><strong>${hoje}</strong></div>
-    <div class="info-item"><span class="info-label">Fiscal responsavel:</span>${fiscal}</div>
-    <div class="info-item"><span class="info-label">Total de OS fiscalizadas:</span>${selecionadas.length}</div>
-  </div>
-  ${semCorretivas?`<p>Não houve ordens de serviço de manutenção corretiva durante o mês de <strong>${_sanEsc(_fiscMesTermo(competencia))}</strong>, referente a este contrato.</p>`:`<table><thead><tr>
-    <th style="width:30px">#</th>
-    <th>Protocolo</th><th>No OS</th><th>Unidade</th><th>Equipamento</th>
-    <th>Servico realizado</th><th>Situacao</th><th>Ocorrencias</th>
-  </tr></thead><tbody>${tabelaRows}</tbody></table>`}
-  <div class="ateste-box">
-    <p>${semCorretivas?'O ateste da medição mensal foi realizado':'A fiscalizacao tecnica das ordens de servico listadas acima foi realizada'} na data de <strong>${hoje}</strong>,
-    em conformidade com o disposto no art. 117 da Lei no 14.133/2021, atestando-se o recebimento definitivo
-    dos servicos prestados${empresa?` pela empresa <strong>${empresa}</strong>`:''}${cpl?`, referentes ao contrato ${cpl}`:''},
-    competencia <strong>${competencia}</strong>, conforme Nota Fiscal <strong>${nf}</strong>,
-    no valor atestado de <strong>${_ctMoney(valor)}</strong>.</p>
-  </div>
+  ${secao(1,'Identificação',`<div class="info-grid">
+    <div class="info-item"><span class="info-label">Processo administrativo:</span><strong>${E(processo||'não informado')}</strong></div>
+    <div class="info-item"><span class="info-label">Contrato / CPL:</span><strong>${E(cpl||'-')}</strong></div>
+    <div class="info-item"><span class="info-label">Contratada:</span><strong>${E(empresa||'-')}</strong></div>
+    <div class="info-item"><span class="info-label">Órgão responsável:</span><strong>Secretaria Municipal da Saúde - SUEQ</strong></div>
+    <div class="info-item" style="grid-column:1/-1"><span class="info-label">Objeto:</span>${E(contrato?.objeto||'-')}</div>
+    <div class="info-item"><span class="info-label">Competência / período:</span><strong>${E(competencia)}</strong></div>
+    <div class="info-item"><span class="info-label">Data da verificação / elaboração:</span><strong>${E(hoje)}</strong></div>
+    <div class="info-item"><span class="info-label">Gestor do contrato:</span>${E(gestor||'Secretário(a) Municipal da Saúde')}</div>
+    <div class="info-item"><span class="info-label">Fiscal responsável:</span>${E(fiscal)}<br><small>Fiscal de Contrato - SMS Sorocaba</small></div>
+    <div class="info-item"><span class="info-label">Parcela / local fiscalizado:</span>${semCorretivas?'Serviço mensal do contrato':`${selecionadas.length} OS em ${unidades||'-'} unidade(s)`}</div>
+  </div>`)}
+  ${secao(2,'Critérios, procedimentos e evidências',`
+    <p><strong>Critérios:</strong> contrato ${E(cpl)}, edital e termo de referência do processo, proposta aceita, art. 117 da Lei nº 14.133/2021 e Instrução Normativa CGM nº 06/2026.</p>
+    <p><strong>Procedimentos:</strong> ${semCorretivas?'conferência da execução mensal do serviço e da nota fiscal apresentada.':`verificação técnica de todas as ${selecionadas.length} ordem(ns) de serviço da competência (sem amostragem), conferência do serviço descrito na OS com o chamado de origem e conferência da Nota Fiscal nº ${E(nf)}.`}</p>
+    <p><strong>Documentos examinados:</strong> ${semCorretivas?'':'chamados e ordens de serviço, '}Nota Fiscal nº ${E(nf)}${cpl?`, contrato ${E(cpl)}`:''}.</p>
+    <p><strong>Evidências:</strong> ${evid?E(evid):'registros das ordens de serviço e dos chamados no sistema (protocolo, OS, datas e serviço realizado, listados abaixo); demais anexos, quando houver, vinculados ao processo administrativo.'}</p>`)}
+  ${semCorretivas
+    ?secao(3,'Execução observada',`<p>Não houve ordens de serviço de manutenção corretiva durante o mês de <strong>${E(_fiscMesTermo(competencia))}</strong> referente a este contrato. Quantitativo: 0 OS. Prazos e resultados: não aplicável ao período, por ausência de demanda.</p>`)
+    :secao(3,'Execução observada (ordens de serviço)',`<table><thead><tr>
+      <th style="width:24px">#</th><th>Protocolo</th><th>Nº OS</th><th>Unidade</th><th>Equipamento</th>
+      <th>Problema relatado</th><th>Serviço realizado</th><th>Atendimento / prazo</th><th>Situação</th><th>Ocorrências</th>
+    </tr></thead><tbody>${tabelaRows}</tbody></table>
+    <p><strong>Quantitativo:</strong> ${selecionadas.length} OS - ${nOk} conforme(s), ${nRes} com ressalva, ${nOutras} em outra situação (pendente, parcial ou não conforme).</p>`)}
+  ${secao(4,'Ocorrências, desconformidades e riscos',ocorr.length
+    ?`<ul>${ocorr.map(r=>`<li>OS ${E(r.os||r.protocolo||'-')}: ${E(r.ocorrencias||SITUACAO_FISC[r.situacao_os]?.label||'-')}</li>`).join('')}</ul>`
+    :'<p>Não foram identificadas ocorrências, desconformidades ou riscos na execução do período.</p>')}
+  ${secao(5,'Valores',`<table class="valores"><tbody>
+    <tr><td>Valor apresentado pela contratada (NF ${E(nf)})</td><td>${E(_ctMoney(aferido))}</td></tr>
+    <tr><td><strong>Valor aferido pela fiscalização (atestado)</strong></td><td><strong>${E(_ctMoney(aferido))}</strong></td></tr>
+  </tbody></table>
+  <p>Não houve divergência entre o valor apresentado e o aferido.</p>`)}
+  ${secao(6,'Providências e pendências',`<p>${prov?E(prov):(nRes+nOutras>0?'Providências a cargo da contratada e do gestor conforme as ocorrências do item 4; sem prazo específico fixado neste relatório.':'Nenhuma providência necessária.')}</p>
+    <p><strong>Pendências de períodos anteriores:</strong> não há pendência registrada no sistema para este contrato.</p>`)}
+  ${secao(7,'Infrações e sanções',sancoesHtml)}
+  ${secao(8,'Conclusão',`<div class="ateste-box"><p>A fiscalização técnica ${semCorretivas?'da medição mensal':'das ordens de serviço listadas'} foi realizada em <strong>${E(hoje)}</strong>, em conformidade com o art. 117 da Lei nº 14.133/2021 e com a Instrução Normativa CGM nº 06/2026.
+    ${comRessalva?`Constatou-se que os serviços foram prestados <strong>com ressalvas</strong> (${nRes} OS com ressalva${nOutras?`, ${nOutras} em outra situação`:''}), indicadas no item 4, as quais não impedem o recebimento.`:'Constatou-se que os serviços foram prestados em conformidade, sem ressalvas ou impedimentos.'}
+    Os serviços estão <strong>aptos ao recebimento definitivo e à liquidação</strong>${empresa?`, pela empresa <strong>${E(empresa)}</strong>`:''}${cpl?`, contrato ${E(cpl)}`:''}, competência <strong>${E(competencia)}</strong>, conforme Nota Fiscal <strong>${E(nf)}</strong>, no valor atestado de <strong>${E(_ctMoney(aferido))}</strong>.</p></div>`)}
   <div class="assinatura">
     <div class="linha-assinatura"></div>
-    <div><strong>${fiscal}</strong></div>
+    <div><strong>${E(fiscal)}</strong></div>
     <div style="font-size:11px;color:#555">Fiscal de Contrato - SMS Sorocaba</div>
-    <div style="font-size:11px;color:#555;margin-top:2px">${hoje}</div>
+    <div style="font-size:11px;color:#555;margin-top:2px">${E(hoje)}</div>
   </div>
   <script>window.onload=()=>window.print();<\/script>
   <\/body><\/html>`;
@@ -696,7 +757,12 @@ async function confirmarGerarMedicaoFiscalizacao(){
   const nfSelecionada=_fiscNFsDisponiveisMedicao.find(n=>String(n.id)===String(nfId));
   const competencia=_competenciaDaNotaFiscal(nfSelecionada);
   const nf=nfSelecionada?.numero||'';
-  const valor=_ctNum(nfSelecionada?.valor_bruto??nfSelecionada?.valor_total);
+  const valorNF=_ctNum(nfSelecionada?.valor_bruto??nfSelecionada?.valor_total);
+  const valor=valorNF;
+  const extras={
+    evidencias:(document.getElementById("mta-evidencias")?.value||'').trim(),
+    providencias:(document.getElementById("mta-providencias")?.value||'').trim()
+  };
   if(!nfId||!nfSelecionada){showMsg("mta","Selecione uma NF disponível.","err");return;}
   if(!competencia){showMsg("mta","A NF selecionada não possui competência. Corrija o cadastro da nota fiscal antes de gerar a medição.","err");return;}
   if(!valor){showMsg("mta","A NF selecionada não possui valor bruto válido.","err");return;}
@@ -729,7 +795,7 @@ async function confirmarGerarMedicaoFiscalizacao(){
     data_medicao:_ctTodayISO(),
     fiscal_responsavel:fiscal,
     status:'aprovada_pelo_fiscal',
-    valor_bruto:valor,
+    valor_bruto:valorNF,
     valor_glosa:0,
     valor_liquido:valor,
     observacoes:`Medicao gerada pela Fiscalizacao a partir de ${selecionadas.length} OS: ${protocolos.join(', ')}`,
@@ -756,7 +822,8 @@ async function confirmarGerarMedicaoFiscalizacao(){
     fiscalizado_por:fiscal,
     gerado_em:_ctTodayISO(),
     protocolos,
-    valor_atestado:valor
+    valor_atestado:valor,
+    observacao:(extras.evidencias||extras.providencias)?JSON.stringify(extras):null
   }).select("*").single();
   if(termoErr){showMsg("mta","Medicao e NF criadas, mas erro ao registrar termo: "+termoErr.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;}
   await sb.from("termo_contratos").insert([{termo_id:termo.id,contrato_id:contrato.id}]);
@@ -833,13 +900,26 @@ async function baixarTermoAtesteMedicao(medicaoId){
         :(med.observacoes||"Servicos medidos")
     }];
   }
+  // Completa dados do chamado de origem (unidade, equipamento, datas) quando ausentes
+  const semChamado=selecionadas.filter(r=>r.protocolo&&!(r._chamado&&r._chamado.unidade));
+  if(semChamado.length){
+    const {data:chs}=await sb.from("chamados").select("protocolo,carimbo,data_solicitacao,unidade,equipamento,patrimonio,problema,descricao").in("protocolo",semChamado.map(r=>r.protocolo));
+    const mapa={};(chs||[]).forEach(c=>mapa[c.protocolo]=c);
+    semChamado.forEach(r=>{if(mapa[r.protocolo])r._chamado=mapa[r.protocolo];});
+  }
+  const ctx=await _fiscContextoRelatorio(_ctAtual);
+  const valorAtestado=_ctNum(termo?.valor_atestado??med.valor_liquido??nf?.valor_aprovado??nf?.valor_total);
   const html=_fiscHtmlTermoAteste({
     selecionadas,
     semCorretivas,
     contrato:_ctAtual,
+    processo:ctx.processo,
+    sancoes:ctx.sancoes,
+    extras:_fiscExtrasTermo(termo?.observacao),
+    gestor:ctx.gestor,
     competencia:med.competencia||termo?.competencia||"",
     nf:nf?.numero||termo?.nf_referencia||"",
-    valor:_ctNum(termo?.valor_atestado??med.valor_liquido??nf?.valor_aprovado??nf?.valor_total),
+    valor:valorAtestado,
     fiscal:med.fiscal_responsavel||termo?.fiscalizado_por||currentProfile?.nome||currentProfile?.email||"fiscal responsavel",
     hoje:fmtDate(termo?.gerado_em||med.data_medicao||_ctTodayISO())||new Date().toLocaleDateString("pt-BR")
   });

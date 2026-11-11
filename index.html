@@ -981,6 +981,14 @@
         <div class="form-label">Valor da medição/NF (R$) *</div>
         <input type="number" id="mta-valor" step="0.01" min="0" placeholder="0,00" disabled>
       </div>
+      <div class="form-group full">
+        <div class="form-label">Evidências adicionais (opcional)</div>
+        <textarea id="mta-evidencias" rows="2" placeholder="Ex.: relatório de serviço nº..., fotos anexadas ao processo SEI..."></textarea>
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Providências / pendências (opcional)</div>
+        <textarea id="mta-providencias" rows="2" placeholder="Providências adotadas ou propostas, destinatário e prazo"></textarea>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn-primary" onclick="confirmarGerarMedicaoFiscalizacao()">Gerar medição</button>
