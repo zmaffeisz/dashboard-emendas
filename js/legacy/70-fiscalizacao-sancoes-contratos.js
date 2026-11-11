@@ -677,7 +677,6 @@ function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal
     return `<tr>
       <td>${i+1}</td>
       <td>${E(r.protocolo||"-")}</td>
-      <td>${E(r.os||"-")}</td>
       <td>${E(ch.unidade||"-")}</td>
       <td>${E(ch.equipamento||"-")}${ch.patrimonio?`<br><small>Patr.: ${E(ch.patrimonio)}</small>`:''}</td>
       <td>${E(ch.descricao||ch.problema||"-")}</td>
@@ -723,12 +722,12 @@ function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal
   ${semCorretivas
     ?secao(3,'Execução observada',`<p>Não houve ordens de serviço de manutenção corretiva durante o mês de <strong>${E(_fiscMesTermo(competencia))}</strong> referente a este contrato. Quantitativo: 0 OS. Prazos e resultados: não aplicável ao período, por ausência de demanda.</p>`)
     :secao(3,'Execução observada (ordens de serviço)',`<table><thead><tr>
-      <th style="width:24px">#</th><th>Protocolo</th><th>Nº OS</th><th>Unidade</th><th>Equipamento</th>
+      <th style="width:24px">#</th><th>Protocolo / OS</th><th>Unidade</th><th>Equipamento</th>
       <th>Problema relatado</th><th>Serviço realizado</th><th>Atendimento / prazo</th><th>Situação</th><th>Ocorrências</th>
     </tr></thead><tbody>${tabelaRows}</tbody></table>
     <p><strong>Quantitativo:</strong> ${selecionadas.length} OS - ${nOk} conforme(s), ${nRes} com ressalva, ${nOutras} em outra situação (pendente, parcial ou não conforme).</p>`)}
   ${secao(4,'Ocorrências, desconformidades e riscos',ocorr.length
-    ?`<ul>${ocorr.map(r=>`<li>OS ${E(r.os||r.protocolo||'-')}: ${E(r.ocorrencias||SITUACAO_FISC[r.situacao_os]?.label||'-')}</li>`).join('')}</ul>`
+    ?`<ul>${ocorr.map(r=>`<li>OS ${E(r.protocolo||'-')}: ${E(r.ocorrencias||SITUACAO_FISC[r.situacao_os]?.label||'-')}</li>`).join('')}</ul>`
     :'<p>Não foram identificadas ocorrências, desconformidades ou riscos na execução do período.</p>')}
   ${secao(5,'Valores',`<table class="valores"><tbody>
     <tr><td>Valor apresentado pela contratada (NF ${E(nf)})</td><td>${E(_ctMoney(aferido))}</td></tr>
