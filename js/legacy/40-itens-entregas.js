@@ -1256,9 +1256,31 @@ async function loadItensEntregas(){
   const wrap=document.getElementById('entregas-wrap'); if(!wrap) return;
   wrap.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando controle de prazos...</div>';
   const out=[];
-  const {data:observacoesHistorico,error:eObservacoes}=await sb.from('entregas_observacoes')
-    .select('id,item_id,item_entrega_id,ata_execucao_id,texto,autor_id,autor_nome,created_at,updated_by,updated_by_nome,updated_at,migrada')
-    .order('created_at',{ascending:true});
+  // Etapa 1: consultas independentes entre si, disparadas em paralelo.
+  const [rObs,rPrazos,rAq,rAt,rItc]=await Promise.all([
+    sb.from('entregas_observacoes')
+      .select('id,item_id,item_entrega_id,ata_execucao_id,texto,autor_id,autor_nome,created_at,updated_by,updated_by_nome,updated_at,migrada')
+      .order('created_at',{ascending:true}),
+    sb.from('entregas_prazos_historico')
+      .select('id,item_entrega_id,ata_execucao_id,prazo_anterior,prazo_novo,observacao,alterado_em,created_at')
+      .order('created_at',{ascending:true}),
+    // Aquisições: itens_entregas + item + processo/contrato/fornecedor/unidade/documentos
+    sb.from('itens_entregas')
+      .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,tipo_material,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs,unidade_snapshot, empenhos(numero,ano), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
+      .order('af_data',{ascending:false}),
+    sb.from('atas_execucao').select('*'),
+    // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando AF)
+    sb.from('itens')
+      .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,status,controle_obs,processos(identificador),contratos(cpl,numero_contrato,tipo_instrumento),fornecedores(razao_social),unidades(nome)')
+      .eq('origem','aquisicao').not('contrato_id','is',null)
+  ]);
+  const {data:observacoesHistorico,error:eObservacoes}=rObs;
+  const {data:prazosHistorico,error:ePrazos}=rPrazos;
+  const {data:aq,error:e1}=rAq;
+  const {data:at,error:e2}=rAt;
+  const {data:itc,error:e3}=rItc;
+  if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
+  if(e2){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (atas): '+_sanEsc(e2.message)+'</div>'; return; }
   if(eObservacoes) console.warn('Histórico de observações:',eObservacoes.message);
   const _obsPorItem={}, _obsPorEntrega={}, _obsPorExec={};
   (observacoesHistorico||[]).forEach(o=>{
@@ -1266,9 +1288,6 @@ async function loadItensEntregas(){
     const id=o.item_entrega_id||o.ata_execucao_id||o.item_id;
     if(id) (mapa[String(id)]=mapa[String(id)]||[]).push(o);
   });
-  const {data:prazosHistorico,error:ePrazos}=await sb.from('entregas_prazos_historico')
-    .select('id,item_entrega_id,ata_execucao_id,prazo_anterior,prazo_novo,observacao,alterado_em,created_at')
-    .order('created_at',{ascending:true});
   if(ePrazos) console.warn('Histórico de prazos:',ePrazos.message);
   const _prazosPorEntrega={}, _prazosPorExec={};
   (prazosHistorico||[]).forEach(h=>{
@@ -1276,28 +1295,35 @@ async function loadItensEntregas(){
     const id=h.item_entrega_id||h.ata_execucao_id;
     if(id) (mapa[String(id)]=mapa[String(id)]||[]).push(h);
   });
-  // Aquisições: itens_entregas + item + processo/contrato/fornecedor/unidade/documentos
-  const {data:aq,error:e1}=await sb.from('itens_entregas')
-    .select('*, empenhos(numero,ano), notas_fiscais(numero,data_emissao,valor_total), itens(id,descricao,qtde,valor_estimado,valor_contratado,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,fonte_tipo,fonte_descricao,emenda_id,emenda_item_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome))')
-    .order('af_data',{ascending:false});
-  if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
-  const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,tipo_material,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data,controle_obs,unidade_snapshot')
-    .order('af_data',{ascending:false});
-  if(e1b) console.warn('AF base:',e1b.message);
-  const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
-  const empAqPorItem={};
+  // A consulta principal já traz todas as colunas necessárias: não há mais busca duplicada de itens_entregas.
+  const aqCalc=aq||[];
+  // Etapa 2: consultas que dependem dos ids da etapa 1, também em paralelo.
   const aqItemIds=[...new Set([...(aqCalc||[]),(aq||[])].map(r=>r.item_id||r.itens?.id).filter(Boolean))];
-  if(aqItemIds.length){
-    const {data:eiAq}=await sb.from('empenho_itens')
-      .select('item_id,empenho_id,empenhos(id,numero,ano)')
-      .in('item_id',aqItemIds);
-    (eiAq||[]).forEach(v=>{
-      if(!v.item_id || empAqPorItem[String(v.item_id)]) return;
-      const emp=v.empenhos;
-      if(emp?.numero) empAqPorItem[String(v.item_id)]={id:emp.id||v.empenho_id||null,label:`${emp.numero}${emp.ano?('/'+emp.ano):''}`};
-    });
-  }
+  const _ataCache=(atasItens&&atasItens.length)?new Set(atasItens.map(i=>String(i.id))):new Set();
+  const _ataIdsFaltantes=[...new Set((at||[]).map(r=>r.ata_item_id).filter(Boolean).map(String))].filter(id=>!_ataCache.has(id));
+  const _ataEmendaItemIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
+  const _ataExecIds=[...new Set((at||[]).map(r=>r.id).filter(Boolean))];
+  const _itcIds=(!e3)?(itc||[]).map(i=>i.id):[];
+  const _itcContratoIds=(!e3)?[...new Set((itc||[]).map(i=>i.contrato_id).filter(Boolean))]:[];
+  const [rEiAq,rAit,rVAta,rEmInfo,rUnsAta,rAfsSaldo,rEi,rEc]=await Promise.all([
+    aqItemIds.length?sb.from('empenho_itens').select('item_id,empenho_id,empenhos(id,numero,ano)').in('item_id',aqItemIds):null,
+    _ataIdsFaltantes.length?sb.from('atas_itens').select('id,cpl,sim,item,marca_modelo,empresa,status_contrato,prazo_entrega,contrato_id,valor_unit,contratos(cpl,numero_contrato,prestador,status)').in('id',_ataIdsFaltantes):null,
+    _ataEmendaItemIds.length?sb.from('empenho_itens').select('emenda_item_id,empenhos(numero,ano)').in('emenda_item_id',_ataEmendaItemIds):null,
+    _ataEmendaItemIds.length?sb.from('emenda_itens').select('id,empenho,nota_fiscal,patrimonio').in('id',_ataEmendaItemIds):null,
+    Promise.all(_chunkArray(_ataExecIds,200).map(ids=>sb.from('atas_execucao_unidades')
+      .select('exec_id,patrimonio,numero_serie,unidade_seq')
+      .in('exec_id',ids)
+      .order('unidade_seq',{ascending:true}))),
+    _itcIds.length?sb.from('itens_entregas').select('item_id,qtde_autorizada,status').in('item_id',_itcIds):null,
+    _itcIds.length?sb.from('empenho_itens').select('item_id,empenhos(numero)').in('item_id',_itcIds):null,
+    _itcContratoIds.length?sb.from('empenhos').select('numero,contrato_id').in('contrato_id',_itcContratoIds):null
+  ]);
+  const empAqPorItem={};
+  (rEiAq?.data||[]).forEach(v=>{
+    if(!v.item_id || empAqPorItem[String(v.item_id)]) return;
+    const emp=v.empenhos;
+    if(emp?.numero) empAqPorItem[String(v.item_id)]={id:emp.id||v.empenho_id||null,label:`${emp.numero}${emp.ano?('/'+emp.ano):''}`};
+  });
   const recebidoPorItem={};
   (aqCalc||[]).forEach(r=>{
     if((r.status||'')==='cancelada') return;
@@ -1344,41 +1370,18 @@ async function loadItensEntregas(){
     });
   });
   // Atas: atas_execucao. Enriquece com atas_itens; se o cache estiver parcial, busca os IDs faltantes.
-  const {data:at,error:e2}=await sb.from('atas_execucao').select('*');
-  if(e2){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (atas): '+_sanEsc(e2.message)+'</div>'; return; }
   let _ataItemPorId={};
   if(atasItens&&atasItens.length) _ataItemPorId=Object.fromEntries(atasItens.map(i=>[String(i.id),i]));
-  if(at&&at.length){
-    const ids=[...new Set(at.map(r=>r.ata_item_id).filter(Boolean).map(String))]
-      .filter(id=>!_ataItemPorId[id]);
-    if(ids.length){
-      const {data:ait}=await sb.from('atas_itens').select('id,cpl,sim,item,marca_modelo,empresa,status_contrato,prazo_entrega,contrato_id,valor_unit,contratos(cpl,numero_contrato,prestador,status)').in('id',ids);
-      (ait||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',marca:i.marca_modelo||'',empresa:i.empresa||i.contratos?.prestador||'',status:i.contratos?.status||i.status_contrato||'',prazo_entrega:i.prazo_entrega||null,contrato_id:i.contrato_id||null,valor_unit:i.valor_unit||null}; });
-    }
-  }
+  (rAit?.data||[]).forEach(i=>{ _ataItemPorId[String(i.id)]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||'',marca:i.marca_modelo||'',empresa:i.empresa||i.contratos?.prestador||'',status:i.contratos?.status||i.status_contrato||'',prazo_entrega:i.prazo_entrega||null,contrato_id:i.contrato_id||null,valor_unit:i.valor_unit||null}; });
   const _empAtaPorEmendaItem={};
-  const _ataEmendaItemIds=[...new Set((at||[]).map(r=>r.emenda_item_id).filter(Boolean))];
-  if(_ataEmendaItemIds.length){
-    const {data:vAta}=await sb.from('empenho_itens').select('emenda_item_id,empenhos(numero,ano)').in('emenda_item_id',_ataEmendaItemIds);
-    (vAta||[]).forEach(v=>{
-      const emp=v.empenhos;
-      if(emp?.numero) _empAtaPorEmendaItem[String(v.emenda_item_id)]=`${emp.numero}${emp.ano?('/'+emp.ano):''}`;
-    });
-  }
+  (rVAta?.data||[]).forEach(v=>{
+    const emp=v.empenhos;
+    if(emp?.numero) _empAtaPorEmendaItem[String(v.emenda_item_id)]=`${emp.numero}${emp.ano?('/'+emp.ano):''}`;
+  });
   const _emendaInfoPorId={};
-  if(_ataEmendaItemIds.length){
-    const {data:emInfo}=await sb.from('emenda_itens').select('id,empenho,nota_fiscal,patrimonio').in('id',_ataEmendaItemIds);
-    (emInfo||[]).forEach(e=>{ _emendaInfoPorId[String(e.id)]=e; });
-  }
+  (rEmInfo?.data||[]).forEach(e=>{ _emendaInfoPorId[String(e.id)]=e; });
   const _ataUnidadesPorExec={};
-  const _ataExecIds=[...new Set((at||[]).map(r=>r.id).filter(Boolean))];
-  for(const ids of _chunkArray(_ataExecIds,200)){
-    const {data:unsAta}=await sb.from('atas_execucao_unidades')
-      .select('exec_id,patrimonio,numero_serie,unidade_seq')
-      .in('exec_id',ids)
-      .order('unidade_seq',{ascending:true});
-    (unsAta||[]).forEach(u=>{ (_ataUnidadesPorExec[String(u.exec_id)]=_ataUnidadesPorExec[String(u.exec_id)]||[]).push(u); });
-  }
+  (rUnsAta||[]).forEach(r=>{ (r?.data||[]).forEach(u=>{ (_ataUnidadesPorExec[String(u.exec_id)]=_ataUnidadesPorExec[String(u.exec_id)]||[]).push(u); }); });
   (at||[]).forEach(r=>{
     const recebido=!!(r.dt_entrega && String(r.dt_entrega).trim());
     const limiteISO=_toISODate(r.prev_entrega);
@@ -1410,17 +1413,12 @@ async function loadItensEntregas(){
     });
   });
   // Fase 11: itens de aquisição contratados com saldo a autorizar aparecem aqui (aguardando AF)
-  const {data:itc,error:e3}=await sb.from('itens')
-    .select('id,descricao,qtde,marca,modelo,prazo_entrega_dias,processo_id,contrato_id,fornecedor_id,status,controle_obs,processos(identificador),contratos(cpl,numero_contrato,tipo_instrumento),fornecedores(razao_social),unidades(nome)')
-    .eq('origem','aquisicao').not('contrato_id','is',null);
   let itemPorId={};
-	  if(!e3){
+  if(!e3){
     const autPorItem={};
     const itemIds=(itc||[]).map(i=>i.id);
     if(itemIds.length){
-      const {data:afsSaldo,error:eSaldo}=await sb.from('itens_entregas')
-        .select('item_id,qtde_autorizada,status')
-        .in('item_id',itemIds);
+      const {data:afsSaldo,error:eSaldo}=rAfsSaldo||{};
       const fonteSaldo=eSaldo?aqCalc:afsSaldo;
       if(eSaldo) console.warn('AF saldo pendente:',eSaldo.message);
       (fonteSaldo||[]).forEach(r=>{
@@ -1432,11 +1430,11 @@ async function loadItensEntregas(){
     const contratoIds=[...new Set((itc||[]).map(i=>i.contrato_id).filter(Boolean))];
     const empPorItem={}, empPorContrato={};
     if(itemIds.length){
-      const {data:ei}=await sb.from('empenho_itens').select('item_id,empenhos(numero)').in('item_id',itemIds);
+      const ei=rEi?.data;
       (ei||[]).forEach(x=>{ if(x.item_id){ (empPorItem[x.item_id]=empPorItem[x.item_id]||[]).push(x.empenhos?.numero||''); } });
     }
     if(contratoIds.length){
-      const {data:ec}=await sb.from('empenhos').select('numero,contrato_id').in('contrato_id',contratoIds);
+      const ec=rEc?.data;
       (ec||[]).forEach(e=>{ if(e.contrato_id){ (empPorContrato[e.contrato_id]=empPorContrato[e.contrato_id]||[]).push(e.numero||''); } });
     }
     itemPorId=Object.fromEntries((itc||[]).map(it=>[String(it.id),it]));

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-12 — Controle de Entregas carrega mais rápido
+
+- `loadItensEntregas` (js/legacy/40-itens-entregas.js) dispara as consultas ao Supabase em duas etapas paralelas (`Promise.all`) em vez de uma fila de `await`, não repete mais a consulta de `itens_entregas` e lista só as colunas usadas. A tela continua sendo montada só depois que tudo chega.
+- `loadData()` (painel de Emendas, js/legacy/90-bootstrap-senha.js) deixou de rodar sempre na abertura: só carrega de imediato se a aba aberta usa seus dados (Emendas, Consulta rápida, Inventário, Licitações); nas demais carrega em segundo plano depois de alguns segundos. Nunca roda em paralelo consigo mesmo.
+- Salvamentos feitos em outras abas (Atas, Entregas, Empenhos, Licitações…) não recarregam mais o painel inteiro: só marcam os dados como desatualizados (`_emendaStale`); a recarga acontece ao voltar a uma aba que os usa. `ensureEmendasData()` é o ponto único para garantir os dados.
+- `loadInventario` busca as unidades de aquisição e de atas, `emenda_itens` e `atas_itens` em paralelo.
+- Sem alteração de schema.
+
 ## 2026-11-11 — Termo de ateste vira Relatório de Fiscalização (IN CGM 06/2026)
 
 - O documento gerado pelo botão de medição/termo (Fiscalização e aba do contrato) passa a ser o

@@ -100,13 +100,14 @@ async function loadInventario(){
     const rows=[];
     const aqUnidadesPorEntrega={};
     const aqEntregaIds=[...new Set((aq||[]).map(r=>r.id).filter(Boolean))];
-    for(const ids of _chunkArray(aqEntregaIds,200)){
-      const {data:uns}=await sb.from('itens_entregas_unidades')
-        .select('id,entrega_id,unidade_id,unidade_nome,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
-        .in('entrega_id',ids)
-        .order('unidade_seq',{ascending:true});
+    // Blocos independentes: buscados em paralelo (em ordem, para preservar a ordenação por unidade_seq).
+    const _unsAq=await Promise.all(_chunkArray(aqEntregaIds,200).map(ids=>sb.from('itens_entregas_unidades')
+      .select('id,entrega_id,unidade_id,unidade_nome,patrimonio,numero_serie,unidade_seq,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
+      .in('entrega_id',ids)
+      .order('unidade_seq',{ascending:true})));
+    _unsAq.forEach(({data:uns})=>{
       (uns||[]).forEach(u=>{ (aqUnidadesPorEntrega[String(u.entrega_id)]=aqUnidadesPorEntrega[String(u.entrega_id)]||[]).push(u); });
-    }
+    });
     (aq||[]).forEach(r=>{
       const it=r.itens||{};
       const ei=it.emenda_it||{};
@@ -177,29 +178,28 @@ async function loadInventario(){
     });
     const ataEmendaInfo={};
     const ataEmendaIds=[...new Set(atInventario.map(r=>r.emenda_item_id).filter(Boolean))];
-    if(ataEmendaIds.length){
-      const {data:emInfo}=await sb.from('emenda_itens')
-        .select('id,item,emenda,unidade_beneficiada,unidade_entrega,empenho,nota_fiscal,patrimonio,emendas:emenda_id(emenda,ano,parlamentar)')
-        .in('id',ataEmendaIds);
-      (emInfo||[]).forEach(e=>{ ataEmendaInfo[String(e.id)]=e; });
-    }
     const ataItemInfo={};
     const ataItemIds=[...new Set(atInventario.map(r=>r.ata_item_id).filter(Boolean))];
-    if(ataItemIds.length){
-      const {data:aiInfo}=await sb.from('atas_itens')
-        .select('id,cpl,sim,item,marca_modelo,empresa,valor_unit,categoria_id,categorias_licitacao(nome),contratos(cpl,numero_contrato,prestador)')
-        .in('id',ataItemIds);
-      (aiInfo||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
-    }
     const ataUnidadesPorExec={};
     const ataExecIds=[...new Set(atInventario.map(r=>r.id).filter(Boolean))];
-    for(const ids of _chunkArray(ataExecIds,200)){
-      const {data:uns}=await sb.from('atas_execucao_unidades')
+    // Três consultas independentes (emenda_itens, atas_itens e unidades das execuções): em paralelo.
+    const [rEmInfo,rAiInfo,rUnsAta]=await Promise.all([
+      ataEmendaIds.length?sb.from('emenda_itens')
+        .select('id,item,emenda,unidade_beneficiada,unidade_entrega,empenho,nota_fiscal,patrimonio,emendas:emenda_id(emenda,ano,parlamentar)')
+        .in('id',ataEmendaIds):null,
+      ataItemIds.length?sb.from('atas_itens')
+        .select('id,cpl,sim,item,marca_modelo,empresa,valor_unit,categoria_id,categorias_licitacao(nome),contratos(cpl,numero_contrato,prestador)')
+        .in('id',ataItemIds):null,
+      Promise.all(_chunkArray(ataExecIds,200).map(ids=>sb.from('atas_execucao_unidades')
         .select('id,exec_id,patrimonio,numero_serie,unidade_seq,unidade_id,unidade_nome,data_entrega_unidade,recebido_em,recebido_por,notas_fiscais(numero,data_emissao,valor_total,arquivo_url)')
         .in('exec_id',ids)
-        .order('unidade_seq',{ascending:true});
+        .order('unidade_seq',{ascending:true})))
+    ]);
+    (rEmInfo?.data||[]).forEach(e=>{ ataEmendaInfo[String(e.id)]=e; });
+    (rAiInfo?.data||[]).forEach(i=>{ ataItemInfo[String(i.id)]=i; });
+    (rUnsAta||[]).forEach(({data:uns})=>{
       (uns||[]).forEach(u=>{ (ataUnidadesPorExec[String(u.exec_id)]=ataUnidadesPorExec[String(u.exec_id)]||[]).push(u); });
-    }
+    });
     atInventario.forEach(r=>{
       const emInfo=ataEmendaInfo[String(r.emenda_item_id||'')]||{};
       const em=emInfo.emendas||{};

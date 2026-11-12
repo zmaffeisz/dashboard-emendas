@@ -1,17 +1,56 @@
 // Garante que loadData() roda após checkAuth E após o DOM estar pronto.
 // Também recarrega ao clicar na aba de Emendas se ainda não carregou.
 let _emendaCarregado = false;
+let _emendaStale = false;       // dados do painel desatualizados por salvamentos feitos em outras abas
+let _emendasPromise = null;     // carga em andamento (evita cargas simultâneas)
+let _emendasRerun = false;      // pedido de nova carga recebido durante uma carga
 const _origLoadData = loadData;
-loadData = async function(){
-  _emendaCarregado = false;
-  await _origLoadData();
-  _emendaCarregado = true;
+
+// Abas que leem allRows/cachedEmendas/cachedUnidades: precisam dos dados do painel de Emendas.
+const _ABAS_USAM_DADOS_EMENDAS = ['dashboard','consulta','inventario-ac','licitacoes'];
+// Nestas abas, um salvamento que chame loadData() recarrega na hora (o usuário está vendo os dados).
+const _ABAS_RECARGA_IMEDIATA = ['dashboard','consulta','inventario-ac'];
+
+// loadData() continua sendo o ponto único de recarga, mas:
+//  - nunca roda em paralelo consigo mesmo;
+//  - se chamado a partir de outra aba (ex.: salvar AF em Atas), só marca os dados como
+//    desatualizados; a recarga acontece quando o usuário voltar a uma aba que usa esses dados.
+loadData = function(){
+  const aba = window._activeTab || 'dashboard';
+  if(_emendaCarregado && !_emendasPromise && !_ABAS_RECARGA_IMEDIATA.includes(aba)){
+    _emendaStale = true;
+    return Promise.resolve();
+  }
+  if(_emendasPromise){ _emendasRerun = true; return _emendasPromise; }
+  _emendasPromise = (async()=>{
+    do{
+      _emendasRerun = false;
+      _emendaCarregado = false;
+      await _origLoadData();
+      _emendaCarregado = true;
+      _emendaStale = false;
+    }while(_emendasRerun);
+  })().finally(()=>{ _emendasPromise = null; });
+  return _emendasPromise;
 };
+
+// Garante que allRows/cachedEmendas/cachedUnidades estão carregados (e atualizados).
+function ensureEmendasData(){
+  if(_emendasPromise) return _emendasPromise;
+  if(_emendaCarregado && !_emendaStale) return Promise.resolve();
+  const aba = window._activeTab || 'dashboard';
+  // chamada explícita: força a carga mesmo que a aba ativa não seja de recarga imediata
+  if(_emendaCarregado && !_ABAS_RECARGA_IMEDIATA.includes(aba)){
+    _emendaCarregado = false; // permite o fluxo normal de loadData()
+  }
+  return loadData();
+}
+window.ensureEmendasData = ensureEmendasData;
 
 const _origShowTab = showTab;
 showTab = function(name){
   _origShowTab(name);
-  if(name === 'dashboard' && !_emendaCarregado) loadData();
+  if(_ABAS_USAM_DADOS_EMENDAS.includes(name) && (!_emendaCarregado || _emendaStale)) ensureEmendasData();
 };
 
 // Injeta botão X em todos os modais que usam .modal-title (sem X próprio)
@@ -151,5 +190,16 @@ sb.auth.onAuthStateChange((event) => {
 
 checkAuth().then(() => {
   // Pequeno delay garante que o DOM está pronto antes de carregar
-  setTimeout(() => { loadData(); _initModalCloseButtons(); }, 100);
+  setTimeout(() => {
+    _initModalCloseButtons();
+    const aba = window._activeTab || 'dashboard';
+    if(_ABAS_USAM_DADOS_EMENDAS.includes(aba)){
+      ensureEmendasData();
+    }else{
+      // A aba aberta não usa os dados do painel de Emendas: deixa-a carregar primeiro e
+      // só depois prepara os dados em segundo plano (Licitações/Inventário/Consulta usam).
+      const bg = () => { if(!_emendaCarregado && !_emendasPromise) ensureEmendasData(); };
+      setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(bg, {timeout: 4000}) : bg()), 6000);
+    }
+  }, 100);
 });
