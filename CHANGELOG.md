@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-13 — Rodapé removido
+
+- Removido o crédito de desenvolvimento do rodapé da aplicação.
+
 ## 2026-11-12 — Controle de Entregas carrega mais rápido
 
 - `loadItensEntregas` (js/legacy/40-itens-entregas.js) dispara as consultas ao Supabase em duas etapas paralelas (`Promise.all`) em vez de uma fila de `await`, não repete mais a consulta de `itens_entregas` e lista só as colunas usadas. A tela continua sendo montada só depois que tudo chega.
