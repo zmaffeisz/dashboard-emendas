@@ -39,6 +39,11 @@
 
 ## 2. Emendas e saldo
 
+- Salvamento de processos valida os itens e suas fontes antes de gravar o cadastro
+  pai. Se uma gravação posterior falhar, o formulário mantém os IDs do processo,
+  itens e fontes já confirmados para que a correção e a nova tentativa reutilizem
+  os mesmos registros. Cliques simultâneos não iniciam gravações concorrentes.
+
 - Na fase de licitação, serviços por escopo fechado e demais serviços não periódicos
   podem puxar itens previstos da emenda. `itens` preserva `emenda_id`,
   `emenda_item_id`, unidade de destino e fonte; o rateio financeiro usa

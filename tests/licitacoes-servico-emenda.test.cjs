@@ -29,14 +29,15 @@ load('function _procEhServicoDemanda(','function _procSetValorEstimadoServicoMen
 load('function procTipoServicoChange(','function _renderProcItensVazio(');
 load('function _procEhAta(','function _procValidarItensLocacao(');
 load('function _procAplicarModoAta(','function _procEmendaOpts(');
-load('async function _persistProcItens(');
+load('function _prepararProcItens(');
 function card({linked=true,existing=false}={}){
   const values={'.pi-desc':'Reforma da UBS','.pi-siam':'', '.pi-unidade-medida':'SERVIÇO','.pi-qtde':'1','.pi-valor':'300000','.pi-prazo':'','.pi-unidade':'10','.pi-fonte':linked?'emenda':'sem_emenda','.pi-fonte-desc':''};
   const controls={};
-  return {dataset:{itemId:existing?'existente':'',emendaId:linked?'emenda':'',emendaItemId:linked?'previsto':''},querySelector(selector){return controls[selector]||(controls[selector]={value:values[selector]??'',style:{}});}};
+  return {dataset:{itemId:existing?'item-novo':'',emendaId:linked?'emenda':'',emendaItemId:linked?'previsto':''},querySelector(selector){return controls[selector]||(controls[selector]={value:values[selector]??'',style:{}});}};
 }
 async function check(tipo){
   inserts=[];updates=[];rateios=[];
+  context._procItensLoaded=[];
   el('proc-natureza').value='SERVIÇO';el('proc-tipo-servico').value=tipo;
   cards=[card()];
   context.procNaturezaChange();
@@ -64,7 +65,7 @@ async function check(tipo){
   cards=[];el('proc-valor').dataset.calculadoPorItens='';el('proc-valor').value='123456';
   context.procTipoServicoChange();
   assert.equal(el('proc-valor').value,'123456','Não apaga a estimativa global de serviço antigo sem itens.');
-  cards=[card({linked:false})];inserts=[];rateios=[];
+  cards=[card({linked:false})];inserts=[];rateios=[];context._procItensLoaded=[];
   await context._persistProcItens(20,'SERVIÇO');
   assert.equal(inserts[0].fonte_tipo,'sem_emenda');assert.equal(inserts[0].emenda_id,null);assert.equal(rateios.length,0);
   for(const tipo of ['Serviço mensal valor fixo','Serviço trimestral valor fixo']){

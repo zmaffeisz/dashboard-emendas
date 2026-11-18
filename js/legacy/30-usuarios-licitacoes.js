@@ -1246,7 +1246,17 @@ function _procCodigoNumericoFiltrar(inp){
     try{ inp.setSelectionRange(Math.max(0,p-removidos),Math.max(0,p-removidos)); }catch(_){}
   }
 }
+let _procSalvando=false;
 async function salvarProcesso(){
+  if(_procSalvando) return;
+  _procSalvando=true;
+  const btn=document.querySelector('#modal-processo .btn-primary');
+  if(btn) btn.disabled=true;
+  try{ await _salvarProcessoValidado(); }
+  catch(e){ showMsg('proc','Erro ao salvar: '+(e.message||e),'err'); }
+  finally{ _procSalvando=false; if(btn) btn.disabled=false; }
+}
+async function _salvarProcessoValidado(){
   const ident=document.getElementById('proc-identificador').value.trim();
   const tipoSelecionado=document.getElementById('proc-tipo').value;
   const tipoOutro=document.getElementById('proc-tipo-outro')?.value.trim()||'';
@@ -1275,6 +1285,10 @@ async function salvarProcesso(){
   if(erroLocacao){showMsg('proc',erroLocacao,'err');return;}
   const erroPrazo=_procValidarPrazosEntrega(natureza);
   if(erroPrazo){showMsg('proc',erroPrazo,'err');return;}
+  const usaItens=natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||natureza==='LOCAÇÃO'||_procUsaItensServico();
+  let itensPreparados;
+  try{ if(usaItens) itensPreparados=_prepararProcItens(natureza); }
+  catch(e){ showMsg('proc',e.message||String(e),'err'); return; }
   let categoriaId;
   try{ categoriaId=await _resolverCategoriaProcesso(); }
   catch(e){ showMsg('proc','Categoria: '+(e.message||e),'err'); return; }
@@ -1311,8 +1325,10 @@ async function salvarProcesso(){
     : await sb.from('processos').insert(dados).select('id').single();
   if(res.error){btn.disabled=false;showMsg('proc','Erro: '+res.error.message,'err');return;}
   const procId=res.data?.id||_procEditId;
-  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||natureza==='LOCAÇÃO'||_procUsaItensServico()){
-    try{ await _persistProcItens(procId, natureza); }
+  // O cadastro já existe: qualquer tentativa posterior deve atualizar este mesmo ID.
+  _procEditId=procId;
+  if(usaItens){
+    try{ await _persistProcItens(procId, natureza, itensPreparados); }
     catch(e){ btn.disabled=false; showMsg('proc','Processo salvo, mas erro nos itens: '+(e.message||e),'err'); await loadLicitacoes(); return; }
   }
   btn.disabled=false;
@@ -2227,7 +2243,7 @@ async function _carregarProcItens(processoId){
   _renderProcItensVazio();
   _recalcProcValorEstimado();
 }
-async function _persistProcItens(processoId, natureza){
+function _prepararProcItens(natureza){
   const ehAta=(natureza==='ATA DE RP');
   const ehDemanda=_procEhServicoDemanda();
   const ehServico=_procUsaItensServico();
@@ -2268,8 +2284,8 @@ async function _persistProcItens(processoId, natureza){
     }
     else if(!ehAta){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     const rateios=(!ehAta&&fonte_tipo==='emenda'&&c.dataset.rateioBloqueado!=='1')?_procLerRecursosCard(c):[];
-    current.push({id:c.dataset.itemId||_procUuid(), novo:!c.dataset.itemId, rateios, row:{
-      processo_id:processoId, origem, fonte_tipo:ehAta?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
+    current.push({id:c.dataset.itemId||c.dataset.novoItemId||_procUuid(), novo:!c.dataset.itemId, card:c, rateios, row:{
+      origem, fonte_tipo:ehAta?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, codigo_siam:codigoSiam, unidade_medida:unidadeMedida, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
       prazo_entrega_dias:ehServico?null:prazoEntrega,
@@ -2277,14 +2293,40 @@ async function _persistProcItens(processoId, natureza){
       status:'em licitação'
     }});
   }
+  current.filter(x=>x.novo).forEach(x=>{x.card.dataset.novoItemId=x.id;});
+  return current;
+}
+async function _persistProcItens(processoId, natureza, preparados){
+  const current=(preparados||_prepararProcItens(natureza)).map(x=>({
+    ...x,row:x.row?{...x.row,processo_id:processoId}:null
+  }));
   const atuais=current.filter(x=>!x.novo).map(x=>String(x.id));
   const toDelete=_procItensLoaded.filter(id=>!atuais.includes(id));
-  if(toDelete.length){ const {error}=await sb.from('itens').delete().in('id',toDelete).is('contrato_id',null); if(error) throw error; }
+  if(toDelete.length){
+    const {error}=await sb.from('itens').delete().in('id',toDelete).is('contrato_id',null); if(error) throw error;
+    _procItensLoaded=_procItensLoaded.filter(id=>!toDelete.includes(id));
+  }
   const inserts=current.filter(x=>x.novo&&!x.skip).map(x=>({id:x.id,...x.row}));
-  if(inserts.length){ const {error}=await sb.from('itens').insert(inserts); if(error) throw error; }
+  if(inserts.length){
+    const {error}=await sb.from('itens').insert(inserts); if(error) throw error;
+    current.filter(x=>x.novo&&!x.skip).forEach(x=>{
+      x.card.dataset.itemId=x.id;
+      if(!_procItensLoaded.includes(String(x.id))) _procItensLoaded.push(String(x.id));
+    });
+  }
   for(const x of current.filter(x=>!x.novo&&x.id&&!x.skip)){ const {error}=await sb.from('itens').update(x.row).eq('id',x.id); if(error) throw error; }
   for(const x of current.filter(x=>!x.skip&&x.rateios?.length)){
-    const {error}=await sb.rpc('salvar_licitacao_item_recursos',{p_item_id:x.id,p_recursos:x.rateios});
+    const {data,error}=await sb.rpc('salvar_licitacao_item_recursos',{p_item_id:x.id,p_recursos:x.rateios});
     if(error) throw new Error(`Rateio financeiro: ${error.message}`);
+    // Preserva também IDs das fontes já gravadas se outro item falhar depois.
+    if(Array.isArray(data)){
+      const rows=[...x.card.querySelectorAll('.pi-recurso-row[data-status="ATIVO"]')];
+      x.rateios.forEach((recurso,idx)=>{
+        const salvo=data.find(r=>r.status==='ATIVO'&&r.tipo===recurso.tipo&&r.fonte_tipo===recurso.fonte_tipo&&
+          (r.emenda_id||null)===(recurso.emenda_id||null)&&
+          (r.fonte_descricao||null)===(recurso.fonte_descricao||null));
+        if(salvo&&rows[idx]) rows[idx].dataset.recursoId=salvo.id;
+      });
+    }
   }
 }

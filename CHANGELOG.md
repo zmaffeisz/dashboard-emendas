@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-18 — Salvar processo não duplica após erro nos itens
+
+- Unidade de medida, dados dos itens e fontes de recurso são validados antes de
+  criar/atualizar o processo ou resolver sua categoria.
+- A gravação impede cliques simultâneos e mantém o ID do processo criado caso os
+  itens falhem depois. Uma nova tentativa atualiza o mesmo cadastro.
+- Itens e fontes já gravados também mantêm seus IDs no formulário para que uma
+  falha posterior no rateio não os duplique na nova tentativa.
+- Sem alteração de schema.
+
 ## 2026-11-18 — Itens de emenda em licitações de serviço por escopo
 
 - Processos de serviço por escopo fechado e outros serviços não periódicos exibem
