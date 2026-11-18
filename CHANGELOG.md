@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-18 — Emendas sem itens aparecem na listagem
+
+- A visão Emendas passa a incluir os cadastros sem itens, com número/ano, objeto,
+  parlamentar, valor cedido e indicação de que nenhum item foi cadastrado.
+- Os filtros, a contagem de emendas e os valores cedidos incluem esses cadastros.
+  Contagem de itens, execução e seleção para licitação continuam usando somente itens reais.
+- O saldo de uma emenda sem itens considera seu valor cedido integral. Sem alteração de banco.
+
 ## 2026-11-13 — Rodapé removido
 
 - Removido o crédito de desenvolvimento do rodapé da aplicação.

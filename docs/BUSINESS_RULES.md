@@ -41,6 +41,11 @@
 
 - Identidade da emenda = **número + ano** (`emendas.emenda` + `emendas.ano`).
 - `valor_cedido` é o teto da emenda.
+- Emendas podem existir sem itens. A visão **Emendas** deve mostrar esses cadastros
+  com seus dados gerais e a indicação **Nenhum item cadastrado**, respeitando os
+  mesmos filtros e o contexto organizacional da consulta. Não criar itens fictícios
+  para torná-las visíveis. O valor cedido entra nos indicadores de emendas; a contagem
+  de itens e as ações de execução/licitação consideram somente itens reais.
 - Os dados centrais da emenda são editáveis somente por administradores. Como saldo,
   indicadores e seletores consultam `emendas` pela chave `emenda_id`, a atualização de
   `valor_cedido` passa a valer automaticamente em todas as leituras derivadas; não existe
