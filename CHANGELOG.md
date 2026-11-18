@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-18 — Itens de emenda em licitações de serviço por escopo
+
+- Processos de serviço por escopo fechado e outros serviços não periódicos exibem
+  os itens da licitação e permitem **Puxar de emenda**, preservando emenda, item de
+  origem, unidade beneficiada e fontes de recurso ao salvar/reabrir.
+- Serviço por demanda também preserva esses vínculos, em vez de gravar sempre
+  `sem_emenda`. Não exige prazo de entrega de aquisição para itens de serviço.
+- Cadastros antigos de serviço sem itens mantêm sua estimativa global. Fluxos
+  mensal/trimestral fixo e regras de execução/pagamento permanecem próprios.
+- Sem alteração de schema.
+
 ## 2026-11-18 — Emendas sem itens aparecem na listagem
 
 - A visão Emendas passa a incluir os cadastros sem itens, com número/ano, objeto,

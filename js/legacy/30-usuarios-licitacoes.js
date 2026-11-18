@@ -1114,6 +1114,7 @@ async function abrirNovoProcesso(opcoes={}){
   if(!podeEditar('contratos')&&!_isAdmin()){alert('Sem permissão.');return;}
   const itensEmenda=Array.isArray(opcoes.itensEmenda)?opcoes.itensEmenda:[];
   _procEditId=null;
+  document.getElementById('proc-valor').dataset.calculadoPorItens='';
   document.getElementById('proc-locacao-meses').value='';
   document.getElementById('proc-locacao-valor-mensal').value='';
   document.getElementById('proc-titulo').textContent='➕ Novo processo';
@@ -1153,6 +1154,8 @@ async function abrirNovoProcesso(opcoes={}){
 async function abrirEditarProcesso(id){
   const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
   _procEditId=p.id;
+  document.getElementById('proc-valor').dataset.calculadoPorItens='';
+  document.getElementById('proc-itens-lista').innerHTML='';
   _procSaldoCache={};
   _procEditOldByEmenda={};
   document.getElementById('proc-titulo').textContent='✏️ Editar processo';
@@ -1308,7 +1311,7 @@ async function salvarProcesso(){
     : await sb.from('processos').insert(dados).select('id').single();
   if(res.error){btn.disabled=false;showMsg('proc','Erro: '+res.error.message,'err');return;}
   const procId=res.data?.id||_procEditId;
-  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||natureza==='LOCAÇÃO'||_procEhServicoDemanda()){
+  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||natureza==='LOCAÇÃO'||_procUsaItensServico()){
     try{ await _persistProcItens(procId, natureza); }
     catch(e){ btn.disabled=false; showMsg('proc','Processo salvo, mas erro nos itens: '+(e.message||e),'err'); await loadLicitacoes(); return; }
   }
@@ -1428,6 +1431,11 @@ function _procEhServicoTrimestralFixo(){
 function _procEhServicoPeriodicoFixo(){
   return _procEhServicoMensalFixo()||_procEhServicoTrimestralFixo();
 }
+// Itens e fontes da licitação são independentes do fluxo de execução/pagamento.
+// Mensal/trimestral fixo continuam no cadastro periódico próprio.
+function _procUsaItensServico(){
+  return document.getElementById('proc-natureza')?.value==='SERVIÇO'&&!_procEhServicoPeriodicoFixo();
+}
 function _procProcessoEhTrimestral(p){
   return String(p?.tipo_servico||'')===PROC_TIPO_SERVICO_TRIMESTRAL_FIXO;
 }
@@ -1524,9 +1532,9 @@ function _procNumeroColado(valor){
 }
 function _procCamposPlanilhaItens(){
   const base=['.pi-desc','.pi-qtde','.pi-unidade-medida','.pi-valor'];
-  if(!_procEhServicoDemanda()&&!_procEhLocacao()) base.push('.pi-prazo');
+  if(!_procUsaItensServico()&&!_procEhLocacao()) base.push('.pi-prazo');
   base.push('.pi-siam');
-  if(!_procEhAta()&&!_procEhServicoDemanda()) base.push('.pi-unidade','.pi-fonte');
+  if(!_procEhAta()) base.push('.pi-unidade','.pi-fonte');
   return base;
 }
 function _procEhCabecalhoPlanilha(linha){
@@ -1728,21 +1736,26 @@ function procTipoServicoChange(){
   }else if(document.getElementById('proc-natureza')?.value==='SERVIÇO'){
     const lista=document.getElementById('proc-serv-mensal-itens-lista');
     if(lista) lista.innerHTML='';
-    const valEl=document.getElementById('proc-valor');
-    if(valEl?.readOnly) valEl.value='';
     _procSetValorEstimadoServicoMensal(false);
   }else{
     const lista=document.getElementById('proc-serv-mensal-itens-lista');
     if(lista) lista.innerHTML='';
   }
   const itensSec=document.getElementById('proc-itens-section');
-  if(itensSec&&document.getElementById('proc-natureza')?.value==='SERVIÇO') itensSec.style.display=demanda?'block':'none';
+  if(itensSec&&document.getElementById('proc-natureza')?.value==='SERVIÇO'){
+    itensSec.style.display=_procUsaItensServico()?'block':'none';
+    if(!mensal){
+      const valEl=document.getElementById('proc-valor');
+      if(valEl){ valEl.readOnly=true; valEl.placeholder='soma automática dos itens'; }
+      _recalcProcValorEstimado();
+    }
+  }
   _procAplicarModoAta();
 }
 
 function procNaturezaChange(){
   const nat=document.getElementById('proc-natureza').value;
-  const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP'||nat==='LOCAÇÃO'||_procEhServicoDemanda());
+  const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP'||nat==='LOCAÇÃO'||_procUsaItensServico());
   const showServico=(nat==='SERVIÇO');
   const tipoServicoWrap=document.getElementById('proc-tipo-servico-wrap');
   const tipoServico=document.getElementById('proc-tipo-servico');
@@ -1763,9 +1776,22 @@ function procNaturezaChange(){
 }
 function _recalcProcValorEstimado(){
   const nat=document.getElementById('proc-natureza').value;
-  if(nat!=='AQUISIÇÃO'&&nat!=='ATA DE RP'&&nat!=='LOCAÇÃO'&&!_procEhServicoDemanda()) return;
+  if(nat!=='AQUISIÇÃO'&&nat!=='ATA DE RP'&&nat!=='LOCAÇÃO'&&!_procUsaItensServico()) return;
+  const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
+  const el=document.getElementById('proc-valor');
+  // Cadastros antigos de serviço podem ter apenas estimativa global, sem itens.
+  if(_procUsaItensServico()&&!cards.length){
+    if(el){
+      if(el.dataset.calculadoPorItens==='1') el.value='';
+      el.dataset.calculadoPorItens='';
+      el.readOnly=false;
+    }
+    _renderProcEmendaSaldoResumo();
+    return;
+  }
+  if(el&&_procUsaItensServico()) el.dataset.calculadoPorItens='1';
   let soma=0;
-  document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{
+  cards.forEach(c=>{
     const q=parseFloat(c.querySelector('.pi-qtde')?.value)||0;
     const v=parseFloat(c.querySelector('.pi-valor')?.value)||0;
     soma+=q*v;
@@ -1774,7 +1800,7 @@ function _recalcProcValorEstimado(){
   if(mensal) mensal.value=nat==='LOCAÇÃO'&&soma?soma.toFixed(2):'';
   const meses=Number(document.getElementById('proc-locacao-meses')?.value);
   const total=nat==='LOCAÇÃO'?(Number.isInteger(meses)&&meses>0?soma*meses:0):soma;
-  const el=document.getElementById('proc-valor'); if(el) el.value=total?total.toFixed(2):'';
+  if(el) el.value=total?total.toFixed(2):'';
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(procRecalcRateio);
   _renderProcEmendaSaldoResumo();
 }
@@ -1807,7 +1833,7 @@ function _procValidarItensLocacao(){
 }
 function _procAplicarModoAta(){
   const ata=_procEhAta();
-  const demanda=_procEhServicoDemanda();
+  const servico=_procUsaItensServico();
   const locacao=_procEhLocacao();
   const valorLabel=document.getElementById('proc-valor')?.closest('.form-group')?.querySelector('.form-label');
   if(valorLabel) valorLabel.textContent=locacao?'Valor global estimado (R$)':'Valor estimado (R$)';
@@ -1816,23 +1842,29 @@ function _procAplicarModoAta(){
   });
   const meses=document.getElementById('proc-locacao-meses'); if(meses) meses.required=locacao;
   // botão "Puxar de emenda" some na ATA (vínculo de emenda só na execução da ata)
-  const btn=document.getElementById('proc-btn-puxar-emenda'); if(btn) btn.style.display=(ata||demanda)?'none':'';
-  const modelo=document.getElementById('proc-btn-modelo-itens'); if(modelo) modelo.style.display=(demanda||locacao)?'none':'';
-  if(ata||demanda){ const box=document.getElementById('proc-import-box'); if(box){ box.style.display='none'; box.innerHTML=''; } }
+  const btn=document.getElementById('proc-btn-puxar-emenda'); if(btn) btn.style.display=ata?'none':'';
+  const modelo=document.getElementById('proc-btn-modelo-itens'); if(modelo) modelo.style.display=(servico||locacao)?'none':'';
+  const dicaModelo=document.getElementById('proc-itens-modelo-dica'); if(dicaModelo) dicaModelo.style.display=(servico||locacao)?'none':'';
+  if(ata){ const box=document.getElementById('proc-import-box'); if(box){ box.style.display='none'; box.innerHTML=''; } }
   // dica do cabeçalho
   const hint=document.getElementById('proc-itens-hint');
-  if(hint) hint.textContent=ata?'(ata de registro de preços — sem emenda/unidade/fonte nesta fase)':(demanda?'(serviço por demanda — pelo menos 1 item obrigatório)':(locacao?'(valor mensal por unidade; total mensal = quantidade × valor unitário; fonte obrigatória)':'(fonte de recurso obrigatória por item)'));
+  if(hint) hint.textContent=ata?'(ata de registro de preços — sem emenda/unidade/fonte nesta fase)':(servico?'(itens previstos do serviço; permite fonte de recurso de emenda)':(locacao?'(valor mensal por unidade; total mensal = quantidade × valor unitário; fonte obrigatória)':'(fonte de recurso obrigatória por item)'));
   // em cada card de item, oculta Unidade destino e a linha de Fonte
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{
-    const p=c.querySelector('.pi-prazo-col'); if(p) p.style.display=(demanda||locacao)?'none':'';
-    const prazo=c.querySelector('.pi-prazo'); if(prazo) prazo.required=!demanda&&!locacao;
+    const p=c.querySelector('.pi-prazo-col'); if(p) p.style.display=(servico||locacao)?'none':'';
+    const prazo=c.querySelector('.pi-prazo'); if(prazo) prazo.required=!servico&&!locacao;
     const valorLabel=c.querySelector('.pi-valor-label'); if(valorLabel) valorLabel.textContent=locacao?'Vl. mensal unit. *':'Vl. unit. estimado';
     const valor=c.querySelector('.pi-valor'); if(valor) valor.required=locacao;
-    const u=c.querySelector('.pi-unidade-col'); if(u) u.style.display=(ata||demanda)?'none':'';
-    const f=c.querySelector('.pi-fonte-row'); if(f) f.style.display=(ata||demanda)?'none':'';
+    const u=c.querySelector('.pi-unidade-col'); if(u) u.style.display=ata?'none':'';
+    const f=c.querySelector('.pi-fonte-row'); if(f) f.style.display=ata?'none':'';
   });
 }
-function _procFonteOpts(sel){const fonte=(sel==='sem_emenda'||sel==='municipal')?'outra':sel;return PROC_FONTES.map(([v,l])=>`<option value="${v}"${fonte===v?' selected':''}>${l}</option>`).join('');}
+function _procFonteOpts(sel){
+  const servico=_procUsaItensServico();
+  const fonte=(sel==='sem_emenda'&&!servico||sel==='municipal')?'outra':sel;
+  const fontes=servico?[['sem_emenda','Sem emenda'],...PROC_FONTES]:PROC_FONTES;
+  return fontes.map(([v,l])=>`<option value="${v}"${fonte===v?' selected':''}>${l}</option>`).join('');
+}
 function _procEmendaOpts(sel){return '<option value="">Selecione a emenda...</option>'+(cachedEmendas||[]).map(e=>`<option value="${e.id}"${String(sel)===String(e.id)?' selected':''}>${_sanEsc(String(e.emenda))}${e.parlamentar?(' — '+_sanEsc(e.parlamentar)):''}</option>`).join('');}
 function _procUnidadeOpts(sel){return '<option value="">— Unidade destino —</option>'+(cachedUnidades||[]).map(u=>`<option value="${u.id}"${String(sel)===String(u.id)?' selected':''}>${_sanEsc(u.nome)}</option>`).join('');}
 
@@ -2198,9 +2230,10 @@ async function _carregarProcItens(processoId){
 async function _persistProcItens(processoId, natureza){
   const ehAta=(natureza==='ATA DE RP');
   const ehDemanda=_procEhServicoDemanda();
+  const ehServico=_procUsaItensServico();
   const ehLocacao=(natureza==='LOCAÇÃO');
   const erroLocacao=_procValidarItensLocacao(); if(erroLocacao) throw new Error(erroLocacao);
-  const origem=ehAta?'ata':(ehDemanda?'servico_demanda':(ehLocacao?'locacao':'aquisicao'));
+  const origem=ehAta?'ata':(ehDemanda?'servico_demanda':(ehServico?'servico':(ehLocacao?'locacao':'aquisicao')));
   const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
   const current=[];
   for(const c of cards){
@@ -2213,9 +2246,9 @@ async function _persistProcItens(processoId, natureza){
     const codigoSiam=_procCodigoSiam(g('pi-siam')?.value);
     const unidadeMedida=_procUnidadeMedidaValor(g('pi-unidade-medida')?.value);
     const qtde=parseFloat(g('pi-qtde').value);
-    const fonte_tipo=g('pi-fonte').value;
+    const fonte_tipo=g('pi-fonte').value||(ehServico?'sem_emenda':'');
     const prazoNumero=Number(g('pi-prazo')?.value);
-    const prazoEntrega=(!ehDemanda&&!ehLocacao&&Number.isInteger(prazoNumero)&&prazoNumero>0)?prazoNumero:null;
+    const prazoEntrega=(!ehServico&&!ehLocacao&&Number.isInteger(prazoNumero)&&prazoNumero>0)?prazoNumero:null;
     // Item 3: ATA DE RP não exige fonte/emenda/unidade nesta fase (vínculo ocorre na execução da ata)
     if(!unidadeMedida) throw new Error(`Informe a unidade de medida do item "${descricao||'sem descrição'}".`);
     _procRegistrarUnidadeMedida(unidadeMedida);
@@ -2225,22 +2258,22 @@ async function _persistProcItens(processoId, natureza){
     }else{
       if(!descricao||!qtde||!fonte_tipo) throw new Error('Cada item precisa de descrição, quantidade e fonte de recurso.');
     }
-    if(!ehDemanda&&!ehLocacao&&!prazoEntrega) throw new Error(`O prazo de entrega do item "${descricao||'sem descrição'}" é obrigatório e deve ser maior que zero.`);
+    if(!ehServico&&!ehLocacao&&!prazoEntrega) throw new Error(`O prazo de entrega do item "${descricao||'sem descrição'}" é obrigatório e deve ser maior que zero.`);
     if(!_procCodigoSiamValido(codigoSiam)) throw new Error(`O Código SIAM do item "${descricao||'sem descrição'}" deve conter somente números, pontos e hífen.`);
     let emenda_id=null, emenda_item_id=null, fonte_descricao=null;
-    if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){
+    if(!ehAta && fonte_tipo==='emenda'){
       emenda_id=c.dataset.emendaId||null;
       emenda_item_id=c.dataset.emendaItemId||null;
       if(!emenda_item_id && !c.dataset.itemId) throw new Error('Itens com fonte = Emenda devem ser adicionados pelo botÃ£o Puxar de emenda.');
     }
-    else if(!ehAta && !ehDemanda){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
-    const rateios=(!ehAta&&!ehDemanda&&fonte_tipo==='emenda'&&c.dataset.rateioBloqueado!=='1')?_procLerRecursosCard(c):[];
+    else if(!ehAta){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
+    const rateios=(!ehAta&&fonte_tipo==='emenda'&&c.dataset.rateioBloqueado!=='1')?_procLerRecursosCard(c):[];
     current.push({id:c.dataset.itemId||_procUuid(), novo:!c.dataset.itemId, rateios, row:{
-      processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
+      processo_id:processoId, origem, fonte_tipo:ehAta?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, codigo_siam:codigoSiam, unidade_medida:unidadeMedida, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
-      prazo_entrega_dias:ehDemanda?null:prazoEntrega,
-      unidade_destino_id:(!ehAta && !ehDemanda && g('pi-unidade').value)?Number(g('pi-unidade').value):null,
+      prazo_entrega_dias:ehServico?null:prazoEntrega,
+      unidade_destino_id:(!ehAta && g('pi-unidade').value)?Number(g('pi-unidade').value):null,
       status:'em licitação'
     }});
   }

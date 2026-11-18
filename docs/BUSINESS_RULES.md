@@ -39,6 +39,14 @@
 
 ## 2. Emendas e saldo
 
+- Na fase de licitação, serviços por escopo fechado e demais serviços não periódicos
+  podem puxar itens previstos da emenda. `itens` preserva `emenda_id`,
+  `emenda_item_id`, unidade de destino e fonte; o rateio financeiro usa
+  `licitacao_item_recursos`, também para serviço por demanda. Isso vincula a origem
+  do recurso, sem definir ou reaproveitar regras de medição/pagamento do mensal fixo.
+  Serviços por escopo usam origem `servico`; por demanda, `servico_demanda`.
+  Prazo de entrega de aquisição não é obrigatório para itens de serviço.
+
 - Identidade da emenda = **número + ano** (`emendas.emenda` + `emendas.ano`).
 - `valor_cedido` é o teto da emenda.
 - Emendas podem existir sem itens. A visão **Emendas** deve mostrar esses cadastros
