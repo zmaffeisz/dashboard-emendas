@@ -582,3 +582,7 @@ e forma de pagamento por demanda. Os itens usam `origem = 'servico_demanda'`.
 Faturamento mensal pelas quantidades realizadas não transforma o contrato em
 mensal fixo: `periodicidade_pagamento`, `valor_mensal_num` e `valor_periodico_num`
 permanecem sem valor quando não existe parcela fixa contratual.
+
+### Execução histórica líquida por demanda
+
+Histórico com valores líquidos não permite deduzir bruto ou glosas a partir de quantidades vezes preços atuais. Preserve os campos desconhecidos e identifique a origem importada. Separe saldos por vigência; uma NF atravessando a renovação continua única, com rateios. Não gere aprovação fiscal, ateste ou pagamento retroativo sem evidência. Negativos quantitativos só são admitidos com configuração explícita de compensação por contrato, conservando o limite financeiro da vigência. Categorias operacionais podem compartilhar um lote contratual sem duplicar seu valor.

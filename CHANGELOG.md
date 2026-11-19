@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-19 — Histórico líquido de serviços por demanda
+
+- Importação histórica própria por vigência, sem inventar bruto, retenções, glosas, datas fiscais ou atestes. NF central permanece única quando rateada entre medições/vigências.
+- Financeiro permite consultar a vigência atual, anteriores ou todas; registros históricos são somente leitura e não entram como NFs aprovadas.
+- Compensação quantitativa por tipo depende de configuração explícita do contrato; preserva negativos, considerando o limite financeiro da vigência. Mensal fixo e escopo permanecem separados.
+- Migration `20261119140719_historico_demanda_por_vigencia.sql`: RLS por seção, somente leitura autenticada, vínculos validados e soma do rateio conferida no fechamento da transação.
+- Validação: testes JS de regressão e histórico, importação SQL com rollback, integridade de NF/rateio/vigência e permissões.
+
 ## 2026-11-19 — Classificação de contratos por demanda
 
 - A classificação lê `modelo_execucao = 'por_demanda'` como serviço contínuo por

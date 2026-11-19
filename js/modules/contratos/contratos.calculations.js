@@ -232,6 +232,7 @@ export function calculateCurrentItemUnitValue(item = {}, events = []) {
 }
 
 export function calculateMeasurementValue(contract = {}, measurementData = {}) {
+  if(measurementData.historico_importado) return roundMoney(measurementData.valor_liquido);
   const itemsValue = (measurementData.items || []).reduce((total, item) => {
     const quantity = toContractNumber(item.acceptedQuantity ?? item.quantidade_aceita ?? item.executedQuantity ?? item.quantidade_executada ?? item.quantity);
     const unitValue = toContractNumber(item.unitValue ?? item.valor_unitario);
@@ -266,7 +267,9 @@ export function calculateMeasurementNetValue(measurementData = {}) {
 export function calculateExecutedValue(contract = {}, measurements = []) {
   const approvedStatuses = ["aprovada", "aprovada_pelo_fiscal", "aprovada_com_glosa", "validada", "encaminhada"];
   return roundMoney((measurements || [])
-    .filter((measurement) => approvedStatuses.includes(String(measurement.status || "").toLowerCase()))
+    .filter((measurement) => measurement.historico_importado
+      ? !measurement.fora_vigencia_atual
+      : approvedStatuses.includes(String(measurement.status || "").toLowerCase()))
     .reduce((total, measurement) => total + calculateMeasurementValue(contract, measurement), 0));
 }
 

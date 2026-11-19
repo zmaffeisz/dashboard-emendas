@@ -433,7 +433,7 @@ async function salvarCadastroNotaFiscal(){
 function _nfOrigem(row){
   if(String(row?.contratos?.tipo_instrumento||'').toUpperCase()==='ATA') return 'ata';
   const sistema=_nfNormalize(row?.origem_sistema);
-  if(row?.medicao_id||row?.contratos?.prefixo_chamado||sistema.includes('fiscalizacao')||sistema.includes('contratos_medicoes')||sistema.includes('cadastro_central')) return 'servico';
+  if(row?.medicao_id||row?.contratos?.prefixo_chamado||sistema==='historico_liquido'||sistema.includes('fiscalizacao')||sistema.includes('contratos_medicoes')||sistema.includes('cadastro_central')) return 'servico';
   return 'aquisicao';
 }
 function _nfOrigemLabel(origem){return {servico:'Serviço',aquisicao:'Aquisição',ata:'Ata'}[origem]||'Outros';}
@@ -461,18 +461,18 @@ function renderTodasNotasFiscais(){
   const rows=nfTodasRows.filter(n=>{
     const origem=_nfOrigem(n);
     if(origemFiltro&&origem!==origemFiltro)return false;
-    if(medFiltro==='com'&&!n.medicao_id)return false;
-    if(medFiltro==='sem'&&n.medicao_id)return false;
+    if(medFiltro==='com'&&!n.medicao_id&&n.origem_sistema!=='historico_liquido')return false;
+    if(medFiltro==='sem'&&(n.medicao_id||n.origem_sistema==='historico_liquido'))return false;
     if(busca&&!_nfNormalize([n.numero_normalizado,n.numero,n.serie,n.fornecedores?.razao_social,n.contratos?.cpl,n.contratos?.numero_contrato,n.processos?.identificador,n.competencia].filter(Boolean).join(' ')).includes(busca))return false;
     return true;
   });
-  const comMed=rows.filter(n=>n.medicao_id).length;
-  const total=rows.reduce((s,n)=>s+_nfNum(n.valor_total),0);
+  const comMed=rows.filter(n=>n.medicao_id||n.origem_sistema==='historico_liquido').length;
+  const total=rows.reduce((s,n)=>s+_nfNum(n.origem_sistema==='historico_liquido'?n.valor_liquido:n.valor_total),0);
   const resumo=document.getElementById('nf-todas-resumo');if(resumo)resumo.innerHTML=`
     <span class="nf-summary-chip"><strong>${rows.length}</strong> notas</span>
     <span class="nf-summary-chip done"><strong>${comMed}</strong> com medição</span>
     <span class="nf-summary-chip pending"><strong>${rows.length-comMed}</strong> sem medição</span>
-    <span class="nf-summary-chip"><strong>${_nfMoney(total)}</strong> valor listado</span>`;
+    <span class="nf-summary-chip"><strong>${_nfMoney(total)}</strong> valor listado${rows.some(n=>n.origem_sistema==='historico_liquido')?' (inclui líquido histórico)':''}</span>`;
   const vazio=document.getElementById('nf-todas-vazio');
   if(!rows.length){body.innerHTML='';if(vazio){vazio.textContent='Nenhuma nota fiscal corresponde aos filtros.';vazio.style.display='block';}return;}
   if(vazio)vazio.style.display='none';
@@ -487,8 +487,8 @@ function renderTodasNotasFiscais(){
       <td>${_nfEsc(empresa)}</td>
       <td>${_nfEsc(contexto)}${n.contratos?.cpl?`<br><small>${_nfEsc(n.contratos.cpl)}</small>`:''}</td>
       <td>${_nfEsc(n.data_emissao?(typeof fmtDate==='function'?fmtDate(n.data_emissao):n.data_emissao):'—')}</td>
-      <td style="text-align:right;font-weight:600">${_nfMoney(n.valor_total)}</td>
-      <td>${n.medicao_id?`<span class="nf-measure-badge with">Com medição</span><br><small>${_nfEsc(med?.competencia||n.competencia||'')}</small>`:'<span class="nf-measure-badge without">Sem medição</span>'}</td>
+      <td style="text-align:right;font-weight:600">${n.origem_sistema==='historico_liquido'?_nfMoney(n.valor_liquido)+'<small> · líquido histórico</small>':_nfMoney(n.valor_total)}</td>
+      <td>${n.origem_sistema==='historico_liquido'?'<span class="nf-measure-badge with">Histórico rateado</span>':n.medicao_id?`<span class="nf-measure-badge with">Com medição</span><br><small>${_nfEsc(med?.competencia||n.competencia||'')}</small>`:'<span class="nf-measure-badge without">Sem medição</span>'}</td>
       <td>${_nfEsc(_nfStatusLabel(n.status))}</td>
       <td>${n.arquivo_url?`<button class="btn-secondary" data-path="${_nfEsc(n.arquivo_url)}" onclick="nfBaixarAnexo(this)" style="font-size:10px;padding:4px 7px">Baixar</button>`:'—'}</td>
     </tr>`;
@@ -505,7 +505,7 @@ async function nfNotasDisponiveisContrato(contratoId){
   if(!contratoId)return[];
   const {data,error}=await sb.from('notas_fiscais').select('*').eq('contrato_id',contratoId).is('medicao_id',null).order('data_emissao',{ascending:false});
   if(error)throw error;
-  return (data||[]).filter(n=>!['cancelada','recusada'].includes(String(n.status||'').toLowerCase()));
+  return (data||[]).filter(n=>n.origem_sistema!=='historico_liquido'&&!['cancelada','recusada'].includes(String(n.status||'').toLowerCase()));
 }
 function nfNotaOptionLabel(n){
   const data=n.data_emissao?(typeof fmtDate==='function'?fmtDate(n.data_emissao):n.data_emissao):'sem data';

@@ -194,3 +194,7 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 - Introduzir testes e2e leves (Playwright) cobrindo login + fluxo principal.
 - Smoke test SQL (script que valida views e integridade) executável via CI.
 - Checklist de regressão por release (este roteiro pode virar base).
+
+### Histórico de demanda por vigência
+
+`node --test tests/contratos-historico-demanda.test.mjs tests/contratos-financeiro.test.mjs tests/contratos-demanda.test.mjs` verifica NF única com rateios, isolamento das vigências, líquido sem bruto fictício, ausência de aprovação automática e preservação do fluxo normal. No banco oficial, o ensaio transacional com rollback também verificou bloqueios de edição de NF, divergência de rateio, vigência inválida e ausência de acesso sem autenticação. Advisors executados após a migration: sem novos alertas de segurança; índices novos sem uso ainda são esperados.

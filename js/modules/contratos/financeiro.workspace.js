@@ -1,3 +1,4 @@
+import { readHistoricoDemanda, normalizeHistoricoDemanda, historicalInvoiceAllocations } from './historico-demanda.js?v=20261119-1';
 // Consulta em página inteira. As operações de domínio continuam nos handlers existentes.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -11,6 +12,7 @@ const excludedMed = new Set(['rascunho','recusada','cancelada']);
 export function filterFinanceiroRows(rows, filters) {
   return rows.filter(row => {
     if(filters.contract && String(row.contract.id) !== filters.contract) return false;
+    if(filters.vigencia && row.historico_importado && !(row.vigencia_id===filters.vigencia || row.historico_medicoes?.some(m=>m.vigencia_id===filters.vigencia))) return false;
     if(filters.status && row.status !== filters.status) return false;
     // Competência desconhecida nunca entra implicitamente em um intervalo.
     const competenceStart = month((row.ciclo_inicio || row.med?.ciclo_inicio || '').slice(0,7)) || month(row.competencia);
@@ -62,8 +64,8 @@ export async function readFinanceiroTable(client, table, select, ids) {
 export function createFinanceiroWorkspace(adapter) {
   const root = document.getElementById('ct-financeiro-view');
   let active = false, type = 'notas', loading = false, busy = false, generation = 0;
-  let data = {notas:[], medicoes:[], termos:[]}, contracts = [], rows = [], page = 1;
-  let filters = {contract:'',search:'',status:'',start:'',end:'',link:'',sort:'recentes'};
+  let data = {notas:[], medicoes:[], termos:[],configs:[]}, contracts = [], rows = [], page = 1;
+  let filters = {vigencia:'',contract:'',search:'',status:'',start:'',end:'',link:'',sort:'recentes'};
   const pageSize = 25;
   if(!root || !adapter) return null;
 
@@ -73,6 +75,7 @@ export function createFinanceiroWorkspace(adapter) {
       <div class="ct-fin-filters">
         <label class="ct-fin-contract">Processo / contrato<select data-filter="contract"><option value="">Selecione um contrato...</option></select></label>
         <label class="ct-fin-search">Buscar<input type="search" data-filter="search" placeholder="NF, processo, fornecedor, fiscal, item, observação..."></label>
+        <label>Vigência<select data-filter="vigencia"><option value="">Todas</option></select></label>
         <label>Status<select data-filter="status"></select></label>
         <label>Competência de<input type="month" data-filter="start"></label>
         <label>Até<input type="month" data-filter="end"></label>
@@ -92,7 +95,10 @@ export function createFinanceiroWorkspace(adapter) {
   function syncControls() {
     const contractSelect = root.querySelector('[data-filter="contract"]');
     contractSelect.innerHTML = '<option value="">Selecione um contrato...</option>'+contracts.map(c=>`<option value="${esc(c.id)}">Processo ${esc(c.cpl || 'não informado')} · Contrato ${esc(c.numero_contrato || c.id)} · ${esc(c.prestador || 'Fornecedor não informado')} · ${esc(c.status || '')}</option>`).join('');
-    const statuses = {...adapter.labels(type)};
+    const config=data.configs?.find(c=>String(c.contrato_id)===filters.contract);
+    const periods=[...new Map(data.medicoes.filter(m=>m.historico_importado&&String(m.contrato_id)===filters.contract).map(m=>[m.vigencia_id,m.vigencia])).entries()];
+    root.querySelector('[data-filter="vigencia"]').innerHTML='<option value="">Todas as vigências</option>'+periods.map(([id,v])=>`<option value="${esc(id)}">${esc(v?.numero)}ª · ${date(v?.data_inicio)} a ${date(v?.data_fim)}${id===config?.vigencia_atual_id?' · atual':''}</option>`).join('');
+    const statuses = {...adapter.labels(type),historico_importado:'Histórico importado'};
     data[type].forEach(row=>{ if(!statuses[row.status]) statuses[row.status] = adapter.statusLabel(row.status); });
     root.querySelector('[data-filter="status"]').innerHTML = '<option value="">Todos</option>'+Object.entries(statuses).map(([key,label])=>`<option value="${esc(key)}">${esc(label)}</option>`).join('');
     root.querySelector('[data-filter="link"]').innerHTML = `<option value="">Todos</option><option value="com">${type==='notas'?'Com medição':'Com NF'}</option><option value="sem">${type==='notas'?'Sem medição':'Sem NF'}</option>`;
@@ -115,18 +121,20 @@ export function createFinanceiroWorkspace(adapter) {
       await adapter.ensureContracts();
       const current=adapter.contracts().filter(c=>c.tipo_instrumento!=='ATA');
       const ids=current.map(c=>c.id);
-      const [notas,medicoes,termos]=await Promise.all([
+      const [notas,medicoes,termos,historico]=await Promise.all([
         readFinanceiroTable(adapter.client(),'notas_fiscais','*',ids),
         readFinanceiroTable(adapter.client(),'contratos_medicoes','*,contratos_medicao_itens(*),contratos_medicao_glosas(*)',ids),
-        readFinanceiroTable(adapter.client(),'termos_ateste','*',ids)
+        readFinanceiroTable(adapter.client(),'termos_ateste','*',ids),
+        readHistoricoDemanda(adapter.client(),ids)
       ]);
       if(ticket!==generation) return;
-      contracts=current; data={notas,medicoes,termos};
+      contracts=current; data={notas,medicoes:[...medicoes,...normalizeHistoricoDemanda(historico.historicos,historico.configs)],termos,configs:historico.configs};
+      if(filters.vigencia===undefined) filters.vigencia=data.configs.find(c=>String(c.contrato_id)===filters.contract)?.vigencia_atual_id||'';
       if(filters.contract && !contracts.some(c=>String(c.id)===filters.contract)) filters.contract='';
       loading=false; syncControls(); render(); message('');
     } catch(error) {
       if(ticket!==generation) return;
-      loading=false; data={notas:[],medicoes:[],termos:[]}; render();
+      loading=false; data={notas:[],medicoes:[],termos:[],configs:[]}; render();
       message('Não foi possível carregar a consulta. '+error.message+' Use Atualizar para tentar novamente.',true);
     }
   }
@@ -135,17 +143,18 @@ export function createFinanceiroWorkspace(adapter) {
     const byMed=new Map(data.medicoes.map(m=>[String(m.id),m]));
     const byMedNF=new Map();
     data.notas.forEach(n=>{ const key=String(n.medicao_id); if(n.medicao_id) byMedNF.set(key,[...(byMedNF.get(key)||[]),n]); });
-    return data[type].flatMap(row=>{
+    const source=type==='notas'?historicalInvoiceAllocations(data.notas,data.medicoes,filters.vigencia):data.medicoes;
+    return source.flatMap(row=>{
       const contract=byContract.get(String(row.contrato_id));
       if(!contract) return [];
-      const med=type==='notas'?byMed.get(String(row.medicao_id)):row;
-      const notes=type==='medicoes'?(byMedNF.get(String(row.id))||[]):[];
+      const med=type==='notas'?(row.historico_medicoes?.[0]||byMed.get(String(row.medicao_id))):row;
+      const notes=type==='medicoes'?(row.historico_importado?data.notas.filter(n=>n.id===row.nota_fiscal_id):(byMedNF.get(String(row.id))||[])):[];
       const competencia=row.competencia || med?.competencia || '';
       const items=row.contratos_medicao_itens || [];
       return [{...row, contract, med, notes, competencia,
-        linked:type==='notas'?!!row.medicao_id:notes.length>0,
+        linked:type==='notas'?(row.historico_importado?row.historico_medicoes.length>0:!!row.medicao_id):notes.length>0,
         gross:type==='notas'?row.valor_total:row.valor_bruto,
-        net:type==='notas'?(row.valor_aprovado??row.valor_total):row.valor_liquido,
+        net:type==='notas'?(row.historico_importado?row.historico_liquido_rateado:(row.valor_aprovado??row.valor_total)):row.valor_liquido,
         sortDate:month((row.ciclo_inicio || med?.ciclo_inicio || '').slice(0,7)) || month(competencia) || row.data_medicao || row.data_emissao || row.created_at || '',
         search:[row.numero, row.serie, competencia, contract.numero_contrato, contract.cpl, contract.prestador, contract.objeto, contract.fiscalizacao, row.fiscal_responsavel, med?.fiscal_responsavel, row.observacoes, row.relatorio_servico_referencia, ...notes.map(n=>n.numero), ...items.map(i=>i.descricao)].filter(Boolean).join(' ')
       }];
@@ -166,16 +175,18 @@ export function createFinanceiroWorkspace(adapter) {
     root.querySelector('#ct-fin-help').hidden=!searching || loading;
     root.querySelector('.ct-fin-pagination').hidden=!searching || loading;
     root.querySelector('#ct-fin-metrics').innerHTML=loading || !searching?'':[
-      metric('Registros filtrados',summary.count), metric('Valor bruto',money(summary.gross)), metric('Glosas',money(summary.glosa)),
+      metric('Registros filtrados',summary.count), metric('Valor bruto',rows.every(r=>r.gross==null)?'Não informado':money(summary.gross),rows.some(r=>r.gross==null)?'Há valores não informados':''), metric('Glosas',rows.every(r=>r.valor_glosa==null)?'Não informado':money(summary.glosa)),
       metric(type==='notas'?'NF aprovada':'Executado / medido',money(summary.valid),type==='notas'?'Aprovação não representa pagamento':'Exclui rascunhos, recusadas e canceladas'),
-      metric(type==='notas'?'Sem medição':'Sem NF',summary.unlinked)
+      metric(type==='notas'?'Sem medição':'Sem NF',summary.unlinked),
+      ...(rows.some(r=>r.historico_importado)?[metric('Líquido histórico',money(rows.filter(r=>r.historico_importado).reduce((sum,r)=>sum+num(r.net),0)),'Não comprova ateste ou pagamento')]:[])
     ].join('');
     root.querySelector('#ct-fin-help').textContent=type==='notas'
       ? 'Totais referentes aos filtros acima. Cada NF é somada uma única vez. Use Detalhes para ver observações e recebimento. NFs sem medição ficam disponíveis no cadastro de uma nova medição.'
       : 'Totais referentes aos filtros acima. Ciclos trimestrais entram no filtro quando cruzam o intervalo de competências. Use Detalhes para consultar itens, fiscal e glosas. O termo de ateste segue as regras do modelo de contrato.';
+    if(rows.some(r=>r.historico_importado)) root.querySelector('#ct-fin-help').textContent+=' Histórico importado em valores líquidos: bruto, retenções e glosas não informados. O filtro de vigência usa somente o rateio correspondente de cada NF. Não comprova ateste nem pagamento.';
     const pages=Math.max(1,Math.ceil(rows.length/pageSize)); page=Math.min(page,pages);
     const visible=rows.slice((page-1)*pageSize,page*pageSize);
-    const cols=type==='notas'?['NF / competência','Contrato / fornecedor','Medição','Emissão','Valor bruto','Glosa','Valor aprovado','Status','Ações']:['Competência / tipo','Contrato / fornecedor','NF vinculada','Data da medição','Valor bruto','Glosa','Valor líquido','Status','Ações'];
+    const cols=type==='notas'?['NF / competência','Contrato / fornecedor','Medição','Emissão','Valor bruto','Glosa','Aprovado / líquido histórico','Status','Ações']:['Competência / tipo','Contrato / fornecedor','NF vinculada','Data da medição','Valor bruto','Glosa','Valor líquido','Status','Ações'];
     root.querySelector('#ct-fin-results').innerHTML=!searching?'<div class="ct-fin-empty">Selecione um contrato ou comece a digitar no campo Buscar para exibir os registros.</div>':loading?'<div class="ct-fin-empty"><span class="spinner"></span> Carregando registros...</div>':!rows.length?`<div class="ct-fin-empty">${filters.start&&filters.end&&filters.start>filters.end?'A competência inicial deve ser anterior ou igual à final.':'Nenhum registro encontrado. Ajuste os filtros ou cadastre um registro no contrato selecionado.'}</div>`:
       `<div class="ct-fin-table-wrap"><table class="ct-fin-table"><caption class="sr-only">${type==='notas'?'Notas fiscais':'Medições'} dos contratos, com filtros aplicados</caption><thead><tr>${cols.map((c,i)=>`<th scope="col" ${i>=4&&i<=6?'class="ct-fin-money"':''}>${c}</th>`).join('')}</tr></thead><tbody>${visible.map(rowHtml).join('')}</tbody></table></div>`;
     root.querySelector('#ct-fin-count').textContent=loading?'':`${rows.length} registro(s) · Exibindo ${rows.length?(page-1)*pageSize+1:0}–${Math.min(page*pageSize,rows.length)}`;
@@ -189,29 +200,30 @@ export function createFinanceiroWorkspace(adapter) {
     const linked=type==='notas'
       ? (row.med?`${esc(row.med.competencia || 'Sem competência')}<small>${esc(adapter.labels('medicoes')[row.med.status] || adapter.statusLabel(row.med.status))}</small>`:row.medicao_id?'Medição indisponível':'<span class="ct-fin-pending">Sem medição</span>')
       : (row.notes.length?row.notes.map(n=>`NF ${esc(n.numero || '—')}`).join(', '):'<span class="ct-fin-pending">Sem NF</span>');
-    const status=adapter.canEdit()&&!row.escopo_item_id?adapter.statusSelect(row.status,type,row.id):adapter.statusBadge(row.status,type);
-    const identity=type==='notas'?`<strong>${esc(row.numero || '—')}</strong><small>${esc(row.competencia || 'Sem competência')}${row.serie?' · Série '+esc(row.serie):''}</small>`:`<strong>${esc(row.competencia || 'Sem competência')}</strong><small>${esc(adapter.statusLabel(row.tipo_medicao || 'competencia'))}</small>`;
+    const status=adapter.canEdit()&&!row.escopo_item_id&&!row.historico_importado?adapter.statusSelect(row.status,type,row.id):row.historico_importado?'<span class="badge">Histórico importado</span>':adapter.statusBadge(row.status,type);
+    const identity=type==='notas'?`<strong>${esc(row.numero || '—')}</strong><small>${esc(row.competencia || 'Sem competência')}${row.serie?' · Série '+esc(row.serie):''}</small>`:`<strong>${esc(row.competencia || 'Sem competência')}</strong><small>${esc(row.historico_importado?'Medição '+row.numero_medicao+' · '+row.vigencia?.numero+'ª vigência':adapter.statusLabel(row.tipo_medicao || 'competencia'))}</small>`;
     const details=detailHtml(row);
-    const term=type==='medicoes'&&(data.termos.some(t=>String(t.medicao_id)===String(row.id))||adapter.canGenerateTerm(row.contract));
+    const term=type==='medicoes'&&!row.historico_importado&&(data.termos.some(t=>String(t.medicao_id)===String(row.id))||adapter.canGenerateTerm(row.contract));
     return `<tr><td>${identity}</td><td><button type="button" class="ct-fin-link" data-action="contract" data-contract="${cid}">${esc(row.contract.numero_contrato || row.contract.cpl || row.contract.id)}</button><small>${esc(row.contract.prestador || '—')}</small></td>
-      <td>${linked}</td><td>${date(type==='notas'?row.data_emissao:row.data_medicao)}</td><td class="ct-fin-money">${money(row.gross)}</td><td class="ct-fin-money">${money(row.valor_glosa)}</td><td class="ct-fin-money"><strong>${money(row.net)}</strong></td><td data-status-contract="${cid}">${status}</td>
+      <td>${linked}</td><td>${date(type==='notas'?row.data_emissao:row.data_medicao)}</td><td class="ct-fin-money">${row.gross==null?'Não informado':money(row.gross)}</td><td class="ct-fin-money">${row.valor_glosa==null?'Não informado':money(row.valor_glosa)}</td><td class="ct-fin-money"><strong>${money(row.net)}</strong></td><td data-status-contract="${cid}">${status}</td>
       <td><button type="button" class="btn-secondary" data-action="details" data-id="${id}" aria-expanded="false">Detalhes</button>${term?`<button type="button" class="btn-secondary" data-action="term" data-id="${id}" data-contract="${cid}">Baixar termo</button>`:''}${type==='notas'&&row.arquivo_url?`<button type="button" class="btn-secondary" data-action="attachment" data-path="${esc(row.arquivo_url)}">Baixar NF</button>`:''}</td></tr>
       <tr class="ct-fin-detail" data-detail="${id}" hidden><td colspan="9">${details}</td></tr>`;
   }
   function detailHtml(row) {
     const field=(label,value)=>`<div><b>${label}</b><span>${esc(value || '—')}</span></div>`;
     const items=row.contratos_medicao_itens || [], glosas=row.contratos_medicao_glosas || [];
-    return `<div class="ct-fin-detail-grid">${field('Observações',row.observacoes)}${field('Fiscal responsável',row.fiscal_responsavel || row.med?.fiscal_responsavel || row.contract.fiscalizacao)}
+    return `<div class="ct-fin-detail-grid">${field('Observações',row.observacoes)}${field('Fiscal responsável',row.fiscal_responsavel || row.med?.fiscal_responsavel || (row.historico_importado?'Não informado':row.contract.fiscalizacao))}
+      ${row.historico_importado?field('Histórico líquido', 'Não comprova aprovação, ateste ou pagamento. Bruto, retenções e glosas não informados.')+field('Rateio da NF',(row.historico_medicoes||[row]).map(m=>'Medição '+m.numero_medicao+' · '+m.vigencia?.numero+'ª vigência · '+money(m.valor_liquido)).join(' / '))+field('Quantidades',(row.historico_medicoes||[row]).every(m=>m.quantidades_informadas===false)?'Não informadas nesta vigência':'Quantidades disponíveis nas medições da segunda vigência'):''}
       ${field('Validação', [row.validado_por,row.validado_em?date(row.validado_em):''].filter(Boolean).join(' · '))}
       ${type==='notas'?field('Recebimento',date(row.data_recebimento)):field('Execução preventiva / relatório',[row.data_execucao_preventiva?date(row.data_execucao_preventiva):'',row.relatorio_servico_referencia].filter(Boolean).join(' · '))}
-      ${items.length?field('Itens medidos',items.map(i=>`${i.descricao || 'Item'} · Executada: ${i.quantidade_executada ?? '—'} · Aceita: ${i.quantidade_aceita ?? '—'}`).join('\n')):''}
+      ${items.length?field('Itens medidos',items.map(i=>`${i.descricao || 'Item'} · ${row.historico_importado?'Informada':'Executada'}: ${i.quantidade_executada ?? '—'}${row.historico_importado?'':' · Aceita: '+(i.quantidade_aceita ?? '—')}`).join('\n')):''}
       ${glosas.length?field('Motivos das glosas',glosas.map(g=>g.motivo).filter(Boolean).join('\n')):''}</div>`;
   }
   function exportCSV() {
-    const records=[['Tipo','Contrato','Processo','Fornecedor','NF','Competência','Data','Vínculo','Valor bruto','Glosa',type==='notas'?'Valor aprovado':'Valor líquido','Status','Observações'], ...rows.map(r=>[
+    const records=[['Tipo','Contrato','Processo','Fornecedor','NF','Competência','Data','Vínculo','Valor bruto','Glosa',type==='notas'?'Valor aprovado / líquido histórico':'Valor líquido','Status','Observações'], ...rows.map(r=>[
       type==='notas'?'Nota fiscal':'Medição',r.contract.numero_contrato,r.contract.cpl,r.contract.prestador,r.numero||'',r.competencia,type==='notas'?r.data_emissao:r.data_medicao,
       type==='notas'?(r.med?.competencia || (r.medicao_id?'Medição indisponível':'Sem medição')):r.notes.map(n=>n.numero).join(', '),
-      num(r.gross).toFixed(2).replace('.',','),num(r.valor_glosa).toFixed(2).replace('.',','),num(r.net).toFixed(2).replace('.',','),adapter.labels(type)[r.status]||adapter.statusLabel(r.status),r.observacoes
+      r.gross==null?'':num(r.gross).toFixed(2).replace('.',','),r.valor_glosa==null?'':num(r.valor_glosa).toFixed(2).replace('.',','),num(r.net).toFixed(2).replace('.',','),adapter.labels(type)[r.status]||adapter.statusLabel(r.status),r.observacoes
     ])];
     // Neutraliza fórmulas ao abrir a exportação em planilhas.
     const cell=value=>'"'+String(value??'').replace(/^[=+@\-\t\r]/,"'$&").replace(/"/g,'""')+'"';
@@ -225,7 +237,7 @@ export function createFinanceiroWorkspace(adapter) {
   root.addEventListener('change',async event=>{
     const key=event.target.dataset.filter;
     if(key==='search') return; // a busca já é aplicada no input; preservar o clique seguinte
-    if(key){filters[key]=event.target.value;page=1;render();return;}
+    if(key){filters[key]=event.target.value;if(key==='contract'){filters.vigencia=data.configs.find(c=>String(c.contrato_id)===filters.contract)?.vigencia_atual_id||'';syncControls();}page=1;render();return;}
     const select=event.target.closest('[data-entity-id]');
     if(!select) return;
     const contract=select.closest('[data-status-contract]').dataset.statusContract;
@@ -247,7 +259,7 @@ export function createFinanceiroWorkspace(adapter) {
       detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));return;
     }
     if(name==='notas'||name==='medicoes'){type=name;filters.status='';filters.link='';page=1;syncControls();render();return;}
-    if(name==='clear'){filters={contract:'',search:'',status:'',start:'',end:'',link:'',sort:'recentes'};page=1;syncControls();render();return;}
+    if(name==='clear'){filters={vigencia:'',contract:'',search:'',status:'',start:'',end:'',link:'',sort:'recentes'};page=1;syncControls();render();return;}
     if(name==='prev'||name==='next'){page+=name==='prev'?-1:1;render();return;}
     if(name==='export'){exportCSV();return;}
     if(name==='refresh'){await refresh();return;}
@@ -260,7 +272,7 @@ export function createFinanceiroWorkspace(adapter) {
     isActive:()=>active && root.closest('.panel')?.classList.contains('active') !== false,
     async open(contractId,nextType) {
       active=true;
-      filters={contract:contractId!=null?String(contractId):'',search:'',status:'',start:'',end:'',link:'',sort:'recentes'};
+      filters={vigencia:undefined,contract:contractId!=null?String(contractId):'',search:'',status:'',start:'',end:'',link:'',sort:'recentes'};
       page=1;
       await refresh(nextType);
     },

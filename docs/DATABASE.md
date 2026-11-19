@@ -348,3 +348,11 @@ entrega/VIGENTE … 25=Cancelado).
 > (status 21–26 automáticos via `automatico`). O catálogo real em prod tem mais linhas
 > (com `contexto`/`orgao` variados). Validar quais status são canônicos para "Controle de
 > processos". Ver [TODO.md](TODO.md).
+
+## Histórico líquido de serviços por demanda
+
+`contratos_demanda_config` identifica a vigência atual e eventual compensação quantitativa explicitamente autorizada. `contratos_medicoes_historicas` registra número, competência, vigência, NF central e líquido conhecido; `contratos_medicoes_historicas_itens` mantém quantidades e categorias operacionais, sem valores fiscais inventados. A primeira vigência pode ter quantidades desconhecidas.
+
+Uma NF histórica usa `origem_sistema = historico_liquido`, status `historico_importado` e `valor_liquido` uma única vez; bruto/total, glosa, retenções e aprovado permanecem nulos quando desconhecidos. Vários rateios podem apontar para a mesma NF. Constraint trigger diferida verifica soma dos rateios contra o líquido central. Triggers validam contrato/vigência/item e protegem a NF de edições genéricas. Os históricos não criam atestes ou pagamentos nem reutilizam regras do mensal fixo.
+
+As três tabelas possuem RLS por domínio/seção, SELECT autenticado e nenhuma escrita via navegador. A importação transacional idempotente é realizada pelo operador autorizado; arquivos com dados reais ficam fora do repositório público. A interface normaliza o histórico somente para consulta; os saldos atuais excluem vigências anteriores. No financeiro, cada NF é somada uma vez, com o rateio do período selecionado. Bruto desconhecido aparece como não informado.

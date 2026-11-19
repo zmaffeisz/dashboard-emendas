@@ -56,4 +56,4 @@ export {
   calculateApprovedInvoiceValue,
   calculateContractBalance,
   calculateContractFinancialSummary
-} from "./contratos.calculations.js";
+} from "./contratos.calculations.js?v=20261119-historico-1";
