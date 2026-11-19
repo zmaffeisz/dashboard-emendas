@@ -1168,6 +1168,7 @@ function _ctHumanize(v){
 }
 function _ctModeloKey(r){
   if(r?.recebimento_escopo) return 'servico_escopo_fechado';
+  if(r?.modelo_execucao==='por_demanda') return 'servico_continuo_demanda';
   const periodicidade=String(r?.periodicidade_pagamento||'').toUpperCase();
   if(periodicidade==='TRIMESTRAL') return 'servico_continuo_trimestral_fixo';
   if(periodicidade==='MENSAL'||r?.modelo_execucao==='continuo_mensal_fixo') return 'servico_continuo_mensal_fixo';
@@ -1193,6 +1194,7 @@ function _ctMsgProrrogacaoAquisicao(){
 function _ctOrigemKey(r){ return r.origem_contratacao||r.procurementOrigin||r.origem||'nao_informada'; }
 function _ctFormaKey(r){
   if(r?.recebimento_escopo) return r.recebimento_escopo==='integral'?'escopo_integral':'escopo_medicoes_parciais';
+  if(r?.modelo_execucao==='por_demanda') return 'por_demanda';
   if(String(r?.periodicidade_pagamento||'').toUpperCase()==='TRIMESTRAL') return 'trimestral_fixo';
   if(String(r?.periodicidade_pagamento||'').toUpperCase()==='MENSAL') return 'mensal_fixo';
   return r.forma_execucao_pagamento||r.executionPaymentModel||r.forma_pagamento||'nao_informada';
@@ -2598,7 +2600,7 @@ async function salvarNovoContrato(){
     valor_mensal_num:servMensalNC?valorPeriodoNum:null,
     periodicidade_pagamento:servTrimestralNC?'TRIMESTRAL':(servMensalNC?'MENSAL':null),
     valor_periodico_num:(servTrimestralNC||servMensalNC)?valorPeriodoNum:null,
-    modelo_execucao:servTrimestralNC?'continuo_trimestral_preventiva_corretiva':(servMensalNC?'continuo_mensal_fixo':null),
+    modelo_execucao:servTrimestralNC?'continuo_trimestral_preventiva_corretiva':(servMensalNC?'continuo_mensal_fixo':(servDemandaNC?'por_demanda':null)),
     fonte:_mn("nc-fonte"),
     fiscalizacao,
     contato:_mn("nc-contato"),

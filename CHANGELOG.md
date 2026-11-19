@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-19 — Classificação de contratos por demanda
+
+- A classificação lê `modelo_execucao = 'por_demanda'` como serviço contínuo por
+  demanda e forma de pagamento por demanda, inclusive sem abrir a ficha dos itens.
+- Novos contratos gerados de processos por demanda gravam essa identificação.
+- Sem alteração de schema nem reaproveitamento de regras de mensal fixo.
+
 ## 2026-11-19 — Recebimento de serviços por escopo no Controle de Entregas
 
 - Contratos de serviço por escopo fechado escolhem recebimento integral ou parcial

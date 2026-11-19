@@ -574,3 +574,11 @@ Ver acompanhamento em [TODO.md](TODO.md).
 
 Serviços por escopo fechado têm recebimento integral ou por medições no Controle
 de Entregas, sem bens físicos. Regras e operação: [SERVICOS_ESCOPO.md](SERVICOS_ESCOPO.md).
+
+## Identificação de serviços por demanda
+
+`contratos.modelo_execucao = 'por_demanda'` identifica serviço contínuo por demanda
+e forma de pagamento por demanda. Os itens usam `origem = 'servico_demanda'`.
+Faturamento mensal pelas quantidades realizadas não transforma o contrato em
+mensal fixo: `periodicidade_pagamento`, `valor_mensal_num` e `valor_periodico_num`
+permanecem sem valor quando não existe parcela fixa contratual.
