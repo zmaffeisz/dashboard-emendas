@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-19 — Recebimento de serviços por escopo no Controle de Entregas
+
+- Contratos de serviço por escopo fechado escolhem recebimento integral ou parcial
+  por medições. Seus itens aparecem automaticamente no Controle de Entregas.
+- Execução própria com ordem/referência opcional, início, prazo, empenho, NF central,
+  período executado, glosa, ateste e conclusão explícita. Não cria bens ou inventário.
+- Cada medição/NF/ateste é gravada em uma transação com reenvio idempotente,
+  bloqueio concorrente de saldo e rateio das fontes sem multiplicar o valor da NF.
+- Cancelamento preserva histórico e libera NF/saldo para correção; documentos
+  cancelados ficam sinalizados. NFs encaminhadas para pagamento impedem cancelamento.
+- Contratos e financeiro consultam as mesmas medições; ateste de escopo tem PDF
+  próprio. Mensal/trimestral fixo e demanda continuam com seus fluxos específicos.
+- Migration: `20261118193000_servicos_escopo_recebimentos.sql`.
+- Complemento: `20261119124000_servicos_escopo_integridade.sql`, consolidando
+  leitura por seção e protegendo também o histórico do ateste e seus itens.
+- Validação: testes JS, teste SQL com rollback, sintaxe de todos os JS e navegador.
+
 ## 2026-11-18 — Salvar processo não duplica após erro nos itens
 
 - Unidade de medida, dados dos itens e fontes de recurso são validados antes de

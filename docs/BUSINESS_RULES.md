@@ -569,3 +569,8 @@
 | Catálogo de status | Confirmar conjunto canônico ("26 status oficiais"). |
 
 Ver acompanhamento em [TODO.md](TODO.md).
+
+## Recebimento de serviços por escopo
+
+Serviços por escopo fechado têm recebimento integral ou por medições no Controle
+de Entregas, sem bens físicos. Regras e operação: [SERVICOS_ESCOPO.md](SERVICOS_ESCOPO.md).

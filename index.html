@@ -1244,9 +1244,10 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
         <input type="text" id="entregas-busca" placeholder="buscar por uma ou mais palavras..." oninput="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
         <select id="entregas-f-tipo" onchange="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
-          <option value="">Aquisições + Atas</option>
+          <option value="">Aquisições + Atas + Serviços</option>
           <option value="Aquisição">Só Aquisições</option>
           <option value="ATA">Só Atas</option>
+          <option value="Serviço">Só Serviços por escopo</option>
         </select>
         <select id="entregas-f-prazo" onchange="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           <option value="">Todos os prazos</option>
@@ -2759,6 +2760,7 @@
       <div class="form-group" id="nc-vencimento-wrap"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
       <div class="form-group" id="nc-valor-wrap"><div class="form-label">Valor Global (R$)</div><input type="text" id="nc-valor-inicial" placeholder="soma dos itens" title="Soma dos valores dos itens marcados para este contrato"></div>
       <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label" id="nc-valor-periodico-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
+      <div class="form-group full" id="nc-recebimento-escopo-wrap" style="display:none"><div class="form-label">Recebimento do serviço por escopo *</div><select id="nc-recebimento-escopo"><option value="">Selecione...</option><option value="integral">Integral, ao concluir o serviço</option><option value="parcial">Parcial, por medições da execução</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">A execução e os atestes serão acompanhados no Controle de Entregas.</div></div>
       <div class="form-group" id="nc-fonte-wrap"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
       <div class="form-group full" id="nc-fiscalizacao-wrap"><div class="form-label">Fiscalização * <span style="font-weight:400;color:var(--text3)">(pesquise e clique p/ escolher vários)</span></div>
         <select id="nc-fiscalizacao" multiple size="4" style="min-height:88px"></select>
@@ -3357,13 +3359,13 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20261118-processo-validacao-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20261002-contrato-secao-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20261119-escopo-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20261008-rateio-emendas-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261002-fiscais-multiplos-3"></script>
-<script src="js/legacy/75-notas-fiscais.js?v=20260929-financeiro-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261119-escopo-1"></script>
+<script src="js/legacy/75-notas-fiscais.js?v=20261119-escopo-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>
-<script type="module" src="js/app.js?v=20261001-requisicao-1"></script>
+<script type="module" src="js/app.js?v=20261119-escopo-1"></script>
 </body>
 </html>

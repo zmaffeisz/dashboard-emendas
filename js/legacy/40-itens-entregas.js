@@ -1251,6 +1251,36 @@ function _prazoBadge(status,dias){
   else if(status==='atrasado'&&dias!=null) extra=` · ${Math.abs(dias)}d`;
   return `<span class="badge" style="background:${cor}22;color:${cor};white-space:nowrap">${status}${extra}</span>`;
 }
+let _ceEscopoPromise=null;
+async function _ceEscopoModule(){
+  if(!_ceEscopoPromise) _ceEscopoPromise=import('../modules/execucao/servicos-escopo.js?v=20261118-1').then(({createServicosEscopo})=>{
+    window.ServicosEscopo=createServicosEscopo({
+      sb,esc:_sanEsc,money:fmtFull,today:()=>new Date().toLocaleDateString('en-CA'),prazo:_prazoStatus,
+      canEdit:()=>podeEditar('itens')||podeEditar('contratos'),
+      openNF:id=>abrirCadastroNotaFiscal(id),openEmpenho:id=>abrirVincularEmpenho(id),
+      reason:()=>prompt('Motivo do cancelamento da medição (o histórico será preservado):'),
+      notify:(text,type)=>toast(text,type),
+      refresh:async()=>{
+        itensEntregasCarregado=false;contratosCarregado=false;nfTodasCarregado=false;
+        ctItensPorContrato={};
+        if(userCanView('itens')) await loadItensEntregas();
+        if(window.ContratosFinanceiro?.isActive()) await window.ContratosFinanceiro.refresh('medicoes');
+      },
+      pdf:async(html,filename)=>{
+        await ensureLib('html2pdf');
+        const el=document.createElement('div');el.innerHTML=html;document.body.append(el);
+        try{await html2pdf().set({filename,margin:12,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4'}}).from(el).save();}
+        finally{el.remove();}
+      }
+    });
+    return window.ServicosEscopo;
+  }).catch(error=>{_ceEscopoPromise=null;throw error;});
+  return _ceEscopoPromise;
+}
+async function abrirServicoEscopo(id){
+  try{await (await _ceEscopoModule()).open(id);}
+  catch(error){alert('Não foi possível abrir a execução: '+error.message);}
+}
 async function loadItensEntregas(){
   if(!userCanView('itens')&&!_isAdmin()) return;
   const wrap=document.getElementById('entregas-wrap'); if(!wrap) return;
@@ -1543,6 +1573,14 @@ async function loadItensEntregas(){
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',tipo_material:r.tipo_material||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       controle_obs:r.controle_obs||'',valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
+  try{
+    const escopo=await _ceEscopoModule();
+    out.push(...await escopo.load());
+  }catch(error){
+    itensEntregasCarregado=false;
+    wrap.innerHTML=`<div role="alert" style="padding:1rem;color:var(--red)">Não foi possível carregar o Controle de Entregas completo: ${_sanEsc(error.message)}. Reabra a aba para tentar novamente.</div>`;
+    return;
+  }
   entregasRows=out;
   itensEntregasCarregado=true;
   renderItensEntregas();
@@ -1589,11 +1627,12 @@ function renderItensEntregas(){
   });
   _ceAdvRowsVisiveis=rows;
   const cEl=document.getElementById('entregas-count'); if(cEl) cEl.textContent=`${rows.length} registro(s)`;
-  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item encontrado. Itens aguardando AF e itens com AF emitida (aguardando recebimento) aparecem aqui. Após o recebimento total, passam para <b>Confirmação de Entrega na Unidade</b>.</div>'; return; }
+  if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum item encontrado. Aquisições, solicitações de ATA e serviços por escopo contratados aparecem aqui. Serviços concluídos ficam disponíveis no filtro <b>Recebido</b>; a confirmação física na unidade aplica-se aos bens.</div>'; return; }
   wrap.innerHTML=_ceAdvBar()+`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
-      <th style="padding:7px 8px;width:28px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="ce-selecionar-visiveis" onchange="_ceAdvToggleVisiveis(this.checked)" aria-label="Selecionar pendências visíveis" style="width:15px;height:15px;accent-color:#EF9F27;cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px;width:115px;min-width:115px;max-width:115px">Processo/CPL</th><th style="padding:7px 8px;width:120px;min-width:120px;max-width:120px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF</th><th style="padding:7px 8px">AF data</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Recebido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
+    <th style="padding:7px 8px;width:28px;text-align:center" title="Selecionar pendências visíveis"><input type="checkbox" id="ce-selecionar-visiveis" onchange="_ceAdvToggleVisiveis(this.checked)" aria-label="Selecionar pendências visíveis" style="width:15px;height:15px;accent-color:#EF9F27;cursor:pointer"></th><th style="padding:7px 8px">Tipo</th><th style="padding:7px 8px;width:115px;min-width:115px;max-width:115px">Processo/CPL</th><th style="padding:7px 8px;width:120px;min-width:120px;max-width:120px">Contrato/SIM</th><th style="padding:7px 8px">Empresa</th><th style="padding:7px 8px">Item</th><th style="padding:7px 8px">Unidade</th><th style="padding:7px 8px">AF / Ordem</th><th style="padding:7px 8px">Emissão / Início</th><th style="padding:7px 8px;text-align:right">Qtde / Valor contratado</th><th style="padding:7px 8px;text-align:right">Recebido / Medido</th><th style="padding:7px 8px">Documentos</th><th style="padding:7px 8px">Data limite</th><th style="padding:7px 8px">Prazo</th><th style="padding:7px 8px">Ações</th>
     </tr></thead><tbody>${rows.map(r=>{
+      if(r.tipo==='Serviço') return window.ServicosEscopo.renderRow(r);
       const dias=_diasRestantes(r.limiteISO);
       const tipoCor=r.tipo==='ATA'?'#A371F7':'#378ADD';
       const pode=podeEditar('itens');
@@ -2236,7 +2275,7 @@ async function baixarAFsLote(rowsSelecionadas=null,opcoes={}){
   pdf.save(arquivo);
   return pdf;
 }
-function _ceAdvElegivel(r){ return !r.recebido && !r.cancelado && !!_ceAdvLockKey(r); }
+function _ceAdvElegivel(r){ return r.tipo!=='Serviço' && !r.recebido && !r.cancelado && !!_ceAdvLockKey(r); }
 function _ceAdvCheckbox(r){
   if(!_ceAdvElegivel(r)||!podeEditar('itens')) return '';
   const key=_ceRowKey(r), checked=_ceAdvSel.has(key);
@@ -3964,6 +4003,9 @@ function _ncServicoDemanda(proc){
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return tipo==='servico por demanda/execucao';
 }
+function _ncServicoEscopo(proc){
+  return proc?.tipo_servico==='Serviço por escopo fechado';
+}
 function _ncShow(id,on){ const el=document.getElementById(id); if(el) el.style.display=on?'':'none'; }
 function _ncAplicarModo(natureza){
   const modo=_ncModo(natureza);
@@ -3971,8 +4013,10 @@ function _ncAplicarModo(natureza){
   const servMensal=_ncServicoPeriodicoFixo(window._gerarContratoProcesso);
   const servTrimestral=_ncServicoTrimestralFixo(window._gerarContratoProcesso);
   const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
+  const servEscopo=_ncServicoEscopo(window._gerarContratoProcesso);
+  _ncShow('nc-recebimento-escopo-wrap',servEscopo);
   // valor mensal e fonte: só contratos comuns (outro)
-  _ncShow('nc-valor-mensal-wrap', modo==='outro'&&!servDemanda);
+  _ncShow('nc-valor-mensal-wrap', modo==='outro'&&!servDemanda&&!servEscopo);
   _ncShow('nc-fonte-wrap', modo==='outro');
   // datas/vigência: ATA usa início (assinatura/vigência/vencimento automáticos); Aquisição não usa nenhuma
   _ncShow('nc-assinatura-wrap', modo==='outro');
@@ -3984,7 +4028,7 @@ function _ncAplicarModo(natureza){
   // valor global é calculado (read-only) nas duas naturezas com itens
   const valInp=document.getElementById('nc-valor-inicial');
   const mensalInp=document.getElementById('nc-valor-mensal');
-  if(valInp){ valInp.readOnly=(ata||aq||servDemanda); valInp.placeholder=(ata||aq||servDemanda)?'soma dos itens (automático)':'ex: 120000,00'; }
+  if(valInp){ valInp.readOnly=(ata||aq||servDemanda||servEscopo); valInp.placeholder=(ata||aq||servDemanda||servEscopo)?'soma dos itens (automático)':'ex: 120000,00'; }
   // vigência/vencimento read-only na ATA (12 meses fixos)
   if(valInp&&servMensal){ valInp.readOnly=true; valInp.placeholder='calculado pelos itens marcados'; }
   if(mensalInp){
@@ -4009,7 +4053,7 @@ function _ncAplicarModo(natureza){
       stSel.disabled=false; if(stAuto) stAuto.style.display='none';
     }
   }
-  if(servDemanda) _ncRecalcValorGlobal();
+  if(servDemanda||servEscopo) _ncRecalcValorGlobal();
   if(ata||servMensal||servDemanda) _ncRecalcVigencia();
 }
 // Fase 10: ATA tem vigência fixa de 12 meses a partir da data de início
@@ -4142,7 +4186,7 @@ function _ncRecalcValorGlobal(){
   const servMensal=_ncServicoPeriodicoFixo(window._gerarContratoProcesso);
   const servTrimestral=_ncServicoTrimestralFixo(window._gerarContratoProcesso);
   const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
-  if(modo!=='ata' && modo!=='aquisicao' && !servMensal && !servDemanda) return;
+  if(modo!=='ata' && modo!=='aquisicao' && !servMensal && !servDemanda && !_ncServicoEscopo(window._gerarContratoProcesso)) return;
   const lista=document.getElementById('nc-itens-lista'); if(!lista) return;
   let tot=0;
   lista.querySelectorAll('.nc-item-row').forEach(r=>{

@@ -1,6 +1,15 @@
 # Testes — dashboard-emendas
 
-> Estado atual: **não há suíte de testes automatizados** (sem framework, sem
+## Recebimento de serviços por escopo (novembro/2026)
+
+- `node --test tests/servicos-escopo.test.mjs tests/contratos-financeiro.test.mjs tests/contratos-periodicidade.test.mjs tests/licitacoes-servico-emenda.test.cjs tests/processo-salvamento.test.cjs`
+- `tests/servicos-escopo.sql`: integração transacional no projeto oficial, com
+  **rollback** obrigatório. Não deixa contratos, medições, NFs ou bens de teste.
+- `tests/fixtures/servicos-escopo.html`: cenário visual com dados fictícios e sem
+  conexão com o banco, servido pelo HTTP local. Exercita os componentes reais da tela.
+- Mais detalhes: [SERVICOS_ESCOPO.md](SERVICOS_ESCOPO.md).
+
+> Registro histórico: **não havia suíte de testes automatizados** (sem framework, sem
 > `package.json`, sem CI). A validação é **manual**. Este documento descreve o que existe
 > e propõe um roteiro de testes manuais.
 

@@ -189,7 +189,7 @@ export function createFinanceiroWorkspace(adapter) {
     const linked=type==='notas'
       ? (row.med?`${esc(row.med.competencia || 'Sem competência')}<small>${esc(adapter.labels('medicoes')[row.med.status] || adapter.statusLabel(row.med.status))}</small>`:row.medicao_id?'Medição indisponível':'<span class="ct-fin-pending">Sem medição</span>')
       : (row.notes.length?row.notes.map(n=>`NF ${esc(n.numero || '—')}`).join(', '):'<span class="ct-fin-pending">Sem NF</span>');
-    const status=adapter.canEdit()?adapter.statusSelect(row.status,type,row.id):adapter.statusBadge(row.status,type);
+    const status=adapter.canEdit()&&!row.escopo_item_id?adapter.statusSelect(row.status,type,row.id):adapter.statusBadge(row.status,type);
     const identity=type==='notas'?`<strong>${esc(row.numero || '—')}</strong><small>${esc(row.competencia || 'Sem competência')}${row.serie?' · Série '+esc(row.serie):''}</small>`:`<strong>${esc(row.competencia || 'Sem competência')}</strong><small>${esc(adapter.statusLabel(row.tipo_medicao || 'competencia'))}</small>`;
     const details=detailHtml(row);
     const term=type==='medicoes'&&(data.termos.some(t=>String(t.medicao_id)===String(row.id))||adapter.canGenerateTerm(row.contract));

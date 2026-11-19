@@ -1,0 +1,31 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teste local — recebimento de escopo</title><link rel="stylesheet" href="../../styles.css">
+<body style="padding:24px"><p>Ambiente de teste · dados fictícios · sem conexão com banco</p>
+<button id="abrir" class="btn-primary">Abrir execução de teste</button><div id="termo-preview"></div>
+<script type="module">
+import {createServicosEscopo} from '../../js/modules/execucao/servicos-escopo.js';
+const item={id:'teste-item',origem:'servico',contrato_id:1,qtde:1,valor_contratado:1000,descricao:'Reforma da unidade de teste',
+  processos:{tipo_servico:'Serviço por escopo fechado',identificador:'SEI TESTE'},
+  contratos:{id:1,recebimento_escopo:'parcial',numero_contrato:'TESTE/2026',prestador:'Empresa fictícia',fiscalizacao:'Fiscal de teste'}};
+const db={itens:[item],contratos_medicoes:[],notas_fiscais:[{id:'nf-1',contrato_id:1,numero:'TESTE-1',valor_total:400,status:'recebida'},{id:'nf-2',contrato_id:1,numero:'TESTE-2',valor_total:600,status:'recebida'}],
+  empenho_itens:[{item_id:item.id,empenhos:{id:'emp-1',numero:'TESTE-EMP',contrato_id:1}}]};
+const clone=x=>JSON.parse(JSON.stringify(x));
+const sb={from(table){let one=false,filters=[];const q={select(){return q;},eq(key,val){filters.push([key,val]);return q;},order(){return q;},range(){return q;},
+  single(){one=true;return q;},then(resolve,reject){const rows=db[table].filter(r=>filters.every(([key,val])=>r[key]===val));return Promise.resolve({data:clone(one?rows[0]:rows)}).then(resolve,reject);}};return q;},
+  async rpc(name,{p_acao,p_dados:d}){
+    if(p_acao==='configurar'){item.contratos.recebimento_escopo=d.modo;item.escopo_execucao={ordem:d.ordem,inicio:d.inicio,prazo:d.prazo};}
+    if(p_acao==='receber'){
+      const nf=db.notas_fiscais.find(n=>n.id===d.nota_fiscal_id);
+      if(!nf)return {error:new Error('Selecione uma NF.')};
+      db.contratos_medicoes.push({id:d.id,escopo_item_id:item.id,status:'aprovada_pelo_fiscal',valor_bruto:nf.valor_total,valor_liquido:nf.valor_total-Number(d.glosa),valor_glosa:Number(d.glosa),
+        escopo_conclusao:d.conclusao,data_medicao:d.data,fiscal_responsavel:d.fiscal,observacoes:d.descricao,escopo_dados:{...d,contrato:'TESTE/2026',empresa:'Empresa fictícia',item:item.descricao,nota_numero:nf.numero}});
+      nf.medicao_id=d.id;
+    }
+    return {data:{id:d.id}};
+  }};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app=createServicosEscopo({sb,esc,money:v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),today:()=>new Date().toLocaleDateString('en-CA'),
+  canEdit:()=>true,refresh:async()=>{},notify:console.log,reason:()=>null,openNF:()=>{},openEmpenho:()=>{},
+  pdf:async html=>{document.getElementById('modal-servico-escopo').classList.remove('active');document.getElementById('termo-preview').innerHTML=html;}});
+document.getElementById('abrir').onclick=()=>app.open(item.id);
+</script></body></html>

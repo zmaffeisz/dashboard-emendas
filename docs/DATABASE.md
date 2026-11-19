@@ -43,6 +43,16 @@ e medição preexistente preservadas. Identificação do lote em `origem_codigo`
 
 ## 2. Migrations aplicadas em produção
 
+### Recebimento de serviços por escopo — 18–19/11/2026
+
+No projeto `qpvgpfwuurqcqprnpxua`, foram aplicadas as migrations
+`20261118193000_servicos_escopo_recebimentos.sql` e
+`20261119124000_servicos_escopo_integridade.sql`.
+Acrescentam modo de recebimento ao contrato, configuração de execução ao item,
+vínculo/snapshot de escopo às medições, RPC transacional, policies por seção e
+proteção do histórico financeiro/ateste. Não criam unidades físicas ou inventário.
+Operação e detalhes: [SERVICOS_ESCOPO.md](SERVICOS_ESCOPO.md).
+
 ### Regularização pontual de dados — 29/09/2026
 
 No projeto `qpvgpfwuurqcqprnpxua`, os 47 registros de

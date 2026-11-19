@@ -46,7 +46,7 @@ function _nfContratoLabel(c){
   return `${partes||('Contrato '+(c?.id||''))} — ${_nfEmpresa(c)}`;
 }
 function _nfPodeEditar(){ return podeEditar('notas-fiscais'); }
-function _nfPodeCadastrar(){ return podeEditar('notas-fiscais')||podeEditar('contratos')||podeEditar('fiscalizacao'); }
+function _nfPodeCadastrar(){ return podeEditar('notas-fiscais')||podeEditar('contratos')||podeEditar('fiscalizacao')||podeEditar('itens'); }
 
 function loadNotasFiscais(){
   const pode=_nfPodeEditar();
@@ -424,6 +424,7 @@ async function salvarCadastroNotaFiscal(){
   btn.disabled=false;btn.textContent='Salvar nota fiscal';
   nfTodasCarregado=false;
   fecharCadastroNotaFiscal();
+  document.dispatchEvent(new CustomEvent('nota-fiscal-cadastrada',{detail:{contrato_id:contrato.id,nota_id:nota.id}}));
   if(window.toast) toast(`NF ${nota.numero} cadastrada e disponível para medição.`,'success');
   if(window._activeTab==='notas-fiscais')nfShowSub('todas');
   if(window.ContratosFinanceiro?.isActive()) await window.ContratosFinanceiro.refresh('notas');
