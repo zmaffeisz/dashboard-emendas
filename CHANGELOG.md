@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-19 — Checklist e execução de contratos por demanda
+
+- Controle mensal e seleção de documentos incluem serviços contínuos por demanda sem prefixo de chamado, mantendo manutenção legada e as restrições de seção e encerramento. Consulta paginada evita listas parciais.
+- Cards por demanda oferecem Registrar execução; ao cadastrar NF, o editor de contratos segue para a medição com a NF selecionada e informa as quantidades de cada exame/serviço.
+- Textos do checklist abrangem todos os contratos do controle. Sem mudança de schema ou reaproveitamento de pagamento mensal fixo.
+- Validação: teste de elegibilidade/paginação, vínculo NF→medição, permissões e saldos, além das regressões de contratos.
+
 ## 2026-11-19 — Histórico líquido de serviços por demanda
 
 - Importação histórica própria por vigência, sem inventar bruto, retenções, glosas, datas fiscais ou atestes. NF central permanece única quando rateada entre medições/vigências.

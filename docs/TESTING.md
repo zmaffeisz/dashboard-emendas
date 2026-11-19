@@ -198,3 +198,7 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 ### Histórico de demanda por vigência
 
 `node --test tests/contratos-historico-demanda.test.mjs tests/contratos-financeiro.test.mjs tests/contratos-demanda.test.mjs` verifica NF única com rateios, isolamento das vigências, líquido sem bruto fictício, ausência de aprovação automática e preservação do fluxo normal. No banco oficial, o ensaio transacional com rollback também verificou bloqueios de edição de NF, divergência de rateio, vigência inválida e ausência de acesso sem autenticação. Advisors executados após a migration: sem novos alertas de segurança; índices novos sem uso ainda são esperados.
+
+### Checklist de demanda e quantidades
+
+`node --test tests/nf-checklist-demanda.test.mjs` verifica demanda sem prefixo (incluindo vencido em renovação), manutenção legada, mensal/trimestral, exclusão de ATA/escopo/encerrados, consulta acima de 500 registros, erro de leitura, abertura da execução com NF e preservação das permissões. Verifica também os saldos com medição aprovada/cancelada e compensação quantitativa explicitamente habilitada. No navegador, conferir o card de demanda, sua seleção no checklist, Nova NF e Registrar execução com quantidade por exame. Não gravar NFs ou medições fictícias em produção.

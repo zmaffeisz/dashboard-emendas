@@ -4408,7 +4408,7 @@ function ctAdicionarItemMedicao(itemId=''){
   row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);width:100%;max-width:100%;box-sizing:border-box;overflow:hidden';
   row.innerHTML=`<div><div class="form-label">Item *</div><select class="ctmi-item" onchange="ctAtualizarItemMedicao(this)">${_ctOptionsItensMedicao(itemId)}</select></div>
     <div><div class="form-label">Descrição</div><input type="text" class="ctmi-desc" readonly style="background:var(--surface2);color:var(--text2)"></div>
-    <div><div class="form-label">Quantidade *</div><input type="number" class="ctmi-qtd" step="any" min="0" oninput="ctAtualizarItemMedicao(this)"></div>
+    <div><div class="form-label">Quantidade executada *</div><input type="number" class="ctmi-qtd" step="any" min="0" oninput="ctAtualizarItemMedicao(this)"></div>
     <div><div class="form-label">Valor bruto</div><input type="text" class="ctmi-total" readonly style="background:var(--surface2);color:var(--text2)"></div>
     <button type="button" class="btn-secondary" onclick="ctRemoverItemMedicao(this)" title="Remover item" style="padding:7px 0;color:var(--red)">×</button>`;
   row.querySelectorAll(':scope > div').forEach(el=>{el.style.minWidth='0';});
@@ -4478,7 +4478,7 @@ function ctAtualizarCicloTrimestralMedicao(){
 
 let _ctNotasDisponiveisMedicao=[];
 
-async function abrirModalMedicaoContrato(){
+async function abrirModalMedicaoContrato(notaId=''){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
   if((_ctItensAtual||[]).some(i=>i.origem==='servico')&&_ctAtual.recebimento_escopo){
@@ -4510,6 +4510,8 @@ async function abrirModalMedicaoContrato(){
   }
   const itensWrap=document.getElementById('ctmed-itens-wrap');
   if(itensWrap) itensWrap.style.display=demanda?'block':'none';
+  const ajudaQuantidades=document.getElementById('ctmed-quantidades-ajuda');
+  if(ajudaQuantidades) ajudaQuantidades.textContent='Informe a quantidade executada de cada exame ou serviço nesta NF. A aprovação da medição atualiza os saldos de execução.'+(_ctAtual._demandaConfig?.compensar_quantidades?' Este contrato permite saldo quantitativo negativo por tipo, respeitando o saldo financeiro da vigência.':'');
   ['ctmed-trimestre-wrap','ctmed-execucao-preventiva-wrap','ctmed-relatorio-wrap'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display=trimestral?(id==='ctmed-relatorio-wrap'?'block':'flex'):'none';
   });
@@ -4547,6 +4549,7 @@ async function abrirModalMedicaoContrato(){
     _ctNotasDisponiveisMedicao=typeof nfNotasDisponiveisContrato==='function'?await nfNotasDisponiveisContrato(_ctAtual.id):[];
     if(nfSel){
       nfSel.innerHTML='<option value="">Selecione uma nota fiscal...</option>'+_ctNotasDisponiveisMedicao.map(n=>`<option value="${_sanEsc(String(n.id))}">${_sanEsc(typeof nfNotaOptionLabel==='function'?nfNotaOptionLabel(n):('NF '+(n.numero||'')))}</option>`).join('');
+      if(notaId&&_ctNotasDisponiveisMedicao.some(n=>String(n.id)===String(notaId))) nfSel.value=String(notaId);
       if(!_ctNotasDisponiveisMedicao.length) nfSel.innerHTML='<option value="">Nenhuma NF disponível — cadastre-a na aba Notas Fiscais</option>';
     }
   }catch(e){

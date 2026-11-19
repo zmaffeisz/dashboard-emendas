@@ -67,13 +67,9 @@ function nfShowSub(sub){
   setTimeout(()=>{ if(typeof _setTableOffset==='function') _setTableOffset(); },50);
 }
 
-async function _nfCarregarContratosManutencao(){
-  const {data,error}=await sb.from('contratos')
-    .select('id,cpl,numero_contrato,status,prefixo_chamado,prestador,fornecedor_id,processo_id,secao_id,vencimento,tipo_instrumento,fornecedores(id,razao_social,cnpj_normalizado),processos(id,identificador)')
-    .not('prefixo_chamado','is',null)
-    .order('cpl',{ascending:true});
-  if(error) throw error;
-  return (data||[]).filter(c=>String(c.prefixo_chamado||'').trim()&&!_nfContratoEncerrado(c));
+async function _nfCarregarContratosControleMensal(){
+  const {carregarContratosControleMensal}=await import('../modules/notas-fiscais/controle-contratos.js?v=20261119-1');
+  return carregarContratosControleMensal(sb);
 }
 
 async function loadNFControleMensal(){
@@ -87,7 +83,7 @@ async function loadNFControleMensal(){
   try{
     const competencia=_nfMonthDate();
     const [contratosRes,docsRes,vinculosRes,marcasRes]=await Promise.all([
-      _nfCarregarContratosManutencao(),
+      _nfCarregarContratosControleMensal(),
       sb.from('nf_checklist_documentos').select('*').eq('ativo',true).order('ordem').order('nome'),
       sb.from('nf_checklist_documento_contratos').select('documento_id,contrato_id,secao_id'),
       sb.from('nf_checklist_marcacoes').select('*').eq('competencia',competencia)
@@ -140,7 +136,7 @@ function renderNFControleMensal(){
     <span class="nf-summary-chip">${_nfEsc(new Date(_nfMonthDate()+'T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}))}</span>`;
   if(!rows.length){
     cards.innerHTML='';
-    if(vazio){vazio.textContent=nfControleContratos.length?'Nenhum contrato corresponde aos filtros.':'Nenhum contrato de manutenção com prefixo foi encontrado.';vazio.style.display='block';}
+    if(vazio){vazio.textContent=nfControleContratos.length?'Nenhum contrato corresponde aos filtros.':'Nenhum contrato contínuo ou de manutenção foi encontrado.';vazio.style.display='block';}
     return;
   }
   if(vazio) vazio.style.display='none';
@@ -158,7 +154,7 @@ function renderNFControleMensal(){
     return `<article class="nf-control-card${completo?' is-complete':''}">
       <div class="nf-card-head">
         <div><div class="nf-card-company">${_nfEsc(_nfEmpresa(c))}</div>
-          <div class="nf-card-meta">${_nfEsc(_nfProcesso(c))} · Contrato ${_nfEsc(c.numero_contrato||'—')} · Prefixo ${_nfEsc(c.prefixo_chamado||'—')}${c.vencimento?`<br>Vigência até ${_nfEsc(typeof fmtDate==='function'?fmtDate(c.vencimento):c.vencimento)}`:''}</div>
+          <div class="nf-card-meta">${_nfEsc(_nfProcesso(c))} · Contrato ${_nfEsc(c.numero_contrato||'—')}${c.modelo_execucao==='por_demanda'?' · Serviço contínuo por demanda':''}${c.prefixo_chamado?' · Prefixo '+_nfEsc(c.prefixo_chamado):''}${c.vencimento?`<br>Vigência até ${_nfEsc(typeof fmtDate==='function'?fmtDate(c.vencimento):c.vencimento)}`:''}</div>
         </div>
         <span class="nf-card-status ${completo?'done':'pending'}">${completo?'Concluído':(docs.length?`${docs.length-feitos} pendente${docs.length-feitos===1?'':'s'}`:'Configurar')}</span>
       </div>
@@ -166,6 +162,7 @@ function renderNFControleMensal(){
       <div class="nf-check-items">${checks||'<div class="nf-card-empty">Nenhum documento configurado para este contrato.</div>'}</div>
       ${(podeCadastrarNF||podeEditarChecklist)?`<div class="nf-card-footer">
         ${podeCadastrarNF?`<button class="nf-card-new-button" data-contrato-id="${c.id}" onclick="abrirCadastroNotaFiscalDoCard(this.dataset.contratoId)">+ Nova NF</button>`:''}
+        ${c.modelo_execucao==='por_demanda'&&podeEditar('contratos')?`<button class="nf-card-checklist-button" data-contrato-id="${c.id}" onclick="nfAbrirMedicaoDemandaDoCard(this.dataset.contratoId)">Registrar execução</button>`:''}
         ${podeEditarChecklist?`<button class="nf-card-checklist-button" data-contrato-id="${c.id}" onclick="abrirGerenciadorChecklistNF(this.dataset.contratoId)">Configurar documentos</button>`:''}
       </div>`:''}
     </article>`;
@@ -276,7 +273,7 @@ function renderGerenciadorChecklistNF(){
   if(!nfChecklistDocumentos.length){lista.innerHTML='<div class="nf-empty">Nenhum documento configurado. Adicione o primeiro item acima.</div>';return;}
   lista.innerHTML=nfChecklistDocumentos.slice().sort((a,b)=>(Number(a.ordem)||0)-(Number(b.ordem)||0)||a.nome.localeCompare(b.nome,'pt-BR')).map(d=>{
     const quantidade=_nfContratosVinculados(d.id).length;
-    const escopo=d.aplica_todos?'Todos os contratos de manutenção':`${quantidade} contrato${quantidade===1?'':'s'}`;
+    const escopo=d.aplica_todos?'Todos os contratos deste controle':`${quantidade} contrato${quantidade===1?'':'s'}`;
     return `<div class="nf-checklist-manager-item"><div><div class="nf-checklist-manager-name">${_nfEsc(d.nome)}</div>
       <div class="nf-checklist-manager-meta">${_nfEsc(escopo)}</div></div>
       <div class="nf-checklist-manager-buttons"><button class="edit" data-documento-id="${_nfEsc(d.id)}" onclick="editarDocumentoChecklistNF(this.dataset.documentoId)">Editar</button><button data-documento-id="${_nfEsc(d.id)}" onclick="desativarDocumentoChecklistNF(this.dataset.documentoId)">Remover</button></div></div>`;
@@ -311,7 +308,7 @@ async function salvarDocumentoChecklistNF(){
       }
     }else{
       const secoes=aplicaTodos?[...new Set(nfControleContratos.map(c=>c.secao_id).filter(Boolean))]:[...new Set(nfControleContratos.filter(c=>contratoIds.includes(Number(c.id))).map(c=>c.secao_id).filter(Boolean))];
-      if(!secoes.length) throw new Error('Nenhuma seção com contrato de manutenção foi encontrada.');
+      if(!secoes.length) throw new Error('Nenhuma seção com contrato neste controle foi encontrada.');
       for(const secaoId of secoes){
         const {data:doc,error:docError}=await sb.from('nf_checklist_documentos').insert({nome,descricao:descricao||null,aplica_todos:aplicaTodos,contrato_id:null,secao_id:secaoId}).select('*').single();
         if(docError) throw docError;
@@ -343,11 +340,22 @@ async function desativarDocumentoChecklistNF(id){
 
 async function _nfCarregarContratosCadastro(){
   const {data,error}=await sb.from('contratos')
-    .select('id,cpl,numero_contrato,status,tipo_instrumento,prefixo_chamado,prestador,fornecedor_id,processo_id,secao_id,fornecedores(id,razao_social,cnpj_normalizado),processos(id,identificador)')
+    .select('id,cpl,numero_contrato,status,tipo_instrumento,prefixo_chamado,modelo_execucao,prestador,fornecedor_id,processo_id,secao_id,fornecedores(id,razao_social,cnpj_normalizado),processos(id,identificador)')
     .order('cpl',{ascending:true});
   if(error) throw error;
   nfContratosCadastro=(data||[]).filter(c=>!_nfContratoEncerrado(c));
   return nfContratosCadastro;
+}
+
+async function nfAbrirMedicaoDemandaDoCard(contratoId,notaId=''){
+  if(!podeEditar('contratos')) return;
+  try{
+    if(!contratosCarregado) await loadContratos();
+    await abrirDetalheContrato(contratoId,{somenteDados:true});
+    await abrirModalMedicaoContrato(notaId);
+  }catch(error){
+    if(window.toast) toast('Não foi possível abrir a execução: '+error.message,'error');
+  }
 }
 
 function abrirCadastroNotaFiscalDoCard(contratoId){
@@ -367,6 +375,7 @@ async function abrirCadastroNotaFiscal(contratoId='',competencia=''){
   document.getElementById('nfc-recebimento').value=_nfToday();
   document.getElementById('nfc-arquivo').value='';
   const msg=document.getElementById('nfc-msg');msg.textContent='';msg.className='fmsg';
+  const salvar=document.getElementById('nfc-salvar');salvar.disabled=false;salvar.textContent='Salvar nota fiscal';
   modal.classList.add('active');
   try{
     await _nfCarregarContratosCadastro();
@@ -374,6 +383,7 @@ async function abrirCadastroNotaFiscal(contratoId='',competencia=''){
     const contrato=nfContratosCadastro.find(c=>String(c.id)===String(preferido));
     contratoIdEl.value=contrato?String(contrato.id):'';
     contratoDisplay.value=contrato?_nfContratoLabel(contrato):'Contrato não identificado';
+    if(contrato?.modelo_execucao==='por_demanda'&&podeEditar('contratos')) salvar.textContent='Salvar NF e informar execução';
     document.getElementById('nfc-empresa').value=contrato?_nfEmpresa(contrato):'';
     document.getElementById('nfc-processo').value=contrato?_nfProcesso(contrato):'';
     if(!contrato){msg.textContent='Não foi possível identificar o contrato selecionado no card.';msg.className='fmsg err';}
@@ -428,6 +438,7 @@ async function salvarCadastroNotaFiscal(){
   if(window.toast) toast(`NF ${nota.numero} cadastrada e disponível para medição.`,'success');
   if(window._activeTab==='notas-fiscais')nfShowSub('todas');
   if(window.ContratosFinanceiro?.isActive()) await window.ContratosFinanceiro.refresh('notas');
+  if(contrato.modelo_execucao==='por_demanda'&&podeEditar('contratos')) await nfAbrirMedicaoDemandaDoCard(contrato.id,nota.id);
 }
 
 function _nfOrigem(row){

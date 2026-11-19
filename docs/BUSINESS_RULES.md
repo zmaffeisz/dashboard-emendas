@@ -339,11 +339,13 @@
 - Nas medições mensais e por demanda, `notas_fiscais.competencia` é a fonte única da
   competência: o valor é apenas exibido para conferência e copiado para a medição, sem
   entrada manual duplicada. A medição trimestral continua usando o ciclo contratual.
-- O controle documental mensal considera contratos de manutenção que possuem
-  `prefixo_chamado` e ainda não foram encerrados definitivamente. Contratos vencidos que
-  permanecem ativos, exibidos como **Aguardando renovação**, continuam no controle.
+- O controle documental mensal inclui serviços contínuos por demanda, mensais e
+  trimestrais, mesmo sem `prefixo_chamado`, além das manutenções legadas com prefixo.
+  ATAs, serviços por escopo e contratos encerrados definitivamente ficam fora desse
+  controle. Contratos vencidos ainda em renovação continuam disponíveis para checklist
+  e cadastro de NFs. A lista respeita as mesmas permissões e seções do banco.
 - Cada documentação do checklist é cadastrada uma única vez por seção e pode valer para
-  todos os contratos de manutenção ou para vários contratos selecionados por meio de
+  todos os contratos deste controle ou para vários contratos selecionados por meio de
   `nf_checklist_documento_contratos`. A ordem de exibição é atribuída automaticamente pelo
   banco. As marcações usam o primeiro dia do mês como competência; a virada mensal cria um
   estado visual novo sem excluir o histórico dos meses anteriores.
@@ -586,3 +588,9 @@ permanecem sem valor quando não existe parcela fixa contratual.
 ### Execução histórica líquida por demanda
 
 Histórico com valores líquidos não permite deduzir bruto ou glosas a partir de quantidades vezes preços atuais. Preserve os campos desconhecidos e identifique a origem importada. Separe saldos por vigência; uma NF atravessando a renovação continua única, com rateios. Não gere aprovação fiscal, ateste ou pagamento retroativo sem evidência. Negativos quantitativos só são admitidos com configuração explícita de compensação por contrato, conservando o limite financeiro da vigência. Categorias operacionais podem compartilhar um lote contratual sem duplicar seu valor.
+
+- Nos cards de demanda, **Registrar execução** abre a medição com quantidades por
+  exame/serviço. Ao salvar uma NF nova, quem pode editar contratos segue para essa medição
+  com a NF já selecionada. O usuário informa os quantitativos; a aprovação segue o fluxo
+  próprio de demanda e atualiza os saldos. O checklist não gera mensalidade fixa, ateste
+  ou aprovação automática. Permissão somente para cadastrar NF não concede edição de medições.
