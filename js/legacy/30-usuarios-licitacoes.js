@@ -315,6 +315,12 @@ function _licCorrespondeSecretaria(itens,secretarias){
 }
 function _licItemExecutado(i){ if(i._situacaoFluxo) return false; const s=_cpStatusById[i.status_lic_id]; return !!(s&&s.automatico); }
 function _licItemContratado(i){ return !!i.contrato_id; }
+function _licProcessoContratado(processo,todosItens,naLic){
+  // Cadastros de contratos existentes podem ter somente o cabeçalho do processo.
+  // Havendo itens, preservar os saldos ainda não contratados na licitação.
+  if(!todosItens.length) return Number(processo.n_contratos||0)>0;
+  return naLic.length>0&&naLic.every(_licItemContratado);
+}
 function _licItemOcorrencia(i){ return i?_licOcorrenciasByItem[String(i.id)]||null:null; }
 function _licItemEncerrado(i){ return !!_licItemOcorrencia(i); }
 function _licProcessoTemEmendaVinculada(processoId,itens=[]){
@@ -333,7 +339,7 @@ function _licProcessosVisiveis(){
     const todosItens=porProc[p.id]||[];
     const itensServico=_procServicoPeriodicoItens(p);
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));
-    const fullyContratado=naLic.length>0&&naLic.every(i=>_licItemContratado(i));
+    const fullyContratado=_licProcessoContratado(p,todosItens,naLic);
     return {p,todosItens,naLic,itensServico,fullyContratado,gone:todosItens.length>0&&naLic.length===0};
   }).filter(x=>{
     if(x.gone||(x.fullyContratado&&!incluirContratados)) return false;
@@ -363,7 +369,7 @@ function renderLicitacoes(){
     const itensServico=_procServicoPeriodicoItens(p);
     const naLic=todosItens.filter(i=>!_licItemExecutado(i));            // pendentes + já contratados
     const pendentes=naLic.filter(i=>!_licItemContratado(i)&&!_licItemEncerrado(i));
-    const fullyContratado=naLic.length>0&&naLic.every(i=>_licItemContratado(i));
+    const fullyContratado=_licProcessoContratado(p,todosItens,naLic);
     return {p, todosItens, naLic, pendentes, itensServico, totContratado:naLic.filter(_licItemContratado).length, fullyContratado, gone:todosItens.length>0 && naLic.length===0};
   });
   const ocultos=info.filter(x=>x.fullyContratado).length;

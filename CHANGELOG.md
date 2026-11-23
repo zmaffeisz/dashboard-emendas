@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-23 — Contratos importados fora das licitações pendentes
+
+- Processos sem itens que já possuem contrato ficam ocultos por padrão em Licitações em andamento, inclusive nas exportações; continuam consultáveis ao marcar incluir já contratadas.
+- Processos parcialmente contratados continuam na lista enquanto houver itens pendentes. Contratos e vínculos são preservados.
+
 ## 2026-11-23 — Ordenação e seção nos contratos
 
 - Contratos abrem por vencimento crescente: vencidos primeiro, seguidos pelos vencimentos mais próximos; datas ausentes ficam no fim.

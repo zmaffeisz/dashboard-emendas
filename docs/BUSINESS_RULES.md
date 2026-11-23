@@ -187,6 +187,8 @@
 
 ## 4. Contratos (matriz) e Atas
 
+- Em Licitações em andamento, processos sem itens que já possuem contrato são considerados contratados e ficam ocultos por padrão. A opção incluir já contratadas permite consultá-los. Havendo itens pendentes, o processo continua visível, mesmo com outros itens já contratados.
+
 - A lista de contratos usa vencimento crescente por padrão (vencidos primeiro e sem data ao final). O seletor também permite seção em ordem alfabética, com vencimento crescente dentro de cada seção. Limpar restaura o padrão. O cabeçalho de cada card identifica `Processo - SEÇÃO`.
 
 - `contratos` é a **matriz** de todo instrumento; `tipo_instrumento` ∈ {`CONTRATO`, `ATA`}.
