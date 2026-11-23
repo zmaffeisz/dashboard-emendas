@@ -1136,7 +1136,7 @@ let contratosRows = [];
 let contratosFiltrados = [];
 let contratosCarregado = false;
 let _ctAtual = null;
-let ctSortCol = null;
+let ctSortCol = 'vencimento';
 let ctSortAsc = true;
 let contratosSelecionados = new Set();
 let ctExpandido = {};
@@ -2690,6 +2690,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 function clearAllContratos(){
+  ctSortCol='vencimento';
+  ctSortAsc=true;
   const el=document.getElementById("ct-busca");if(el)el.value="";
   const alerta=document.getElementById("ct-alerta");if(alerta)alerta.value="";
   Object.keys(contratoHeaderFilters).forEach(k=>contratoHeaderFilters[k]=[]);
@@ -2785,6 +2787,12 @@ function fmtDate(d){
   return d;
 }
 
+function ordenarContratosPor(col){
+  ctSortCol=col==='secao'?'secao':'vencimento';
+  ctSortAsc=true;
+  renderTabelaContratos();
+}
+
 function sortContratos(col){
   if(ctSortCol===col) ctSortAsc=!ctSortAsc;
   else{ctSortCol=col;ctSortAsc=true;}
@@ -2794,7 +2802,7 @@ function sortContratos(col){
 function ctGetSortVal(r,col){
   if(col==="vencimento"||col==="dias"){
     const d=parseDataBR(r.vencimento);
-    return d?d.getTime():(ctSortAsc?Infinity:-Infinity);
+    return d&&Number.isFinite(d.getTime())?d.getTime():(ctSortAsc?Infinity:-Infinity);
   }
   if(col==="numero_contrato") return (r.numero_contrato||'').toString().toLowerCase();
   if(col==="modelo_contrato") return _ctModeloLabel(r).toLowerCase();
@@ -2819,6 +2827,8 @@ function diasContratoVencer(vencimento){
 function renderTabelaContratos(){
   const tbody=document.getElementById("ct-tbody");
   if(!tbody) return;
+  const ordenar=document.getElementById('ct-ordenar');
+  if(ordenar) ordenar.value=ctSortCol==='secao'?'secao':'vencimento';
   const table=document.getElementById("ct-table");
   if(table){
     table.style.display="table";
@@ -2847,6 +2857,12 @@ function renderTabelaContratos(){
       const va=ctGetSortVal(a,ctSortCol),vb=ctGetSortVal(b,ctSortCol);
       if(va<vb) return ctSortAsc?-1:1;
       if(va>vb) return ctSortAsc?1:-1;
+      // Dentro de cada seção, manter os vencidos e vencimentos próximos primeiro.
+      if(ctSortCol==='secao'){
+        const da=ctGetSortVal(a,'vencimento'),db=ctGetSortVal(b,'vencimento');
+        if(da<db) return -1;
+        if(da>db) return 1;
+      }
       return 0;
     });
   }
@@ -2970,7 +2986,7 @@ function _ctContratoCardHtml(r){
       <div class="ct-contract-identity">
         <span class="ct-contract-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
         <div class="ct-contract-identity-info">
-          <span class="ct-contract-kicker">Processo</span>
+          <span class="ct-contract-kicker">Processo - ${_sanEsc(r.secao||'Sem seção')}</span>
           <strong>${_sanEsc(r.cpl||'Não informado')}</strong>
           <span class="ct-contract-number">Contrato ${_sanEsc(r.numero_contrato||'não informado')}</span>
         </div>

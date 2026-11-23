@@ -2508,6 +2508,13 @@
           <option value="limiteAditivo80">Aditivo acima de 80%</option>
         </select>
       </div>
+      <div class="fg">
+        <label class="fg-label" for="ct-ordenar">Ordenar por</label>
+        <select id="ct-ordenar" onchange="ordenarContratosPor(this.value)">
+          <option value="vencimento">Vencimento</option>
+          <option value="secao">Seção</option>
+        </select>
+      </div>
       <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
     </div>
 
@@ -3363,7 +3370,7 @@
 <script src="js/legacy/40-itens-entregas.js?v=20261119-checklist-demanda-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20261008-rateio-emendas-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261119-checklist-demanda-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261123-ordenacao-contratos-1"></script>
 <script src="js/legacy/75-notas-fiscais.js?v=20261119-checklist-demanda-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>

@@ -187,6 +187,8 @@
 
 ## 4. Contratos (matriz) e Atas
 
+- A lista de contratos usa vencimento crescente por padrão (vencidos primeiro e sem data ao final). O seletor também permite seção em ordem alfabética, com vencimento crescente dentro de cada seção. Limpar restaura o padrão. O cabeçalho de cada card identifica `Processo - SEÇÃO`.
+
 - `contratos` é a **matriz** de todo instrumento; `tipo_instrumento` ∈ {`CONTRATO`, `ATA`}.
 - **Valores monetários**: usar sempre os campos numéricos `valor_inicial_num`,
   `valor_atual_num`, `valor_mensal_num` para cálculo. Os campos texto (`valor_inicial`,

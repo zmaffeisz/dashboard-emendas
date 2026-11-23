@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-23 — Ordenação e seção nos contratos
+
+- Contratos abrem por vencimento crescente: vencidos primeiro, seguidos pelos vencimentos mais próximos; datas ausentes ficam no fim.
+- Seletor permite ordenar por seção, mantendo os vencimentos em ordem dentro de cada seção. Limpar restaura o padrão por vencimento.
+- Cards identificam a seção junto de Processo.
+
 ## 2026-11-19 — Checklist e execução de contratos por demanda
 
 - Controle mensal e seleção de documentos incluem serviços contínuos por demanda sem prefixo de chamado, mantendo manutenção legada e as restrições de seção e encerramento. Consulta paginada evita listas parciais.
