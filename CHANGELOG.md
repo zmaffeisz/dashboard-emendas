@@ -2,6 +2,8 @@
 
 ## 2026-11-26 — Situações no Controle de Entregas
 
+- Ícones antes dos nomes nas ações de situação, observações e vínculo de empenho, incluindo os botões de situação em lote.
+
 - Opções Pendente (com descrição obrigatória) e Sem prazo nos menus individuais e na barra de seleção em lote; etiquetas roxa e azul-petróleo e filtros próprios. A busca inclui a descrição.
 - Voltar ao prazo automático restaura a indicação pelas datas existentes. As marcações são acompanhamento administrativo e não alteram prazos contratuais, recebimentos, NFs ou inventário.
 - Gravação atômica em lote, repetição segura após erro de rede e histórico por AF, execução de ATA ou item de serviço. Recebimentos parciais com saldo podem receber situação; concluídos/cancelados não.

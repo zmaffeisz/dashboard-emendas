@@ -1266,8 +1266,8 @@ function _ceSituacaoElegivel(r){
 function _ceSituacaoAcoes(r){
   if(!podeEditar('itens')||!_ceSituacaoElegivel(r)) return '';
   const key=_ceRowKey(r);
-  return `<button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','pendente')">Pendente</button><button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','sem_prazo')">Sem prazo</button>`
-    +(r.acompanhamento&&r.acompanhamento.situacao!=='automatico'?`<button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','automatico')">Voltar ao prazo automático</button>`:'');
+  return `<button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','pendente')">⏳ Pendente</button><button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','sem_prazo')">🗓️ Sem prazo</button>`
+    +(r.acompanhamento&&r.acompanhamento.situacao!=='automatico'?`<button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','automatico')">↩️ Voltar ao prazo automático</button>`:'');
 }
 function _ceSituacaoStatusHtml(r){
   const texto=r.acompanhamento?.situacao!=='automatico'&&_ceSituacaoElegivel(r)?r.acompanhamento?.descricao||'':'';
@@ -1677,7 +1677,7 @@ function renderItensEntregas(){
       let acoes='—', docs='—', recInfo, rowBg='';
       if(r._pendente){
         rowBg=';background:#EF9F2710';
-        const vincBtn=pode?`<button onclick="abrirVincularEmpenho('${r.item_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">Vincular empenho</button>`:'';
+        const vincBtn=pode?`<button onclick="abrirVincularEmpenho('${r.item_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">💵 Vincular empenho</button>`:'';
         const afBtn=pode?`<button onclick="abrirModalAF('${r.item_id}')" ${r.empenho_vinculado?'':'disabled title="Vincule um empenho antes de emitir a AF"'} style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:${r.empenho_vinculado?'var(--blue)':'var(--surface2)'};color:${r.empenho_vinculado?'#fff':'var(--text3)'};cursor:${r.empenho_vinculado?'pointer':'not-allowed'};white-space:nowrap">Emitir AF</button>`:'';
         acoes=`<div style="display:flex;gap:4px;flex-wrap:wrap">${vincBtn}${afBtn}</div>`;
         docs=`<div>Emp: ${r.empenho_vinculado?_sanEsc(r.empenho||'sim'):'<span style="color:var(--red)">não vinculado</span>'}</div>${marcaMod?('<div>'+_sanEsc(marcaMod)+'</div>'):''}`;
@@ -1692,7 +1692,7 @@ function renderItensEntregas(){
         const aqPrazoBtn=(r.tipo==='Aquisição'&&!r.recebido&&!r.cancelado&&pode)?`<button onclick="abrirModalProrrogarPrazoAquisicao('${r.entrega_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         // ATA aguardando AF: só "Emitir AF" (define data AF + prazo). Após emitir, libera Receber/Prazo.
         const ataPodeAF=!!(r.empenho_vinculado||r.empenho);
-        const ataVincBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode&&!ataPodeAF)?`<button onclick="abrirVincularEmpenho('', '${r.exec_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">Vincular empenho</button>`:'';
+        const ataVincBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode&&!ataPodeAF)?`<button onclick="abrirVincularEmpenho('', '${r.exec_id}')" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">💵 Vincular empenho</button>`:'';
         const ataAFBtn=(r.tipo==='ATA'&&r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirModalAF('','${r.exec_id}')" ${ataPodeAF?'':'disabled title="Nenhum empenho vinculado. Vincule um empenho antes de emitir a AF."'} style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:${ataPodeAF?'var(--blue)':'var(--surface2)'};color:${ataPodeAF?'#fff':'var(--text3)'};cursor:${ataPodeAF?'pointer':'not-allowed'};white-space:nowrap">📄 Emitir AF</button>`:'';
         const ataPrazoBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&!r.recebido&&r.exec_id&&pode)?`<button onclick="abrirModalProrrogarPrazo('${r.exec_id}')" title="Prorrogar prazo de entrega" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--amber-bg);color:var(--amber-text);background:var(--amber-bg);cursor:pointer;white-space:nowrap">📅 Prazo</button>`:'';
         const ataRecBtn=(r.tipo==='ATA'&&!r._ataPendenteAF&&r.exec_id&&pode)?`<button onclick="abrirRecebimentoAta('${r.exec_id}')" title="Registrar recebimento administrativo" style="font-size:11px;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--green);background:${r.recebido?'var(--surface)':'var(--green)'};color:${r.recebido?'var(--green)':'#fff'};cursor:pointer;white-space:nowrap">${r.recebido?'✓ Ver recebimento':'📥 Receber'}</button>`:'';
@@ -1709,7 +1709,7 @@ function renderItensEntregas(){
       const observacoes=Array.isArray(r.observacoes)?r.observacoes:[];
       const obsTotal=observacoes.length;
       const obsUltima=observacoes[obsTotal-1]?.texto||'';
-      const obsBtn=pode?`<button onclick="abrirObservacaoEntrega('${_ceRowKey(r)}')" title="${_sanEsc(obsUltima||'Adicionar observação')}" aria-label="Observações (${obsTotal})" style="height:28px;padding:0 7px;border-radius:6px;border:1px solid ${obsTotal?'var(--blue)':'var(--border)'};background:${obsTotal?'var(--blue-bg)':'var(--surface)'};color:${obsTotal?'var(--blue)':'var(--text2)'};cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap">Obs${obsTotal?' · '+obsTotal:''}</button>`:'';
+      const obsBtn=pode?`<button onclick="abrirObservacaoEntrega('${_ceRowKey(r)}')" title="${_sanEsc(obsUltima||'Adicionar observação')}" aria-label="Observações (${obsTotal})" style="height:28px;padding:0 7px;border-radius:6px;border:1px solid ${obsTotal?'var(--blue)':'var(--border)'};background:${obsTotal?'var(--blue-bg)':'var(--surface)'};color:${obsTotal?'var(--blue)':'var(--text2)'};cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap">📝 Obs${obsTotal?' · '+obsTotal:''}</button>`:'';
       if(obsBtn) acoes=acoes==='—'?`<div style="display:flex;gap:4px;flex-wrap:wrap">${obsBtn}</div>`:acoes.replace('</div>',obsBtn+'</div>');
       const situacaoBtns=_ceSituacaoAcoes(r);
       if(situacaoBtns) acoes=acoes==='—'?`<div style="display:flex;gap:4px;flex-wrap:wrap">${situacaoBtns}</div>`:acoes.replace('</div>',situacaoBtns+'</div>');
@@ -2389,9 +2389,9 @@ function _ceAdvBar(){
     ${baixarAfsBtn}
     ${emailAfsBtn}
     ${recBtn}
-    <button onclick="abrirSituacaoEntrega('','pendente')" class="btn-secondary" style="color:#7C3AED">Marcar pendente</button>
-    <button onclick="abrirSituacaoEntrega('','sem_prazo')" class="btn-secondary" style="color:#0E7490">Marcar sem prazo</button>
-    <button onclick="abrirSituacaoEntrega('','automatico')" class="btn-secondary">Prazo automático</button>
+    <button onclick="abrirSituacaoEntrega('','pendente')" class="btn-secondary" style="color:#7C3AED">⏳ Marcar pendente</button>
+    <button onclick="abrirSituacaoEntrega('','sem_prazo')" class="btn-secondary" style="color:#0E7490">🗓️ Marcar sem prazo</button>
+    <button onclick="abrirSituacaoEntrega('','automatico')" class="btn-secondary">↩️ Prazo automático</button>
     ${selecionadas.every(r=>r.tipo!=='Serviço'&&!r.recebido)?'<button onclick="abrirAdvertenciaCE()" class="btn-secondary">⚖️ Gerar advertência</button>':''}
     <button onclick="_ceAdvLimpar()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Limpar seleção</button>
   </div>`;
