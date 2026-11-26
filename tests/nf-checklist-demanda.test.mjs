@@ -9,7 +9,8 @@ assert.equal(contratoParticipaControleMensal({...demanda,status:'VIGENTE'}),true
 for(const status of ['ENCERRADO','CONCLUÍDO','CANCELADO','RESCINDIDO']) assert.equal(contratoParticipaControleMensal({...demanda,status}),false);
 assert.equal(contratoParticipaControleMensal({...demanda,tipo_instrumento:'ATA',prefixo_chamado:'X'}),false);
 assert.equal(contratoParticipaControleMensal({...demanda,recebimento_escopo:'parcial'}),false);
-assert.equal(contratoParticipaControleMensal({prefixo_chamado:'MANUT'}),true,'Manutenção legada preservada');
+assert.equal(contratoParticipaControleMensal({prefixo_chamado:'MANUT'}),false,'Prefixo não substitui a classificação');
+assert.equal(contratoParticipaControleMensal({modelo_contrato:'servico_continuo_mensal_fixo',prefixo_chamado:'MANUT'}),true,'Manutenção legada classificada preservada');
 assert.equal(contratoParticipaControleMensal({periodicidade_pagamento:'TRIMESTRAL'}),true);
 assert.equal(contratoParticipaControleMensal({modelo_execucao:'continuo_mensal_fixo'}),true);
 assert.equal(contratoParticipaControleMensal({modelo_execucao:null,prefixo_chamado:' '}),false);

@@ -3945,6 +3945,7 @@ function ncProcessoChange(){
   const gm=document.getElementById('nc-gera-mais');
   if(!id){
     window._gerarContratoProcesso=null;
+    if(typeof _ncPrepararClassificacao==='function') _ncPrepararClassificacao();
     if(cplH) cplH.value='';
     if(gm) gm.checked=false;
     const secSel=document.getElementById('nc-secao');
@@ -4004,7 +4005,7 @@ function _ncServicoDemanda(proc){
   return tipo==='servico por demanda/execucao';
 }
 function _ncServicoEscopo(proc){
-  return proc?.tipo_servico==='Serviço por escopo fechado';
+  return ['Serviço por escopo fechado','Serviço pontual com pagamento único'].includes(proc?.tipo_servico);
 }
 function _ncShow(id,on){ const el=document.getElementById(id); if(el) el.style.display=on?'':'none'; }
 function _ncAplicarModo(natureza){
@@ -4014,7 +4015,10 @@ function _ncAplicarModo(natureza){
   const servTrimestral=_ncServicoTrimestralFixo(window._gerarContratoProcesso);
   const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
   const servEscopo=_ncServicoEscopo(window._gerarContratoProcesso);
-  _ncShow('nc-recebimento-escopo-wrap',servEscopo);
+  const pontual=window._gerarContratoProcesso?.tipo_servico==='Serviço pontual com pagamento único';
+  if(pontual&&document.getElementById('nc-recebimento-escopo')) document.getElementById('nc-recebimento-escopo').value='integral';
+  _ncShow('nc-recebimento-escopo-wrap',servEscopo&&!pontual);
+  if(typeof _ncPrepararClassificacao==='function') _ncPrepararClassificacao();
   // valor mensal e fonte: só contratos comuns (outro)
   _ncShow('nc-valor-mensal-wrap', modo==='outro'&&!servDemanda&&!servEscopo);
   _ncShow('nc-fonte-wrap', modo==='outro');

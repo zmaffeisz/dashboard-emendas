@@ -23,6 +23,8 @@ element('mfo-servico', 'Pendência sanada pela empresa');
 element('mfo-ocorrencias', 'Regularização conferida');
 element('modal-fisc-os');
 element('fm-total');
+element('fm-sem-total');
+element('fm-sem-pend');
 element('fm-nao');
 element('fm-pend');
 element('fm-conf');

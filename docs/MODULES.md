@@ -140,10 +140,20 @@ Ciclo de vida do item após a contratação:
   número, datas de emissão e recebimento, valor, anexo e observações; contrato, fornecedor,
   processo e competência vêm do card, sem seletor de contrato no modal, enquanto o status
   é definido automaticamente.
-- **Controle mensal:** cards dos contratos de manutenção com prefixo e checklist em
-  `nf_checklist_documentos` / `nf_checklist_marcacoes`; concluídos permanecem visíveis no
-  final da lista. Cada card oferece um botão compacto para cadastrar NF já vinculada ao
-  contrato e à competência selecionada; o filtro abre por padrão no mês anterior.
+- **Controle mensal de documentos:** inclusão automática pela classificação persistida em
+  `contratos.modelo_contrato`, usando o catálogo de 13 modelos em
+  `js/modules/contratos/classificacao.js`. Participam mensal/trimestral fixo, demanda,
+  engenharia, locações, materiais/peças, dedicação exclusiva e credenciamento.
+  Aquisição única/parcelada, fornecimento com instalação e serviço pontual com pagamento
+  único ficam fora, assim como ATAs e instrumentos encerrados. Vencido continua visível.
+  Prefixo de chamado não determina inclusão. A competência seleciona as marcações,
+  não a vigência do contrato; acompanhamento mensal não cria obrigação de NF mensal.
+  Tecnologia deve ser classificada pelo objeto como aquisição, locação ou serviço.
+  O editor permite manter classificações legadas; o banco bloqueia conversão dos fluxos
+  especializados. Escopo parcial legado mantém recebimento e histórico próprios.
+  O checklist usa `nf_checklist_documentos` / `nf_checklist_marcacoes`; concluídos ficam
+  ao final. O card oferece cadastro de NF vinculada ao contrato e à competência; o
+  filtro inicia no mês anterior. A classificação não gera NF nem medição automaticamente.
 - **Todas as notas:** consulta unificada de `notas_fiscais`, inclusive aquisições e atas,
   com situação do vínculo em `contratos_medicoes`.
 - **Medição:** tanto o fluxo contratual quanto a Fiscalização listam somente NFs do mesmo

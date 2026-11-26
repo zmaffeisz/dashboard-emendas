@@ -1730,7 +1730,7 @@
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
       <div class="form-group"><div class="form-label">Categoria da licitação *</div><select id="proc-categoria" onchange="procCategoriaChange()"><option value="">Selecione...</option></select><div class="form-help">A categoria acompanhará os itens, contratos, atas e o inventário.</div></div>
       <div class="form-group" id="proc-categoria-nova-wrap" style="display:none"><div class="form-label">Nova categoria *</div><input type="text" id="proc-categoria-nova" maxlength="120" placeholder="Nome da nova categoria"><div class="form-help">Antes de criar, confira as opções existentes. A nova categoria ficará disponível para revisão em Cadastros.</div></div>
-      <div class="form-group" id="proc-tipo-servico-wrap" style="display:none"><div class="form-label">Tipo do serviço *</div><select id="proc-tipo-servico" onchange="procTipoServicoChange()"><option value="">Selecione...</option><option>Serviço mensal valor fixo</option><option>Serviço trimestral valor fixo</option><option>Serviço por demanda/execução</option><option>Serviço por escopo fechado</option><option>Locação de bem móvel</option><option>Mão de obra com dedicação exclusiva</option><option>Credenciamento</option></select></div>
+      <div class="form-group" id="proc-tipo-servico-wrap" style="display:none"><div class="form-label">Tipo do serviço *</div><select id="proc-tipo-servico" onchange="procTipoServicoChange()"><option value="">Selecione...</option><option>Serviço mensal valor fixo</option><option>Serviço trimestral valor fixo</option><option>Serviço por demanda/execução</option><option>Serviço pontual com pagamento único</option><option>Obra ou serviço de engenharia</option><option>Serviço com materiais ou peças</option><option>Locação de bem móvel</option><option>Mão de obra com dedicação exclusiva</option><option>Credenciamento</option></select></div>
       <div class="form-group"><div class="form-label">Seção *</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
       <div class="form-group" id="proc-serv-demanda-meses-wrap" style="display:none"><div class="form-label">Vigência em meses *</div><input type="number" id="proc-serv-demanda-meses" min="1" step="1" placeholder="ex: 12"></div>
       <div class="form-group full" id="proc-servico-mensal-wrap" style="display:none;min-width:0;max-width:100%;box-sizing:border-box">
@@ -2347,7 +2347,7 @@
   </div>
 
   <div class="nf-subtabs" role="tablist" aria-label="Seções de notas fiscais">
-    <button class="nf-subtab-btn active" data-sub="controle" onclick="nfShowSub('controle')">Controle mensal</button>
+    <button class="nf-subtab-btn active" data-sub="controle" onclick="nfShowSub('controle')">Controle mensal de documentos</button>
     <button class="nf-subtab-btn" data-sub="todas" onclick="nfShowSub('todas')">Todas as notas fiscais</button>
   </div>
 
@@ -2697,7 +2697,7 @@
       <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01" disabled title="Valor original preservado. Use reajuste, aditivo ou supressão para alterar valores de gestão."></div>
       <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01" disabled title="Valor de gestão preservado. Use eventos formalizados para alterar o valor atual."></div>
       <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label" id="ec-valor-periodico-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
-      <div class="form-group" id="ec-classificacao-wrap"><div class="form-label">Classificação do pagamento</div><select id="ec-classificacao"><option value="">Manter classificação atual</option><option value="mensal_fixo">Mensal fixo — manutenção</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">Selecione mensal fixo para corrigir contratos de manutenção que foram cadastrados sem essa classificação.</div></div>
+      <div class="form-group full" id="ec-classificacao-wrap"><div class="form-label">Classificação do contrato</div><select id="ec-classificacao"><option value="">Manter classificação atual</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">A classificação define a participação no controle mensal de documentos. Cada modelo mantém sua forma de execução.</div></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
       <div class="form-group"><div class="form-label">Fiscais responsáveis</div><select id="ec-fiscalizacao" multiple size="4" style="min-height:88px"></select><div style="font-size:11px;color:var(--text3);margin-top:4px">Pesquise e selecione um ou mais fiscais.</div></div>
       <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
@@ -2749,6 +2749,7 @@
         </div>
         <input type="text" id="nc-prestador" placeholder="Razão social da nova empresa" style="display:none;margin-top:6px">
       </div>
+      <div class="form-group full" id="nc-classificacao-wrap"><div class="form-label">Classificação do contrato *</div><select id="nc-classificacao"><option value="">Selecione a classificação...</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">Define a participação no controle mensal de documentos. Quando informada no processo, a classificação é herdada.</div></div>
       <div class="form-group full" id="nc-objeto-wrap"><div class="form-label">Objeto</div><input type="text" id="nc-objeto" placeholder="herdado da licitação" readonly></div>
       <div class="form-group"><div class="form-label">CNPJ</div><input type="text" id="nc-cnpj" placeholder="00.000.000/0000-00"></div>
       <div class="form-group"><div class="form-label">E-mail da empresa *</div><input type="email" id="nc-email" placeholder="contato@empresa.com"></div>
@@ -2767,7 +2768,7 @@
       <div class="form-group" id="nc-vencimento-wrap"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
       <div class="form-group" id="nc-valor-wrap"><div class="form-label">Valor Global (R$)</div><input type="text" id="nc-valor-inicial" placeholder="soma dos itens" title="Soma dos valores dos itens marcados para este contrato"></div>
       <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label" id="nc-valor-periodico-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
-      <div class="form-group full" id="nc-recebimento-escopo-wrap" style="display:none"><div class="form-label">Recebimento do serviço por escopo *</div><select id="nc-recebimento-escopo"><option value="">Selecione...</option><option value="integral">Integral, ao concluir o serviço</option><option value="parcial">Parcial, por medições da execução</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">A execução e os atestes serão acompanhados no Controle de Entregas.</div></div>
+      <div class="form-group full" id="nc-recebimento-escopo-wrap" style="display:none"><div class="form-label">Recebimento do serviço por escopo *</div><select id="nc-recebimento-escopo" onchange="_ncPrepararClassificacao()"><option value="">Selecione...</option><option value="integral">Integral, ao concluir o serviço</option><option value="parcial">Parcial, por medições da execução</option></select><div style="font-size:11px;color:var(--text3);margin-top:4px">A execução e os atestes serão acompanhados no Controle de Entregas.</div></div>
       <div class="form-group" id="nc-fonte-wrap"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
       <div class="form-group full" id="nc-fiscalizacao-wrap"><div class="form-label">Fiscalização * <span style="font-weight:400;color:var(--text3)">(pesquise e clique p/ escolher vários)</span></div>
         <select id="nc-fiscalizacao" multiple size="4" style="min-height:88px"></select>
@@ -3366,14 +3367,14 @@
 <script src="js/legacy/00-core.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20261008-rateio-emendas-1"></script>
-<script src="js/legacy/30-usuarios-licitacoes.js?v=20261123-contratados-sem-itens-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20261119-checklist-demanda-1"></script>
+<script src="js/legacy/30-usuarios-licitacoes.js?v=20261126-classificacao-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20261126-classificacao-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20261008-rateio-emendas-1"></script>
-<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261123-ordenacao-contratos-1"></script>
-<script src="js/legacy/75-notas-fiscais.js?v=20261119-checklist-demanda-1"></script>
+<script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261126-classificacao-1"></script>
+<script src="js/legacy/75-notas-fiscais.js?v=20261126-classificacao-1"></script>
 <script src="js/legacy/90-bootstrap-senha.js"></script>
 <script src="js/theme.js"></script>
-<script type="module" src="js/app.js?v=20261119-checklist-demanda-1"></script>
+<script type="module" src="js/app.js?v=20261126-classificacao-1"></script>
 </body>
 </html>

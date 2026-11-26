@@ -1167,6 +1167,10 @@ function _ctHumanize(v){
   return String(v||'').replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase());
 }
 function _ctModeloKey(r){
+  if(typeof _ctModule==='function'&&typeof _ctModule().getContractModel==='function') return _ctModule().getContractModel(r);
+  if(r?.recebimento_escopo==='parcial') return 'servico_escopo_fechado';
+  if(r?.modelo_contrato) return r.modelo_contrato;
+  if(r?.recebimento_escopo==='integral') return 'servico_pontual_pagamento_unico';
   if(r?.recebimento_escopo) return 'servico_escopo_fechado';
   if(r?.modelo_execucao==='por_demanda') return 'servico_continuo_demanda';
   const periodicidade=String(r?.periodicidade_pagamento||'').toUpperCase();
@@ -1176,6 +1180,7 @@ function _ctModeloKey(r){
 }
 function _ctModeloLabelFromKey(key){
   if(!key||key==='nao_classificado') return 'Não classificado';
+  if(key==='servico_escopo_fechado') return 'Serviço por escopo — medições parciais (legado)';
   const found=(_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===key);
   return found?.label||_ctHumanize(key);
 }
@@ -1198,6 +1203,24 @@ function _ctFormaKey(r){
   if(String(r?.periodicidade_pagamento||'').toUpperCase()==='TRIMESTRAL') return 'trimestral_fixo';
   if(String(r?.periodicidade_pagamento||'').toUpperCase()==='MENSAL') return 'mensal_fixo';
   return r.forma_execucao_pagamento||r.executionPaymentModel||r.forma_pagamento||'nao_informada';
+}
+function _ctPreencherClassificacao(id,atual='',manter=false){
+  const sel=document.getElementById(id); if(!sel) return;
+  const modelos=_ctModule().CONTRACT_MODELS||[];
+  sel.innerHTML=`<option value="">${manter?'Manter classificação atual: '+_sanEsc(_ctModeloLabelFromKey(atual)):'Selecione a classificação...'}</option>`
+    +modelos.map(m=>`<option value="${m.key}">${_sanEsc(m.label)}</option>`).join('');
+  if(atual==='servico_escopo_fechado') sel.insertAdjacentHTML('beforeend','<option value="servico_escopo_fechado">Serviço por escopo — medições parciais (legado)</option>');
+  sel.value=atual;
+  sel.disabled=atual==='servico_escopo_fechado';
+}
+function _ncPrepararClassificacao(){
+  const proc=window._gerarContratoProcesso||{};
+  const atual=_ctModule().inferContractModelFromProcess?.(proc,document.getElementById('nc-recebimento-escopo')?.value)||'';
+  _ctPreencherClassificacao('nc-classificacao',atual);
+  const ata=_ncModo(proc.natureza)==='ata';
+  const wrap=document.getElementById('nc-classificacao-wrap'); if(wrap) wrap.style.display=ata?'none':'';
+  const sel=document.getElementById('nc-classificacao');
+  if(sel) sel.disabled=ata||!!atual;
 }
 function _ctPeriodicidade(r=_ctAtual){
   const explicita=String(r?.periodicidade_pagamento||'').toUpperCase();
@@ -2522,7 +2545,8 @@ async function salvarNovoContrato(){
   const modoNC=_ncModo(window._gerarContratoProcesso?.natureza);
   const servDemandaNC=typeof _ncServicoDemanda==='function' && _ncServicoDemanda(window._gerarContratoProcesso);
   const servEscopoNC=_ncServicoEscopo(window._gerarContratoProcesso);
-  const recebimentoEscopo=document.getElementById('nc-recebimento-escopo')?.value||null;
+  const pontualNC=window._gerarContratoProcesso?.tipo_servico==='Serviço pontual com pagamento único';
+  const recebimentoEscopo=pontualNC?'integral':(document.getElementById('nc-recebimento-escopo')?.value||null);
   const servTrimestralNC=typeof _ncServicoTrimestralFixo==='function' && _ncServicoTrimestralFixo(window._gerarContratoProcesso);
   const servMensalNC=typeof _ncServicoMensalFixo==='function' && _ncServicoMensalFixo(window._gerarContratoProcesso);
   const numeroContrato=document.getElementById("nc-numero").value.trim();
@@ -2532,6 +2556,15 @@ async function salvarNovoContrato(){
     ?document.getElementById("nc-secao-novo").value.trim()
     :(secSelEarly?.value||'');
   if(!window._gerarContratoProcesso){showMsg("nc","Selecione o processo (licitação) (*).","err");return;}
+  const classificacaoNC=document.getElementById('nc-classificacao')?.value||_ctModule().inferContractModelFromProcess?.(window._gerarContratoProcesso,recebimentoEscopo)||'';
+  if(tipoInstrumento!=='ATA'&&!classificacaoNC){showMsg('nc','Selecione a classificação do contrato (*).','err');return;}
+  const modeloProcessoNC=_ctModule().inferContractModelFromProcess?.(window._gerarContratoProcesso,recebimentoEscopo)||'';
+  if(tipoInstrumento!=='ATA'&&['servico_continuo_mensal_fixo','servico_continuo_trimestral_fixo','servico_continuo_demanda','servico_pontual_pagamento_unico'].includes(classificacaoNC)&&classificacaoNC!==modeloProcessoNC){
+    showMsg('nc','A classificação deve corresponder ao tipo de serviço cadastrado no processo. Corrija o processo antes de gerar o contrato.','err');return;
+  }
+  if(modoNC==='aquisicao'&&!['aquisicao_entrega_unica','aquisicao_entrega_parcelada','fornecimento_com_instalacao'].includes(classificacaoNC)){
+    showMsg('nc','Selecione uma classificação de aquisição ou fornecimento com instalação.','err');return;
+  }
   const erroContexto=_ncValidarContextoProcesso(window._gerarContratoProcesso);
   if(erroContexto){showMsg('nc',erroContexto,'err');return;}
   const secaoProcesso=_ncResolverSecaoProcesso(window._gerarContratoProcesso);
@@ -2586,6 +2619,7 @@ async function salvarNovoContrato(){
   const valorPeriodoNum=valorPeriodoRaw?parseFloat(valorPeriodoRaw.replace(/\./g,'').replace(',','.')):null;
   const dados={
     cpl, prestador, objeto, fornecedor_id,tipo_instrumento:tipoInstrumento,
+    modelo_contrato:tipoInstrumento==='ATA'?null:classificacaoNC,
     numero_contrato:numeroContrato||null,
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
@@ -3291,9 +3325,7 @@ function abrirEditarContrato(id){
   _ctEdicaoId=contrato.id;
   const classificacao=document.getElementById('ec-classificacao');
   if(classificacao){
-    classificacao.value='';
-    classificacao.disabled=_ctEhTrimestral(contrato);
-    classificacao.options[0].textContent=`Manter classificação atual: ${_ctModeloLabel(contrato)}`;
+    _ctPreencherClassificacao('ec-classificacao',_ctModeloKey(contrato),true);
   }
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
   if(_ctEhTrimestral(contrato)) document.getElementById('ec-valor-mensal').value=contrato.valor_periodico_num??'';
@@ -3329,8 +3361,13 @@ async function salvarEdicaoContrato(){
   const prefixo=document.getElementById('ec-prefixo').value.trim().toUpperCase();
   if(prefixo&&!/^[A-Z]+$/.test(prefixo)){showMsg('ec','O prefixo deve conter somente letras.','err');return;}
   const dados={};
-  const correcaoMensal=document.getElementById('ec-classificacao')?.value==='mensal_fixo';
+  const classificacaoEscolhida=document.getElementById('ec-classificacao')?.value||'';
   const contratoAtual=contratosRows.find(r=>String(r.id)===String(_ctEdicaoId));
+  const correcaoMensal=['mensal_fixo','servico_continuo_mensal_fixo'].includes(classificacaoEscolhida)&&contratoAtual?.modelo_contrato!=='servico_continuo_mensal_fixo';
+  const modeloEscolhido=classificacaoEscolhida==='mensal_fixo'?'servico_continuo_mensal_fixo':classificacaoEscolhida;
+  if(modeloEscolhido){
+    dados.modelo_contrato=modeloEscolhido;
+  }
   if(correcaoMensal&&(_ctEhTrimestral(contratoAtual)||document.getElementById('ec-tipo').value==='ATA')){
     showMsg('ec','Esta correção é exclusiva de contratos de manutenção mensal fixa.','err');return;
   }
@@ -3376,6 +3413,7 @@ async function salvarEdicaoContrato(){
   if(error){showMsg('ec','Erro: '+error.message,'err');return;}
   showMsg('ec','✓ Contrato atualizado.','ok');
   contratosCarregado=false;await loadContratos();
+  if(typeof nfControleCarregado!=='undefined') nfControleCarregado=false;
   if(correcaoMensal) await window.ContratosFinanceiro?.refresh();
   if(atasContratos&&atasContratos.length) await loadAtas(); // mantém Atas Rp Vigentes em sincronia se estava carregada
   setTimeout(()=>document.getElementById('modal-editar-contrato').classList.remove('active'),700);

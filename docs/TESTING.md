@@ -202,3 +202,26 @@ Pré-requisito: servir via `python -m http.server 8765` e ter usuários de teste
 ### Checklist de demanda e quantidades
 
 `node --test tests/nf-checklist-demanda.test.mjs` verifica demanda sem prefixo (incluindo vencido em renovação), manutenção legada, mensal/trimestral, exclusão de ATA/escopo/encerrados, consulta acima de 500 registros, erro de leitura, abertura da execução com NF e preservação das permissões. Verifica também os saldos com medição aprovada/cancelada e compensação quantitativa explicitamente habilitada. No navegador, conferir o card de demanda, sua seleção no checklist, Nova NF e Registrar execução com quantidade por exame. Não gravar NFs ou medições fictícias em produção.
+
+
+### Classificação e controle mensal de documentos (2026-11-26)
+
+`node --test tests/contratos-classificacao.test.mjs tests/nf-checklist-demanda.test.mjs tests/contratos-classificacao-mensal.test.cjs tests/contratos-demanda.test.mjs tests/contratos-periodicidade.test.mjs tests/contratos-financeiro.test.mjs tests/servicos-escopo.test.mjs` cobre o catálogo de 13 modelos, engenharia/locações no controle, exclusões, prefixo sem classificação, preservação de pagamento/execução no editor e escopo parcial legado.
+
+A migração `20261126185052_classificacao_contratos_controle_documentos.sql` adiciona
+`contratos.modelo_contrato` e preenche apenas classificações comprovadas. Antes da
+aplicação, salvar backup dos contratos fora do repositório. Comparar todos os campos
+anteriores e os hashes de medições/NFs/marcações depois. Não classificar serviços
+importados sem informação sobre execução/pagamento apenas pelo nome do fornecedor.
+
+Verificação visual local: `tests/contratos-classificacao-ui.html` usa os painéis/modais
+reais e dados simulados, confere 13 classificações e 9 modelos no controle documental.
+`tests/contratos-financeiro-ui.html` verifica as consultas de NF e medições. As duas
+fixtures não gravam em produção. Os testes de fiscalização e termo de ateste tiveram
+as simulações atualizadas para incluir os indicadores e a leitura de chamados já
+presentes no código.
+
+Na aplicação de 26/11/2026: 292 contratos preservados campo a campo (exceto a nova
+classificação); hashes de NFs, medições e checklist inalterados. Advisors de segurança
+sem novos alertas. Os alertas preexistentes de funções administrativas, proteção de
+senhas, índices sem uso e políticas permissivas continuam fora do escopo desta mudança.

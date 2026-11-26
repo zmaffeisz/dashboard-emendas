@@ -83,6 +83,7 @@ context.fmtFull = value => String(value);
 context.fmtDate = value => value;
 context.window.open = () => ({document: {write(value) {html = value;}, close() {}}});
 context.sb.from = table => {
+  if(table==='chamados') return {select:()=>({in:async()=>({data:[],error:null})})};
   assert.equal(table, 'chamados_controle');
   return {select: () => ({eq: async (column, id) => {
     assert.equal(column, 'medicao_id');

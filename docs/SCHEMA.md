@@ -407,3 +407,16 @@ a quantidade de meses da locação; quando informado, deve ser positivo. O formu
 exige inteiro positivo para LOCAÇÃO. `vw_processos_resumo` expõe o campo com
 `security_invoker=true`. Os preços dos itens continuam mensais; `valor_estimado`
 do processo guarda mensal × meses nas locações salvas pelo formulário atualizado.
+
+
+### Classificação dos contratos (2026-11-26)
+
+`contratos.modelo_contrato` guarda a classificação que determina o controle mensal
+de documentos. Não existe flag separada de controle mensal. Os 13 valores e sua regra
+de acompanhamento estão em `js/modules/contratos/classificacao.js`; o valor legado
+`servico_escopo_fechado` só é aceito com `recebimento_escopo = 'parcial'`.
+A trigger privada `preparar_classificacao_contrato` valida consistência com o fluxo
+operacional e impede conversão de mensal/trimestral/demanda/escopo pelo editor geral.
+Alterar classificação é restrito a administradores; RLS por seção permanece vigente.
+Os campos `modelo_execucao`, `periodicidade_pagamento` e `recebimento_escopo` continuam
+sustentando os fluxos existentes e não são reescritos pela migração.

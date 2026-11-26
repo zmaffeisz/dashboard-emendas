@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — Classificação e controle mensal de documentos
+
+- Classificação do contrato substitui o seletor restrito de classificação do pagamento; 13 modelos, sem categoria específica de tecnologia. Serviço pontual com pagamento único substitui escopo fechado para novos cadastros.
+- O modelo define automaticamente a entrada no controle mensal de documentos, incluindo engenharia e locações, sem flag adicional ou dependência de prefixo. Aquisições, fornecimento com instalação e serviço pontual ficam fora.
+- Classificações existentes são preenchidas apenas com informações explícitas do fluxo/processo ou objetos inequívocos. Mensal, trimestral, demanda, valores, NFs, medições e histórico são preservados. Modelos de execução especializados não podem ser convertidos pelo editor geral.
+- Escopo parcial legado permanece no recebimento por medições parciais, sem conversão para pagamento único.
+
 ## 2026-11-23 — Contratos importados fora das licitações pendentes
 
 - Processos sem itens que já possuem contrato ficam ocultos por padrão em Licitações em andamento, inclusive nas exportações; continuam consultáveis ao marcar incluir já contratadas.

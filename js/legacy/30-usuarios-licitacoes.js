@@ -1176,7 +1176,9 @@ async function abrirEditarProcesso(id){
   document.getElementById('proc-locacao-meses').value=p.locacao_meses??'';
   document.getElementById('proc-categoria-nova').value='';
   await _preencherSelectCategoriaProcesso(p.categoria_id||'');
-  document.getElementById('proc-tipo-servico').value=p.tipo_servico||'';
+  const tipoServicoSelect=document.getElementById('proc-tipo-servico');
+  if(p.tipo_servico==='Serviço por escopo fechado'&&![...tipoServicoSelect.options].some(o=>o.value===p.tipo_servico)) { const legado=new Option('Serviço por escopo fechado — legado',p.tipo_servico); legado.disabled=true; tipoServicoSelect.add(legado); }
+  tipoServicoSelect.value=p.tipo_servico||'';
   _procCarregarServicoMensalItens(p);
   const trimestral=_procProcessoEhTrimestral(p);
   document.getElementById('proc-serv-mensal-meses').value=trimestral?(p.servico_trimestral_meses??''):(p.servico_mensal_meses??'');

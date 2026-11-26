@@ -68,7 +68,7 @@ function nfShowSub(sub){
 }
 
 async function _nfCarregarContratosControleMensal(){
-  const {carregarContratosControleMensal}=await import('../modules/notas-fiscais/controle-contratos.js?v=20261119-1');
+  const {carregarContratosControleMensal}=await import('../modules/notas-fiscais/controle-contratos.js?v=20261126-1');
   return carregarContratosControleMensal(sb);
 }
 
@@ -136,7 +136,7 @@ function renderNFControleMensal(){
     <span class="nf-summary-chip">${_nfEsc(new Date(_nfMonthDate()+'T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}))}</span>`;
   if(!rows.length){
     cards.innerHTML='';
-    if(vazio){vazio.textContent=nfControleContratos.length?'Nenhum contrato corresponde aos filtros.':'Nenhum contrato contínuo ou de manutenção foi encontrado.';vazio.style.display='block';}
+    if(vazio){vazio.textContent=nfControleContratos.length?'Nenhum contrato corresponde aos filtros.':'Nenhum contrato classificado para o controle mensal de documentos foi encontrado.';vazio.style.display='block';}
     return;
   }
   if(vazio) vazio.style.display='none';

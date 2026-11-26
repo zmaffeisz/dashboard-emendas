@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Classificação — teste local</title><link rel="icon" href="data:,"><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../css/notas-fiscais.css"></head>
+<body><main style="padding:24px"><p id="resultado">Carregando teste local sem acesso ao banco…</p><div id="fixture"></div></main>
+<script>
+const _sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const podeEditar=()=>true,normalizar=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const setHeaderH=()=>{},fmtFull=v=>String(v),toast=()=>{};
+let mockContracts=[];
+const sb={from(table){const q={select(){return q},order(){return q},eq(){return q},range(){return q},then(resolve,reject){return Promise.resolve({data:table==='contratos'?mockContracts:[]}).then(resolve,reject)}};return q}};
+window.addEventListener('error',e=>{document.getElementById('resultado').textContent='FALHOU: '+e.message});
+</script>
+<script type="module">
+try {
+  window.ContratosModule=await import('../js/modules/contratos/contratos.service.js?v=20261126-1');
+  mockContracts=ContratosModule.CONTRACT_MODELS.map((m,i)=>({id:i+1,numero_contrato:(i+1)+'/2026',cpl:'Teste local',secao_id:3,status:'VIGENTE',tipo_instrumento:'CONTRATO',modelo_contrato:m.key,prestador:m.label}));
+  const doc=new DOMParser().parseFromString(await(await fetch('../index.html')).text(),'text/html');
+  const panel=doc.getElementById('panel-notas-fiscais'); panel.style.display='block';panel.classList.add('active');document.getElementById('fixture').append(panel);
+  const modal=doc.getElementById('modal-editar-contrato');document.getElementById('fixture').append(modal);
+  for(const file of ['70-fiscalizacao-sancoes-contratos.js','75-notas-fiscais.js'])await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='../js/legacy/'+file+'?v=20261126-classificacao-1';s.onload=resolve;s.onerror=reject;document.body.append(s)});
+  await loadNFControleMensal();
+  if(document.querySelectorAll('.nf-control-card').length!==9)throw new Error('Esperados 9 modelos no controle mensal.');
+  _ctPreencherClassificacao('ec-classificacao','locacao_bens_moveis',true);
+  if(document.querySelectorAll('#ec-classificacao option').length!==14)throw new Error('Esperadas 13 classificações e a opção manter.');
+  // Exibe apenas o campo real para inspeção do seletor, sem ações de gravação.
+  for(const child of [...modal.querySelector('.form-grid').children])if(child.id!=='ec-classificacao-wrap')child.style.display='none';
+  for(const child of modal.querySelectorAll('.form-actions,.fmsg'))child.style.display='none';
+  const button=document.createElement('button');button.textContent='Conferir classificação';button.onclick=()=>modal.classList.add('active');document.getElementById('resultado').after(button);
+  document.getElementById('resultado').textContent='PASSOU: 13 classificações; 9 modelos no controle mensal, incluindo engenharia e locações; aquisição e serviço pontual fora. Sem acesso ao banco.';
+} catch(error){document.getElementById('resultado').textContent='FALHOU: '+error.message;console.error(error)}
+</script></body></html>

@@ -43,7 +43,7 @@
   const userCanView=()=>true, podeEditar=()=>fixtureEditable, bloquearSeVisualiz=()=>!fixtureEditable;
   const currentProfile={nome:'Fiscal teste'},setHeaderH=()=>{},normalizar=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const parseDataBR=v=>v?new Date(v):null,fmtFull=v=>String(v),uiConfirm=async()=>true;
-  const showTab=()=>{},fecharSidebar=()=>{};
+  const showTab=()=>{},fecharSidebar=()=>{},toast=()=>{};
   const baixarArquivoStoragePrivado=async(bucket,path)=>fixtureOperations.push({attachment:bucket,path});
 </script>
 <script type="module">
@@ -57,7 +57,9 @@
       await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='../js/legacy/'+name;s.onload=resolve;s.onerror=reject;document.body.append(s);});
     }
     contratosRows=fixtureContracts;contratosCarregado=true;
-    await import('../js/app.js');
+    window.ContratosModule=await import('../js/modules/contratos/contratos.service.js?v=20261126-1');
+    const {createFinanceiroWorkspace}=await import('../js/modules/contratos/financeiro.workspace.js');
+    window.ContratosFinanceiro=createFinanceiroWorkspace(window.ctFinanceiroAdapter);
     await ctShowSub('financeiro');
     if(document.querySelector('.ct-fin-table')||!document.getElementById('ct-fin-metrics').hidden)throw new Error('Registros ou totais apareceram antes de selecionar/pesquisar.');
     const select=document.querySelector('[data-filter="contract"]');

@@ -1,3 +1,6 @@
+import { getContractModel } from './classificacao.js?v=20261126-1';
+export { CONTRACT_MODELS, getContractModel, inferContractModelFromProcess, contractUsesMonthlyDocuments } from './classificacao.js?v=20261126-1';
+
 export const CONTRACT_COLLECTION_KEYS = Object.freeze({
   contracts: "contracts",
   contractItems: "contractItems",
@@ -7,23 +10,6 @@ export const CONTRACT_COLLECTION_KEYS = Object.freeze({
   contractDocuments: "contractDocuments",
   contractHistory: "contractHistory"
 });
-
-export const CONTRACT_MODELS = Object.freeze([
-  { key: "aquisicao_entrega_unica", label: "Aquisicao com entrega unica", usesRemainingMonths: false, measurementMode: "recebimento" },
-  { key: "aquisicao_entrega_parcelada", label: "Aquisicao com entregas parceladas", usesRemainingMonths: false, measurementMode: "entrega_parcelada" },
-  { key: "servico_continuo_mensal_fixo", label: "Servico continuo com valor mensal fixo", usesRemainingMonths: true, measurementMode: "competencia" },
-  { key: "servico_continuo_trimestral_fixo", label: "Servico continuo com valor trimestral fixo, preventiva/calibracao e corretivas", usesRemainingMonths: false, usesRemainingPeriods: true, periodMonths: 3, measurementMode: "competencia_trimestral" },
-  { key: "servico_continuo_demanda", label: "Servico continuo por demanda", usesRemainingMonths: false, measurementMode: "demanda" },
-  { key: "servico_escopo_fechado", label: "Servico por escopo fechado", usesRemainingMonths: false, measurementMode: "etapa_marco" },
-  { key: "obra_engenharia", label: "Obra ou servico de engenharia", usesRemainingMonths: false, measurementMode: "planilha_medicao" },
-  { key: "locacao_bens_moveis", label: "Locacao de bens moveis", usesRemainingMonths: true, measurementMode: "competencia" },
-  { key: "locacao_imovel", label: "Locacao de imovel", usesRemainingMonths: true, measurementMode: "competencia" },
-  { key: "fornecimento_com_instalacao", label: "Fornecimento com instalacao", usesRemainingMonths: false, measurementMode: "aceite_instalacao" },
-  { key: "servico_com_materiais_pecas", label: "Servico com materiais ou pecas", usesRemainingMonths: false, measurementMode: "medicao_mista" },
-  { key: "mao_obra_dedicacao_exclusiva", label: "Mao de obra com dedicacao exclusiva", usesRemainingMonths: true, measurementMode: "competencia" },
-  { key: "tecnologia_software_licenca", label: "Tecnologia, software, licenca ou sistema", usesRemainingMonths: null, measurementMode: "configuravel" },
-  { key: "credenciamento", label: "Credenciamento", usesRemainingMonths: false, measurementMode: "procedimento_demanda" }
-]);
 
 export const PROCUREMENT_ORIGINS = Object.freeze([
   "licitacao",
@@ -125,7 +111,7 @@ export function createContractRecord(input = {}) {
     sector: input.sector ?? input.secao ?? "",
     manager: input.manager ?? "",
     fiscal: input.fiscal ?? input.fiscalizacao ?? "",
-    contractModel: input.contractModel ?? input.modelo_contrato ?? "",
+    contractModel: getContractModel(input),
     procurementOrigin: input.procurementOrigin ?? input.origem_contratacao ?? "",
     executionPaymentModel: input.executionPaymentModel ?? input.forma_execucao_pagamento ?? "",
     paymentFrequency: input.paymentFrequency ?? input.periodicidade_pagamento ?? "",

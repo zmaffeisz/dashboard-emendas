@@ -5,6 +5,9 @@ export function getContratosServiceStatus() {
 export {
   CONTRACT_COLLECTION_KEYS,
   CONTRACT_MODELS,
+  getContractModel,
+  inferContractModelFromProcess,
+  contractUsesMonthlyDocuments,
   PROCUREMENT_ORIGINS,
   EXECUTION_PAYMENT_MODELS,
   INSTRUMENT_TYPES,
@@ -25,7 +28,7 @@ export {
   createContractHistoryEntry,
   findContractById,
   getContractBundle
-} from "./contratos.data.js";
+} from "./contratos.data.js?v=20261126-1";
 
 export {
   toContractNumber,
