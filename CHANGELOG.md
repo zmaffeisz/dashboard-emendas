@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-26 — Situações no Controle de Entregas
+
+- Opções Pendente (com descrição obrigatória) e Sem prazo nos menus individuais e na barra de seleção em lote; etiquetas roxa e azul-petróleo e filtros próprios. A busca inclui a descrição.
+- Voltar ao prazo automático restaura a indicação pelas datas existentes. As marcações são acompanhamento administrativo e não alteram prazos contratuais, recebimentos, NFs ou inventário.
+- Gravação atômica em lote, repetição segura após erro de rede e histórico por AF, execução de ATA ou item de serviço. Recebimentos parciais com saldo podem receber situação; concluídos/cancelados não.
+- Serviços pontuais com pagamento único usam o recebimento já existente, junto do escopo legado.
+
 ## 2026-11-26 — Classificação e controle mensal de documentos
 
 - Classificação do contrato substitui o seletor restrito de classificação do pagamento; 13 modelos, sem categoria específica de tecnologia. Serviço pontual com pagamento único substitui escopo fechado para novos cadastros.

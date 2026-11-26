@@ -35,7 +35,7 @@ export function createServicosEscopo(ctx) {
 
   async function load() {
     const items = await all(() => sb.from('itens').select('*,processos!inner(identificador,tipo_servico),contratos!inner(id,cpl,numero_contrato,prestador,fornecedor_id,status,recebimento_escopo,fiscalizacao),unidades(nome),emendas(emenda,numero,ano)')
-      .eq('origem', 'servico').eq('processos.tipo_servico', 'Serviço por escopo fechado').not('contrato_id', 'is', null));
+      .eq('origem', 'servico').in('processos.tipo_servico', ['Serviço por escopo fechado', 'Serviço pontual com pagamento único']).not('contrato_id', 'is', null));
     if (!items.length) { rows = []; return rows; }
     const meds = [];
     for (let start = 0; start < items.length; start += 100) {
@@ -52,12 +52,12 @@ export function createServicosEscopo(ctx) {
     return rows;
   }
   function renderRow(r) {
-    const tds = ['', '<b>Serviço por escopo</b>', esc(r.processo), esc(r.contrato), esc(r.empresa),
+    const tds = [ctx.selectionCheckbox?.(r) || '', '<b>Serviço por escopo</b>', esc(r.processo), esc(r.contrato), esc(r.empresa),
       `${esc(r.item)}${r._item.emendas ? `<div>Emenda ${esc(r._item.emendas.emenda || r._item.emendas.numero)} / ${esc(r._item.emendas.ano)}</div>` : ''}`,
       esc(r.unidade), esc(r.af_numero || '—'), esc(date(r.af_dataISO)), `<span title="Valor contratado">${money(r.resumo.total)}</span>`,
       `<span title="Valor bruto medido">${money(r.resumo.bruto)}</span><div>Líquido atestado: ${money(r.resumo.liquido)}</div>`,
-      `${r.resumo.medicoes.length} medição(ões) / NF`, esc(date(r.limiteISO)), r.recebido ? 'Concluído' : esc(r.status),
-      `<button class="btn-secondary" onclick="abrirServicoEscopo('${r.item_id}')">Execução / medições</button>`];
+      `${r.resumo.medicoes.length} medição(ões) / NF`, esc(date(r.limiteISO)), ctx.statusBadge?.(r) || (r.recebido ? 'Concluído' : esc(r.status)),
+      `<div style="display:flex;gap:4px"><button class="btn-secondary" onclick="abrirServicoEscopo('${r.item_id}')">Execução / medições</button>${ctx.situationActions?.(r) || ''}</div>`];
     return `<tr>${tds.map(cell => `<td style="padding:8px;border-bottom:1px solid var(--border)">${cell}</td>`).join('')}</tr>`;
   }
   function modal() {

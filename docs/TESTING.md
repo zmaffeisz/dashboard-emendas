@@ -225,3 +225,20 @@ Na aplicação de 26/11/2026: 292 contratos preservados campo a campo (exceto a 
 classificação); hashes de NFs, medições e checklist inalterados. Advisors de segurança
 sem novos alertas. Os alertas preexistentes de funções administrativas, proteção de
 senhas, índices sem uso e políticas permissivas continuam fora do escopo desta mudança.
+
+
+### Situações das entregas (2026-11-26)
+
+`node --test tests/entregas-situacoes.test.mjs tests/controle-entregas-ordenacao.test.cjs tests/servicos-escopo.test.mjs` verifica status por origem, última ocorrência, retorno ao cálculo automático, parcial/concluído, motivo obrigatório, falhas de rede/leitura, repetição e clique duplo.
+No navegador: `tests/entregas-situacoes-ui.html` usa filtros, menus e modal reais com
+gravação simulada. Conferir lote com mesma descrição, edição individual e restauração
+do prazo; `tests/controle-entregas-selecao-visivel.html` verifica a seleção por contrato.
+No banco oficial, testar em transação com rollback: motivo obrigatório, lote de duas
+ATAs, repetição da requisição, lote com origem inválida sem gravação parcial, retorno
+ao automático e proibição de editar/apagar histórico. Não marcar itens reais como teste.
+
+Ensaio SQL reproduzível: `tests/entregas-situacoes.sql`. Também verifica recusa de
+entrega concluída, acesso anônimo/perfil não aprovado e edição/apagamento do histórico.
+Na aplicação: hashes de itens, AFs, execuções de ATA e NFs preservados; nenhum evento
+fictício persistido. Advisors sem novos alertas de segurança; índices novos ainda sem
+uso são esperados antes das primeiras marcações.

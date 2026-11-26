@@ -1253,6 +1253,7 @@
           <option value="">Todos os prazos</option>
           <option value="aguardando AF">Aguardando AF</option>
           <option value="atrasado">Atrasado</option>
+          <option value="pendente">Pendente</option>
           <option value="vence hoje">Vence hoje</option>
           <option value="no prazo">No prazo</option>
           <option value="sem prazo">Sem prazo</option>
@@ -2277,6 +2278,25 @@
         </div>
       </div>
     </div>
+
+<!-- Modal Situação do Controle de Entregas -->
+<div class="modal-overlay" id="modal-situacao-entrega" role="dialog" aria-modal="true" aria-labelledby="ces-titulo">
+  <div class="modal-box" style="width:620px;max-width:96vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-title" id="ces-titulo">Situação da entrega</div>
+    <p id="ces-info" style="font-size:12px;color:var(--text2)"></p>
+    <div class="form-group"><label class="form-label" for="ces-situacao">Situação</label>
+      <select id="ces-situacao" onchange="alterarFormularioSituacaoEntrega()">
+        <option value="pendente">Pendente</option><option value="sem_prazo">Sem prazo</option><option value="automatico">Voltar ao prazo automático</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label" id="ces-descricao-label" for="ces-descricao">O que está pendente? *</label>
+      <textarea id="ces-descricao" rows="4" maxlength="4000" placeholder="Ex.: equipamento chegou, mas faltam as peças de instalação." style="resize:vertical;width:100%;box-sizing:border-box;padding:8px;font:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm)"></textarea>
+    </div>
+    <p style="font-size:12px;color:var(--text3)">A situação organiza o acompanhamento. Datas e recebimentos permanecem no histórico. Ao voltar ao automático, a indicação de prazo é recalculada pelas datas existentes.</p>
+    <div id="ces-msg" role="alert" style="font-size:12px;color:var(--red);margin:.75rem 0"></div>
+    <div class="form-actions"><button class="btn-primary" id="ces-salvar" onclick="salvarSituacaoEntrega()">Salvar situação</button><button class="btn-secondary" onclick="fecharSituacaoEntrega()">Cancelar</button></div>
+  </div>
+</div>
 
 <!-- Modal Observação do Controle de Entregas -->
 <div class="modal-overlay" id="modal-observacao-entrega">
@@ -3368,7 +3388,7 @@
 <script src="js/legacy/10-chamados-inventario.js?v=20260903-inventario-datas-filtros-1"></script>
   <script src="js/legacy/20-atas.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/30-usuarios-licitacoes.js?v=20261126-classificacao-1"></script>
-<script src="js/legacy/40-itens-entregas.js?v=20261126-classificacao-1"></script>
+<script src="js/legacy/40-itens-entregas.js?v=20261126-situacoes-1"></script>
 <script src="js/legacy/50-cadastros-planilhas-chamados.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/60-emendas-dashboard.js?v=20261008-rateio-emendas-1"></script>
 <script src="js/legacy/70-fiscalizacao-sancoes-contratos.js?v=20261126-classificacao-1"></script>

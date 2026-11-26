@@ -61,7 +61,7 @@ function _ceCompactarAcoes(wrap){
     if(!grupo||grupo.dataset.compacto==='1') return;
     const botoes=[...grupo.querySelectorAll('button')];
     if(botoes.length<2) return;
-    const principal=botoes.find(btn=>/Receber item|Ver recebimento|Receber|Emitir AF/i.test(btn.textContent||''));
+    const principal=botoes.find(btn=>/Receber item|Ver recebimento|Receber|Emitir AF|Execução \/ medições/i.test(btn.textContent||''));
     if(!principal) return;
     const itens=botoes.filter(btn=>btn!==principal).map(btn=>({label:(btn.textContent||'Ação').trim(),onclick:btn.getAttribute('onclick')||'',title:btn.getAttribute('title')||''})).filter(item=>item.onclick);
     if(!itens.length) return;
@@ -1244,18 +1244,48 @@ function _prazoStatus(limiteISO,recebido,cancelado){
   return 'atrasado';
 }
 function _prazoBadge(status,dias){
-  const map={'sem prazo':'#888780','no prazo':'#3FB950','vence hoje':'#EF9F27','atrasado':'#F85149','recebido':'#378ADD','cancelado':'#888780','aguardando AF':'#EF9F27'};
+  const map={'pendente':'#7C3AED','sem prazo':'#0E7490','no prazo':'#3FB950','vence hoje':'#EF9F27','atrasado':'#F85149','recebido':'#378ADD','cancelado':'#888780','aguardando AF':'#EF9F27'};
   const cor=map[status]||'#888780';
   let extra='';
   if(status==='no prazo'&&dias!=null) extra=` · ${dias}d`;
   else if(status==='atrasado'&&dias!=null) extra=` · ${Math.abs(dias)}d`;
   return `<span class="badge" style="background:${cor}22;color:${cor};white-space:nowrap">${status}${extra}</span>`;
 }
+let _ceSituacoesPromise=null;
+async function _ceSituacoesModule(){
+  if(!_ceSituacoesPromise) _ceSituacoesPromise=import('../modules/execucao/entregas-situacoes.js?v=20261126-1').then(mod=>{
+    const controller=mod.createDeliveryTracking({sb,rows:()=>entregasRows,canEdit:()=>podeEditar('itens'),notify:(text,type)=>toast(text,type),
+      reload:async()=>{const events=await controller.read();entregasRows=mod.applyDeliveryTracking(entregasRows,events);_ceAdvSel.clear();_ceAdvLock='';renderItensEntregas();}});
+    return {controller,decorate:mod.applyDeliveryTracking};
+  }).catch(error=>{_ceSituacoesPromise=null;throw error;});
+  return _ceSituacoesPromise;
+}
+function _ceSituacaoElegivel(r){
+  return !!r&&!!(r.entrega_id||r.exec_id||r.item_id)&&!r.cancelado&&r.status!=='cancelado'&&(!r.recebido||(r.tipo==='Aquisição'&&Number(r.saldo_af)>0));
+}
+function _ceSituacaoAcoes(r){
+  if(!podeEditar('itens')||!_ceSituacaoElegivel(r)) return '';
+  const key=_ceRowKey(r);
+  return `<button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','pendente')">Pendente</button><button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','sem_prazo')">Sem prazo</button>`
+    +(r.acompanhamento&&r.acompanhamento.situacao!=='automatico'?`<button class="btn-secondary" onclick="abrirSituacaoEntrega('${key}','automatico')">Voltar ao prazo automático</button>`:'');
+}
+function _ceSituacaoStatusHtml(r){
+  const texto=r.acompanhamento?.situacao!=='automatico'&&_ceSituacaoElegivel(r)?r.acompanhamento?.descricao||'':'';
+  return _prazoBadge(r.status,_diasRestantes(r.limiteISO))+(texto?`<div style="font-size:11px;margin-top:5px;max-width:230px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text2)">${_sanEsc(texto)}</div>`:'');
+}
+async function abrirSituacaoEntrega(key,situacao){
+  try{(await _ceSituacoesModule()).controller.open(key?[key]:_ceSelRows().map(_ceRowKey),situacao);}
+  catch(error){toast('Não foi possível abrir a situação: '+error.message,'error');}
+}
+async function salvarSituacaoEntrega(){return (await _ceSituacoesModule()).controller.save();}
+async function fecharSituacaoEntrega(){return (await _ceSituacoesModule()).controller.close();}
+async function alterarFormularioSituacaoEntrega(){return (await _ceSituacoesModule()).controller.formChanged();}
 let _ceEscopoPromise=null;
 async function _ceEscopoModule(){
-  if(!_ceEscopoPromise) _ceEscopoPromise=import('../modules/execucao/servicos-escopo.js?v=20261118-1').then(({createServicosEscopo})=>{
+  if(!_ceEscopoPromise) _ceEscopoPromise=import('../modules/execucao/servicos-escopo.js?v=20261126-1').then(({createServicosEscopo})=>{
     window.ServicosEscopo=createServicosEscopo({
       sb,esc:_sanEsc,money:fmtFull,today:()=>new Date().toLocaleDateString('en-CA'),prazo:_prazoStatus,
+      selectionCheckbox:_ceAdvCheckbox,situationActions:_ceSituacaoAcoes,statusBadge:_ceSituacaoStatusHtml,
       canEdit:()=>podeEditar('itens')||podeEditar('contratos'),
       openNF:id=>abrirCadastroNotaFiscal(id),openEmpenho:id=>abrirVincularEmpenho(id),
       reason:()=>prompt('Motivo do cancelamento da medição (o histórico será preservado):'),
@@ -1581,7 +1611,14 @@ async function loadItensEntregas(){
     wrap.innerHTML=`<div role="alert" style="padding:1rem;color:var(--red)">Não foi possível carregar o Controle de Entregas completo: ${_sanEsc(error.message)}. Reabra a aba para tentar novamente.</div>`;
     return;
   }
-  entregasRows=out;
+  try{
+    const situacoes=await _ceSituacoesModule();
+    entregasRows=situacoes.decorate(out,await situacoes.controller.read());
+  }catch(error){
+    itensEntregasCarregado=false;
+    wrap.innerHTML=`<div role="alert" style="padding:1rem;color:var(--red)">Não foi possível carregar as situações das entregas: ${_sanEsc(error.message)}. Atualize para tentar novamente.</div>`;
+    return;
+  }
   itensEntregasCarregado=true;
   renderItensEntregas();
 }
@@ -1616,12 +1653,12 @@ function renderItensEntregas(){
     if(fT && r.tipo!==fT) return false;
     if(fP && r.status!==fP) return false;
     if(q){
-      const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade,r.empenho,r.af_dataISO,r.af_dataISO?fmtDate(r.af_dataISO):'',r.nota_fiscal,r.marca,r.modelo,r.patrimonio,r.numero_serie].filter(Boolean).join(' ');
+      const hay=[r.item,r.processo,r.contrato,r.empresa,r.af_numero,r.unidade,r.empenho,r.af_dataISO,r.af_dataISO?fmtDate(r.af_dataISO):'',r.nota_fiscal,r.marca,r.modelo,r.patrimonio,r.numero_serie,r.acompanhamento?.descricao].filter(Boolean).join(' ');
       if(!matchBusca(hay,q)) return false;
     }
     return true;
   }).sort((a,b)=>{ // aguardando AF primeiro; depois atrasados, por dias restantes
-    const ord={'aguardando AF':0,'atrasado':1,'vence hoje':2,'no prazo':3,'sem prazo':4,'recebido':5,'cancelado':6};
+    const ord={'aguardando AF':0,'atrasado':1,'pendente':2,'vence hoje':3,'no prazo':4,'sem prazo':5,'recebido':6,'cancelado':7};
     const da=(ord[a.status]??9)-(ord[b.status]??9); if(da) return da;
     return (_diasRestantes(a.limiteISO)??99999)-(_diasRestantes(b.limiteISO)??99999);
   });
@@ -1674,6 +1711,8 @@ function renderItensEntregas(){
       const obsUltima=observacoes[obsTotal-1]?.texto||'';
       const obsBtn=pode?`<button onclick="abrirObservacaoEntrega('${_ceRowKey(r)}')" title="${_sanEsc(obsUltima||'Adicionar observação')}" aria-label="Observações (${obsTotal})" style="height:28px;padding:0 7px;border-radius:6px;border:1px solid ${obsTotal?'var(--blue)':'var(--border)'};background:${obsTotal?'var(--blue-bg)':'var(--surface)'};color:${obsTotal?'var(--blue)':'var(--text2)'};cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap">Obs${obsTotal?' · '+obsTotal:''}</button>`:'';
       if(obsBtn) acoes=acoes==='—'?`<div style="display:flex;gap:4px;flex-wrap:wrap">${obsBtn}</div>`:acoes.replace('</div>',obsBtn+'</div>');
+      const situacaoBtns=_ceSituacaoAcoes(r);
+      if(situacaoBtns) acoes=acoes==='—'?`<div style="display:flex;gap:4px;flex-wrap:wrap">${situacaoBtns}</div>`:acoes.replace('</div>',situacaoBtns+'</div>');
       return `<tr style="border-bottom:1px solid var(--border)${rowBg}">
       <td style="padding:6px 8px;text-align:center">${_ceAdvCheckbox(r)}</td>
       <td style="padding:6px 8px"><span class="badge" style="background:${tipoCor}22;color:${tipoCor};white-space:nowrap">${r.tipo}</span></td>
@@ -1688,7 +1727,7 @@ function renderItensEntregas(){
       <td style="padding:6px 8px;text-align:right;white-space:nowrap">${recInfo}</td>
       <td style="padding:6px 8px;white-space:nowrap;color:var(--text3)">${docs}</td>
       <td style="padding:6px 8px;vertical-align:top">${_prazoEntregaHistoricoHtml(r)}${r.entregaISO?('<br><span style="color:var(--text3)">entregue '+fmtDate(r.entregaISO)+'</span>'):''}</td>
-      <td style="padding:6px 8px">${_prazoBadge(r.status,dias)}</td>
+      <td style="padding:6px 8px">${_ceSituacaoStatusHtml(r)}</td>
       <td style="padding:6px 8px">${acoes}</td>
     </tr>`;}).join('')}</tbody></table>`;
   _ceAdvAtualizarCheckboxVisiveis();
@@ -1842,7 +1881,7 @@ async function abrirEmailAF(key){
   if(window.toast) toast('E-mail preparado. Anexe o PDF da AF antes de enviar.','success');
 }
 async function abrirEmailAFsLote(){
-  const rows=_ceSelRows().filter(r=>r.af_numero&&!r.cancelado);
+  const rows=_ceSelRows().filter(r=>r.tipo!=='Serviço'&&r.af_numero&&!r.cancelado);
   if(!rows.length){ if(window.toast) toast('Selecione ao menos uma AF emitida.','error'); return; }
   const afs=new Set(rows.map(r=>String(r.af_numero).trim()));
   if(afs.size!==1){ if(window.toast) toast('Selecione itens da mesma AF para preparar um único e-mail.','error'); return; }
@@ -2033,7 +2072,7 @@ async function baixarAFPDF(key,opcoes={}){
   return pdf;
 }
 async function baixarAFsLote(rowsSelecionadas=null,opcoes={}){
-  const rows=(Array.isArray(rowsSelecionadas)?rowsSelecionadas:_ceSelRows()).filter(r=>!!r.af_numero&&!r.cancelado);
+  const rows=(Array.isArray(rowsSelecionadas)?rowsSelecionadas:_ceSelRows()).filter(r=>r.tipo!=='Serviço'&&!!r.af_numero&&!r.cancelado);
   const minimo=opcoes.single?1:2;
   if(rows.length<minimo){ if(window.toast) toast(opcoes.single?'Este item ainda não tem AF disponível para download.':'Selecione pelo menos duas AFs emitidas do mesmo contrato.','error'); return; }
   const contratos=new Set(rows.map(_ceAdvLockKey).filter(Boolean));
@@ -2275,7 +2314,7 @@ async function baixarAFsLote(rowsSelecionadas=null,opcoes={}){
   pdf.save(arquivo);
   return pdf;
 }
-function _ceAdvElegivel(r){ return r.tipo!=='Serviço' && !r.recebido && !r.cancelado && !!_ceAdvLockKey(r); }
+function _ceAdvElegivel(r){ return _ceSituacaoElegivel(r) && !!_ceAdvLockKey(r); }
 function _ceAdvCheckbox(r){
   if(!_ceAdvElegivel(r)||!podeEditar('itens')) return '';
   const key=_ceRowKey(r), checked=_ceAdvSel.has(key);
@@ -2338,7 +2377,7 @@ function _ceAdvBar(){
   const selecionadas=_ceSelRows();
   const pendentesAF=selecionadas.filter(r=>r._pendente && r.tipo==='Aquisição');
   const afBtn=pendentesAF.length?`<button onclick="abrirAFLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar AF (${pendentesAF.length})</button>`:'';
-  const afsEmitidas=selecionadas.filter(r=>!!r.af_numero&&!r.cancelado);
+  const afsEmitidas=selecionadas.filter(r=>r.tipo!=='Serviço'&&!!r.af_numero&&!r.cancelado);
   const baixarAfsBtn=afsEmitidas.length>=2?`<button onclick="baixarAFsLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--surface);color:var(--blue);cursor:pointer;font-weight:600">⬇ Baixar AFs (${afsEmitidas.length})</button>`:'';
   const emailAfsBtn=afsEmitidas.length?`<button onclick="abrirEmailAFsLote()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid #7c3aed;background:#f5f3ff;color:#6d28d9;cursor:pointer;font-weight:600">✉ Preparar e-mail (${afsEmitidas.length})</button>`:'';
   const recebiveis=_ceRecLoteSelecionadas();
@@ -2350,7 +2389,10 @@ function _ceAdvBar(){
     ${baixarAfsBtn}
     ${emailAfsBtn}
     ${recBtn}
-    <button onclick="abrirAdvertenciaCE()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar advertência</button>
+    <button onclick="abrirSituacaoEntrega('','pendente')" class="btn-secondary" style="color:#7C3AED">Marcar pendente</button>
+    <button onclick="abrirSituacaoEntrega('','sem_prazo')" class="btn-secondary" style="color:#0E7490">Marcar sem prazo</button>
+    <button onclick="abrirSituacaoEntrega('','automatico')" class="btn-secondary">Prazo automático</button>
+    ${selecionadas.every(r=>r.tipo!=='Serviço'&&!r.recebido)?'<button onclick="abrirAdvertenciaCE()" class="btn-secondary">⚖️ Gerar advertência</button>':''}
     <button onclick="_ceAdvLimpar()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">Limpar seleção</button>
   </div>`;
 }
@@ -2437,6 +2479,7 @@ function _afLotePDF(numero, afData, rows, c){
 async function abrirAdvertenciaCE(){
   if(bloquearSeVisualiz('itens')) return;
   const rows=entregasRows.filter(r=>_ceAdvSel.has(_ceRowKey(r))); if(!rows.length) return;
+  if(rows.some(r=>r.tipo==='Serviço'||r.recebido||r.cancelado)){if(window.toast)toast('Selecione entregas ainda não recebidas para gerar advertência.','warning');return;}
   _ceAdvRows=rows; _ceAdvAtivo=true; _sancaoAquisicaoRow=null;
   let c={}; const cid=rows.find(r=>r.contrato_id)?.contrato_id;
   if(cid){ const {data}=await sb.from('contratos').select('id,numero_contrato,cnpj,objeto,prestador').eq('id',cid).single(); c=data||{}; }

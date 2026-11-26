@@ -420,3 +420,15 @@ operacional e impede conversão de mensal/trimestral/demanda/escopo pelo editor 
 Alterar classificação é restrito a administradores; RLS por seção permanece vigente.
 Os campos `modelo_execucao`, `periodicidade_pagamento` e `recebimento_escopo` continuam
 sustentando os fluxos existentes e não são reescritos pela migração.
+
+
+### Situações administrativas das entregas
+
+`entregas_situacoes`: eventos com uma única origem (`item_id`, `item_entrega_id` ou
+`ata_execucao_id`), seção derivada, situação (`pendente`, `sem_prazo`, `automatico`),
+descrição, autor e data. A última ocorrência prevalece somente enquanto a entrega
+estiver aberta. Não há alteração em datas/NFs/recebimentos ou unidades físicas.
+A RLS exige acesso ao Controle de Entregas e à origem na seção; insert valida perfil
+aprovado e permissão de edição. Update/delete não são concedidos a authenticated.
+`registrar_situacao_entregas` grava lotes de até 500 origens distintos atomicamente,
+com chave de repetição. Pendência exige descrição de até 4000 caracteres.

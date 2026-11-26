@@ -300,3 +300,20 @@ Editar contrato usa seleção múltipla com pesquisa em **Fiscais responsáveis*
 a tela restaura a seleção de cada nome e conserva nomes antigos/inativos ausentes
 no catálogo `pessoas`. Essa edição cadastral não cria nem encerra linhas históricas
 em `contratos_fiscalizadores`; designações com datas usam o fluxo próprio de fiscais.
+
+
+### Situações do Controle de Entregas
+
+`js/modules/execucao/entregas-situacoes.js` controla Pendente, Sem prazo e retorno
+ao automático. A última marcação em `entregas_situacoes` define a etiqueta e o filtro
+para registros abertos; concluídos/cancelados mantêm a situação final. A descrição é
+obrigatória em Pendente, aparece abaixo da etiqueta e entra na busca. A AF de aquisição
+tem situação própria, independente de outras AFs do mesmo item; ATAs usam a execução
+e serviços usam o item. Recebimento parcial de aquisição com saldo continua editável.
+As ações ficam no menu individual e na barra de seleção existente (mesmo contrato).
+Medições de serviço e recebimentos mantêm seus fluxos; a marcação não os substitui.
+
+O modal permite aplicar uma descrição aos registros selecionados. A RPC
+`registrar_situacao_entregas` é invoker, valida seção/permissão em cada origem, rejeita
+lotes inválidos inteiros e usa identificação da requisição para evitar repetição.
+O histórico é apenas de inserção para usuários autenticados, sem edição/apagamento.

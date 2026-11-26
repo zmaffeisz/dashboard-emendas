@@ -1,0 +1,31 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Situações de entregas — teste local</title><link rel="icon" href="data:,"><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../dashboard.css"></head>
+<body><main style="padding:24px"><h2>Situações — teste sem acesso ao banco</h2><p id="resultado">Carregando…</p><div id="fixture"></div></main>
+<script>
+window.PROC_FONTES=[];window.podeEditar=()=>true;window.userCanView=()=>true;window._isAdmin=()=>true;
+window._sanEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+window.fmtDate=v=>v||'';window.matchBusca=(texto,q)=>String(q).toLowerCase().split(/\s+/).every(p=>String(texto).toLowerCase().includes(p));
+window.toast=(text)=>{document.getElementById('resultado').textContent=text};
+let events=[],calls=[],time=0;
+const sb={from(){const q={select(){return q},order(){return q},range(a,b){return Promise.resolve({data:events.slice(a,b+1)})}};return q},async rpc(name,args){
+  calls.push({name,args});
+  if(!events.some(e=>e.request===args.p_requisicao))events.push(...args.p_alvos.map(target=>({...target,id:crypto.randomUUID(),request:args.p_requisicao,situacao:args.p_situacao,descricao:args.p_descricao,registrado_em:new Date(Date.now()+time++).toISOString()})));
+  return {data:args.p_alvos.length};
+}};
+window.addEventListener('error',e=>document.getElementById('resultado').textContent='FALHOU: '+e.message);
+</script>
+<script type="module">
+try{
+ const source=new DOMParser().parseFromString(await(await fetch('../index.html')).text(),'text/html');
+ const panel=source.getElementById('itens-sub-entregas');panel.style.display='block';document.getElementById('fixture').append(panel,source.getElementById('modal-situacao-entrega'));
+ for(const file of ['components/kebab-menu.js','legacy/40-itens-entregas.js'])await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='../js/'+file+'?qa=situacoes';s.onload=resolve;s.onerror=reject;document.body.append(s)});
+ entregasRows=[
+  {tipo:'ATA',exec_id:'1',contrato_id:10,contrato:'100/2026',processo:'CPL 10',empresa:'Empresa de teste',item:'Equipamento A',unidade:'UBS A',status:'atrasado',limiteISO:'2026-01-01',qtde:2},
+  {tipo:'ATA',exec_id:'2',contrato_id:10,contrato:'100/2026',processo:'CPL 10',empresa:'Empresa de teste',item:'Equipamento B',unidade:'UBS B',status:'atrasado',limiteISO:'2026-01-01',qtde:1},
+  {tipo:'Aquisição',entrega_id:'3',item_id:'item3',contrato_id:10,contrato:'100/2026',processo:'CPL 10',empresa:'Empresa de teste',item:'Recebimento parcial',unidade:'UBS C',status:'recebido',recebido:true,saldo_af:1,qtde:2,qtde_recebida:1,limiteISO:'2026-01-01'}
+ ];
+ renderItensEntregas();
+ const controller=await _ceSituacoesModule();
+ document.getElementById('resultado').textContent='PRONTO: use o menu ⋮ de cada linha ou selecione itens para testar o lote. Todas as gravações são simuladas.';
+ window.fixtureReady=true;
+}catch(error){document.getElementById('resultado').textContent='FALHOU: '+error.message;console.error(error)}
+</script></body></html>
