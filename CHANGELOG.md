@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 — Cabeçalho curto no celular
+
+- No celular o topo mostra o brasão e o título "Gestão de Emendas", numa faixa só. Tema, abertura de chamados e Entrar ficam em botões de ícone. O título completo continua no computador.
+
+## 2026-11-27 — Leitura no celular e no tablet
+
+- Cabeçalho, filtros, cartões de emenda, tabelas largas, modais e formulários passam a caber na largura do celular (cerca de 360–430px) e do tablet, sem alterar o layout a partir de 1280px.
+- Tabelas continuam na grade larga, com rolagem horizontal dentro do próprio bloco e um aviso para deslizar. O título da emenda deixa de ser cortado até sobrar só a esfera.
+- Formulários públicos (login, cadastro e abertura de chamado) ganham campos e botões maiores para toque. Nenhuma regra de negócio, consulta ou dado foi alterado.
+
 ## 2026-11-26 — Situações no Controle de Entregas
 
 - Ícones antes dos nomes nas ações de situação, observações e vínculo de empenho, incluindo os botões de situação em lote.

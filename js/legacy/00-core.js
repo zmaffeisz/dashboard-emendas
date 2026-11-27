@@ -213,6 +213,7 @@ function updateSidebarOverlay(){
 function toggleSidebar(){ document.body.classList.toggle('sidebar-open'); updateSidebarOverlay(); }
 function fecharSidebar(){ document.body.classList.remove('sidebar-open'); updateSidebarOverlay(); }
 window.addEventListener('resize',()=>{ setHeaderH(); _setTableOffset(); updateSidebarOverlay(); });
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ setHeaderH(); _setTableOffset(); });
 
 async function checkAuth(){
   const {data:{session}} = await sb.auth.getSession();
