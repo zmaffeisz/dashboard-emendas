@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="css/requisicao-materiais.css?v=20261001-1">
   <link rel="stylesheet" href="dashboard.css?v=20261008-cards-itens-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
+<link rel="stylesheet" href="css/mobile.css?v=20261127-mobile-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
 
@@ -20,14 +21,14 @@
 
 <div class="header">
   <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Abrir menu">☰</button>
-  <div style="display:flex;align-items:center;gap:12px">
+  <div class="header-brand" style="display:flex;align-items:center;gap:12px">
     <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" style="height:48px;width:auto" alt="Brasão">
     <div>
       <div class="header-title">Gestão de Emendas, Licitações e Contratos da Saúde</div>
       <div class="header-sub">Secretaria da Saúde · Prefeitura de Sorocaba</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
+  <div class="header-actions" style="display:flex;gap:8px;align-items:center">
     <label id="org-context-wrap" style="display:none;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap">
       Visualizando como
       <select id="org-context-select" onchange="trocarContextoAdmin()" style="max-width:260px;font-size:12px;padding:5px 26px 5px 8px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:#153a66;color:#fff"></select>
@@ -131,7 +132,7 @@
         </div>
       </div>
       <div id="em-modo-bar" style="display:flex;gap:6px;margin:14px 1.125rem 10px;flex-wrap:wrap;align-items:center"></div>
-      <div style="margin:0 1.125rem .85rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="em-filter-bar" style="margin:0 1.125rem .85rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="text" id="f-busca" placeholder="🔎 Buscar por emenda, objeto, item..." oninput="applyFilters()" style="flex:1 1 220px;min-width:160px;max-width:320px;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
         <button type="button" class="hdr-filter-btn" data-col="tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar por esfera" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">Esfera ▾</button>
         <button type="button" class="hdr-filter-btn" data-col="emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar por nº da emenda" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">Nº emenda ▾</button>

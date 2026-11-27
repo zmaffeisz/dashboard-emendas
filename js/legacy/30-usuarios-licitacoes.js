@@ -1966,7 +1966,7 @@ function _procRecursoRowHtml(recurso,bloqueado=false){
   }
   const seletor=principal||existente
     ?`<div class="pi-recurso-emenda-label" style="font-size:11px;font-weight:600;padding:7px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2)">${_sanEsc(label)}${principal?' <span style="color:var(--blue)">(principal)</span>':' <span style="color:var(--amber)">(complemento)</span>'}</div>`
-    :`<div style="display:grid;grid-template-columns:190px minmax(210px,1fr);gap:7px">
+    :`<div class="pi-recurso-fonte-grid" style="display:grid;grid-template-columns:190px minmax(210px,1fr);gap:7px">
         <select class="pi-recurso-fonte-tipo" onchange="_procRecursoFonteTipoChange(this)" style="font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%">
           <option value="emenda"${fonteTipo==='emenda'?' selected':''}>Emenda</option>
           <option value="recurso_proprio"${fonteTipo==='recurso_proprio'?' selected':''}>Fonte 01 (recurso próprio)</option>
@@ -2093,7 +2093,7 @@ function procAddItemRow(data,opcoes={}){
         <input type="text" class="pi-siam"${termDis} maxlength="50" inputmode="numeric" placeholder="000.00001.2491-01" value="${_sanEsc(String(data.codigo_siam||'')).replace(/"/g,'&quot;')}" oninput="_procCodigoSiamInput(this)" onpaste="_procColarPlanilha(event)" style="${inp}"></div>
       ${terminal?'':`<button type="button" onclick="procRemoveItemCard(this)" title="Remover item" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;margin-top:14px">✕</button>`}
     </div>
-    <div style="display:grid;grid-template-columns:90px minmax(190px,1.35fr) 130px 100px minmax(150px,1fr);gap:8px;margin-top:6px">
+    <div class="pi-item-fields" style="display:grid;grid-template-columns:90px minmax(190px,1.35fr) 130px 100px minmax(150px,1fr);gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp};${ro}"></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade de medida *</div><div class="pi-unidade-medida-wrap"><input type="text" class="pi-unidade-medida"${termDis} maxlength="80" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Busque por código, nome ou uso" value="${_sanEsc(String(data.unidade_medida||'')).replace(/"/g,'&quot;')}" oninput="_procRenderUnidadesMedida(this)" onfocus="_procRenderUnidadesMedida(this)" onkeydown="_procUnidadeMedidaTecla(event)" onblur="_procFecharUnidadeMedida(this)" onpaste="_procColarPlanilha(event)" style="${inp}"><div class="pi-unidade-medida-menu" hidden></div></div></div>
       <div><div class="pi-valor-label" style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor"${termDis} placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" onpaste="_procColarPlanilha(event)" style="${inp}"></div>

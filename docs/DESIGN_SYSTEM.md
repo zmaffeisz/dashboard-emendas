@@ -265,12 +265,18 @@ se deve fazer é introduzir emoji novo como ícone de **navegação estrutural**
 
 ## Responsivo
 
-Breakpoints em uso: `1280px`→`1024px`→`768px`→`480px`.
+Breakpoints em uso: `1280px`→`1024px`→`768px`→`700px`→`480px`.
 - `min-width:769px`: sidebar colapsada (58px) por padrão, expande no hover (220px).
 - `max-width:1024px` (tablet paisagem): KPIs/`.metrics-secondary` com colunas menores.
 - `max-width:768px`: sidebar vira drawer (`body.sidebar-open`), hamburger aparece,
   filtros empilham, KPIs em 2 colunas, modais viram bottom-sheet full-width.
 - `max-width:480px`: KPIs em 1 coluna, modal com padding reduzido.
+
+Ajustes extras de celular e tablet ficam em [`css/mobile.css`](../css/mobile.css),
+carregado por último. Esse arquivo só contém `@media (max-width: …)`. A partir de
+1280px ele não altera o desktop. Tabelas largas rolam dentro de `.table-wrap` (não
+na página). Não reescrever o CSS de desktop para “caber” no celular — acrescentar
+a regra no `mobile.css`.
 
 ## Antes de commitar uma mudança visual
 
