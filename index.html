@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="css/requisicao-materiais.css?v=20261001-1">
   <link rel="stylesheet" href="dashboard.css?v=20261008-cards-itens-1">
 <link rel="stylesheet" href="css/notas-fiscais.css?v=20260812-central-nf-3">
-<link rel="stylesheet" href="css/mobile.css?v=20261127-mobile-1">
+<link rel="stylesheet" href="css/mobile.css?v=20261127-mobile-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- PapaParse / html2pdf / XLSX sao carregados sob demanda (ver ensureLib) -->
 
@@ -24,7 +24,8 @@
   <div class="header-brand" style="display:flex;align-items:center;gap:12px">
     <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" style="height:48px;width:auto" alt="Brasão">
     <div>
-      <div class="header-title">Gestão de Emendas, Licitações e Contratos da Saúde</div>
+      <div class="header-title header-title-long">Gestão de Emendas, Licitações e Contratos da Saúde</div>
+      <div class="header-title header-title-short">Gestão de Emendas</div>
       <div class="header-sub">Secretaria da Saúde · Prefeitura de Sorocaba</div>
     </div>
   </div>
@@ -40,10 +41,13 @@
       <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
     </button>
     <span id="last-update" style="display:none"></span>
-    <a href="chamado.html" target="_blank" rel="noopener noreferrer" class="refresh-btn" style="text-decoration:none">Abertura de Chamados</a>
-    <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">
+    <a href="chamado.html" target="_blank" rel="noopener noreferrer" class="refresh-btn header-chamados" style="text-decoration:none" aria-label="Abertura de Chamados" title="Abertura de Chamados">
+      <svg class="header-chamados-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8a2 2 0 012 2v16l-6-3-6 3V5a2 2 0 012-2z"/><path d="M9 8h6M9 12h4"/></svg>
+      <span class="header-chamados-label">Abertura de Chamados</span>
+    </a>
+    <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" aria-label="Entrar" title="Entrar" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.5 12.5L19 4M19 4h-4M19 4v4"/></svg>
-      Entrar
+      <span class="header-login-label">Entrar</span>
     </button>
     <span class="pill pill-loading" id="conn-pill" style="display:none">⏳ Conectando</span>
   </div>
